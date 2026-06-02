@@ -46,7 +46,8 @@ sellora/
 │   ├── architecture.md
 │   ├── database_mixins.md
 │   ├── future_model_examples.py
-│   └── sprint_1_2a_lead_customer_workflow.md
+│   ├── sprint_1_2a_lead_customer_workflow.md
+│   └── sprint_1_3_products_inventory.md
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -60,6 +61,7 @@ sellora/
 - **RBAC:** reusable guards support `OWNER`, `MANAGER`, and `ANALYST` authorization.
 - **Auditability:** an `audit_logs` table captures lead source, lead, and customer workflow actions.
 - **Lead → Customer Workflow:** Sprint 1.2A adds Lead Sources, Leads, Customers, lead assignment, lead loss, and lead conversion APIs.
+- **Products & Inventory:** Sprint 1.3 adds Products, Product Variants, Product Images, Inventory, and Inventory Transactions without implementing Orders.
 
 ## Backend stack
 
@@ -142,6 +144,15 @@ Default local admin credentials from `.env.example`:
 - `POST /api/v1/leads/{id}/mark-lost`
 - `GET|POST /api/v1/customers`
 - `GET|PUT|DELETE /api/v1/customers/{id}`
+- `GET|POST /api/v1/products`
+- `GET|PUT|DELETE /api/v1/products/{id}`
+- `POST /api/v1/products/{id}/images`
+- `GET|POST /api/v1/products/variants`
+- `PUT|DELETE /api/v1/products/variants/{id}`
+- `GET|PUT /api/v1/inventory/{id}`
+- `GET /api/v1/inventory`
+- `POST /api/v1/inventory/{id}/transactions`
+- `GET /api/v1/inventory/transactions`
 
 Use `Authorization: Bearer <access_token>` for authenticated requests. Workspace-scoped CRM routes must also pass `X-Workspace-ID`.
 
@@ -159,7 +170,7 @@ pytest
 
 ## Next recommended sprint
 
-Sprint 1.2B should build on this workflow with workspace administration and invite surfaces:
+Sprint 1.4 should build on the product and inventory workflow with workspace administration and operational surfaces:
 
 1. workspace settings read/update;
 2. user invitation flow;
@@ -168,4 +179,4 @@ Sprint 1.2B should build on this workflow with workspace administration and invi
 5. role-specific route examples;
 6. frontend authentication shell.
 
-Do not add Orders, Products, Inventory, or Advertising until the lead/customer workflow and workspace administration surfaces are stable.
+Do not add Orders or Advertising until product inventory, lead/customer workflow, and workspace administration surfaces are stable.

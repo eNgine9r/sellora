@@ -27,3 +27,7 @@ Future CRM models should use `UUIDPrimaryKeyMixin`, `WorkspaceScopedMixin`, `Sof
 ## Sprint 1.2A business modules
 
 Lead Sources, Leads, and Customers are the first business modules. They inherit the database mixin contract, keep business rules in services, expose repositories for persistence, and write audit logs for create/update/delete and workflow transitions. Orders, Products, Inventory, and Advertising remain out of scope.
+
+## Sprint 1.3 catalog and inventory modules
+
+Products, Product Variants, Product Images, Inventory, and Inventory Transactions inherit the database mixin contract. Variant creation owns automatic inventory creation in `ProductService`, while stock mutation and transaction logging stay in `InventoryService`. Orders remain out of scope.
