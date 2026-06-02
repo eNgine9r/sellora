@@ -1,7 +1,12 @@
 from app.models.audit_log import AuditLog
+from app.models.attachment import Attachment, AttachmentEntityType
+from app.models.customer_address import CustomerAddress
+from app.models.customer_note import CustomerNote
+from app.models.customer_tag import CustomerTag
 from app.models.customer import Customer
 from app.models.lead import Lead, LeadStatus
 from app.models.lead_source import LeadSource
+from app.models.tag import Tag
 from app.models.product import Product
 from app.models.product_variant import ProductVariant
 from app.models.inventory import Inventory
@@ -15,4 +20,4 @@ from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_user import WorkspaceUser
 
-__all__ = ["AuditLog", "Customer", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "LeadStatus", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "User", "Workspace", "WorkspaceUser"]
+__all__ = ["Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "LeadStatus", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "User", "Workspace", "WorkspaceUser"]

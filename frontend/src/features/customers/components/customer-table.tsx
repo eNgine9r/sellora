@@ -1,6 +1,6 @@
 import { Customer } from "@/types/crm";
 
-export function CustomerTable({ customers }: { customers: Customer[] }) {
+export function CustomerTable({ customers, onSelect }: { customers: Customer[]; onSelect?: (customer: Customer) => void }) {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -16,7 +16,7 @@ export function CustomerTable({ customers }: { customers: Customer[] }) {
         </thead>
         <tbody className="divide-y divide-slate-100">
           {customers.map((customer) => (
-            <tr key={customer.id} className="hover:bg-slate-50">
+            <tr key={customer.id} className="cursor-pointer hover:bg-slate-50" onClick={() => onSelect?.(customer)}>
               <td className="px-4 py-3 font-medium text-slate-900">{customer.name}</td>
               <td className="px-4 py-3 text-slate-700">{customer.phone ?? "—"}</td>
               <td className="px-4 py-3 text-slate-700">{customer.instagram_username ?? "—"}</td>

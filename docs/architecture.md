@@ -35,3 +35,7 @@ Products, Product Variants, Product Images, Inventory, and Inventory Transaction
 ## Sprint 1.4 orders and profit engine
 
 Orders, Order Items, and Order Status History inherit the database mixin contract. Order creation and status transitions are coordinated in `OrderService`, which calls inventory transaction logic for reserve, ship, cancel, and return workflows and recalculates order profit.
+
+## Sprint 1.5 CRM completion
+
+Tags, Customer Tags, Customer Notes, Customer Addresses, and Attachments inherit the database mixin contract. Customer notes are append-only, default address uniqueness is enforced in service logic and by a partial database index, and attachments use a constrained polymorphic entity type for CRM and future shipment records.

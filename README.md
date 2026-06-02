@@ -48,7 +48,8 @@ sellora/
 │   ├── future_model_examples.py
 │   ├── sprint_1_2a_lead_customer_workflow.md
 │   ├── sprint_1_3_products_inventory.md
-│   └── sprint_1_4_orders_profit_engine.md
+│   ├── sprint_1_4_orders_profit_engine.md
+│   └── sprint_1_5_crm_completion.md
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -64,6 +65,7 @@ sellora/
 - **Lead → Customer Workflow:** Sprint 1.2A adds Lead Sources, Leads, Customers, lead assignment, lead loss, and lead conversion APIs.
 - **Products & Inventory:** Sprint 1.3 adds Products, Product Variants, Product Images, Inventory, and Inventory Transactions.
 - **Orders & Profit Engine:** Sprint 1.4 adds Orders, Order Items, Status History, inventory transitions, and profit calculations without standalone shipments/payments modules.
+- **CRM Completion:** Sprint 1.5 adds customer tags, notes, addresses, and polymorphic attachments.
 
 ## Backend stack
 
@@ -159,6 +161,12 @@ Default local admin credentials from `.env.example`:
 - `GET|PUT /api/v1/orders/{id}`
 - `POST /api/v1/orders/{id}/status`
 - `GET /api/v1/orders/dashboard`
+- `GET|POST /api/v1/tags`
+- `PUT|DELETE /api/v1/tags/{id}`
+- `GET|POST /api/v1/customers/{id}/notes`
+- `GET|POST /api/v1/customers/{id}/addresses`
+- `PUT|DELETE /api/v1/customers/{id}/addresses/{address_id}`
+- `GET|POST|DELETE /api/v1/attachments`
 
 Use `Authorization: Bearer <access_token>` for authenticated requests. Workspace-scoped CRM routes must also pass `X-Workspace-ID`.
 
@@ -176,7 +184,7 @@ pytest
 
 ## Next recommended sprint
 
-Sprint 1.5 should build on the order workflow with workspace administration and operational surfaces:
+Sprint 1.6 should build on the completed CRM workflow with workspace administration and operational surfaces:
 
 1. workspace settings read/update;
 2. user invitation flow;
