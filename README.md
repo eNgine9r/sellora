@@ -43,7 +43,9 @@ sellora/
 │   ├── package.json
 │   └── tailwind.config.ts
 ├── docs/
-│   └── architecture.md
+│   ├── architecture.md
+│   ├── database_mixins.md
+│   └── future_model_examples.py
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -53,7 +55,7 @@ sellora/
 
 - **Clean Architecture:** API routers depend on services, services depend on repositories/models, and infrastructure details stay in database/auth packages.
 - **Modular Monolith:** the app starts as one deployable backend, with package boundaries ready for future feature modules.
-- **Multi-Tenant SaaS:** workspaces are first-class; users join workspaces through roles; future tenant-owned entities must include `workspace_id`.
+- **Multi-Tenant SaaS:** workspaces are first-class; users join workspaces through roles; future tenant-owned entities must inherit `WorkspaceScopedMixin` and `SoftDeleteMixin`.
 - **RBAC:** reusable guards support `OWNER`, `MANAGER`, and `ANALYST` authorization.
 - **Auditability:** an `audit_logs` table is ready for future entity change tracking.
 
@@ -143,7 +145,7 @@ pytest
 
 ## Next recommended sprint
 
-Sprint 1.2 should add workspace administration screens and APIs only:
+Before Sprint 1.2 business work, future entities should follow the database mixin contract documented in `docs/database_mixins.md`. Sprint 1.2 should add workspace administration screens and APIs only:
 
 1. workspace settings read/update;
 2. user invitation flow;

@@ -2,9 +2,11 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, MetaData, func
+from sqlalchemy import DateTime, MetaData, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from app.database.mixins import SoftDeleteMixin, TenantMixin, WorkspaceScopedMixin
 
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
@@ -26,14 +28,6 @@ class TimestampMixin:
 
 class UUIDPrimaryKeyMixin:
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-
-
-class TenantMixin:
-    """Mixin for future tenant-owned business entities."""
-
-    @declared_attr.directive
-    def workspace_id(cls) -> Mapped[UUID]:
-        return mapped_column(PG_UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), index=True, nullable=False)
 
 
 def model_to_dict(model: Any) -> dict[str, Any]:
