@@ -4,10 +4,13 @@ from sqlalchemy.orm import Session
 from app.auth.password import hash_password
 from app.core.config import get_settings
 from app.database.session import SessionLocal
+from app.models.lead_source import LeadSource
 from app.models.role import Role, RoleName
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_user import WorkspaceUser
+
+DEFAULT_LEAD_SOURCES = ["Instagram Direct", "Instagram Ads", "Telegram", "Facebook", "Repeat Customer", "Manual"]
 
 ROLE_DESCRIPTIONS = {
     RoleName.OWNER: "Full workspace ownership and billing administration.",
@@ -52,6 +55,17 @@ def seed_initial_admin(db: Session, roles: dict[RoleName, Role]) -> None:
     ).scalar_one_or_none()
     if membership is None:
         db.add(WorkspaceUser(workspace_id=workspace.id, user_id=user.id, role_id=roles[RoleName.OWNER].id))
+
+    for source_name in DEFAULT_LEAD_SOURCES:
+        lead_source = db.execute(
+            select(LeadSource).where(
+                LeadSource.workspace_id == workspace.id,
+                LeadSource.name == source_name,
+                LeadSource.deleted_at.is_(None),
+            )
+        ).scalar_one_or_none()
+        if lead_source is None:
+            db.add(LeadSource(workspace_id=workspace.id, name=source_name, is_active=True))
 
 
 def main() -> None:

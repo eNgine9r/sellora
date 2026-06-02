@@ -45,7 +45,8 @@ sellora/
 ├── docs/
 │   ├── architecture.md
 │   ├── database_mixins.md
-│   └── future_model_examples.py
+│   ├── future_model_examples.py
+│   └── sprint_1_2a_lead_customer_workflow.md
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -57,7 +58,8 @@ sellora/
 - **Modular Monolith:** the app starts as one deployable backend, with package boundaries ready for future feature modules.
 - **Multi-Tenant SaaS:** workspaces are first-class; users join workspaces through roles; future tenant-owned entities must inherit `WorkspaceScopedMixin` and `SoftDeleteMixin`.
 - **RBAC:** reusable guards support `OWNER`, `MANAGER`, and `ANALYST` authorization.
-- **Auditability:** an `audit_logs` table is ready for future entity change tracking.
+- **Auditability:** an `audit_logs` table captures lead source, lead, and customer workflow actions.
+- **Lead → Customer Workflow:** Sprint 1.2A adds Lead Sources, Leads, Customers, lead assignment, lead loss, and lead conversion APIs.
 
 ## Backend stack
 
@@ -129,7 +131,19 @@ Default local admin credentials from `.env.example`:
 - `POST /api/v1/auth/refresh`
 - `GET /api/v1/auth/me`
 
-Use `Authorization: Bearer <access_token>` for authenticated requests. Workspace-scoped routes in future sprints should also pass `X-Workspace-ID`.
+## CRM endpoints
+
+- `GET|POST /api/v1/lead-sources`
+- `PUT|DELETE /api/v1/lead-sources/{id}`
+- `GET|POST /api/v1/leads`
+- `PUT|DELETE /api/v1/leads/{id}`
+- `POST /api/v1/leads/{id}/assign`
+- `POST /api/v1/leads/{id}/convert`
+- `POST /api/v1/leads/{id}/mark-lost`
+- `GET|POST /api/v1/customers`
+- `GET|PUT|DELETE /api/v1/customers/{id}`
+
+Use `Authorization: Bearer <access_token>` for authenticated requests. Workspace-scoped CRM routes must also pass `X-Workspace-ID`.
 
 ## Local backend commands
 
@@ -145,13 +159,13 @@ pytest
 
 ## Next recommended sprint
 
-Before Sprint 1.2 business work, future entities should follow the database mixin contract documented in `docs/database_mixins.md`. Sprint 1.2 should add workspace administration screens and APIs only:
+Sprint 1.2B should build on this workflow with workspace administration and invite surfaces:
 
 1. workspace settings read/update;
 2. user invitation flow;
 3. membership management;
-4. audit log write helpers;
+4. audit log viewer;
 5. role-specific route examples;
 6. frontend authentication shell.
 
-Do not add CRM business modules until the identity, tenancy, and workspace administration surfaces are complete.
+Do not add Orders, Products, Inventory, or Advertising until the lead/customer workflow and workspace administration surfaces are stable.
