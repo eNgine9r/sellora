@@ -31,3 +31,7 @@ Lead Sources, Leads, and Customers are the first business modules. They inherit 
 ## Sprint 1.3 catalog and inventory modules
 
 Products, Product Variants, Product Images, Inventory, and Inventory Transactions inherit the database mixin contract. Variant creation owns automatic inventory creation in `ProductService`, while stock mutation and transaction logging stay in `InventoryService`. Orders remain out of scope.
+
+## Sprint 1.4 orders and profit engine
+
+Orders, Order Items, and Order Status History inherit the database mixin contract. Order creation and status transitions are coordinated in `OrderService`, which calls inventory transaction logic for reserve, ship, cancel, and return workflows and recalculates order profit.

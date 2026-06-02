@@ -53,7 +53,7 @@ class InventoryService:
     def list_transactions(self, workspace_id: UUID, inventory_id: UUID | None = None, product_variant_id: UUID | None = None) -> list[InventoryTransaction]:
         return self.transactions.list(workspace_id, inventory_id, product_variant_id)
 
-    def record_transaction(self, workspace_id: UUID, inventory_id: UUID, payload: InventoryTransactionCreate, actor_user_id: UUID | None) -> InventoryTransaction | None:
+    def record_transaction(self, workspace_id: UUID, inventory_id: UUID, payload: InventoryTransactionCreate, actor_user_id: UUID | None, commit: bool = True) -> InventoryTransaction | None:
         inventory = self.get_inventory(workspace_id, inventory_id)
         if inventory is None:
             return None
@@ -88,8 +88,9 @@ class InventoryService:
             old_value={"stock_quantity": previous_stock, "reserved_quantity": previous_reserved},
             new_value=snapshot(transaction),
         )
-        self.db.commit()
-        self.db.refresh(transaction)
+        if commit:
+            self.db.commit()
+            self.db.refresh(transaction)
         return transaction
 
     def _calculate_quantities(self, inventory: Inventory, transaction_type: InventoryTransactionType, quantity: int) -> tuple[int, int]:
