@@ -1,6 +1,6 @@
 import { apiRequest } from "@/services/api";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
-import { ImportJob, ImportLog, ImportPreview, MappingPreset, ValidationReport } from "@/types/import-center";
+import { ImportJob, ImportLog, ImportPreview, ImportReport, MappingPreset, MappingSuggestion, ValidationReport } from "@/types/import-center";
 
 function authHeaders(workspaceId: string, token?: string) { return { "X-Workspace-ID": workspaceId, ...(token ? { Authorization: `Bearer ${token}` } : {}) }; }
 export async function uploadImportFile(workspaceId: string, file: File, token?: string) { const form = new FormData(); form.append("file", file); const response = await fetch(`${API_BASE_URL}/import/upload`, { method: "POST", body: form, headers: authHeaders(workspaceId, token) }); if (!response.ok) throw new Error(`Sellora API request failed: ${response.status}`); return response.json() as Promise<{ job_id: string; status: string; file_name: string }>; }
@@ -10,3 +10,6 @@ export const validateImportMapping = (workspaceId: string, jobId: string, entity
 export const executeImport = (workspaceId: string, jobId: string, entityType: string, sheetName: string, columnMapping: Record<string, string>, token?: string) => apiRequest<{ job: ImportJob }>(`/import/${jobId}/execute`, { method: "POST", headers: authHeaders(workspaceId, token), body: JSON.stringify({ entity_type: entityType, sheet_name: sheetName, column_mapping: columnMapping, mode: "create_only" }) });
 export const fetchImportLogs = (workspaceId: string, jobId: string, token?: string) => apiRequest<ImportLog[]>(`/import/${jobId}/logs`, { headers: authHeaders(workspaceId, token) });
 export const fetchYourJewelryPreset = (workspaceId: string, token?: string) => apiRequest<MappingPreset>("/import/presets/your_jewelry_excel_v1", { headers: authHeaders(workspaceId, token) });
+
+export const suggestImportMapping = (workspaceId: string, jobId: string, sheetName: string, entityType: string, token?: string) => apiRequest<MappingSuggestion>(`/import/${jobId}/suggest-mapping`, { method: "POST", headers: authHeaders(workspaceId, token), body: JSON.stringify({ sheet_name: sheetName, entity_type: entityType }) });
+export const dryRunImport = (workspaceId: string, jobId: string, entityType: string, sheetName: string, columnMapping: Record<string, string>, token?: string) => apiRequest<ImportReport>(`/import/${jobId}/dry-run`, { method: "POST", headers: authHeaders(workspaceId, token), body: JSON.stringify({ entity_type: entityType, sheet_name: sheetName, column_mapping: columnMapping }) });

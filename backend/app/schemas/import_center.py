@@ -50,15 +50,42 @@ class ImportValidationRequest(BaseModel):
     column_mapping: dict[str, str]
 
 
+class ImportValidationIssue(BaseModel):
+    row_number: int | None = None
+    severity: str
+    field: str | None = None
+    message: str
+    raw_value: object | None = None
+    normalized_value: object | None = None
+
+
 class ImportValidationReport(BaseModel):
     is_valid: bool
     total_rows: int
     errors: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    issues: list[ImportValidationIssue] = Field(default_factory=list)
+
+
+class ImportReportResponse(BaseModel):
+    job_id: UUID
+    entity_type: str
+    sheet_name: str
+    total_rows: int
+    valid_rows: int
+    warning_rows: int
+    error_rows: int
+    skipped_rows: int
+    duplicate_rows: int
+    ready_to_import_rows: int
+    estimated_entities_to_create: int
+    sample_errors: list[ImportValidationIssue] = Field(default_factory=list)
+    sample_warnings: list[ImportValidationIssue] = Field(default_factory=list)
 
 
 class ImportExecuteRequest(ImportValidationRequest):
     mode: str = "create_only"
+    dry_run: bool = False
 
 
 class ImportExecuteResponse(BaseModel):
@@ -82,3 +109,23 @@ class MappingPresetResponse(BaseModel):
     name: str
     sheets: list[str]
     mappings: dict[str, dict[str, str]]
+
+
+class YourJewelryPresetResponse(BaseModel):
+    preset_name: str
+    supported_sheets: list[str]
+    suggested_entity_type_per_sheet: dict[str, str]
+    suggested_column_mapping_per_sheet: dict[str, dict[str, dict[str, list[str]]]]
+    notes: list[str]
+
+
+class SuggestMappingRequest(BaseModel):
+    sheet_name: str
+    entity_type: str
+
+
+class SuggestMappingResponse(BaseModel):
+    suggested_mapping: dict[str, str]
+    confidence: dict[str, float]
+    unmapped_columns: list[str]
+    required_fields_missing: list[str]

@@ -47,3 +47,7 @@ Analytics reads remain workspace-scoped and follow Clean Architecture boundaries
 ## Sprint 1.7 import center
 
 The Import Center follows the existing repository/service/router split. Import jobs and row logs are workspace-scoped, owner-only, auditable, and store files on disk instead of in the database. Excel parsing, mapping validation, and entity import execution are separate services so CSV and external spreadsheet integrations can be added later without changing foundation architecture.
+
+## Sprint 1.7.1 import hardening
+
+Import hardening adds dry-run reporting, value normalization, fuzzy mapping suggestions, and row-level validation issues while preserving the repository/service/router split. Confidentiality rules require spreadsheet files and private import folders to remain ignored by Git, and documentation/tests use only synthetic data or generic sheet/column aliases.

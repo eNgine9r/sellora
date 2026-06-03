@@ -179,9 +179,12 @@ Default local admin credentials from `.env.example`:
 - `POST /api/v1/import/upload`
 - `GET /api/v1/import/{job_id}/sheets`
 - `POST /api/v1/import/{job_id}/preview`
+- `POST /api/v1/import/{job_id}/suggest-mapping`
+- `POST /api/v1/import/{job_id}/dry-run`
 - `POST /api/v1/import/{job_id}/validate`
 - `POST /api/v1/import/{job_id}/execute`
 - `GET /api/v1/import/{job_id}/logs`
+- `GET /api/v1/import/presets/your-jewelry`
 
 Use `Authorization: Bearer <access_token>` for authenticated requests. Workspace-scoped CRM routes must also pass `X-Workspace-ID`.
 

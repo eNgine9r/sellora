@@ -1,4 +1,5 @@
 import asyncio
+from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
@@ -15,7 +16,7 @@ from app.models.product import Product
 from app.models.product_variant import ProductVariant
 from app.models.role import RoleName
 from app.schemas.import_center import ImportValidationRequest
-from app.services.import_center_service import EntityImportService, ExcelParserService, ImportService, MappingValidationService
+from app.services.import_center_service import EntityImportService, ExcelParserService, ExcelValueNormalizer, ImportService, MappingSuggestionService, MappingValidationService
 
 
 class FakeDb:
@@ -77,7 +78,7 @@ class FakeAuditLogs:
 
 class FakeParser:
     def __init__(self) -> None:
-        self.rows = [{"Name": "Alice", "Phone": "1"}, {"Name": None, "Phone": None}]
+        self.rows = [{"Name": "Alice", "Phone": "1"}, {"Name": "Bob", "Phone": None}]
 
     def list_sheets(self, file_path):
         return ["Customers", "Products"]
@@ -107,7 +108,8 @@ def _import_service(tmp_path: Path) -> ImportService:
     service.logs = FakeLogs()
     service.parser = FakeParser()
     service.validator = MappingValidationService()
-    service.entity_importer = SimpleNamespace(import_row=lambda workspace_id, entity_type, row, mapping: (ImportJobLogStatus.SUCCESS if row.get("Name") else ImportJobLogStatus.FAILED, "ok" if row.get("Name") else "missing"))
+    service.lookup = SimpleNamespace(find_customer=lambda *args, **kwargs: None, find_product_by_sku=lambda *args, **kwargs: None, find_variant=lambda *args, **kwargs: None)
+    service.entity_importer = SimpleNamespace(import_row=lambda workspace_id, entity_type, row, mapping: (ImportJobLogStatus.SUCCESS if row.get("Phone") else ImportJobLogStatus.FAILED, "ok" if row.get("Phone") else "missing"))
     service.audit_logs = FakeAuditLogs()
     return service
 
@@ -161,6 +163,7 @@ def test_customer_product_inventory_and_order_import_success(monkeypatch) -> Non
     service.db = db
     product = Product(id=uuid4(), workspace_id=uuid4(), name="Watch", sku="W1")
     variant = ProductVariant(id=uuid4(), workspace_id=product.workspace_id, product_id=product.id, sku="W1-BLK")
+    service.validator = MappingValidationService()
     service.lookup = SimpleNamespace(
         find_customer=lambda workspace_id, phone=None, instagram_username=None: None,
         find_product_by_sku=lambda workspace_id, sku: None,
@@ -185,3 +188,112 @@ def test_failed_row_logging_and_workspace_isolation(tmp_path) -> None:
     assert imported.failed_rows == 1
     assert service.list_logs(job.workspace_id, job.id, ImportJobLogStatus.FAILED.value)[0].message == "missing"
     assert service.jobs.get(uuid4(), job.id) is None
+
+
+def test_dry_run_does_not_create_business_records_and_reports_counters(tmp_path) -> None:
+    service = _import_service(tmp_path)
+    job = service.jobs.job
+
+    report = service.dry_run(job.workspace_id, job.id, "customers", "Customers", {"name": "Name", "phone": "Phone"}, actor_user_id=uuid4())
+
+    assert report.total_rows == 2
+    assert report.ready_to_import_rows == 2
+    assert report.estimated_entities_to_create == 2
+    assert service.db.added == []
+
+
+def test_excel_value_normalizer_handles_numbers_dates_currency_dash_and_empty_values() -> None:
+    normalizer = ExcelValueNormalizer()
+
+    assert normalizer.number("1 250 грн") == 1250
+    assert normalizer.number("1,25") == Decimal("1.25")
+    assert normalizer.text("-") is None
+    assert normalizer.text("") is None
+    assert normalizer.text("  Instagram  ") == "Instagram"
+    assert normalizer.date("01.06.2026").date().isoformat() == "2026-06-01"
+    assert normalizer.date("2026-06-01").date().isoformat() == "2026-06-01"
+    assert normalizer.date(45444) is not None
+    assert normalizer.boolean("так") is True
+    assert normalizer.percent("10%") == Decimal("0.1")
+
+
+def test_suggested_mapping_for_your_jewelry_orders_sheet_uses_synthetic_columns() -> None:
+    suggestion = MappingSuggestionService().suggest(["Дата замовлення", "Сума", "Прибуток", "Реклама", "Місто"], "orders")
+
+    assert suggestion.suggested_mapping["created_at"] == "Дата замовлення"
+    assert suggestion.suggested_mapping["revenue"] == "Сума"
+    assert suggestion.suggested_mapping["net_profit"] == "Прибуток"
+    assert suggestion.confidence["created_at"] >= 0.75
+
+
+def test_stronger_validation_detects_invalid_number_invalid_date_and_missing_required_fields() -> None:
+    validator = MappingValidationService()
+    report = validator.validate("orders", {"customer_name": "Customer", "revenue": "Revenue", "created_at": "Date"}, [{"Customer": "Test Customer", "Revenue": "bad", "Date": "not-a-date"}])
+    missing = validator.validate("inventory", {"stock_quantity": "Qty"}, [{"Qty": 1}])
+
+    assert not report.is_valid
+    assert any(issue.field == "revenue" for issue in report.issues)
+    assert any(issue.field == "created_at" for issue in report.issues)
+    assert not missing.is_valid
+
+
+def test_validation_detects_duplicate_customer_product_variant_and_inventory_rows() -> None:
+    workspace_id = uuid4()
+    lookup = SimpleNamespace(
+        find_customer=lambda workspace_id, phone=None, instagram_username=None: Customer(id=uuid4(), workspace_id=workspace_id, name="Existing") if phone else None,
+        find_product_by_sku=lambda workspace_id, sku: Product(id=uuid4(), workspace_id=workspace_id, name="Existing", sku=sku) if sku else None,
+        find_variant=lambda workspace_id, sku=None, product_id=None, color=None, size=None: ProductVariant(id=uuid4(), workspace_id=workspace_id, product_id=uuid4(), sku=sku) if sku else None,
+    )
+    validator = MappingValidationService()
+
+    customer = validator.validate("customers", {"phone": "Phone"}, [{"Phone": "+380000000000"}], workspace_id, lookup)
+    product = validator.validate("products", {"name": "Name", "sku": "SKU"}, [{"Name": "Synthetic Product", "SKU": "SKU-1"}], workspace_id, lookup)
+    variant = validator.validate("product_variants", {"product_name": "Product", "variant_sku": "SKU"}, [{"Product": "Synthetic Product", "SKU": "SKU-1"}], workspace_id, lookup)
+    inventory = validator.validate("inventory", {"variant_sku": "SKU", "stock_quantity": "Qty"}, [{"SKU": "SKU-1", "Qty": 1}, {"SKU": "SKU-1", "Qty": 2}], workspace_id, lookup)
+
+    assert any("Duplicate customer" in issue.message for issue in customer.issues)
+    assert any("Duplicate product" in issue.message for issue in product.issues)
+    assert any("Duplicate variant" in issue.message for issue in variant.issues)
+    assert any("Duplicate inventory" in issue.message for issue in inventory.issues)
+
+
+def test_gitignore_protects_private_import_files() -> None:
+    gitignore = Path("../.gitignore").read_text()
+
+    for pattern in ["backend/storage/imports/", "backend/storage/test-files/", "backend/storage/private-imports/", "*.xlsx", "*.xls", "*.csv"]:
+        assert pattern in gitignore
+
+
+def test_tests_use_synthetic_excel_files_only(tmp_path) -> None:
+    openpyxl = pytest.importorskip("openpyxl")
+    Workbook = openpyxl.Workbook
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Synthetic"
+    sheet.append(["Customer", "Revenue"])
+    sheet.append(["Test Customer", 1000])
+    path = tmp_path / "synthetic.xlsx"
+    workbook.save(path)
+
+    columns, rows = ExcelParserService().read_rows(str(path), "Synthetic")
+
+    assert columns == ["Customer", "Revenue"]
+    assert rows == [{"Customer": "Test Customer", "Revenue": 1000}]
+
+
+def test_owner_only_dry_run_access() -> None:
+    workspace_id = uuid4()
+    manager = SimpleNamespace(workspaces=[SimpleNamespace(workspace_id=workspace_id, workspace=SimpleNamespace(is_active=True), role=SimpleNamespace(name=RoleName.MANAGER.value))])
+    guard = require_roles(RoleName.OWNER)
+
+    with pytest.raises(HTTPException):
+        guard(manager, workspace_id)
+
+
+def test_workspace_isolation_during_dry_run(tmp_path) -> None:
+    service = _import_service(tmp_path)
+    job = service.jobs.job
+
+    with pytest.raises(Exception):
+        service.dry_run(uuid4(), job.id, "customers", "Customers", {"name": "Name"}, actor_user_id=uuid4())
