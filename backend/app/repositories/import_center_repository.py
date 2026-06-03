@@ -14,6 +14,7 @@ from app.models.inventory import Inventory
 from app.models.order import Order
 from app.models.product import Product
 from app.models.product_variant import ProductVariant
+from app.models.shipment import Shipment
 
 
 class ImportJobRepository:
@@ -101,3 +102,18 @@ class ImportEntityLookupRepository:
 
     def find_ad_metric_by_campaign_date(self, workspace_id: UUID, campaign_id: UUID, metric_date: date) -> AdMetric | None:
         return self.db.execute(select(AdMetric).where(AdMetric.workspace_id == workspace_id, AdMetric.campaign_id == campaign_id, AdMetric.metric_date == metric_date, AdMetric.deleted_at.is_(None))).scalar_one_or_none()
+
+    def find_order_by_number(self, workspace_id: UUID, order_number: str | None) -> Order | None:
+        if not order_number:
+            return None
+        return self.db.execute(select(Order).where(Order.workspace_id == workspace_id, Order.order_number == order_number, Order.deleted_at.is_(None))).scalar_one_or_none()
+
+    def find_shipment_by_tracking(self, workspace_id: UUID, tracking_number: str | None) -> Shipment | None:
+        if not tracking_number:
+            return None
+        return self.db.execute(select(Shipment).where(Shipment.workspace_id == workspace_id, Shipment.tracking_number == tracking_number, Shipment.deleted_at.is_(None))).scalar_one_or_none()
+
+    def find_shipment_by_order(self, workspace_id: UUID, order_id: UUID | None) -> Shipment | None:
+        if order_id is None:
+            return None
+        return self.db.execute(select(Shipment).where(Shipment.workspace_id == workspace_id, Shipment.order_id == order_id, Shipment.deleted_at.is_(None), Shipment.status != "CANCELLED")).scalar_one_or_none()

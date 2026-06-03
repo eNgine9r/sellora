@@ -9,7 +9,9 @@ from app.models.order import OrderStatus
 from app.models.role import RoleName
 from app.models.user import User
 from app.schemas.order import OrderCreate, OrderDashboardResponse, OrderResponse, OrderStatusUpdate, OrderUpdate
+from app.schemas.shipment import ShipmentCreate, ShipmentResponse
 from app.services.order_service import OrderService, OrderServiceError
+from app.services.shipment_service import ShipmentService, ShipmentServiceError
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -61,3 +63,19 @@ def change_order_status(order_id: UUID, payload: OrderStatusUpdate, workspace_id
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order
+
+
+@router.get("/{order_id}/shipment", response_model=ShipmentResponse | None, dependencies=[Depends(require_min_role(RoleName.ANALYST))])
+def get_order_shipment(order_id: UUID, workspace_id: UUID = Depends(get_workspace_id), db: Session = Depends(get_db)) -> ShipmentResponse | None:
+    try:
+        return ShipmentService(db).get_for_order(workspace_id, order_id)
+    except ShipmentServiceError as exc:
+        raise _bad_request(OrderServiceError(str(exc)))
+
+
+@router.post("/{order_id}/shipment", response_model=ShipmentResponse, status_code=status.HTTP_201_CREATED)
+def create_order_shipment(order_id: UUID, payload: ShipmentCreate, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> ShipmentResponse:
+    try:
+        return ShipmentService(db).create(workspace_id, payload.model_copy(update={"order_id": order_id}), current_user.id)
+    except ShipmentServiceError as exc:
+        raise _bad_request(OrderServiceError(str(exc)))

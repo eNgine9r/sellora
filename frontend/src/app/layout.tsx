@@ -6,7 +6,9 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Sellora",
-  description: "Sellora SaaS CRM foundation",
+  description: "CRM for Instagram stores",
+  applicationName: "Sellora",
+  icons: { icon: "/branding/sellora-icon.svg", apple: "/branding/sellora-icon.svg" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

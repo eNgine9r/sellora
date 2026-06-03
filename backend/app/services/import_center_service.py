@@ -18,12 +18,13 @@ from app.models.inventory import Inventory
 from app.models.order import Order, OrderStatus, PaymentStatus
 from app.models.product import Product
 from app.models.product_variant import ProductVariant
+from app.models.shipment import Shipment, ShipmentCarrier, ShipmentStatus
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.import_center_repository import ImportEntityLookupRepository, ImportJobLogRepository, ImportJobRepository
 from app.schemas.import_center import ImportReportResponse, ImportValidationIssue, ImportValidationReport, SuggestMappingResponse, YourJewelryPresetResponse
 from app.services.business_utils import snapshot
 
-SUPPORTED_ENTITY_TYPES = {"customers", "products", "product_variants", "inventory", "orders", "ad_campaigns", "ad_metrics"}
+SUPPORTED_ENTITY_TYPES = {"customers", "products", "product_variants", "inventory", "orders", "ad_campaigns", "ad_metrics", "shipments"}
 YOUR_JEWELRY_SHEETS = ["Замовлення 2022-2025", "Аналітика Реклами 2023-2025", "Наявність на складі годинників", "Main Watchh інфа про товар"]
 FIELD_ALIASES: dict[str, dict[str, list[str]]] = {
     "customers": {
@@ -78,6 +79,21 @@ FIELD_ALIASES: dict[str, dict[str, list[str]]] = {
         "revenue": ["Виручка", "Дохід", "Revenue", "revenue"],
         "net_profit": ["Прибуток", "Profit", "net_profit"],
     },
+
+    "shipments": {
+        "order_number": ["Номер замовлення", "Order Number", "order_number"],
+        "tracking_number": ["ТТН", "Номер ТТН", "Tracking Number", "tracking_number"],
+        "carrier": ["Перевізник", "Carrier", "carrier"],
+        "status": ["Статус доставки", "Shipment Status", "status"],
+        "recipient_name": ["Отримувач", "Recipient Name", "recipient_name"],
+        "recipient_phone": ["Телефон", "Recipient Phone", "recipient_phone"],
+        "city": ["Місто", "City", "city"],
+        "warehouse": ["Відділення", "Warehouse", "warehouse"],
+        "shipping_cost": ["Вартість доставки", "Shipping Cost", "shipping_cost"],
+        "cod_amount": ["Накладений платіж", "COD Amount", "cod_amount"],
+        "declared_value": ["Оголошена вартість", "Declared Value", "declared_value"],
+        "notes": ["Нотатки", "Notes", "notes"],
+    },
     "orders": {
         "customer_name": ["Клієнт", "Customer", "customer_name"],
         "customer_phone": ["Телефон", "Phone", "customer_phone"],
@@ -107,6 +123,7 @@ YOUR_JEWELRY_EXCEL_V1 = {
         "orders": {"customer_name": "Клієнт", "customer_phone": "Телефон", "revenue": "Сума", "created_at": "Дата", "city": "Місто", "region": "Область"},
         "ad_campaigns": {"name": "Кампанія", "platform": "Платформа", "objective": "Ціль"},
         "ad_metrics": {"campaign_name": "Кампанія", "metric_date": "Дата", "spend": "Витрати на рекламу", "impressions": "Покази", "reach": "Охоплення", "clicks": "Кліки", "messages": "Повідомлення", "leads": "Ліди", "orders": "Замовлення", "revenue": "Виручка", "net_profit": "Прибуток"},
+        "shipments": {"order_number": "Номер замовлення", "tracking_number": "ТТН", "carrier": "Перевізник", "status": "Статус доставки", "city": "Місто", "warehouse": "Відділення", "recipient_phone": "Телефон", "recipient_name": "Отримувач"},
     },
 }
 
@@ -280,9 +297,10 @@ class MappingValidationService:
         "orders": [("customer_name", "customer_phone", "instagram_username"), ("revenue", "order_total"), ("created_at", "order_date")],
         "ad_campaigns": [("name",)],
         "ad_metrics": [("campaign_name", "campaign_id"), ("metric_date",)],
+        "shipments": [("order_number",)],
     }
-    numeric_fields = {"stock_quantity", "reserved_quantity", "incoming_quantity", "minimum_quantity", "purchase_price", "shipping_cost", "selling_price", "weight", "quantity", "ad_cost", "cod_fee", "other_cost", "net_profit", "revenue", "order_total", "daily_budget", "total_budget", "spend", "impressions", "reach", "clicks", "messages", "leads", "orders"}
-    non_negative_fields = {"stock_quantity", "reserved_quantity", "incoming_quantity", "minimum_quantity", "quantity", "daily_budget", "total_budget", "spend", "impressions", "reach", "clicks", "messages", "leads", "orders", "revenue", "order_total"}
+    numeric_fields = {"stock_quantity", "reserved_quantity", "incoming_quantity", "minimum_quantity", "purchase_price", "shipping_cost", "selling_price", "weight", "quantity", "ad_cost", "cod_fee", "other_cost", "net_profit", "revenue", "order_total", "daily_budget", "total_budget", "spend", "impressions", "reach", "clicks", "messages", "leads", "orders", "cod_amount", "declared_value"}
+    non_negative_fields = {"stock_quantity", "reserved_quantity", "incoming_quantity", "minimum_quantity", "quantity", "daily_budget", "total_budget", "spend", "impressions", "reach", "clicks", "messages", "leads", "orders", "revenue", "order_total", "shipping_cost", "cod_amount", "declared_value"}
     date_fields = {"created_at", "order_date", "metric_date", "start_date", "end_date"}
 
     def __init__(self) -> None:
@@ -298,6 +316,7 @@ class MappingValidationService:
                 issues.append(issue(None, "ERROR", None, f"Required mapping missing: one of {', '.join(group)}"))
         seen_inventory: set[str] = set()
         seen_ad_metrics: set[tuple[object, str]] = set()
+        seen_shipments: set[str] = set()
         for row_number, row in enumerate(rows, start=2):
             mapped = map_row(row, column_mapping)
             normalized = self.normalized_row(mapped)
@@ -329,6 +348,14 @@ class MappingValidationService:
                     issues.append(issue(row_number, "WARNING", "metric_date", "Duplicate ad metric row for campaign/date", None, metric_key[1]))
                 if all(metric_key):
                     seen_ad_metrics.add(metric_key)
+            if entity_type == "shipments":
+                tracking = normalized.get("tracking_number")
+                if tracking:
+                    if str(tracking) in seen_shipments:
+                        issues.append(issue(row_number, "WARNING", "tracking_number", "Duplicate shipment tracking number in file", None, tracking))
+                    seen_shipments.add(str(tracking))
+                if normalized.get("status") and normalized.get("status") != ShipmentStatus.DRAFT.value and not tracking:
+                    issues.append(issue(row_number, "ERROR", "tracking_number", "tracking_number is required for non-draft shipments"))
             if lookup and workspace_id:
                 issues.extend(self._duplicate_issues(entity_type, row_number, normalized, lookup, workspace_id))
         return report_from_issues(rows, issues)
@@ -364,6 +391,14 @@ class MappingValidationService:
             campaign = lookup.find_ad_campaign_by_id(workspace_id, normalized.get("campaign_id")) or lookup.find_ad_campaign_by_name(workspace_id, normalized.get("campaign_name"))
             if campaign and normalized.get("metric_date") and lookup.find_ad_metric_by_campaign_date(workspace_id, campaign.id, normalized.get("metric_date").date()):
                 return [issue(row_number, "WARNING", "metric_date", "Duplicate ad metric in workspace")]
+        if entity_type == "shipments":
+            if lookup.find_shipment_by_tracking(workspace_id, normalized.get("tracking_number")):
+                return [issue(row_number, "WARNING", "tracking_number", "Duplicate shipment tracking number in workspace")]
+            order = lookup.find_order_by_number(workspace_id, normalized.get("order_number"))
+            if order is None:
+                return [issue(row_number, "ERROR", "order_number", "Order not found in workspace")]
+            if lookup.find_shipment_by_order(workspace_id, order.id):
+                return [issue(row_number, "WARNING", "order_number", "Active shipment already exists for order")]
         return []
 
 
@@ -389,6 +424,8 @@ class EntityImportService:
             return self._ad_campaign(workspace_id, data)
         if entity_type == "ad_metrics":
             return self._ad_metric(workspace_id, data)
+        if entity_type == "shipments":
+            return self._shipment(workspace_id, data)
         return ImportJobLogStatus.FAILED, "Unsupported entity type"
 
     def _customer(self, workspace_id: UUID, data: dict) -> tuple[ImportJobLogStatus, str]:
@@ -467,6 +504,24 @@ class EntityImportService:
         metric = AdMetric(workspace_id=workspace_id, campaign_id=campaign.id, metric_date=metric_date_value, spend=data.get("spend") or Decimal("0"), impressions=int(data.get("impressions") or 0), reach=int(data.get("reach") or 0), clicks=int(data.get("clicks") or 0), messages=int(data.get("messages") or 0), leads=int(data.get("leads") or 0), orders=int(data.get("orders") or 0), revenue=data.get("revenue") or Decimal("0"), net_profit=data.get("net_profit") or Decimal("0"))
         self.db.add(metric); self.db.flush()
         return ImportJobLogStatus.SUCCESS, "Ad metric created"
+
+    def _shipment(self, workspace_id: UUID, data: dict) -> tuple[ImportJobLogStatus, str]:
+        order = self.lookup.find_order_by_number(workspace_id, data.get("order_number"))
+        if order is None:
+            return ImportJobLogStatus.FAILED, "Order not found for shipment"
+        if self.lookup.find_shipment_by_order(workspace_id, order.id):
+            return ImportJobLogStatus.SKIPPED, "Active shipment already exists for order"
+        if self.lookup.find_shipment_by_tracking(workspace_id, data.get("tracking_number")):
+            return ImportJobLogStatus.SKIPPED, "Duplicate shipment tracking number skipped"
+        status_value = data.get("status") or ShipmentStatus.DRAFT.value
+        status_value = status_value if status_value in {item.value for item in ShipmentStatus} else ShipmentStatus.DRAFT.value
+        if status_value != ShipmentStatus.DRAFT.value and not data.get("tracking_number"):
+            return ImportJobLogStatus.FAILED, "tracking_number is required for non-draft shipment"
+        carrier_value = data.get("carrier") or ShipmentCarrier.NOVA_POSHTA.value
+        carrier_value = carrier_value if carrier_value in {item.value for item in ShipmentCarrier} else ShipmentCarrier.NOVA_POSHTA.value
+        shipment = Shipment(workspace_id=workspace_id, order_id=order.id, customer_id=order.customer_id, tracking_number=data.get("tracking_number"), carrier=carrier_value, status=status_value, recipient_name=data.get("recipient_name"), recipient_phone=data.get("recipient_phone"), city=data.get("city"), warehouse=data.get("warehouse"), shipping_cost=data.get("shipping_cost"), cod_amount=data.get("cod_amount"), declared_value=data.get("declared_value"), notes=data.get("notes"))
+        self.db.add(shipment); self.db.flush()
+        return ImportJobLogStatus.SUCCESS, "Shipment created"
 
 
 class ImportService:
