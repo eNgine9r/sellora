@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -15,7 +17,7 @@ class TagRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID) -> list[Tag]:
+    def list_for_workspace(self, workspace_id: UUID) -> list[Tag]:
         stmt = (
             select(Tag)
             .where(Tag.workspace_id == workspace_id, Tag.deleted_at.is_(None))
@@ -131,7 +133,7 @@ class AttachmentRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(
+    def list_for_workspace(
         self,
         workspace_id: UUID,
         entity_type: str | None = None,

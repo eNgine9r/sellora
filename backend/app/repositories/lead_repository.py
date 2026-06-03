@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -11,7 +13,7 @@ class LeadRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID, search: str | None = None, status: str | None = None, lead_source_id: UUID | None = None) -> list[Lead]:
+    def list_for_workspace(self, workspace_id: UUID, search: str | None = None, status: str | None = None, lead_source_id: UUID | None = None) -> list[Lead]:
         stmt: Select[tuple[Lead]] = select(Lead).where(Lead.workspace_id == workspace_id, Lead.deleted_at.is_(None)).options(
             selectinload(Lead.lead_source),
             selectinload(Lead.assigned_user),

@@ -65,7 +65,7 @@ class FakeCustomerRepository:
 
 
 class FakeCustomerServiceRepository(FakeCustomerRepository):
-    def list(self, workspace_id, search=None):
+    def list_for_workspace(self, workspace_id, search=None):
         return [customer for customer in self.customers.values() if customer.workspace_id == workspace_id]
 
     def get(self, workspace_id, customer_id):

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -16,7 +18,7 @@ class LeadSourceService:
         self.audit_logs = AuditLogRepository(db)
 
     def list(self, workspace_id: UUID, search: str | None = None, include_inactive: bool = False) -> list[LeadSource]:
-        return self.lead_sources.list(workspace_id, search, include_inactive)
+        return self.lead_sources.list_for_workspace(workspace_id, search, include_inactive)
 
     def get(self, workspace_id: UUID, lead_source_id: UUID) -> LeadSource | None:
         return self.lead_sources.get(workspace_id, lead_source_id)

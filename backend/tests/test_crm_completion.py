@@ -92,7 +92,7 @@ class FakeAttachmentRepo:
     def __init__(self) -> None:
         self.attachments = []
 
-    def list(self, workspace_id, entity_type=None, entity_id=None):
+    def list_for_workspace(self, workspace_id, entity_type=None, entity_id=None):
         return [item for item in self.attachments if item.workspace_id == workspace_id]
 
     def create(self, attachment):

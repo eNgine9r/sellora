@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -22,7 +24,7 @@ class InventoryService:
         self.audit_logs = AuditLogRepository(db)
 
     def list_inventory(self, workspace_id: UUID, low_stock_only: bool = False) -> list[Inventory]:
-        return self.inventory.list(workspace_id, low_stock_only)
+        return self.inventory.list_for_workspace(workspace_id, low_stock_only)
 
     def get_inventory(self, workspace_id: UUID, inventory_id: UUID) -> Inventory | None:
         return self.inventory.get(workspace_id, inventory_id)
@@ -51,7 +53,7 @@ class InventoryService:
         return inventory
 
     def list_transactions(self, workspace_id: UUID, inventory_id: UUID | None = None, product_variant_id: UUID | None = None) -> list[InventoryTransaction]:
-        return self.transactions.list(workspace_id, inventory_id, product_variant_id)
+        return self.transactions.list_for_workspace(workspace_id, inventory_id, product_variant_id)
 
     def record_transaction(self, workspace_id: UUID, inventory_id: UUID, payload: InventoryTransactionCreate, actor_user_id: UUID | None, commit: bool = True) -> InventoryTransaction | None:
         inventory = self.get_inventory(workspace_id, inventory_id)

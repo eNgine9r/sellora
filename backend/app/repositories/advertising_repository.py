@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import date
 from uuid import UUID
 
@@ -12,7 +14,7 @@ class AdCampaignRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID) -> list[AdCampaign]:
+    def list_for_workspace(self, workspace_id: UUID) -> list[AdCampaign]:
         stmt = select(AdCampaign).where(AdCampaign.workspace_id == workspace_id, AdCampaign.deleted_at.is_(None)).order_by(AdCampaign.created_at.desc())
         return list(self.db.execute(stmt).scalars())
 
@@ -30,7 +32,7 @@ class AdMetricRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID) -> list[AdMetric]:
+    def list_for_workspace(self, workspace_id: UUID) -> list[AdMetric]:
         stmt = self._base(workspace_id).order_by(AdMetric.metric_date.desc(), AdMetric.created_at.desc())
         return list(self.db.execute(stmt).scalars())
 

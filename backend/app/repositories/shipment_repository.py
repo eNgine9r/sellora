@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime, time
 from uuid import UUID
 
@@ -11,7 +13,7 @@ class ShipmentRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID, status: str | None = None, search: str | None = None) -> list[Shipment]:
+    def list_for_workspace(self, workspace_id: UUID, status: str | None = None, search: str | None = None) -> list[Shipment]:
         stmt: Select[tuple[Shipment]] = select(Shipment).where(Shipment.workspace_id == workspace_id, Shipment.deleted_at.is_(None)).options(selectinload(Shipment.order), selectinload(Shipment.customer))
         if status:
             stmt = stmt.where(Shipment.status == status)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
@@ -32,7 +34,7 @@ class AdCampaignService:
         self.audit_logs = AuditLogRepository(db)
 
     def list(self, workspace_id: UUID) -> list[AdCampaign]:
-        return self.campaigns.list(workspace_id)
+        return self.campaigns.list_for_workspace(workspace_id)
 
     def get(self, workspace_id: UUID, campaign_id: UUID) -> AdCampaign:
         campaign = self.campaigns.get(workspace_id, campaign_id)
@@ -75,7 +77,7 @@ class AdMetricService:
         self.audit_logs = AuditLogRepository(db)
 
     def list(self, workspace_id: UUID, include_sensitive: bool) -> list[AdMetricResponse]:
-        return [metric_response(metric, include_sensitive) for metric in self.metrics.list(workspace_id)]
+        return [metric_response(metric, include_sensitive) for metric in self.metrics.list_for_workspace(workspace_id)]
 
     def list_for_campaign(self, workspace_id: UUID, campaign_id: UUID, include_sensitive: bool) -> list[AdMetricResponse]:
         if self.campaigns.get(workspace_id, campaign_id) is None:

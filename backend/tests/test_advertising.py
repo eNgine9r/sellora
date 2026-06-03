@@ -32,7 +32,7 @@ class FakeCampaignRepo:
         self.campaign = AdCampaign(id=uuid4(), workspace_id=workspace_id, name="Synthetic Campaign", platform="INSTAGRAM", status="ACTIVE", objective="MESSAGES", budget_type="MANUAL")
         self.created = []
 
-    def list(self, workspace_id):
+    def list_for_workspace(self, workspace_id):
         return [self.campaign] if workspace_id == self.workspace_id and self.campaign.deleted_at is None else []
 
     def get(self, workspace_id, campaign_id):
@@ -51,7 +51,7 @@ class FakeMetricRepo:
         self.campaign_id = campaign_id
         self.metric = None
 
-    def list(self, workspace_id):
+    def list_for_workspace(self, workspace_id):
         return [self.metric] if self.metric and workspace_id == self.workspace_id and self.metric.deleted_at is None else []
 
     def list_for_campaign(self, workspace_id, campaign_id):

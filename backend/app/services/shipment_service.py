@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -28,7 +30,7 @@ class ShipmentService:
         self.order_service = OrderService(db)
 
     def list(self, workspace_id: UUID, status: ShipmentStatus | None = None, search: str | None = None) -> list[ShipmentResponse]:
-        return [self._response(shipment) for shipment in self.shipments.list(workspace_id, status.value if status else None, search)]
+        return [self._response(shipment) for shipment in self.shipments.list_for_workspace(workspace_id, status.value if status else None, search)]
 
     def get(self, workspace_id: UUID, shipment_id: UUID) -> ShipmentResponse | None:
         shipment = self.shipments.get(workspace_id, shipment_id)

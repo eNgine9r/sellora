@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from uuid import UUID
 
 from sqlalchemy import Select, or_, select
@@ -36,7 +38,7 @@ class ImportJobLogRepository:
     def create(self, log: ImportJobLog) -> ImportJobLog:
         self.db.add(log); self.db.flush(); return log
 
-    def list(self, workspace_id: UUID, import_job_id: UUID, status: str | None = None) -> list[ImportJobLog]:
+    def list_for_job(self, workspace_id: UUID, import_job_id: UUID, status: str | None = None) -> list[ImportJobLog]:
         stmt: Select[tuple[ImportJobLog]] = select(ImportJobLog).where(ImportJobLog.workspace_id == workspace_id, ImportJobLog.import_job_id == import_job_id)
         if status:
             stmt = stmt.where(ImportJobLog.status == status)

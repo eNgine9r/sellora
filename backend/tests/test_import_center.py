@@ -63,7 +63,7 @@ class FakeLogs:
         self.logs.append(log)
         return log
 
-    def list(self, workspace_id, import_job_id, status=None):
+    def list_for_job(self, workspace_id, import_job_id, status=None):
         return [log for log in self.logs if log.workspace_id == workspace_id and log.import_job_id == import_job_id and (status is None or log.status == status)]
 
 

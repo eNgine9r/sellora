@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -13,7 +15,7 @@ class ProductRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID, search: str | None = None) -> list[Product]:
+    def list_for_workspace(self, workspace_id: UUID, search: str | None = None) -> list[Product]:
         stmt: Select[tuple[Product]] = select(Product).where(Product.workspace_id == workspace_id, Product.deleted_at.is_(None)).options(selectinload(Product.images))
         if search:
             query = f"%{search}%"
@@ -45,7 +47,7 @@ class ProductVariantRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID, product_id: UUID | None = None) -> list[ProductVariant]:
+    def list_for_workspace(self, workspace_id: UUID, product_id: UUID | None = None) -> list[ProductVariant]:
         stmt: Select[tuple[ProductVariant]] = select(ProductVariant).where(ProductVariant.workspace_id == workspace_id, ProductVariant.deleted_at.is_(None)).options(selectinload(ProductVariant.inventory))
         if product_id:
             stmt = stmt.where(ProductVariant.product_id == product_id)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime, time
 from uuid import UUID
 
@@ -13,7 +15,7 @@ class OrderRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID, status: str | None = None) -> list[Order]:
+    def list_for_workspace(self, workspace_id: UUID, status: str | None = None) -> list[Order]:
         stmt: Select[tuple[Order]] = select(Order).where(Order.workspace_id == workspace_id, Order.deleted_at.is_(None)).options(selectinload(Order.items), selectinload(Order.status_history))
         if status:
             stmt = stmt.where(Order.status == status)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -11,7 +13,7 @@ class LeadSourceRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID, search: str | None = None, include_inactive: bool = False) -> list[LeadSource]:
+    def list_for_workspace(self, workspace_id: UUID, search: str | None = None, include_inactive: bool = False) -> list[LeadSource]:
         stmt: Select[tuple[LeadSource]] = select(LeadSource).where(LeadSource.workspace_id == workspace_id, LeadSource.deleted_at.is_(None))
         if search:
             stmt = stmt.where(LeadSource.name.ilike(f"%{search}%"))

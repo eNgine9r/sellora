@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -36,7 +38,7 @@ class TagService:
         self.audit_logs = AuditLogRepository(db)
 
     def list(self, workspace_id: UUID) -> list[Tag]:
-        return self.tags.list(workspace_id)
+        return self.tags.list_for_workspace(workspace_id)
 
     def create(self, workspace_id: UUID, payload: TagCreate, actor_user_id: UUID | None) -> Tag:
         tag = self.tags.create(Tag(workspace_id=workspace_id, **payload.model_dump()))
@@ -300,7 +302,7 @@ class AttachmentService:
         entity_type: AttachmentEntityType | None = None,
         entity_id: UUID | None = None,
     ) -> list[Attachment]:
-        return self.attachments.list(workspace_id, entity_type.value if entity_type else None, entity_id)
+        return self.attachments.list_for_workspace(workspace_id, entity_type.value if entity_type else None, entity_id)
 
     def create(self, workspace_id: UUID, payload: AttachmentCreate, actor_user_id: UUID | None) -> Attachment:
         self._validate_entity(workspace_id, payload.entity_type, payload.entity_id)

@@ -41,7 +41,7 @@ class FakeShipmentRepo:
         self.order = order
         self.shipments = []
 
-    def list(self, workspace_id, status=None, search=None):
+    def list_for_workspace(self, workspace_id, status=None, search=None):
         rows = [item for item in self.shipments if item.workspace_id == workspace_id and item.deleted_at is None]
         if status:
             rows = [item for item in rows if item.status == status]

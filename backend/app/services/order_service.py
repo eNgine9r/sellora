@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
@@ -32,7 +34,7 @@ class OrderService:
         self.audit_logs = AuditLogRepository(db)
 
     def list(self, workspace_id: UUID, status: OrderStatus | None = None) -> list[Order]:
-        return self.orders.list(workspace_id, status.value if status else None)
+        return self.orders.list_for_workspace(workspace_id, status.value if status else None)
 
     def get(self, workspace_id: UUID, order_id: UUID) -> Order | None:
         return self.orders.get(workspace_id, order_id)

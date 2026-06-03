@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from uuid import UUID
 
 from sqlalchemy import Select, select
@@ -11,7 +13,7 @@ class InventoryRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID, low_stock_only: bool = False) -> list[Inventory]:
+    def list_for_workspace(self, workspace_id: UUID, low_stock_only: bool = False) -> list[Inventory]:
         stmt: Select[tuple[Inventory]] = select(Inventory).where(Inventory.workspace_id == workspace_id, Inventory.deleted_at.is_(None)).options(selectinload(Inventory.variant))
         if low_stock_only:
             stmt = stmt.where(Inventory.stock_quantity <= Inventory.minimum_quantity)
@@ -35,7 +37,7 @@ class InventoryTransactionRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID, inventory_id: UUID | None = None, product_variant_id: UUID | None = None) -> list[InventoryTransaction]:
+    def list_for_workspace(self, workspace_id: UUID, inventory_id: UUID | None = None, product_variant_id: UUID | None = None) -> list[InventoryTransaction]:
         stmt: Select[tuple[InventoryTransaction]] = select(InventoryTransaction).where(InventoryTransaction.workspace_id == workspace_id, InventoryTransaction.deleted_at.is_(None))
         if inventory_id:
             stmt = stmt.where(InventoryTransaction.inventory_id == inventory_id)

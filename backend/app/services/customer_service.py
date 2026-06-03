@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -16,7 +18,7 @@ class CustomerService:
         self.audit_logs = AuditLogRepository(db)
 
     def list(self, workspace_id: UUID, search: str | None = None) -> list[Customer]:
-        return self.customers.list(workspace_id, search)
+        return self.customers.list_for_workspace(workspace_id, search)
 
     def get(self, workspace_id: UUID, customer_id: UUID) -> Customer | None:
         return self.customers.get(workspace_id, customer_id)

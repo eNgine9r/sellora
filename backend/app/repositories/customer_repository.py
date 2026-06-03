@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -11,7 +13,7 @@ class CustomerRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list(self, workspace_id: UUID, search: str | None = None) -> list[Customer]:
+    def list_for_workspace(self, workspace_id: UUID, search: str | None = None) -> list[Customer]:
         stmt: Select[tuple[Customer]] = select(Customer).where(Customer.workspace_id == workspace_id, Customer.deleted_at.is_(None))
         if search:
             query = f"%{search}%"

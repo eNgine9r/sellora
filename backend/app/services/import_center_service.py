@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
@@ -622,7 +624,7 @@ class ImportService:
 
     def list_logs(self, workspace_id: UUID, job_id: UUID, status: str | None = None) -> list[ImportJobLog]:
         self._job(workspace_id, job_id)
-        return self.logs.list(workspace_id, job_id, status)
+        return self.logs.list_for_job(workspace_id, job_id, status)
 
     def _job(self, workspace_id: UUID, job_id: UUID) -> ImportJob:
         job = self.jobs.get(workspace_id, job_id)

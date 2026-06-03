@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -26,7 +28,7 @@ class ProductService:
         self.audit_logs = AuditLogRepository(db)
 
     def list_products(self, workspace_id: UUID, search: str | None = None) -> list[Product]:
-        return self.products.list(workspace_id, search)
+        return self.products.list_for_workspace(workspace_id, search)
 
     def get_product(self, workspace_id: UUID, product_id: UUID) -> Product | None:
         return self.products.get(workspace_id, product_id)
@@ -103,7 +105,7 @@ class ProductService:
         return image
 
     def list_variants(self, workspace_id: UUID, product_id: UUID | None = None) -> list[ProductVariant]:
-        return self.variants.list(workspace_id, product_id)
+        return self.variants.list_for_workspace(workspace_id, product_id)
 
     def get_variant(self, workspace_id: UUID, variant_id: UUID) -> ProductVariant | None:
         return self.variants.get(workspace_id, variant_id)
