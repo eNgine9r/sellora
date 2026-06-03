@@ -6,13 +6,14 @@ import { LeadForm, LeadFormValues } from "@/features/leads/components/lead-form"
 import { LeadTable } from "@/features/leads/components/lead-table";
 import { createLead, fetchLeads, fetchLeadSources } from "@/services/crm";
 import { LeadStatus } from "@/types/crm";
+import { useAuth } from "@/hooks/use-auth";
 
 const STATUSES: (LeadStatus | "")[] = ["", "NEW", "IN_PROGRESS", "QUALIFIED", "CONVERTED", "LOST"];
 
 export default function LeadsPage() {
   const queryClient = useQueryClient();
-  const [workspaceId, setWorkspaceId] = useState("");
-  const [token, setToken] = useState("");
+  const { currentWorkspaceId } = useAuth();
+  const workspaceId = currentWorkspaceId ?? "";
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<LeadStatus | "">("");
   const [leadSourceId, setLeadSourceId] = useState("");
@@ -20,10 +21,10 @@ export default function LeadsPage() {
   const enabled = Boolean(workspaceId);
 
   const filters = useMemo(() => ({ search, status, leadSourceId }), [search, status, leadSourceId]);
-  const leadsQuery = useQuery({ queryKey: ["leads", workspaceId, filters], queryFn: () => fetchLeads(workspaceId, filters, token), enabled });
-  const sourcesQuery = useQuery({ queryKey: ["lead-sources", workspaceId], queryFn: () => fetchLeadSources(workspaceId, token), enabled });
+  const leadsQuery = useQuery({ queryKey: ["leads", workspaceId, filters], queryFn: () => fetchLeads(workspaceId, filters, undefined), enabled });
+  const sourcesQuery = useQuery({ queryKey: ["lead-sources", workspaceId], queryFn: () => fetchLeadSources(workspaceId, undefined), enabled });
   const createMutation = useMutation({
-    mutationFn: (values: LeadFormValues) => createLead(workspaceId, values, token),
+    mutationFn: (values: LeadFormValues) => createLead(workspaceId, values, undefined),
     onSuccess: () => {
       setIsCreateOpen(false);
       queryClient.invalidateQueries({ queryKey: ["leads", workspaceId] });
@@ -43,8 +44,6 @@ export default function LeadsPage() {
         </header>
 
         <section className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-5">
-          <input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Workspace ID" value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)} />
-          <input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Access token" value={token} onChange={(event) => setToken(event.target.value)} />
           <input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Search leads" value={search} onChange={(event) => setSearch(event.target.value)} />
           <select className="rounded-md border border-slate-300 px-3 py-2" value={status} onChange={(event) => setStatus(event.target.value as LeadStatus | "")}>
             {STATUSES.map((item) => <option key={item || "all"} value={item}>{item || "All statuses"}</option>)}
