@@ -1,0 +1,12 @@
+import { apiRequest } from "@/services/api";
+import { AdCampaign, AdCampaignCreate, AdMetric, AdMetricCreate, AdvertisingSummary, AdvertisingTrendPoint, CampaignPerformance } from "@/types/advertising";
+
+function authHeaders(workspaceId: string, token?: string) { return { "X-Workspace-ID": workspaceId, ...(token ? { Authorization: `Bearer ${token}` } : {}) }; }
+function rangeQuery(startDate?: string, endDate?: string, extra?: Record<string, string | number | undefined>) { const params = new URLSearchParams(); if (startDate) params.set("start_date", startDate); if (endDate) params.set("end_date", endDate); Object.entries(extra ?? {}).forEach(([key, value]) => { if (value !== undefined) params.set(key, String(value)); }); const query = params.toString(); return query ? `?${query}` : ""; }
+export const fetchAdCampaigns = (workspaceId: string, token?: string) => apiRequest<AdCampaign[]>("/advertising/campaigns", { headers: authHeaders(workspaceId, token) });
+export const createAdCampaign = (workspaceId: string, token: string | undefined, payload: AdCampaignCreate) => apiRequest<AdCampaign>("/advertising/campaigns", { method: "POST", headers: authHeaders(workspaceId, token), body: JSON.stringify(payload) });
+export const fetchAdMetrics = (workspaceId: string, token?: string) => apiRequest<AdMetric[]>("/advertising/metrics", { headers: authHeaders(workspaceId, token) });
+export const createAdMetric = (workspaceId: string, token: string | undefined, payload: AdMetricCreate) => apiRequest<AdMetric>("/advertising/metrics", { method: "POST", headers: authHeaders(workspaceId, token), body: JSON.stringify(payload) });
+export const fetchAdvertisingSummary = (workspaceId: string, token?: string, startDate?: string, endDate?: string) => apiRequest<AdvertisingSummary>(`/advertising/summary${rangeQuery(startDate, endDate)}`, { headers: authHeaders(workspaceId, token) });
+export const fetchCampaignPerformance = (workspaceId: string, token?: string, startDate?: string, endDate?: string, limit = 10) => apiRequest<CampaignPerformance[]>(`/advertising/campaign-performance${rangeQuery(startDate, endDate, { limit })}`, { headers: authHeaders(workspaceId, token) });
+export const fetchAdvertisingTrend = (workspaceId: string, token?: string, startDate?: string, endDate?: string) => apiRequest<AdvertisingTrendPoint[]>(`/advertising/trend${rangeQuery(startDate, endDate)}`, { headers: authHeaders(workspaceId, token) });

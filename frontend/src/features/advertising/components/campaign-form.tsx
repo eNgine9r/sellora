@@ -1,0 +1,1 @@
+export function CampaignForm() { return <section className="rounded-2xl bg-white p-4 shadow-sm"><h2 className="text-lg font-semibold">Create Campaign</h2><p className="mt-2 text-sm text-slate-600">Manual form placeholder for campaign name, platform, objective, budget, and dates.</p></section>; }
