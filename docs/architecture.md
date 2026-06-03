@@ -39,3 +39,7 @@ Orders, Order Items, and Order Status History inherit the database mixin contrac
 ## Sprint 1.5 CRM completion
 
 Tags, Customer Tags, Customer Notes, Customer Addresses, and Attachments inherit the database mixin contract. Customer notes are append-only, default address uniqueness is enforced in service logic and by a partial database index, and attachments use a constrained polymorphic entity type for CRM and future shipment records.
+
+## Sprint 1.6 analytics engine
+
+Analytics reads remain workspace-scoped and follow Clean Architecture boundaries: repositories perform data access, services calculate metrics, and API routers expose read-only endpoints. Profit-bearing analytics use an explicit OWNER/ANALYST guard while manager access remains limited to non-profit sales, customer, and inventory summaries.

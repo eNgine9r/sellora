@@ -167,6 +167,13 @@ Default local admin credentials from `.env.example`:
 - `GET|POST /api/v1/customers/{id}/addresses`
 - `PUT|DELETE /api/v1/customers/{id}/addresses/{address_id}`
 - `GET|POST|DELETE /api/v1/attachments`
+- `GET /api/v1/analytics/sales-summary`
+- `GET /api/v1/analytics/profit-summary`
+- `GET /api/v1/analytics/sales-trend`
+- `GET /api/v1/analytics/top-products`
+- `GET /api/v1/analytics/customers-summary`
+- `GET /api/v1/analytics/inventory-summary`
+- `GET /api/v1/analytics/dashboard`
 
 Use `Authorization: Bearer <access_token>` for authenticated requests. Workspace-scoped CRM routes must also pass `X-Workspace-ID`.
 
@@ -184,10 +191,10 @@ pytest
 
 ## Next recommended sprint
 
-Sprint 1.6 should build on the completed CRM workflow with workspace administration and operational surfaces:
+Sprint 1.7 should build on analytics with operational integrations while avoiding premature coupling:
 
-1. workspace settings read/update;
-2. user invitation flow;
+1. Google Sheets import planning;
+2. shipment provider integration discovery;
 3. membership management;
 4. audit log viewer;
 5. role-specific route examples;
