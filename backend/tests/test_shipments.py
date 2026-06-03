@@ -230,3 +230,15 @@ def test_auth_session_restore_refresh_behavior_not_regressed() -> None:
 
     assert "refreshAccessToken(refreshToken)" in source
     assert "fetchCurrentUser(tokens.access_token)" in source
+
+
+def test_shipment_create_schema_accepts_valid_draft_payload() -> None:
+    from uuid import uuid4
+    from app.models.shipment import ShipmentStatus
+    from app.schemas.shipment import ShipmentCreate
+
+    order_id = uuid4()
+    payload = ShipmentCreate.model_validate({"order_id": order_id, "status": "DRAFT", "tracking_number": None})
+
+    assert payload.order_id == order_id
+    assert payload.status == ShipmentStatus.DRAFT

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { buildShipmentCreatePayload } from "@/lib/payload-builders";
 import { Order } from "@/types/orders";
 import { ShipmentCarrier, ShipmentCreatePayload, ShipmentStatus } from "@/types/shipments";
 
@@ -21,9 +22,21 @@ export function ShipmentForm({ orders, initialOrderId, onSubmit }: { orders: Ord
   const [declaredValue, setDeclaredValue] = useState("");
   const [notes, setNotes] = useState("");
 
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSubmit({ order_id: orderId, tracking_number: trackingNumber || undefined, carrier, status, recipient_name: recipientName || undefined, recipient_phone: recipientPhone || undefined, city: city || undefined, warehouse: warehouse || undefined, shipping_cost: shippingCost || undefined, cod_amount: codAmount || undefined, declared_value: declaredValue || undefined, notes: notes || undefined });
+    const payload = buildShipmentCreatePayload({ order_id: orderId, tracking_number: trackingNumber, carrier, status, recipient_name: recipientName, recipient_phone: recipientPhone, city, warehouse, shipping_cost: shippingCost, cod_amount: codAmount, declared_value: declaredValue, notes });
+    if (!payload.order_id) {
+      setValidationError("Order is required.");
+      return;
+    }
+    if (payload.status !== "DRAFT" && !payload.tracking_number) {
+      setValidationError("Tracking number is required for non-draft shipments.");
+      return;
+    }
+    setValidationError(null);
+    onSubmit(payload);
   }
 
   return (
@@ -35,6 +48,7 @@ export function ShipmentForm({ orders, initialOrderId, onSubmit }: { orders: Ord
       <div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm font-semibold text-slate-700">City<input className="min-h-11 rounded-lg border border-slate-300 px-3 py-2" value={city} onChange={(event) => setCity(event.target.value)} /></label><label className="grid gap-2 text-sm font-semibold text-slate-700">Warehouse<input className="min-h-11 rounded-lg border border-slate-300 px-3 py-2" value={warehouse} onChange={(event) => setWarehouse(event.target.value)} /></label></div>
       <div className="grid gap-4 sm:grid-cols-3"><label className="grid gap-2 text-sm font-semibold text-slate-700">Shipping cost<input className="min-h-11 rounded-lg border border-slate-300 px-3 py-2" inputMode="decimal" value={shippingCost} onChange={(event) => setShippingCost(event.target.value)} /></label><label className="grid gap-2 text-sm font-semibold text-slate-700">COD amount<input className="min-h-11 rounded-lg border border-slate-300 px-3 py-2" inputMode="decimal" value={codAmount} onChange={(event) => setCodAmount(event.target.value)} /></label><label className="grid gap-2 text-sm font-semibold text-slate-700">Declared value<input className="min-h-11 rounded-lg border border-slate-300 px-3 py-2" inputMode="decimal" value={declaredValue} onChange={(event) => setDeclaredValue(event.target.value)} /></label></div>
       <label className="grid gap-2 text-sm font-semibold text-slate-700">Notes<textarea className="min-h-24 rounded-lg border border-slate-300 px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
+      {validationError ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">{validationError}</p> : null}
       <button className="min-h-11 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white" type="submit">Create shipment</button>
     </form>
   );

@@ -236,3 +236,17 @@ def _user(workspace_id, role_name):
 
 def service_sensitive_for_role(role_name: RoleName) -> bool:
     return role_name in {RoleName.OWNER, RoleName.ANALYST}
+
+
+def test_ad_metric_create_schema_rejects_negative_numbers() -> None:
+    from datetime import date
+    from uuid import uuid4
+    from pydantic import ValidationError
+    from app.schemas.advertising import AdMetricCreate
+
+    try:
+        AdMetricCreate.model_validate({"campaign_id": uuid4(), "metric_date": date.today(), "spend": -1})
+    except ValidationError as exc:
+        assert any(error["loc"] == ("spend",) for error in exc.errors())
+    else:
+        raise AssertionError("AdMetricCreate should reject negative spend")

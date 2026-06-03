@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { CustomerDetails } from "@/features/customers/components/customer-details";
-import { CustomerForm, CustomerFormValues } from "@/features/customers/components/customer-form";
+import { CustomerForm } from "@/features/customers/components/customer-form";
 import { CustomerTable } from "@/features/customers/components/customer-table";
 import {
   addAttachment,
@@ -16,7 +16,7 @@ import {
   fetchCustomerTags,
   fetchTags,
 } from "@/services/crm-completion";
-import { createCustomer, fetchCustomers } from "@/services/crm";
+import { createCustomer, CustomerCreatePayload, fetchCustomers } from "@/services/crm";
 import { Customer } from "@/types/crm";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -69,7 +69,7 @@ export default function CustomersPage() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (values: CustomerFormValues) => createCustomer(workspaceId, values, undefined),
+    mutationFn: (values: CustomerCreatePayload) => createCustomer(workspaceId, values, undefined),
     onSuccess: () => {
       setIsCreateOpen(false);
       queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });

@@ -6,14 +6,14 @@ function workspaceHeaders(workspaceId?: string): HeadersInit {
 }
 
 export type OrderCreatePayload = {
-  customer_id?: string;
+  customer_id: string | null;
   payment_status: PaymentStatus;
-  items: { product_variant_id: string; quantity: number; unit_price: string; unit_cost?: string }[];
-  ad_cost?: string;
-  shipping_cost?: string;
-  cod_fee?: string;
-  other_cost?: string;
-  notes?: string;
+  items: { product_variant_id: string; quantity: number; unit_price: number; unit_cost: number }[];
+  ad_cost: number;
+  shipping_cost: number;
+  cod_fee: number;
+  other_cost: number;
+  notes: string | null;
 };
 
 export async function fetchOrders(workspaceId: string, status?: OrderStatus | ""): Promise<Order[]> {

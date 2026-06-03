@@ -10,19 +10,20 @@ function workspaceHeaders(workspaceId?: string, token?: string): HeadersInit {
 
 export type ProductCreatePayload = {
   name: string;
-  sku?: string;
-  description?: string;
-  images?: { image_url: string; alt_text?: string; is_primary?: boolean }[];
+  sku: string | null;
+  description: string | null;
+  is_active?: boolean;
+  images: { image_url: string; alt_text?: string | null; sort_order?: number; is_primary?: boolean }[];
 };
 
 export type ProductVariantCreatePayload = {
   product_id: string;
   sku: string;
-  color?: string;
-  size?: string;
-  price?: string;
-  initial_stock_quantity?: number;
-  minimum_quantity?: number;
+  color: string | null;
+  size: string | null;
+  price: number | null;
+  initial_stock_quantity: number;
+  minimum_quantity: number;
 };
 
 export async function fetchProducts(workspaceId: string, search?: string, token?: string): Promise<Product[]> {
@@ -72,7 +73,7 @@ export async function fetchInventoryTransactions(workspaceId: string, inventoryI
 export async function createInventoryTransaction(
   workspaceId: string,
   inventoryId: string,
-  payload: { transaction_type: InventoryTransactionType; quantity: number; reason?: string },
+  payload: { transaction_type: InventoryTransactionType; quantity: number; reason?: string | null },
   token?: string,
 ): Promise<InventoryTransaction> {
   return apiRequest<InventoryTransaction>(`/inventory/${inventoryId}/transactions`, {

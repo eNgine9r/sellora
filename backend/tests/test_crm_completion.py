@@ -160,3 +160,12 @@ def test_attachments_support_customer_lead_order_product_and_shipment() -> None:
         assert attachment.entity_type == entity_type.value
 
     assert {item.entity_type for item in service.attachments.attachments} == {item.value for item in AttachmentEntityType}
+
+
+def test_customer_create_schema_accepts_valid_payload() -> None:
+    from app.schemas.customer import CustomerCreate
+
+    payload = CustomerCreate.model_validate({"name": "Test Customer", "phone": None, "instagram_username": None})
+
+    assert payload.name == "Test Customer"
+    assert payload.phone is None

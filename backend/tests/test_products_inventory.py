@@ -196,3 +196,36 @@ def test_inventory_workspace_isolation_returns_none_for_other_workspace() -> Non
     service = _inventory_service(inventory)
 
     assert service.get_inventory(uuid4(), inventory.id) is None
+
+
+def test_product_create_schema_accepts_minimal_payload() -> None:
+    from app.schemas.product import ProductCreate
+
+    payload = ProductCreate.model_validate({"name": "Minimal product"})
+
+    assert payload.name == "Minimal product"
+    assert payload.sku is None
+    assert payload.images == []
+
+
+def test_product_create_schema_rejects_missing_name() -> None:
+    from pydantic import ValidationError
+    from app.schemas.product import ProductCreate
+
+    try:
+        ProductCreate.model_validate({"sku": "SKU-1"})
+    except ValidationError as exc:
+        assert any(error["loc"] == ("name",) for error in exc.errors())
+    else:
+        raise AssertionError("ProductCreate should require name")
+
+
+def test_product_variant_create_schema_accepts_valid_payload() -> None:
+    from uuid import uuid4
+    from app.schemas.product import ProductVariantCreate
+
+    product_id = uuid4()
+    payload = ProductVariantCreate.model_validate({"product_id": product_id, "sku": "VAR-1", "price": 100, "initial_stock_quantity": 2})
+
+    assert payload.product_id == product_id
+    assert payload.sku == "VAR-1"

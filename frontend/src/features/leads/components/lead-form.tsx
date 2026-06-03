@@ -1,10 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { buildLeadCreatePayload } from "@/lib/payload-builders";
 import { LeadCreatePayload } from "@/services/crm";
 import { LeadSource } from "@/types/crm";
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type LeadFormValues = {
   name: string;
@@ -16,37 +15,6 @@ export type LeadFormValues = {
   assigned_user_id?: string;
   expected_revenue?: string;
 };
-
-export function cleanOptionalString(value: string | undefined): string | null {
-  const cleaned = value?.trim() ?? "";
-  return cleaned.length > 0 ? cleaned : null;
-}
-
-export function cleanOptionalUuid(value: string | undefined): string | null {
-  const cleaned = value?.trim() ?? "";
-  return UUID_PATTERN.test(cleaned) ? cleaned : null;
-}
-
-export function cleanOptionalNumber(value: string | undefined): number | null {
-  const cleaned = value?.trim() ?? "";
-  if (!cleaned) return null;
-  const normalized = cleaned.replace(/\s+/g, "").replace(",", ".");
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-export function normalizeLeadPayload(values: LeadFormValues): LeadCreatePayload {
-  return {
-    instagram_username: cleanOptionalString(values.instagram_username),
-    instagram_profile_url: cleanOptionalString(values.instagram_profile_url),
-    name: values.name.trim(),
-    phone: cleanOptionalString(values.phone),
-    lead_source_id: cleanOptionalUuid(values.lead_source_id),
-    notes: cleanOptionalString(values.notes),
-    assigned_user_id: cleanOptionalUuid(values.assigned_user_id),
-    expected_revenue: cleanOptionalNumber(values.expected_revenue),
-  };
-}
 
 export function LeadForm({
   leadSources,
@@ -64,7 +32,7 @@ export function LeadForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const payload = normalizeLeadPayload(values);
+    const payload = buildLeadCreatePayload(values);
     if (!payload.name) {
       setValidationError("Lead name is required.");
       return;

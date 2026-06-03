@@ -55,7 +55,15 @@ export async function fetchCustomers(workspaceId: string, search?: string, token
   return apiRequest<Customer[]>(`/customers${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }
 
-export async function createCustomer(workspaceId: string, payload: Partial<Customer>, token?: string): Promise<Customer> {
+export type CustomerCreatePayload = {
+  name: string;
+  phone: string | null;
+  instagram_username: string | null;
+  city: string | null;
+  region: string | null;
+};
+
+export async function createCustomer(workspaceId: string, payload: CustomerCreatePayload, token?: string): Promise<Customer> {
   return apiRequest<Customer>("/customers", {
     method: "POST",
     headers: workspaceHeaders(workspaceId, token),

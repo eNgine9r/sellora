@@ -188,3 +188,16 @@ def test_completed_order_updates_customer_metrics() -> None:
     assert customer.total_orders == 1
     assert customer.total_spent == Decimal("100")
     assert customer.last_order_at is not None
+
+
+def test_order_create_schema_rejects_invalid_item_quantity() -> None:
+    from uuid import uuid4
+    from pydantic import ValidationError
+    from app.schemas.order import OrderCreate
+
+    try:
+        OrderCreate.model_validate({"items": [{"product_variant_id": uuid4(), "quantity": 0, "unit_price": 10}]})
+    except ValidationError as exc:
+        assert any(error["loc"] == ("items", 0, "quantity") for error in exc.errors())
+    else:
+        raise AssertionError("OrderCreate should reject zero item quantity")

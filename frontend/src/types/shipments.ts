@@ -28,18 +28,18 @@ export type Shipment = {
 
 export type ShipmentCreatePayload = {
   order_id: string;
-  customer_id?: string | null;
-  tracking_number?: string;
-  carrier?: ShipmentCarrier;
-  status?: ShipmentStatus;
-  recipient_name?: string;
-  recipient_phone?: string;
-  city?: string;
-  warehouse?: string;
-  shipping_cost?: string;
-  cod_amount?: string;
-  declared_value?: string;
-  notes?: string;
+  customer_id: string | null;
+  tracking_number: string | null;
+  carrier: ShipmentCarrier;
+  status: ShipmentStatus;
+  recipient_name: string | null;
+  recipient_phone: string | null;
+  city: string | null;
+  warehouse: string | null;
+  shipping_cost: number | null;
+  cod_amount: number | null;
+  declared_value: number | null;
+  notes: string | null;
 };
 
 export type ShipmentSummary = {

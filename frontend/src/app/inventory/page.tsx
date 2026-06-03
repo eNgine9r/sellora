@@ -7,6 +7,7 @@ import { InventoryTransactionHistory } from "@/features/inventory/components/inv
 import { createInventoryTransaction, fetchInventory, fetchInventoryTransactions, fetchProductVariants } from "@/services/products";
 import { InventoryTransactionType } from "@/types/products";
 import { useAuth } from "@/hooks/use-auth";
+import { cleanOptionalString } from "@/lib/payload-normalizers";
 
 const TRANSACTION_TYPES: InventoryTransactionType[] = ["STOCK_IN", "STOCK_OUT", "RESERVE", "UNRESERVE", "RETURN", "ADJUSTMENT"];
 
@@ -24,7 +25,7 @@ export default function InventoryPage() {
   const inventoryQuery = useQuery({ queryKey: ["inventory", workspaceId, lowStockOnly], queryFn: () => fetchInventory(workspaceId, lowStockOnly, undefined), enabled });
   const variantsQuery = useQuery({ queryKey: ["product-variants", workspaceId], queryFn: () => fetchProductVariants(workspaceId, undefined, undefined), enabled });
   const transactionsQuery = useQuery({ queryKey: ["inventory-transactions", workspaceId, inventoryId], queryFn: () => fetchInventoryTransactions(workspaceId, inventoryId || undefined, undefined), enabled });
-  const transactionMutation = useMutation({ mutationFn: () => createInventoryTransaction(workspaceId, inventoryId, { transaction_type: transactionType, quantity, reason: reason || undefined }, undefined), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["inventory", workspaceId] }); queryClient.invalidateQueries({ queryKey: ["inventory-transactions", workspaceId] }); } });
+  const transactionMutation = useMutation({ mutationFn: () => createInventoryTransaction(workspaceId, inventoryId, { transaction_type: transactionType, quantity: Math.max(1, quantity), reason: cleanOptionalString(reason) }, undefined), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["inventory", workspaceId] }); queryClient.invalidateQueries({ queryKey: ["inventory-transactions", workspaceId] }); } });
 
   function submitTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
