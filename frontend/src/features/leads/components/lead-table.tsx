@@ -1,0 +1,40 @@
+import { Lead, LeadSource } from "@/types/crm";
+import { LeadStatusBadge } from "./lead-status-badge";
+
+export function LeadTable({ leads, leadSources }: { leads: Lead[]; leadSources: LeadSource[] }) {
+  const sourceById = new Map(leadSources.map((source) => [source.id, source.name]));
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th className="px-4 py-3">Instagram</th>
+            <th className="px-4 py-3">Name</th>
+            <th className="px-4 py-3">Phone</th>
+            <th className="px-4 py-3">Status</th>
+            <th className="px-4 py-3">Source</th>
+            <th className="px-4 py-3">Assigned Manager</th>
+            <th className="px-4 py-3">Created At</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {leads.map((lead) => (
+            <tr key={lead.id} className="hover:bg-slate-50">
+              <td className="px-4 py-3 text-slate-700">{lead.instagram_username ?? "—"}</td>
+              <td className="px-4 py-3 font-medium text-slate-900">{lead.name}</td>
+              <td className="px-4 py-3 text-slate-700">{lead.phone ?? "—"}</td>
+              <td className="px-4 py-3"><LeadStatusBadge status={lead.status} /></td>
+              <td className="px-4 py-3 text-slate-700">{lead.lead_source_id ? sourceById.get(lead.lead_source_id) ?? "Unknown" : "—"}</td>
+              <td className="px-4 py-3 text-slate-700">{lead.assigned_user_id ?? "Unassigned"}</td>
+              <td className="px-4 py-3 text-slate-700">{new Date(lead.created_at).toLocaleDateString()}</td>
+            </tr>
+          ))}
+          {leads.length === 0 ? (
+            <tr><td className="px-4 py-8 text-center text-slate-500" colSpan={7}>No leads found.</td></tr>
+          ) : null}
+        </tbody>
+      </table>
+    </div>
+  );
+}
