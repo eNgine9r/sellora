@@ -95,7 +95,7 @@ export default function CustomersPage() {
   });
 
   return (
-    <main className="min-h-screen bg-slate-100 p-6 text-slate-950">
+    <main className="min-h-screen bg-[#F8F7FC] p-4 sm:p-6 text-slate-950">
       <div className="mx-auto grid max-w-7xl gap-6">
         <header className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
           <div>

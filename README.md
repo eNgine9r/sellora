@@ -97,18 +97,7 @@ cp .env.example .env
 
 Update secrets in `.env` for any non-local environment.
 
-Required variables include:
-
-- `DATABASE_URL`
-- `SECRET_KEY`
-- `JWT_SECRET`
-- `JWT_EXPIRE_MINUTES`
-- `REFRESH_TOKEN_EXPIRE_DAYS`
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `IMPORT_STORAGE_PATH`
-- `IMPORT_MAX_FILE_SIZE_MB`
+For staging and production, configure database connectivity, application signing secrets, token lifetimes, and local Postgres settings through the deployment platform or a private `.env` file. Do not paste real values into docs, screenshots, logs, or pull requests.
 
 ## Startup
 

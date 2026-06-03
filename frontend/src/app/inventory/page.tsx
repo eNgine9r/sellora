@@ -32,7 +32,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 p-6 text-slate-950">
+    <main className="min-h-screen bg-[#F8F7FC] p-4 sm:p-6 text-slate-950">
       <div className="mx-auto grid max-w-7xl gap-6">
         <header className="rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora Inventory</p><h1 className="mt-2 text-3xl font-bold">Inventory</h1><p className="mt-1 text-slate-600">Track stock levels, low stock, reservations, and inventory transaction history.</p></header>
         <section className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-4">

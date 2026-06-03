@@ -21,7 +21,7 @@ export default function ProductsPage() {
   const createVariantMutation = useMutation({ mutationFn: (values: Parameters<typeof createProductVariant>[1]) => createProductVariant(workspaceId, values, undefined), onSuccess: () => { setDialog(null); queryClient.invalidateQueries({ queryKey: ["products", workspaceId] }); } });
 
   return (
-    <main className="min-h-screen bg-slate-100 p-6 text-slate-950">
+    <main className="min-h-screen bg-[#F8F7FC] p-4 sm:p-6 text-slate-950">
       <div className="mx-auto grid max-w-7xl gap-6">
         <header className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
           <div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora Catalog</p><h1 className="mt-2 text-3xl font-bold">Products</h1><p className="mt-1 text-slate-600">Manage product images, product SKUs, variants, and variant SKUs.</p></div>
