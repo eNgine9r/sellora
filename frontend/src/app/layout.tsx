@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "Sellora",
   description: "CRM for Instagram stores",
   applicationName: "Sellora",
-  icons: { icon: "/branding/sellora-icon.svg", apple: "/branding/sellora-icon.svg" },
+  icons: { icon: "/brand/sellora-icon.svg", apple: "/brand/sellora-icon.svg" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

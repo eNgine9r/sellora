@@ -231,3 +231,8 @@ No deployment architecture was changed: Vercel frontend, Render backend, and Sup
 Sellora now includes manual shipment tracking for orders, including TTN/tracking number, carrier, delivery status actions, recipient details, logistics dashboard counters, and Import Center shipment mapping support. The implementation is manual-only and does not connect to Nova Poshta or any external carrier API.
 
 The frontend also includes mobile-friendly app navigation and Sellora branding metadata/assets for the login page, authenticated shell, favicon, and app icon. The staging deployment architecture remains Vercel frontend, Render backend, and Supabase PostgreSQL.
+
+
+## Sprint 1.9.1 Staging QA & MVP Polish
+
+The frontend now opens with a public Sellora landing page at `/`, uses `/dashboard` as the primary authenticated dashboard, and includes polished SaaS navigation, dashboard cards, charts, responsive private routes, and Sellora PNG brand assets under `frontend/public/brand/`. Backend contracts and deployment architecture are unchanged.
