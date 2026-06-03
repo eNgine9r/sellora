@@ -1,3 +1,9 @@
+export type TokenPair = {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+};
+
 export type WorkspaceMembership = {
   workspace_id: string;
   workspace_name: string;
