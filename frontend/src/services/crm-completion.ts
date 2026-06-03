@@ -1,8 +1,8 @@
 import { apiRequest } from "@/services/api";
 import { Attachment, AttachmentEntityType, CustomerAddress, CustomerNote, CustomerTag, Tag } from "@/types/crm-completion";
 
-function workspaceHeaders(workspaceId: string, token?: string): HeadersInit {
-  return { "X-Workspace-ID": workspaceId, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+function workspaceHeaders(workspaceId?: string, token?: string): HeadersInit {
+  return { ...(workspaceId ? { "X-Workspace-ID": workspaceId } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
 
 export async function fetchTags(workspaceId: string, token?: string): Promise<Tag[]> {

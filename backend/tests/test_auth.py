@@ -22,3 +22,33 @@ def test_jwt_access_and_refresh_tokens_have_expected_subject_and_type() -> None:
     assert access_payload["type"] == "access"
     assert refresh_payload["sub"] == str(user_id)
     assert refresh_payload["type"] == "refresh"
+
+from types import SimpleNamespace
+
+from app.services.auth_service import AuthService
+
+
+def test_current_user_response_includes_workspace_memberships() -> None:
+    workspace_id = uuid4()
+    user_id = uuid4()
+    user = SimpleNamespace(
+        id=user_id,
+        email="owner@example.com",
+        first_name="Owner",
+        last_name="User",
+        is_active=True,
+        last_login_at=None,
+        workspaces=[
+            SimpleNamespace(
+                workspace_id=workspace_id,
+                workspace=SimpleNamespace(name="Demo Workspace", slug="demo", is_active=True),
+                role=SimpleNamespace(name="OWNER"),
+            )
+        ],
+    )
+
+    response = AuthService.to_current_user_response(user)
+
+    assert response.memberships[0].workspace_id == workspace_id
+    assert response.memberships[0].workspace_name == "Demo Workspace"
+    assert response.memberships[0].role == "OWNER"

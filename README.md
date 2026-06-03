@@ -186,7 +186,7 @@ Default local admin credentials from `.env.example`:
 - `GET /api/v1/import/{job_id}/logs`
 - `GET /api/v1/import/presets/your-jewelry`
 
-Use `Authorization: Bearer <access_token>` for authenticated requests. Workspace-scoped CRM routes must also pass `X-Workspace-ID`.
+The staging frontend centralizes authenticated API requests and automatically attaches the active session and workspace headers after login; do not paste or expose tokens in the UI.
 
 ## Local backend commands
 
@@ -218,3 +218,9 @@ Do not add Nova Poshta, Instagram Graph, live Meta Ads, or AI Insights until the
 Sellora now includes manual advertising campaign and daily metric tracking under `/api/v1/advertising`. The module calculates CPA, CPL, CPC, CPM, CTR, ROAS, and ROI from manually entered metrics. OWNER can create/update/delete campaigns and metrics; ANALYST can read full analytics; MANAGER can read basic performance while profit-sensitive fields are omitted.
 
 Frontend route `/advertising` provides a campaign list, daily metrics table, KPI cards, performance table, and trend chart. The Import Center also supports `ad_campaigns` and `ad_metrics` mappings for dry-run and create-only imports without storing private spreadsheet data in the repository.
+
+## Sprint 1.8.1 – Staging UX & Auth Stabilization
+
+The frontend now includes a `/login` page, centralized auth storage, automatic `/auth/me` loading, first-workspace auto-selection, protected app navigation, workspace switching, and safe logout. API requests use `NEXT_PUBLIC_API_BASE_URL` and automatically attach the active session and selected workspace headers through the central API client.
+
+No deployment architecture was changed: Vercel frontend, Render backend, and Supabase PostgreSQL remain the staging target. No Shipments, Nova Poshta API, Meta Ads API, or AI Insights were added.

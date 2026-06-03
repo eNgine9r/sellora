@@ -1,9 +1,9 @@
 import { apiRequest } from "@/services/api";
 import { Inventory, InventoryTransaction, InventoryTransactionType, Product, ProductVariant } from "@/types/products";
 
-function workspaceHeaders(workspaceId: string, token?: string): HeadersInit {
+function workspaceHeaders(workspaceId?: string, token?: string): HeadersInit {
   return {
-    "X-Workspace-ID": workspaceId,
+    ...(workspaceId ? { "X-Workspace-ID": workspaceId } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }

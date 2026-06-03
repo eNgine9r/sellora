@@ -18,11 +18,12 @@ import {
 } from "@/services/crm-completion";
 import { createCustomer, fetchCustomers } from "@/services/crm";
 import { Customer } from "@/types/crm";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
-  const [workspaceId, setWorkspaceId] = useState("");
-  const [token, setToken] = useState("");
+  const { currentWorkspaceId } = useAuth();
+  const workspaceId = currentWorkspaceId ?? "";
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -31,32 +32,32 @@ export default function CustomersPage() {
 
   const customersQuery = useQuery({
     queryKey: ["customers", workspaceId, search],
-    queryFn: () => fetchCustomers(workspaceId, search, token),
+    queryFn: () => fetchCustomers(workspaceId, search, undefined),
     enabled,
   });
   const tagsQuery = useQuery({
     queryKey: ["tags", workspaceId],
-    queryFn: () => fetchTags(workspaceId, token),
+    queryFn: () => fetchTags(workspaceId, undefined),
     enabled,
   });
   const customerTagsQuery = useQuery({
     queryKey: ["customer-tags", workspaceId, selectedId],
-    queryFn: () => fetchCustomerTags(workspaceId, selectedId, token),
+    queryFn: () => fetchCustomerTags(workspaceId, selectedId, undefined),
     enabled: enabled && Boolean(selectedId),
   });
   const notesQuery = useQuery({
     queryKey: ["customer-notes", workspaceId, selectedId],
-    queryFn: () => fetchCustomerNotes(workspaceId, selectedId, token),
+    queryFn: () => fetchCustomerNotes(workspaceId, selectedId, undefined),
     enabled: enabled && Boolean(selectedId),
   });
   const addressesQuery = useQuery({
     queryKey: ["customer-addresses", workspaceId, selectedId],
-    queryFn: () => fetchCustomerAddresses(workspaceId, selectedId, token),
+    queryFn: () => fetchCustomerAddresses(workspaceId, selectedId, undefined),
     enabled: enabled && Boolean(selectedId),
   });
   const attachmentsQuery = useQuery({
     queryKey: ["customer-attachments", workspaceId, selectedId],
-    queryFn: () => fetchAttachments(workspaceId, "CUSTOMER", selectedId, token),
+    queryFn: () => fetchAttachments(workspaceId, "CUSTOMER", selectedId, undefined),
     enabled: enabled && Boolean(selectedId),
   });
 
@@ -68,28 +69,28 @@ export default function CustomersPage() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (values: CustomerFormValues) => createCustomer(workspaceId, values, token),
+    mutationFn: (values: CustomerFormValues) => createCustomer(workspaceId, values, undefined),
     onSuccess: () => {
       setIsCreateOpen(false);
       queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
     },
   });
   const addTagMutation = useMutation({
-    mutationFn: (tagId: string) => addCustomerTag(workspaceId, selectedId, tagId, token),
+    mutationFn: (tagId: string) => addCustomerTag(workspaceId, selectedId, tagId, undefined),
     onSuccess: invalidateDetails,
   });
   const addNoteMutation = useMutation({
-    mutationFn: (note: string) => addCustomerNote(workspaceId, selectedId, note, token),
+    mutationFn: (note: string) => addCustomerNote(workspaceId, selectedId, note, undefined),
     onSuccess: invalidateDetails,
   });
   const addAddressMutation = useMutation({
     mutationFn: ({ addressLine1, isDefault }: { addressLine1: string; isDefault: boolean }) =>
-      addCustomerAddress(workspaceId, selectedId, { address_line1: addressLine1, is_default: isDefault }, token),
+      addCustomerAddress(workspaceId, selectedId, { address_line1: addressLine1, is_default: isDefault }, undefined),
     onSuccess: invalidateDetails,
   });
   const addAttachmentMutation = useMutation({
     mutationFn: (fileUrl: string) =>
-      addAttachment(workspaceId, { entity_type: "CUSTOMER", entity_id: selectedId, file_url: fileUrl }, token),
+      addAttachment(workspaceId, { entity_type: "CUSTOMER", entity_id: selectedId, file_url: fileUrl }, undefined),
     onSuccess: invalidateDetails,
   });
 
@@ -108,8 +109,6 @@ export default function CustomersPage() {
         </header>
 
         <section className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-3">
-          <input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Workspace ID" value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)} />
-          <input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Access token" value={token} onChange={(event) => setToken(event.target.value)} />
           <input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Search customers" value={search} onChange={(event) => setSearch(event.target.value)} />
         </section>
 

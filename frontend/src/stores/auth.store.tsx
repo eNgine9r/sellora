@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { authStorage, fetchCurrentUser, firstAvailableWorkspace, loginWithPassword } from "@/services/auth.service";
+import { authStorage, fetchCurrentUser, firstAvailableWorkspace, loginWithPassword, refreshAccessToken } from "@/services/auth.service";
 import { CurrentUser, WorkspaceMembership } from "@/types/auth";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -49,8 +49,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus("unauthenticated");
       return;
     }
-    const user = await fetchCurrentUser(accessToken);
-    applyUser(user);
+    try {
+      const user = await fetchCurrentUser(accessToken);
+      applyUser(user);
+    } catch {
+      const refreshToken = authStorage.getRefreshToken();
+      if (!refreshToken) {
+        throw new Error("Session expired");
+      }
+      const tokens = await refreshAccessToken(refreshToken);
+      authStorage.setTokens(tokens);
+      const user = await fetchCurrentUser(tokens.access_token);
+      applyUser(user);
+    }
   }, [applyUser]);
 
   useEffect(() => {

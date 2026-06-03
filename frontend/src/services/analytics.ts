@@ -1,8 +1,8 @@
 import { apiRequest } from "@/services/api";
 import { CustomersSummary, DashboardAnalytics, InventorySummary, ProfitSummary, SalesSummary, SalesTrendItem, TopProduct } from "@/types/analytics";
 
-function authHeaders(workspaceId: string, token?: string) {
-  return { "X-Workspace-ID": workspaceId, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+function authHeaders(workspaceId?: string, token?: string) {
+  return { ...(workspaceId ? { "X-Workspace-ID": workspaceId } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
 
 function rangeQuery(startDate?: string, endDate?: string, extra?: Record<string, string | number | undefined>) {

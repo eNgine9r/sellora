@@ -1,9 +1,9 @@
 import { apiRequest } from "@/services/api";
 import { Order, OrderDashboard, OrderStatus, PaymentStatus } from "@/types/orders";
 
-function workspaceHeaders(workspaceId: string, token?: string): HeadersInit {
+function workspaceHeaders(workspaceId?: string, token?: string): HeadersInit {
   return {
-    "X-Workspace-ID": workspaceId,
+    ...(workspaceId ? { "X-Workspace-ID": workspaceId } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
