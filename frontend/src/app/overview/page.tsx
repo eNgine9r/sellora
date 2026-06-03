@@ -1,0 +1,15 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { AnalyticsKpiCard } from "@/features/analytics/components/analytics-kpi-card";
+import { RevenueTrendChart } from "@/features/analytics/components/revenue-trend-chart";
+import { TopProductsTable } from "@/features/analytics/components/top-products-table";
+import { fetchAnalyticsDashboard } from "@/services/analytics";
+
+export default function OverviewPage() {
+  const [workspaceId, setWorkspaceId] = useState("");
+  const [token, setToken] = useState("");
+  const dashboard = useQuery({ queryKey: ["overview-dashboard", workspaceId], queryFn: () => fetchAnalyticsDashboard(workspaceId, token), enabled: Boolean(workspaceId) });
+  return <main className="min-h-screen bg-slate-100 p-6 text-slate-950"><div className="mx-auto grid max-w-7xl gap-6"><header className="rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora Overview</p><h1 className="mt-2 text-3xl font-bold">Business Dashboard</h1><p className="mt-1 text-slate-600">Daily and monthly order, revenue, profit, and inventory health.</p></header><section className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-2"><input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Workspace ID" value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)} /><input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Access token" value={token} onChange={(event) => setToken(event.target.value)} /></section><section className="grid gap-4 md:grid-cols-4"><AnalyticsKpiCard label="Today Orders" value={dashboard.data?.today_orders ?? 0} /><AnalyticsKpiCard label="Today Revenue" value={dashboard.data?.today_revenue ?? "0.00"} /><AnalyticsKpiCard label="Today Profit" value={dashboard.data?.today_profit ?? "0.00"} /><AnalyticsKpiCard label="Low Stock" value={dashboard.data?.low_stock_count ?? 0} /><AnalyticsKpiCard label="Month Orders" value={dashboard.data?.month_orders ?? 0} /><AnalyticsKpiCard label="Month Revenue" value={dashboard.data?.month_revenue ?? "0.00"} /><AnalyticsKpiCard label="Month Profit" value={dashboard.data?.month_profit ?? "0.00"} /><AnalyticsKpiCard label="AOV" value={dashboard.data?.average_order_value ?? "0.00"} /></section><div className="grid gap-4 lg:grid-cols-2"><RevenueTrendChart data={dashboard.data?.sales_trend ?? []} /><TopProductsTable products={dashboard.data?.top_products ?? []} /></div></div></main>;
+}
