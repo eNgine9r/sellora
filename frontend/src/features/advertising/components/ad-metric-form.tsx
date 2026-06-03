@@ -1,0 +1,1 @@
+export function AdMetricForm() { return <section className="rounded-2xl bg-white p-4 shadow-sm"><h2 className="text-lg font-semibold">Add Daily Metrics</h2><p className="mt-2 text-sm text-slate-600">Manual metric entry supports spend, impressions, clicks, messages, leads, orders, revenue, and owner-only profit.</p></section>; }
