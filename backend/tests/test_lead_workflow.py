@@ -154,3 +154,28 @@ def test_workspace_isolation_returns_no_lead_from_other_workspace() -> None:
     service = _lead_service([lead])
 
     assert service.get(uuid4(), lead.id) is None
+
+
+def test_lead_create_schema_accepts_minimal_name_payload() -> None:
+    payload = LeadCreate.model_validate({"name": "Minimal lead"})
+
+    assert payload.name == "Minimal lead"
+    assert payload.lead_source_id is None
+    assert payload.expected_revenue is None
+
+
+def test_lead_create_schema_accepts_null_optional_lead_source_id() -> None:
+    payload = LeadCreate.model_validate({"name": "Null source lead", "lead_source_id": None})
+
+    assert payload.lead_source_id is None
+
+
+def test_lead_create_schema_rejects_missing_name() -> None:
+    from pydantic import ValidationError
+
+    try:
+        LeadCreate.model_validate({"lead_source_id": None})
+    except ValidationError as exc:
+        assert any(error["loc"] == ("name",) for error in exc.errors())
+    else:
+        raise AssertionError("LeadCreate should require name")

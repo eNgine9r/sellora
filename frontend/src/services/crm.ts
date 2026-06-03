@@ -14,6 +14,19 @@ export type LeadFilters = {
   leadSourceId?: string;
 };
 
+export type LeadCreatePayload = {
+  instagram_username: string | null;
+  instagram_profile_url: string | null;
+  name: string;
+  phone: string | null;
+  lead_source_id: string | null;
+  notes: string | null;
+  assigned_user_id: string | null;
+  expected_revenue: number | null;
+  first_contact_at?: string | null;
+  last_contact_at?: string | null;
+};
+
 export async function fetchLeadSources(workspaceId: string, token?: string): Promise<LeadSource[]> {
   return apiRequest<LeadSource[]>("/lead-sources", { headers: workspaceHeaders(workspaceId, token) });
 }
@@ -27,7 +40,7 @@ export async function fetchLeads(workspaceId: string, filters: LeadFilters, toke
   return apiRequest<Lead[]>(`/leads${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }
 
-export async function createLead(workspaceId: string, payload: Partial<Lead>, token?: string): Promise<Lead> {
+export async function createLead(workspaceId: string, payload: LeadCreatePayload, token?: string): Promise<Lead> {
   return apiRequest<Lead>("/leads", {
     method: "POST",
     headers: workspaceHeaders(workspaceId, token),

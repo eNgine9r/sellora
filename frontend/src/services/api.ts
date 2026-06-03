@@ -2,6 +2,18 @@ import { API_BASE_URL, authStorage, refreshAccessToken } from "@/services/auth.s
 
 let isRefreshing = false;
 
+export class ApiError extends Error {
+  status: number;
+  detail: unknown;
+
+  constructor(status: number, detail: unknown, message = `Sellora API request failed: ${status}`) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
 function redirectToLogin() {
   if (typeof window !== "undefined" && window.location.pathname !== "/login") {
     window.location.assign("/login");
@@ -48,11 +60,25 @@ export async function authenticatedFetch(path: string, init?: RequestInit, retry
   }
 }
 
+async function readSafeErrorDetail(response: Response): Promise<unknown> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    return null;
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await authenticatedFetch(path, init);
 
   if (!response.ok) {
-    throw new Error(`Sellora API request failed: ${response.status}`);
+    const detail = await readSafeErrorDetail(response);
+    throw new ApiError(response.status, detail);
   }
 
   if (response.status === 204) {
