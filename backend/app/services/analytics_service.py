@@ -53,7 +53,7 @@ class AnalyticsService:
         orders = self._orders(workspace_id, start_date, end_date)
         total_revenue = self._sum(order.revenue for order in orders)
         total_net_profit = self._sum(order.net_profit for order in orders)
-        margin_percent = self._divide(total_net_profit, total_revenue) * Decimal("100") if total_revenue else PERCENT_ZERO
+        margin_percent = (total_net_profit / total_revenue * Decimal("100")) if total_revenue else PERCENT_ZERO
         return ProfitSummaryResponse(
             total_revenue=total_revenue,
             total_product_cost=self._sum(order.product_cost for order in orders),

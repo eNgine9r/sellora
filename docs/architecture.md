@@ -43,3 +43,7 @@ Tags, Customer Tags, Customer Notes, Customer Addresses, and Attachments inherit
 ## Sprint 1.6 analytics engine
 
 Analytics reads remain workspace-scoped and follow Clean Architecture boundaries: repositories perform data access, services calculate metrics, and API routers expose read-only endpoints. Profit-bearing analytics use an explicit OWNER/ANALYST guard while manager access remains limited to non-profit sales, customer, and inventory summaries.
+
+## Sprint 1.7 import center
+
+The Import Center follows the existing repository/service/router split. Import jobs and row logs are workspace-scoped, owner-only, auditable, and store files on disk instead of in the database. Excel parsing, mapping validation, and entity import execution are separate services so CSV and external spreadsheet integrations can be added later without changing foundation architecture.

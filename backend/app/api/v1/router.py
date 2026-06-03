@@ -9,6 +9,7 @@ from app.api.v1.leads import router as leads_router
 from app.api.v1.products import router as products_router
 from app.api.v1.tags import router as tags_router
 from app.api.v1.orders import router as orders_router
+from app.api.v1.import_center import router as import_center_router
 from app.api.v1.inventory import router as inventory_router
 
 api_router = APIRouter()
@@ -18,6 +19,7 @@ api_router.include_router(lead_sources_router)
 api_router.include_router(leads_router)
 api_router.include_router(customers_router)
 api_router.include_router(products_router)
+api_router.include_router(import_center_router)
 api_router.include_router(inventory_router)
 api_router.include_router(orders_router)
 api_router.include_router(tags_router)

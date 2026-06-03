@@ -107,6 +107,8 @@ Required variables include:
 - `POSTGRES_DB`
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
+- `IMPORT_STORAGE_PATH`
+- `IMPORT_MAX_FILE_SIZE_MB`
 
 ## Startup
 
@@ -174,6 +176,12 @@ Default local admin credentials from `.env.example`:
 - `GET /api/v1/analytics/customers-summary`
 - `GET /api/v1/analytics/inventory-summary`
 - `GET /api/v1/analytics/dashboard`
+- `POST /api/v1/import/upload`
+- `GET /api/v1/import/{job_id}/sheets`
+- `POST /api/v1/import/{job_id}/preview`
+- `POST /api/v1/import/{job_id}/validate`
+- `POST /api/v1/import/{job_id}/execute`
+- `GET /api/v1/import/{job_id}/logs`
 
 Use `Authorization: Bearer <access_token>` for authenticated requests. Workspace-scoped CRM routes must also pass `X-Workspace-ID`.
 
@@ -191,7 +199,7 @@ pytest
 
 ## Next recommended sprint
 
-Sprint 1.7 should build on analytics with operational integrations while avoiding premature coupling:
+Sprint 1.8 should build on the import center with operational integrations while avoiding premature coupling:
 
 1. Google Sheets import planning;
 2. shipment provider integration discovery;
