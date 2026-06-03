@@ -1,3 +1,4 @@
+import { normalizeWorkspaceId } from "@/lib/workspace";
 import { API_BASE_URL, authStorage, refreshAccessToken } from "@/services/auth.service";
 
 let isRefreshing = false;
@@ -44,6 +45,9 @@ export function safeApiErrorMessage(error: unknown, fallback = "Unable to comple
   if (!(error instanceof ApiError)) return fallback;
   const endpoint = safeEndpointPath(error.path);
   const firstFieldError = error.fieldErrors[0];
+  if (firstFieldError?.field.toLowerCase() === "header.x-workspace-id") {
+    return "Workspace session is invalid. Please log in again.";
+  }
   if (firstFieldError) {
     return `Request failed (${error.status}) on ${endpoint}. Field '${firstFieldError.field}' ${firstFieldError.message}.`;
   }
@@ -61,19 +65,46 @@ function redirectToLogin() {
   }
 }
 
-function headersWithAuth(initHeaders: HeadersInit | undefined, body: BodyInit | null | undefined): HeadersInit {
-  const headers: Record<string, string> = body instanceof FormData ? {} : { "Content-Type": "application/json" };
+const WORKSPACE_HEADER = "X-Workspace-ID";
+
+function workspaceSessionError(path: string): ApiError {
+  return new ApiError(
+    400,
+    { detail: [{ loc: ["header", WORKSPACE_HEADER], msg: "Workspace session is invalid. Please log in again." }] },
+    path,
+  );
+}
+
+function headersWithAuth(path: string, initHeaders: HeadersInit | undefined, body: BodyInit | null | undefined): HeadersInit {
+  const headers = new Headers(initHeaders);
+  const explicitWorkspaceId = normalizeWorkspaceId(headers.get(WORKSPACE_HEADER));
+  const explicitAuthorization = headers.get("Authorization");
+  headers.delete(WORKSPACE_HEADER);
+  headers.delete("Authorization");
+
+  if (!(body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const accessToken = authStorage.getAccessToken();
-  const workspaceId = authStorage.getCurrentWorkspaceId();
-  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-  if (workspaceId) headers["X-Workspace-ID"] = workspaceId;
-  return { ...headers, ...Object.fromEntries(new Headers(initHeaders).entries()) };
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  } else if (explicitAuthorization) {
+    headers.set("Authorization", explicitAuthorization);
+  }
+
+  const workspaceId = normalizeWorkspaceId(authStorage.getCurrentWorkspaceId()) ?? explicitWorkspaceId;
+  if (!workspaceId) {
+    throw workspaceSessionError(path);
+  }
+  headers.set(WORKSPACE_HEADER, workspaceId);
+  return headers;
 }
 
 export async function authenticatedFetch(path: string, init?: RequestInit, retry = true): Promise<Response> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    headers: headersWithAuth(init?.headers, init?.body),
+    headers: headersWithAuth(path, init?.headers, init?.body),
   });
 
   if (response.status !== 401 || !retry) {

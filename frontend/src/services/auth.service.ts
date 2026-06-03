@@ -1,3 +1,4 @@
+import { normalizeWorkspaceId } from "@/lib/workspace";
 import { CurrentUser, TokenPair, WorkspaceMembership } from "@/types/auth";
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
@@ -6,8 +7,6 @@ const ACCESS_TOKEN_KEY = "sellora.access_token";
 const REFRESH_TOKEN_KEY = "sellora.refresh_token";
 const CURRENT_USER_KEY = "sellora.current_user";
 const CURRENT_WORKSPACE_ID_KEY = "sellora.current_workspace_id";
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 function isBrowser() {
   return typeof window !== "undefined";
 }
@@ -31,9 +30,8 @@ export const authStorage = {
   },
   getCurrentWorkspaceId() {
     if (!isBrowser()) return null;
-    const workspaceId = window.localStorage.getItem(CURRENT_WORKSPACE_ID_KEY);
-    if (!workspaceId) return null;
-    if (!UUID_PATTERN.test(workspaceId)) {
+    const workspaceId = normalizeWorkspaceId(window.localStorage.getItem(CURRENT_WORKSPACE_ID_KEY));
+    if (!workspaceId) {
       window.localStorage.removeItem(CURRENT_WORKSPACE_ID_KEY);
       return null;
     }
@@ -48,13 +46,14 @@ export const authStorage = {
     if (!isBrowser()) return;
     window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
   },
-  setCurrentWorkspaceId(workspaceId: string) {
+  setCurrentWorkspaceId(workspaceId: unknown) {
     if (!isBrowser()) return;
-    if (!UUID_PATTERN.test(workspaceId)) {
+    const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
+    if (!normalizedWorkspaceId) {
       window.localStorage.removeItem(CURRENT_WORKSPACE_ID_KEY);
       return;
     }
-    window.localStorage.setItem(CURRENT_WORKSPACE_ID_KEY, workspaceId);
+    window.localStorage.setItem(CURRENT_WORKSPACE_ID_KEY, normalizedWorkspaceId);
   },
   clear() {
     if (!isBrowser()) return;
@@ -100,5 +99,5 @@ export async function fetchCurrentUser(accessToken: string): Promise<CurrentUser
 }
 
 export function firstAvailableWorkspace(user: CurrentUser): WorkspaceMembership | null {
-  return user.memberships[0] ?? null;
+  return user.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id)) ?? null;
 }
