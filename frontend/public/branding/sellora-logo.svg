@@ -1,0 +1,6 @@
+<svg width="640" height="180" viewBox="0 0 640 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="180" height="180" rx="40" fill="#2563EB"/>
+  <path d="M48 110c11 16 28 24 51 24 24 0 43-12 43-32 0-19-14-26-40-32l-17-4c-12-3-17-7-17-15 0-9 8-14 22-14 14 0 26 6 34 17l18-17C130 20 112 12 90 12 64 12 46 27 46 52c0 19 13 29 39 36l17 4c14 4 19 8 19 15 0 8-9 13-23 13-17 0-30-8-40-22L48 110Z" fill="white"/>
+  <text x="220" y="111" font-family="Inter, Arial, sans-serif" font-size="72" font-weight="800" fill="#0F172A">Sellora</text>
+  <text x="224" y="144" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="500" fill="#64748B">CRM for Instagram stores</text>
+</svg>
