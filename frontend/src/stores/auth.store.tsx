@@ -68,9 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = authStorage.getCurrentUser();
     const storedWorkspaceId = authStorage.getCurrentWorkspaceId();
     if (storedUser && authStorage.getAccessToken()) {
+      const selectedWorkspace = storedUser.memberships.find((membership) => membership.workspace_id === storedWorkspaceId) ?? firstAvailableWorkspace(storedUser);
       setCurrentUser(storedUser);
-      setCurrentWorkspaceId(storedWorkspaceId);
-      setStatus("authenticated");
+      if (selectedWorkspace) authStorage.setCurrentWorkspaceId(selectedWorkspace.workspace_id);
+      setCurrentWorkspaceId(selectedWorkspace?.workspace_id ?? null);
+      setStatus(selectedWorkspace ? "authenticated" : "loading");
       void reloadCurrentUser().catch(() => {
         authStorage.clear();
         setCurrentUser(null);

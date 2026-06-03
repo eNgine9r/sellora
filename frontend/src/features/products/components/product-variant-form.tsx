@@ -15,7 +15,17 @@ export type ProductVariantFormValues = {
   minimum_quantity?: string;
 };
 
-export function ProductVariantForm({ products, onSubmit }: { products: Product[]; onSubmit: (values: ProductVariantCreatePayload) => void }) {
+export function ProductVariantForm({
+  products,
+  onSubmit,
+  isSubmitting = false,
+  submitError,
+}: {
+  products: Product[];
+  onSubmit: (values: ProductVariantCreatePayload) => void;
+  isSubmitting?: boolean;
+  submitError?: string | null;
+}) {
   const [values, setValues] = useState<ProductVariantFormValues>({ product_id: "", sku: "", initial_stock_quantity: "0", minimum_quantity: "0" });
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -51,7 +61,10 @@ export function ProductVariantForm({ products, onSubmit }: { products: Product[]
         <input className="rounded-md border border-slate-300 px-3 py-2" min={0} type="number" placeholder="Minimum stock" value={values.minimum_quantity ?? "0"} onChange={(event) => setValues({ ...values, minimum_quantity: event.target.value })} />
       </div>
       {validationError ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">{validationError}</p> : null}
-      <button className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700" type="submit">Create variant</button>
+      {submitError ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">{submitError}</p> : null}
+      <button className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={isSubmitting} type="submit">
+        {isSubmitting ? "Creating…" : "Create variant"}
+      </button>
     </form>
   );
 }

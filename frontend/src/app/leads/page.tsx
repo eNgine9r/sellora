@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { LeadForm } from "@/features/leads/components/lead-form";
 import { LeadTable } from "@/features/leads/components/lead-table";
-import { ApiError } from "@/services/api";
+import { ApiError, safeApiErrorMessage } from "@/services/api";
 import { createLead, fetchLeads, fetchLeadSources, LeadCreatePayload } from "@/services/crm";
 import { LeadStatus } from "@/types/crm";
 import { useAuth } from "@/hooks/use-auth";
@@ -16,7 +16,7 @@ function messageForApiError(error: unknown, context: "list" | "create" | "source
   if (error instanceof ApiError) {
     if (error.status === 401) return "Session expired. Please log in again.";
     if (error.status === 403) return "You do not have permission to manage leads.";
-    if (error.status === 422) return context === "create" ? "Lead data is invalid. Please check the form." : "Lead filters are invalid. Please reset filters and try again.";
+    if (error.status === 422) return safeApiErrorMessage(error, context === "create" ? "Lead data is invalid. Please check the form." : "Lead filters are invalid. Please reset filters and try again.");
   }
   if (context === "create") return "Unable to create lead. Please try again.";
   if (context === "sources") return "Unable to load lead sources. You can still create a lead without a source.";
@@ -25,14 +25,14 @@ function messageForApiError(error: unknown, context: "list" | "create" | "source
 
 export default function LeadsPage() {
   const queryClient = useQueryClient();
-  const { currentWorkspaceId, status: authStatus } = useAuth();
+  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<LeadStatus | "">("");
   const [leadSourceId, setLeadSourceId] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const authReady = authStatus !== "loading";
-  const enabled = authReady && authStatus === "authenticated" && Boolean(workspaceId);
+  const enabled = authReady && authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
 
   const filters = useMemo(() => ({ search, status, leadSourceId }), [search, status, leadSourceId]);
   const leadsQuery = useQuery({ queryKey: ["leads", workspaceId, filters], queryFn: () => fetchLeads(workspaceId, filters, undefined), enabled });

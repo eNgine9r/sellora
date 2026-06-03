@@ -6,6 +6,7 @@ const ACCESS_TOKEN_KEY = "sellora.access_token";
 const REFRESH_TOKEN_KEY = "sellora.refresh_token";
 const CURRENT_USER_KEY = "sellora.current_user";
 const CURRENT_WORKSPACE_ID_KEY = "sellora.current_workspace_id";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -29,7 +30,14 @@ export const authStorage = {
     }
   },
   getCurrentWorkspaceId() {
-    return isBrowser() ? window.localStorage.getItem(CURRENT_WORKSPACE_ID_KEY) : null;
+    if (!isBrowser()) return null;
+    const workspaceId = window.localStorage.getItem(CURRENT_WORKSPACE_ID_KEY);
+    if (!workspaceId) return null;
+    if (!UUID_PATTERN.test(workspaceId)) {
+      window.localStorage.removeItem(CURRENT_WORKSPACE_ID_KEY);
+      return null;
+    }
+    return workspaceId;
   },
   setTokens(tokens: TokenPair) {
     if (!isBrowser()) return;
@@ -42,6 +50,10 @@ export const authStorage = {
   },
   setCurrentWorkspaceId(workspaceId: string) {
     if (!isBrowser()) return;
+    if (!UUID_PATTERN.test(workspaceId)) {
+      window.localStorage.removeItem(CURRENT_WORKSPACE_ID_KEY);
+      return;
+    }
     window.localStorage.setItem(CURRENT_WORKSPACE_ID_KEY, workspaceId);
   },
   clear() {

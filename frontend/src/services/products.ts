@@ -28,7 +28,7 @@ export type ProductVariantCreatePayload = {
 
 export async function fetchProducts(workspaceId: string, search?: string, token?: string): Promise<Product[]> {
   const params = new URLSearchParams();
-  if (search) params.set("search", search);
+  if (search?.trim()) params.set("search", search.trim());
   const query = params.toString();
   return apiRequest<Product[]>(`/products${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }
@@ -43,7 +43,7 @@ export async function createProduct(workspaceId: string, payload: ProductCreateP
 
 export async function fetchProductVariants(workspaceId: string, productId?: string, token?: string): Promise<ProductVariant[]> {
   const params = new URLSearchParams();
-  if (productId) params.set("product_id", productId);
+  if (productId?.trim()) params.set("product_id", productId.trim());
   const query = params.toString();
   return apiRequest<ProductVariant[]>(`/products/variants${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }
@@ -65,7 +65,7 @@ export async function fetchInventory(workspaceId: string, lowStockOnly = false, 
 
 export async function fetchInventoryTransactions(workspaceId: string, inventoryId?: string, token?: string): Promise<InventoryTransaction[]> {
   const params = new URLSearchParams();
-  if (inventoryId) params.set("inventory_id", inventoryId);
+  if (inventoryId?.trim()) params.set("inventory_id", inventoryId.trim());
   const query = params.toString();
   return apiRequest<InventoryTransaction[]>(`/inventory/transactions${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }

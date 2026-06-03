@@ -22,12 +22,12 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
-  const { currentWorkspaceId } = useAuth();
+  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const enabled = Boolean(workspaceId);
+  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const selectedId = selectedCustomer?.id ?? "";
 
   const customersQuery = useQuery({

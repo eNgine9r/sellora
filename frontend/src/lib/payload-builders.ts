@@ -51,7 +51,7 @@ export function buildProductCreatePayload(values: RawProductValues): ProductCrea
     sku: cleanOptionalString(values.sku),
     description: cleanOptionalString(values.description),
     is_active: values.is_active ?? true,
-    images: imageUrl ? [{ image_url: imageUrl, is_primary: true }] : [],
+    images: imageUrl ? [{ image_url: imageUrl, sort_order: 0, is_primary: true }] : [],
   };
 }
 

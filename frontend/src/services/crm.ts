@@ -33,9 +33,9 @@ export async function fetchLeadSources(workspaceId: string, token?: string): Pro
 
 export async function fetchLeads(workspaceId: string, filters: LeadFilters, token?: string): Promise<Lead[]> {
   const params = new URLSearchParams();
-  if (filters.search) params.set("search", filters.search);
+  if (filters.search?.trim()) params.set("search", filters.search.trim());
   if (filters.status) params.set("status", filters.status);
-  if (filters.leadSourceId) params.set("lead_source_id", filters.leadSourceId);
+  if (filters.leadSourceId?.trim()) params.set("lead_source_id", filters.leadSourceId.trim());
   const query = params.toString();
   return apiRequest<Lead[]>(`/leads${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }
@@ -50,7 +50,7 @@ export async function createLead(workspaceId: string, payload: LeadCreatePayload
 
 export async function fetchCustomers(workspaceId: string, search?: string, token?: string): Promise<Customer[]> {
   const params = new URLSearchParams();
-  if (search) params.set("search", search);
+  if (search?.trim()) params.set("search", search.trim());
   const query = params.toString();
   return apiRequest<Customer[]>(`/customers${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }

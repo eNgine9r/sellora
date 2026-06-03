@@ -13,14 +13,14 @@ const TRANSACTION_TYPES: InventoryTransactionType[] = ["STOCK_IN", "STOCK_OUT", 
 
 export default function InventoryPage() {
   const queryClient = useQueryClient();
-  const { currentWorkspaceId } = useAuth();
+  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [inventoryId, setInventoryId] = useState("");
   const [transactionType, setTransactionType] = useState<InventoryTransactionType>("STOCK_IN");
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState("");
-  const enabled = Boolean(workspaceId);
+  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
 
   const inventoryQuery = useQuery({ queryKey: ["inventory", workspaceId, lowStockOnly], queryFn: () => fetchInventory(workspaceId, lowStockOnly, undefined), enabled });
   const variantsQuery = useQuery({ queryKey: ["product-variants", workspaceId], queryFn: () => fetchProductVariants(workspaceId, undefined, undefined), enabled });

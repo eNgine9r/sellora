@@ -15,9 +15,9 @@ const STATUSES: (ShipmentStatus | "")[] = ["", "DRAFT", "CREATED", "IN_TRANSIT",
 
 export default function ShipmentsPage() {
   const queryClient = useQueryClient();
-  const { currentWorkspaceId } = useAuth();
+  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
-  const enabled = Boolean(workspaceId);
+  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const [status, setStatus] = useState<ShipmentStatus | "">("");
   const [search, setSearch] = useState("");
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);

@@ -2,16 +2,57 @@ import { API_BASE_URL, authStorage, refreshAccessToken } from "@/services/auth.s
 
 let isRefreshing = false;
 
+export type ApiFieldError = {
+  field: string;
+  message: string;
+};
+
 export class ApiError extends Error {
   status: number;
   detail: unknown;
+  path: string;
+  fieldErrors: ApiFieldError[];
 
-  constructor(status: number, detail: unknown, message = `Sellora API request failed: ${status}`) {
+  constructor(status: number, detail: unknown, path: string, message = `Sellora API request failed: ${status}`) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+    this.path = path;
+    this.fieldErrors = extractFieldErrors(detail);
   }
+}
+
+function extractFieldErrors(detail: unknown): ApiFieldError[] {
+  if (!detail || typeof detail !== "object" || !("detail" in detail)) return [];
+  const errors = (detail as { detail?: unknown }).detail;
+  if (!Array.isArray(errors)) return [];
+  return errors.flatMap((error) => {
+    if (!error || typeof error !== "object") return [];
+    const loc = Array.isArray((error as { loc?: unknown }).loc) ? (error as { loc: unknown[] }).loc : [];
+    const message = typeof (error as { msg?: unknown }).msg === "string" ? (error as { msg: string }).msg : "Invalid value";
+    const field = loc.filter((part) => typeof part === "string" || typeof part === "number").join(".");
+    return field ? [{ field, message }] : [];
+  });
+}
+
+function safeEndpointPath(path: string): string {
+  return path.split("?")[0].replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, ":id");
+}
+
+export function safeApiErrorMessage(error: unknown, fallback = "Unable to complete request. Please try again."): string {
+  if (!(error instanceof ApiError)) return fallback;
+  const endpoint = safeEndpointPath(error.path);
+  const firstFieldError = error.fieldErrors[0];
+  if (firstFieldError) {
+    return `Request failed (${error.status}) on ${endpoint}. Field '${firstFieldError.field}' ${firstFieldError.message}.`;
+  }
+  if (error.status === 401) return "Session expired. Please log in again.";
+  if (error.status === 403) return "You do not have permission for this action.";
+  if (error.status === 404) return "Record not found.";
+  if (error.status === 422) return `Invalid request for ${endpoint}. Please check the form or filters.`;
+  if (error.status >= 500) return "Server error. Please try again later.";
+  return `${fallback} (${error.status} on ${endpoint}).`;
 }
 
 function redirectToLogin() {
@@ -78,7 +119,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
   if (!response.ok) {
     const detail = await readSafeErrorDetail(response);
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, detail, path);
   }
 
   if (response.status === 204) {

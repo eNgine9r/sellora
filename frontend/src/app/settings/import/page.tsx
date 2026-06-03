@@ -19,8 +19,9 @@ const entityTypes = ["customers", "products", "product_variants", "inventory", "
 
 export default function ImportCenterPage() {
   const queryClient = useQueryClient();
-  const { currentWorkspaceId } = useAuth();
+  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
+  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const [jobId, setJobId] = useState("");
   const [job, setJob] = useState<ImportJob | null>(null);
   const [sheetName, setSheetName] = useState("");
@@ -30,8 +31,8 @@ export default function ImportCenterPage() {
   const [report, setReport] = useState<ValidationReportType | undefined>();
   const [dryRunReport, setDryRunReport] = useState<ImportReport | undefined>();
   const [suggestion, setSuggestion] = useState<MappingSuggestion | undefined>();
-  const sheets = useQuery({ queryKey: ["import-sheets", workspaceId, jobId], queryFn: () => fetchImportSheets(workspaceId, jobId, undefined), enabled: Boolean(workspaceId && jobId) });
-  const logs = useQuery({ queryKey: ["import-logs", workspaceId, jobId], queryFn: () => fetchImportLogs(workspaceId, jobId, undefined), enabled: Boolean(workspaceId && jobId) });
+  const sheets = useQuery({ queryKey: ["import-sheets", workspaceId, jobId], queryFn: () => fetchImportSheets(workspaceId, jobId, undefined), enabled: enabled && Boolean(jobId) });
+  const logs = useQuery({ queryKey: ["import-logs", workspaceId, jobId], queryFn: () => fetchImportLogs(workspaceId, jobId, undefined), enabled: enabled && Boolean(jobId) });
   const upload = useMutation({ mutationFn: (file: File) => uploadImportFile(workspaceId, file, undefined), onSuccess: (response) => setJobId(response.job_id) });
   const previewMutation = useMutation({ mutationFn: () => previewImportSheet(workspaceId, jobId, sheetName, 20, undefined), onSuccess: setPreview });
   const suggestMutation = useMutation({ mutationFn: () => suggestImportMapping(workspaceId, jobId, sheetName, entityType, undefined), onSuccess: (response) => { setSuggestion(response); setMapping(response.suggested_mapping); } });

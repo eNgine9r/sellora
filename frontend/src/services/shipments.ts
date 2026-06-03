@@ -8,7 +8,7 @@ function workspaceHeaders(workspaceId?: string): HeadersInit {
 export async function fetchShipments(workspaceId: string, status?: ShipmentStatus | "", search?: string): Promise<Shipment[]> {
   const params = new URLSearchParams();
   if (status) params.set("status", status);
-  if (search) params.set("search", search);
+  if (search?.trim()) params.set("search", search.trim());
   const query = params.toString();
   return apiRequest<Shipment[]>(`/shipments${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId) });
 }

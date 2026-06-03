@@ -15,12 +15,12 @@ const STATUSES: (OrderStatus | "")[] = ["", "NEW", "CONFIRMED", "SHIPPED", "DELI
 
 export default function OrdersPage() {
   const queryClient = useQueryClient();
-  const { currentWorkspaceId } = useAuth();
+  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const [status, setStatus] = useState<OrderStatus | "">("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const enabled = Boolean(workspaceId);
+  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
 
   const ordersQuery = useQuery({ queryKey: ["orders", workspaceId, status], queryFn: () => fetchOrders(workspaceId, status), enabled });
   const dashboardQuery = useQuery({ queryKey: ["orders-dashboard", workspaceId], queryFn: () => fetchOrderDashboard(workspaceId), enabled });

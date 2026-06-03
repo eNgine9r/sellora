@@ -16,11 +16,11 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function AdvertisingPage() {
   const queryClient = useQueryClient();
-  const { currentWorkspaceId } = useAuth();
+  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const enabled = Boolean(workspaceId);
+  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const campaigns = useQuery({ queryKey: ["ad-campaigns", workspaceId], queryFn: () => fetchAdCampaigns(workspaceId, undefined), enabled });
   const metrics = useQuery({ queryKey: ["ad-metrics", workspaceId], queryFn: () => fetchAdMetrics(workspaceId, undefined), enabled });
   const summary = useQuery({ queryKey: ["ad-summary", workspaceId, startDate, endDate], queryFn: () => fetchAdvertisingSummary(workspaceId, undefined, startDate, endDate), enabled });
