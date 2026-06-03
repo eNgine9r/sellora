@@ -51,3 +51,9 @@ The Import Center follows the existing repository/service/router split. Import j
 ## Sprint 1.7.1 import hardening
 
 Import hardening adds dry-run reporting, value normalization, fuzzy mapping suggestions, and row-level validation issues while preserving the repository/service/router split. Confidentiality rules require spreadsheet files and private import folders to remain ignored by Git, and documentation/tests use only synthetic data or generic sheet/column aliases.
+
+## Sprint 1.8 Advertising & ROAS
+
+Advertising is implemented as a manual, workspace-scoped module with `AdCampaign` and `AdMetric` entities. It intentionally avoids Meta Ads API, Instagram Graph API, Nova Poshta API, and AI integrations. Campaign and metric writes are OWNER-only, while read APIs support OWNER, MANAGER, and ANALYST; service-level filtering hides sensitive `net_profit` and `roi` values from MANAGER responses.
+
+The Import Center recognizes `ad_campaigns` and `ad_metrics` for dry-run and create-only import flows using confirmed column mappings and synthetic-test-only confidentiality practices.

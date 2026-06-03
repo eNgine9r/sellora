@@ -3,6 +3,10 @@ from uuid import UUID
 from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session
 
+from datetime import date
+
+from app.models.ad_campaign import AdCampaign
+from app.models.ad_metric import AdMetric
 from app.models.customer import Customer
 from app.models.import_job import ImportJob
 from app.models.import_job_log import ImportJobLog
@@ -83,3 +87,17 @@ class ImportEntityLookupRepository:
             return False
         stmt = select(Order).where(Order.workspace_id == workspace_id, Order.customer_id == customer_id, Order.revenue == revenue, Order.created_at >= created_at)
         return self.db.execute(stmt).first() is not None
+
+
+    def find_ad_campaign_by_name(self, workspace_id: UUID, name: str | None) -> AdCampaign | None:
+        if not name:
+            return None
+        return self.db.execute(select(AdCampaign).where(AdCampaign.workspace_id == workspace_id, AdCampaign.name == name, AdCampaign.deleted_at.is_(None))).scalar_one_or_none()
+
+    def find_ad_campaign_by_id(self, workspace_id: UUID, campaign_id: UUID | str | None) -> AdCampaign | None:
+        if not campaign_id:
+            return None
+        return self.db.execute(select(AdCampaign).where(AdCampaign.workspace_id == workspace_id, AdCampaign.id == campaign_id, AdCampaign.deleted_at.is_(None))).scalar_one_or_none()
+
+    def find_ad_metric_by_campaign_date(self, workspace_id: UUID, campaign_id: UUID, metric_date: date) -> AdMetric | None:
+        return self.db.execute(select(AdMetric).where(AdMetric.workspace_id == workspace_id, AdMetric.campaign_id == campaign_id, AdMetric.metric_date == metric_date, AdMetric.deleted_at.is_(None))).scalar_one_or_none()

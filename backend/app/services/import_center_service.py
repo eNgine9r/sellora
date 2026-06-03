@@ -9,6 +9,8 @@ from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.models.ad_campaign import AdCampaign
+from app.models.ad_metric import AdMetric
 from app.models.customer import Customer
 from app.models.import_job import ImportJob, ImportJobStatus
 from app.models.import_job_log import ImportJobLog, ImportJobLogStatus
@@ -21,7 +23,7 @@ from app.repositories.import_center_repository import ImportEntityLookupReposito
 from app.schemas.import_center import ImportReportResponse, ImportValidationIssue, ImportValidationReport, SuggestMappingResponse, YourJewelryPresetResponse
 from app.services.business_utils import snapshot
 
-SUPPORTED_ENTITY_TYPES = {"customers", "products", "product_variants", "inventory", "orders"}
+SUPPORTED_ENTITY_TYPES = {"customers", "products", "product_variants", "inventory", "orders", "ad_campaigns", "ad_metrics"}
 YOUR_JEWELRY_SHEETS = ["Замовлення 2022-2025", "Аналітика Реклами 2023-2025", "Наявність на складі годинників", "Main Watchh інфа про товар"]
 FIELD_ALIASES: dict[str, dict[str, list[str]]] = {
     "customers": {
@@ -51,6 +53,31 @@ FIELD_ALIASES: dict[str, dict[str, list[str]]] = {
         "incoming_quantity": ["У дорозі", "incoming_quantity"],
         "minimum_quantity": ["Мінімальний залишок", "minimum_quantity"],
     },
+    "ad_campaigns": {
+        "name": ["Кампанія", "Campaign", "Campaign Name", "campaign_name", "name"],
+        "platform": ["Платформа", "Platform", "platform"],
+        "objective": ["Ціль", "Objective", "objective"],
+        "budget_type": ["Тип бюджету", "Budget Type", "budget_type"],
+        "daily_budget": ["Денний бюджет", "Daily Budget", "daily_budget"],
+        "total_budget": ["Загальний бюджет", "Total Budget", "total_budget"],
+        "start_date": ["Дата старту", "Start Date", "start_date"],
+        "end_date": ["Дата завершення", "End Date", "end_date"],
+        "notes": ["Нотатки", "Notes", "notes"],
+    },
+    "ad_metrics": {
+        "campaign_name": ["Кампанія", "Campaign", "campaign_name"],
+        "campaign_id": ["campaign_id"],
+        "metric_date": ["Дата", "Date", "metric_date"],
+        "spend": ["Витрати на рекламу", "Реклама", "Spend", "ad_spend", "spend"],
+        "impressions": ["Покази", "Impressions", "impressions"],
+        "reach": ["Охоплення", "Reach", "reach"],
+        "clicks": ["Кліки", "Clicks", "clicks"],
+        "messages": ["Повідомлення", "Звернення", "Direct", "Messages", "messages"],
+        "leads": ["Ліди", "Leads", "leads"],
+        "orders": ["Замовлення", "Orders", "orders"],
+        "revenue": ["Виручка", "Дохід", "Revenue", "revenue"],
+        "net_profit": ["Прибуток", "Profit", "net_profit"],
+    },
     "orders": {
         "customer_name": ["Клієнт", "Customer", "customer_name"],
         "customer_phone": ["Телефон", "Phone", "customer_phone"],
@@ -78,6 +105,8 @@ YOUR_JEWELRY_EXCEL_V1 = {
         "products": {"name": "Назва", "sku": "Артикул", "description": "Опис"},
         "inventory": {"variant_sku": "Артикул", "stock_quantity": "Кількість", "minimum_quantity": "Мінімальний залишок"},
         "orders": {"customer_name": "Клієнт", "customer_phone": "Телефон", "revenue": "Сума", "created_at": "Дата", "city": "Місто", "region": "Область"},
+        "ad_campaigns": {"name": "Кампанія", "platform": "Платформа", "objective": "Ціль"},
+        "ad_metrics": {"campaign_name": "Кампанія", "metric_date": "Дата", "spend": "Витрати на рекламу", "impressions": "Покази", "reach": "Охоплення", "clicks": "Кліки", "messages": "Повідомлення", "leads": "Ліди", "orders": "Замовлення", "revenue": "Виручка", "net_profit": "Прибуток"},
     },
 }
 
@@ -233,7 +262,7 @@ class MappingSuggestionService:
             supported_sheets=YOUR_JEWELRY_SHEETS,
             suggested_entity_type_per_sheet={
                 "Замовлення 2022-2025": "orders",
-                "Аналітика Реклами 2023-2025": "orders",
+                "Аналітика Реклами 2023-2025": "ad_metrics",
                 "Наявність на складі годинників": "inventory",
                 "Main Watchh інфа про товар": "products",
             },
@@ -249,10 +278,12 @@ class MappingValidationService:
         "product_variants": [("product_name", "product_sku"), ("variant_sku", "color", "size")],
         "inventory": [("variant_sku",), ("stock_quantity",)],
         "orders": [("customer_name", "customer_phone", "instagram_username"), ("revenue", "order_total"), ("created_at", "order_date")],
+        "ad_campaigns": [("name",)],
+        "ad_metrics": [("campaign_name", "campaign_id"), ("metric_date",)],
     }
-    numeric_fields = {"stock_quantity", "reserved_quantity", "incoming_quantity", "minimum_quantity", "purchase_price", "shipping_cost", "selling_price", "weight", "quantity", "ad_cost", "cod_fee", "other_cost", "net_profit", "revenue", "order_total"}
-    non_negative_fields = {"stock_quantity", "reserved_quantity", "incoming_quantity", "minimum_quantity", "quantity"}
-    date_fields = {"created_at", "order_date"}
+    numeric_fields = {"stock_quantity", "reserved_quantity", "incoming_quantity", "minimum_quantity", "purchase_price", "shipping_cost", "selling_price", "weight", "quantity", "ad_cost", "cod_fee", "other_cost", "net_profit", "revenue", "order_total", "daily_budget", "total_budget", "spend", "impressions", "reach", "clicks", "messages", "leads", "orders"}
+    non_negative_fields = {"stock_quantity", "reserved_quantity", "incoming_quantity", "minimum_quantity", "quantity", "daily_budget", "total_budget", "spend", "impressions", "reach", "clicks", "messages", "leads", "orders", "revenue", "order_total"}
+    date_fields = {"created_at", "order_date", "metric_date", "start_date", "end_date"}
 
     def __init__(self) -> None:
         self.normalizer = ExcelValueNormalizer()
@@ -266,6 +297,7 @@ class MappingValidationService:
             if not any(column_mapping.get(field) for field in group):
                 issues.append(issue(None, "ERROR", None, f"Required mapping missing: one of {', '.join(group)}"))
         seen_inventory: set[str] = set()
+        seen_ad_metrics: set[tuple[object, str]] = set()
         for row_number, row in enumerate(rows, start=2):
             mapped = map_row(row, column_mapping)
             normalized = self.normalized_row(mapped)
@@ -291,6 +323,12 @@ class MappingValidationService:
                 if sku in seen_inventory:
                     issues.append(issue(row_number, "WARNING", "variant_sku", "Duplicate inventory row for variant SKU", None, sku))
                 seen_inventory.add(sku)
+            if entity_type == "ad_metrics":
+                metric_key = (normalized.get("campaign_id") or normalized.get("campaign_name"), str(normalized.get("metric_date")) if normalized.get("metric_date") else None)
+                if all(metric_key) and metric_key in seen_ad_metrics:
+                    issues.append(issue(row_number, "WARNING", "metric_date", "Duplicate ad metric row for campaign/date", None, metric_key[1]))
+                if all(metric_key):
+                    seen_ad_metrics.add(metric_key)
             if lookup and workspace_id:
                 issues.extend(self._duplicate_issues(entity_type, row_number, normalized, lookup, workspace_id))
         return report_from_issues(rows, issues)
@@ -320,6 +358,12 @@ class MappingValidationService:
             return [issue(row_number, "WARNING", "sku", "Duplicate product SKU in workspace")]
         if entity_type == "product_variants" and lookup.find_variant(workspace_id, sku=normalized.get("variant_sku")):
             return [issue(row_number, "WARNING", "variant_sku", "Duplicate variant SKU in workspace")]
+        if entity_type == "ad_campaigns" and lookup.find_ad_campaign_by_name(workspace_id, normalized.get("name")):
+            return [issue(row_number, "WARNING", "name", "Duplicate ad campaign in workspace")]
+        if entity_type == "ad_metrics":
+            campaign = lookup.find_ad_campaign_by_id(workspace_id, normalized.get("campaign_id")) or lookup.find_ad_campaign_by_name(workspace_id, normalized.get("campaign_name"))
+            if campaign and normalized.get("metric_date") and lookup.find_ad_metric_by_campaign_date(workspace_id, campaign.id, normalized.get("metric_date").date()):
+                return [issue(row_number, "WARNING", "metric_date", "Duplicate ad metric in workspace")]
         return []
 
 
@@ -341,6 +385,10 @@ class EntityImportService:
             return self._inventory(workspace_id, data)
         if entity_type == "orders":
             return self._order(workspace_id, data)
+        if entity_type == "ad_campaigns":
+            return self._ad_campaign(workspace_id, data)
+        if entity_type == "ad_metrics":
+            return self._ad_metric(workspace_id, data)
         return ImportJobLogStatus.FAILED, "Unsupported entity type"
 
     def _customer(self, workspace_id: UUID, data: dict) -> tuple[ImportJobLogStatus, str]:
@@ -396,6 +444,29 @@ class EntityImportService:
         order = Order(workspace_id=workspace_id, order_number=f"IMP-{datetime.now(UTC).strftime('%Y%m%d%H%M%S%f')}", customer_id=customer.id if customer else None, status=OrderStatus.COMPLETED.value, payment_status=PaymentStatus.PAID.value, revenue=revenue, product_cost=Decimal("0"), ad_cost=data.get("ad_cost") or Decimal("0"), shipping_cost=data.get("shipping_cost") or Decimal("0"), cod_fee=data.get("cod_fee") or Decimal("0"), other_cost=data.get("other_cost") or Decimal("0"), net_profit=data.get("net_profit") or revenue, created_at=created_at, completed_at=created_at)
         self.db.add(order); self.db.flush()
         return ImportJobLogStatus.WARNING if customer is None else ImportJobLogStatus.SUCCESS, "Order created" if customer else "Order created without matched customer"
+
+    def _ad_campaign(self, workspace_id: UUID, data: dict) -> tuple[ImportJobLogStatus, str]:
+        if not data.get("name"):
+            return ImportJobLogStatus.FAILED, "Ad campaign requires name"
+        if self.lookup.find_ad_campaign_by_name(workspace_id, data.get("name")):
+            return ImportJobLogStatus.SKIPPED, "Duplicate ad campaign skipped"
+        campaign = AdCampaign(workspace_id=workspace_id, name=data["name"], platform=(data.get("platform") or "INSTAGRAM"), objective=(data.get("objective") or "MESSAGES"), budget_type=(data.get("budget_type") or "MANUAL"), daily_budget=data.get("daily_budget"), total_budget=data.get("total_budget"), start_date=data.get("start_date").date() if data.get("start_date") else None, end_date=data.get("end_date").date() if data.get("end_date") else None, notes=data.get("notes"))
+        self.db.add(campaign); self.db.flush()
+        return ImportJobLogStatus.SUCCESS, "Ad campaign created"
+
+    def _ad_metric(self, workspace_id: UUID, data: dict) -> tuple[ImportJobLogStatus, str]:
+        campaign = self.lookup.find_ad_campaign_by_id(workspace_id, data.get("campaign_id")) or self.lookup.find_ad_campaign_by_name(workspace_id, data.get("campaign_name"))
+        if campaign is None:
+            return ImportJobLogStatus.FAILED, "Ad campaign not found for metric"
+        metric_date = data.get("metric_date")
+        if metric_date is None:
+            return ImportJobLogStatus.FAILED, "Ad metric requires metric_date"
+        metric_date_value = metric_date.date()
+        if self.lookup.find_ad_metric_by_campaign_date(workspace_id, campaign.id, metric_date_value):
+            return ImportJobLogStatus.SKIPPED, "Duplicate ad metric skipped"
+        metric = AdMetric(workspace_id=workspace_id, campaign_id=campaign.id, metric_date=metric_date_value, spend=data.get("spend") or Decimal("0"), impressions=int(data.get("impressions") or 0), reach=int(data.get("reach") or 0), clicks=int(data.get("clicks") or 0), messages=int(data.get("messages") or 0), leads=int(data.get("leads") or 0), orders=int(data.get("orders") or 0), revenue=data.get("revenue") or Decimal("0"), net_profit=data.get("net_profit") or Decimal("0"))
+        self.db.add(metric); self.db.flush()
+        return ImportJobLogStatus.SUCCESS, "Ad metric created"
 
 
 class ImportService:

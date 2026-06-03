@@ -1,3 +1,5 @@
+from app.models.ad_campaign import AdCampaign, AdCampaignBudgetType, AdCampaignObjective, AdCampaignPlatform, AdCampaignStatus
+from app.models.ad_metric import AdMetric
 from app.models.audit_log import AuditLog
 from app.models.attachment import Attachment, AttachmentEntityType
 from app.models.customer_address import CustomerAddress
@@ -22,4 +24,4 @@ from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_user import WorkspaceUser
 
-__all__ = ["Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "ImportJob", "ImportJobLog", "ImportJobLogStatus", "ImportJobStatus", "LeadStatus", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "User", "Workspace", "WorkspaceUser"]
+__all__ = ["AdCampaign", "AdCampaignBudgetType", "AdCampaignObjective", "AdCampaignPlatform", "AdCampaignStatus", "AdMetric", "Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "ImportJob", "ImportJobLog", "ImportJobLogStatus", "ImportJobStatus", "LeadStatus", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "User", "Workspace", "WorkspaceUser"]

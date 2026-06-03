@@ -202,13 +202,19 @@ pytest
 
 ## Next recommended sprint
 
-Sprint 1.8 should build on the import center with operational integrations while avoiding premature coupling:
+Sprint 1.9 should build on the manual advertising engine with operational readiness while still avoiding external API coupling:
 
-1. Google Sheets import planning;
-2. shipment provider integration discovery;
-3. membership management;
-4. audit log viewer;
-5. role-specific route examples;
-6. frontend authentication shell.
+1. shipment provider integration discovery;
+2. membership management;
+3. audit log viewer;
+4. role-specific route examples;
+5. frontend authentication shell;
+6. Meta Ads API planning without live integration.
 
-Do not add Advertising or standalone Shipment/Payment modules until orders, inventory, lead/customer workflow, and workspace administration surfaces are stable.
+Do not add Nova Poshta, Instagram Graph, live Meta Ads, or AI Insights until the manual workflows and audit surfaces are stable.
+
+## Sprint 1.8 – Advertising & ROAS Engine
+
+Sellora now includes manual advertising campaign and daily metric tracking under `/api/v1/advertising`. The module calculates CPA, CPL, CPC, CPM, CTR, ROAS, and ROI from manually entered metrics. OWNER can create/update/delete campaigns and metrics; ANALYST can read full analytics; MANAGER can read basic performance while profit-sensitive fields are omitted.
+
+Frontend route `/advertising` provides a campaign list, daily metrics table, KPI cards, performance table, and trend chart. The Import Center also supports `ad_campaigns` and `ad_metrics` mappings for dry-run and create-only imports without storing private spreadsheet data in the repository.

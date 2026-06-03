@@ -108,7 +108,7 @@ def _import_service(tmp_path: Path) -> ImportService:
     service.logs = FakeLogs()
     service.parser = FakeParser()
     service.validator = MappingValidationService()
-    service.lookup = SimpleNamespace(find_customer=lambda *args, **kwargs: None, find_product_by_sku=lambda *args, **kwargs: None, find_variant=lambda *args, **kwargs: None)
+    service.lookup = SimpleNamespace(find_customer=lambda *args, **kwargs: None, find_product_by_sku=lambda *args, **kwargs: None, find_variant=lambda *args, **kwargs: None, find_ad_campaign_by_name=lambda *args, **kwargs: None, find_ad_campaign_by_id=lambda *args, **kwargs: None, find_ad_metric_by_campaign_date=lambda *args, **kwargs: None)
     service.entity_importer = SimpleNamespace(import_row=lambda workspace_id, entity_type, row, mapping: (ImportJobLogStatus.SUCCESS if row.get("Phone") else ImportJobLogStatus.FAILED, "ok" if row.get("Phone") else "missing"))
     service.audit_logs = FakeAuditLogs()
     return service
@@ -297,3 +297,39 @@ def test_workspace_isolation_during_dry_run(tmp_path) -> None:
 
     with pytest.raises(Exception):
         service.dry_run(uuid4(), job.id, "customers", "Customers", {"name": "Name"}, actor_user_id=uuid4())
+
+
+def test_import_dry_run_supports_ad_metrics_with_synthetic_data(tmp_path) -> None:
+    service = _import_service(tmp_path)
+    job = service.jobs.job
+    service.parser.rows = [{"Campaign": "Synthetic Campaign", "Date": "2026-06-01", "Spend": "100", "Impressions": "1000", "Clicks": "50", "Leads": "5", "Orders": "1", "Revenue": "250", "Profit": "75"}]
+    service.lookup = SimpleNamespace(
+        find_customer=lambda *args, **kwargs: None,
+        find_product_by_sku=lambda *args, **kwargs: None,
+        find_variant=lambda *args, **kwargs: None,
+        find_ad_campaign_by_name=lambda *args, **kwargs: SimpleNamespace(id=uuid4()),
+        find_ad_campaign_by_id=lambda *args, **kwargs: None,
+        find_ad_metric_by_campaign_date=lambda *args, **kwargs: None,
+    )
+
+    report = service.dry_run(job.workspace_id, job.id, "ad_metrics", "Ads", {"campaign_name": "Campaign", "metric_date": "Date", "spend": "Spend", "impressions": "Impressions", "clicks": "Clicks", "leads": "Leads", "orders": "Orders", "revenue": "Revenue", "net_profit": "Profit"}, actor_user_id=uuid4())
+
+    assert report.total_rows == 1
+    assert report.ready_to_import_rows == 1
+    assert report.error_rows == 0
+
+
+def test_advertising_mapping_suggestion_uses_synthetic_columns_only() -> None:
+    suggestion = MappingSuggestionService().suggest(["Кампанія", "Дата", "Витрати на рекламу", "Покази", "Охоплення", "Кліки", "Повідомлення", "Ліди", "Замовлення", "Виручка"], "ad_metrics")
+
+    assert suggestion.suggested_mapping["campaign_name"] == "Кампанія"
+    assert suggestion.suggested_mapping["metric_date"] == "Дата"
+    assert suggestion.suggested_mapping["spend"] == "Витрати на рекламу"
+
+
+def test_advertising_import_tests_use_only_synthetic_data() -> None:
+    source = Path(__file__).read_text()
+    private_filename = "Your " + "Jewelry (Shop).xlsx"
+
+    assert private_filename not in source
+    assert "Synthetic Campaign" in source

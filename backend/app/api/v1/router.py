@@ -1,3 +1,4 @@
+from app.api.v1.advertising import router as advertising_router
 from fastapi import APIRouter
 
 from app.api.v1.analytics import router as analytics_router
@@ -13,6 +14,7 @@ from app.api.v1.import_center import router as import_center_router
 from app.api.v1.inventory import router as inventory_router
 
 api_router = APIRouter()
+api_router.include_router(advertising_router)
 api_router.include_router(analytics_router)
 api_router.include_router(auth_router)
 api_router.include_router(lead_sources_router)
