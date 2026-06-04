@@ -22,6 +22,7 @@ class InventoryResponse(BaseModel):
 
 
 class InventoryUpdate(BaseModel):
+    incoming_quantity: int | None = Field(default=None, ge=0)
     minimum_quantity: int | None = Field(default=None, ge=0)
 
 

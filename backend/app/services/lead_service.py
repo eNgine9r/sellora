@@ -68,7 +68,7 @@ class LeadService:
             user_id=actor_user_id,
             entity_type="Lead",
             entity_id=lead.id,
-            action="UPDATE",
+            action="LEAD_UPDATE",
             old_value=old_value,
             new_value=snapshot(lead),
         )

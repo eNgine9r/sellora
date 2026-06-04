@@ -2,11 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { LeadForm } from "@/features/leads/components/lead-form";
 import { LeadTable } from "@/features/leads/components/lead-table";
 import { ApiError, safeApiErrorMessage } from "@/services/api";
-import { createLead, fetchLeads, fetchLeadSources, LeadCreatePayload } from "@/services/crm";
-import { LeadStatus } from "@/types/crm";
+import { createLead, fetchLeads, fetchLeadSources, LeadCreatePayload, updateLead } from "@/services/crm";
+import { Lead, LeadStatus } from "@/types/crm";
+import { buildLeadUpdatePayload } from "@/lib/payload-builders";
 import { useAuth } from "@/hooks/use-auth";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 
@@ -25,14 +27,16 @@ function messageForApiError(error: unknown, context: "list" | "create" | "source
 
 export default function LeadsPage() {
   const queryClient = useQueryClient();
-  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
+  const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<LeadStatus | "">("");
   const [leadSourceId, setLeadSourceId] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const authReady = authStatus !== "loading";
   const enabled = authReady && authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
+  const canEdit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
 
   const filters = useMemo(() => ({ search, status, leadSourceId }), [search, status, leadSourceId]);
   const leadsQuery = useQuery({ queryKey: ["leads", workspaceId, filters], queryFn: () => fetchLeads(workspaceId, filters, undefined), enabled });
@@ -44,9 +48,17 @@ export default function LeadsPage() {
       setIsCreateOpen(false);
     },
   });
+  const updateMutation = useMutation({
+    mutationFn: (values: Record<string, string>) => updateLead(workspaceId, editingLead?.id ?? "", buildLeadUpdatePayload(values), undefined),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["leads", workspaceId] });
+      setEditingLead(null);
+    },
+  });
 
   const listError = leadsQuery.isError ? messageForApiError(leadsQuery.error, "list") : null;
   const createError = createMutation.isError ? messageForApiError(createMutation.error, "create") : null;
+  const updateError = updateMutation.isError ? messageForApiError(updateMutation.error, "create") : null;
   const sourcesError = sourcesQuery.isError ? messageForApiError(sourcesQuery.error, "sources") : null;
 
   return (
@@ -84,7 +96,7 @@ export default function LeadsPage() {
             action={<button className="min-h-11 rounded-2xl bg-blue-600 px-4 text-sm font-black text-white" onClick={() => setIsCreateOpen(true)}>Create lead</button>}
           />
         ) : null}
-        {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={leadsQuery.data ?? []} leadSources={sourcesQuery.data ?? []} /> : null}
+        {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={leadsQuery.data ?? []} leadSources={sourcesQuery.data ?? []} onEdit={canEdit ? setEditingLead : undefined} /> : null}
 
         {isCreateOpen ? (
           <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/40 p-4">
@@ -107,6 +119,7 @@ export default function LeadsPage() {
             </div>
           </div>
         ) : null}
+        {editingLead ? <EditRecordDialog title="Edit lead" fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "instagram_profile_url", label: "Instagram profile URL" }, { name: "lead_source_id", label: "Lead source ID" }, { name: "status", label: "Status", type: "select", options: STATUSES.filter(Boolean).map((item) => ({ value: item, label: item })) }, { name: "expected_revenue", label: "Expected revenue", type: "number" }, { name: "loss_reason", label: "Loss reason", type: "textarea" }, { name: "notes", label: "Notes", type: "textarea" }]} initialValues={editingLead} isSubmitting={updateMutation.isPending} submitError={updateError} onClose={() => setEditingLead(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
       </div>
     </main>
   );

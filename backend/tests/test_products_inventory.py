@@ -59,6 +59,12 @@ class FakeVariants:
                 return variant
         return None
 
+    def find_by_sku(self, workspace_id, sku):
+        for variant in self.variants.values():
+            if variant.workspace_id == workspace_id and variant.sku == sku:
+                return variant
+        return None
+
     def create(self, variant):
         variant.id = variant.id or uuid4()
         self.variants[variant.id] = variant
@@ -229,3 +235,31 @@ def test_product_variant_create_schema_accepts_valid_payload() -> None:
 
     assert payload.product_id == product_id
     assert payload.sku == "VAR-1"
+
+
+def test_product_variant_update_preserves_sku_uniqueness() -> None:
+    workspace_id = uuid4()
+    product = Product(id=uuid4(), workspace_id=workspace_id, name="Synthetic Product", sku="SYN-1")
+    service = _product_service(product)
+    first = service.create_variant(workspace_id, ProductVariantCreate(product_id=product.id, sku="SYN-1-A", color="A"), actor_user_id=uuid4())
+    second = service.create_variant(workspace_id, ProductVariantCreate(product_id=product.id, sku="SYN-1-B", color="B"), actor_user_id=uuid4())
+
+    from app.schemas.product import ProductVariantUpdate
+    try:
+        service.update_variant(workspace_id, second.id, ProductVariantUpdate(sku=first.sku), actor_user_id=uuid4())
+    except ProductServiceError as exc:
+        assert "SKU" in str(exc)
+    else:
+        raise AssertionError("duplicate variant SKU should fail")
+
+
+def test_inventory_update_can_correct_incoming_and_minimum_quantities() -> None:
+    from app.schemas.inventory import InventoryUpdate
+    inventory = Inventory(id=uuid4(), workspace_id=uuid4(), product_variant_id=uuid4(), stock_quantity=5, reserved_quantity=0, incoming_quantity=0, minimum_quantity=1)
+    service = _inventory_service(inventory)
+
+    updated = service.update_inventory(inventory.workspace_id, inventory.id, InventoryUpdate(incoming_quantity=4, minimum_quantity=2), actor_user_id=uuid4())
+
+    assert updated.incoming_quantity == 4
+    assert updated.minimum_quantity == 2
+    assert service.audit_logs.records[-1]["action"] == "INVENTORY_ADJUSTMENT"

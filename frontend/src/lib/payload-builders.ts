@@ -24,6 +24,14 @@ const AD_PLATFORMS = ["META", "INSTAGRAM", "FACEBOOK", "TIKTOK", "GOOGLE", "TELE
 const AD_CAMPAIGN_STATUSES = ["ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"] as const;
 const AD_OBJECTIVES = ["MESSAGES", "SALES", "TRAFFIC", "AWARENESS", "FOLLOWERS", "OTHER"] as const;
 const AD_BUDGET_TYPES = ["DAILY", "LIFETIME", "MANUAL"] as const;
+function cleanOptionalBoolean(value: string | number | boolean | null | undefined): boolean | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "boolean") return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (["true", "1", "yes", "так", "да"].includes(normalized)) return true;
+  if (["false", "0", "no", "ні", "нет"].includes(normalized)) return false;
+  return null;
+}
 
 type RawLeadValues = Partial<Record<keyof LeadCreatePayload, string | number | null | undefined>> & { name?: string };
 
@@ -42,7 +50,7 @@ export function buildLeadCreatePayload(values: RawLeadValues): LeadCreatePayload
   };
 }
 
-type RawProductValues = Partial<ProductCreatePayload> & { image_url?: string };
+type RawProductValues = { name?: string; sku?: string | null; description?: string | null; category?: string | null; brand?: string | null; image_url?: string | null; is_active?: string | number | boolean | null };
 
 export function buildProductCreatePayload(values: RawProductValues): ProductCreatePayload {
   const imageUrl = cleanOptionalString(values.image_url);
@@ -52,12 +60,12 @@ export function buildProductCreatePayload(values: RawProductValues): ProductCrea
     description: cleanOptionalString(values.description),
     category: cleanOptionalString(values.category),
     brand: cleanOptionalString(values.brand),
-    is_active: values.is_active ?? true,
+    is_active: cleanOptionalBoolean(values.is_active) ?? true,
     images: imageUrl ? [{ image_url: imageUrl, sort_order: 0, is_primary: true }] : [],
   };
 }
 
-type RawProductVariantValues = Partial<Record<keyof ProductVariantCreatePayload, string | number | null | undefined>>;
+type RawProductVariantValues = Partial<Record<keyof ProductVariantCreatePayload, string | number | boolean | null | undefined>>;
 
 export function buildProductVariantCreatePayload(values: RawProductVariantValues): ProductVariantCreatePayload {
   return {
@@ -67,7 +75,7 @@ export function buildProductVariantCreatePayload(values: RawProductVariantValues
     size: cleanOptionalString(values.size),
     price: cleanOptionalNumber(values.price),
     barcode: cleanOptionalString(values.barcode),
-    is_active: values.is_active === undefined ? true : Boolean(values.is_active),
+    is_active: cleanOptionalBoolean(values.is_active) ?? true,
     initial_stock_quantity: Math.max(0, cleanRequiredInteger(values.initial_stock_quantity)),
     minimum_quantity: Math.max(0, cleanRequiredInteger(values.minimum_quantity)),
   };
@@ -122,7 +130,7 @@ export function buildOrderCreatePayload(values: RawOrderValues): OrderCreatePayl
   };
 }
 
-type RawShipmentValues = Partial<Record<keyof ShipmentCreatePayload, string | number | null | undefined>>;
+type RawShipmentValues = Partial<Record<keyof ShipmentCreatePayload, string | number | boolean | null | undefined>>;
 
 export function buildShipmentCreatePayload(values: RawShipmentValues): ShipmentCreatePayload {
   return stripUndefinedFields({
@@ -173,4 +181,39 @@ export function buildAdMetricCreatePayload(values: Record<string, string | numbe
     revenue: Math.max(0, cleanRequiredNumber(values.revenue)),
     net_profit: cleanRequiredNumber(values.net_profit),
   };
+}
+
+
+export function buildLeadUpdatePayload(values: RawLeadValues & { status?: string; loss_reason?: string | null }) {
+  return stripUndefinedFields({
+    ...buildLeadCreatePayload(values),
+    status: cleanOptionalEnum(values.status, ["NEW", "IN_PROGRESS", "QUALIFIED", "CONVERTED", "LOST"] as const),
+    loss_reason: cleanOptionalString(values.loss_reason),
+  });
+}
+export const buildCustomerUpdatePayload = buildCustomerCreatePayload;
+export function buildProductUpdatePayload(values: RawProductValues) {
+  const payload = buildProductCreatePayload(values);
+  const { images: _images, ...update } = payload;
+  return update;
+}
+export function buildProductVariantUpdatePayload(values: RawProductVariantValues) {
+  const payload = buildProductVariantCreatePayload({ ...values, product_id: "00000000-0000-0000-0000-000000000000", initial_stock_quantity: 0, minimum_quantity: 0 });
+  const { product_id: _product_id, initial_stock_quantity: _initial, minimum_quantity: _minimum, ...update } = payload;
+  return update;
+}
+export function buildInventoryUpdatePayload(values: Record<string, string | number | null | undefined>) {
+  return stripUndefinedFields({ incoming_quantity: cleanOptionalInteger(values.incoming_quantity) ?? undefined, minimum_quantity: cleanOptionalInteger(values.minimum_quantity) ?? undefined });
+}
+export function buildOrderUpdatePayload(values: RawOrderValues) {
+  return stripUndefinedFields({ payment_status: cleanOptionalEnum(values.payment_status, PAYMENT_STATUSES) ?? undefined, ad_cost: cleanOptionalNumber(values.ad_cost) ?? undefined, shipping_cost: cleanOptionalNumber(values.shipping_cost) ?? undefined, cod_fee: cleanOptionalNumber(values.cod_fee) ?? undefined, other_cost: cleanOptionalNumber(values.other_cost) ?? undefined, notes: cleanOptionalString(values.notes) });
+}
+export function buildShipmentUpdatePayload(values: RawShipmentValues) {
+  const { order_id: _order_id, ...payload } = buildShipmentCreatePayload({ ...values, order_id: "00000000-0000-0000-0000-000000000000" });
+  return payload;
+}
+export const buildAdCampaignUpdatePayload = buildAdCampaignCreatePayload;
+export function buildAdMetricUpdatePayload(values: Record<string, string | number | null | undefined>) {
+  const { campaign_id: _campaign_id, ...payload } = buildAdMetricCreatePayload({ ...values, campaign_id: "00000000-0000-0000-0000-000000000000" });
+  return payload;
 }

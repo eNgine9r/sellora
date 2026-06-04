@@ -101,7 +101,7 @@ class OrderService:
         for field, value in payload.model_dump(exclude_unset=True).items():
             setattr(order, field, value.value if hasattr(value, "value") else value)
         self._recalculate_profit(order)
-        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="UPDATE", old_value=old_value, new_value=snapshot(order))
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="ORDER_UPDATE", old_value=old_value, new_value=snapshot(order))
         self.db.commit()
         self.db.refresh(order)
         return order

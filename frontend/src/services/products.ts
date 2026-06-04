@@ -45,6 +45,10 @@ export async function createProduct(workspaceId: string, payload: ProductCreateP
   });
 }
 
+export async function updateProduct(workspaceId: string, productId: string, payload: Partial<Omit<ProductCreatePayload, "images">>, token?: string): Promise<Product> {
+  return apiRequest<Product>(`/products/${productId}`, { method: "PUT", headers: workspaceHeaders(workspaceId, token), body: JSON.stringify(payload) });
+}
+
 export async function fetchProductVariants(workspaceId: string, productId?: string, token?: string): Promise<ProductVariant[]> {
   const params = new URLSearchParams();
   if (productId?.trim()) params.set("product_id", productId.trim());
@@ -60,6 +64,10 @@ export async function createProductVariant(workspaceId: string, payload: Product
   });
 }
 
+export async function updateProductVariant(workspaceId: string, variantId: string, payload: Partial<Omit<ProductVariantCreatePayload, "product_id" | "initial_stock_quantity" | "minimum_quantity">>, token?: string): Promise<ProductVariant> {
+  return apiRequest<ProductVariant>(`/products/variants/${variantId}`, { method: "PUT", headers: workspaceHeaders(workspaceId, token), body: JSON.stringify(payload) });
+}
+
 export async function fetchInventory(workspaceId: string, lowStockOnly = false, token?: string): Promise<Inventory[]> {
   const params = new URLSearchParams();
   if (lowStockOnly) params.set("low_stock_only", "true");
@@ -72,6 +80,10 @@ export async function fetchInventoryTransactions(workspaceId: string, inventoryI
   if (inventoryId?.trim()) params.set("inventory_id", inventoryId.trim());
   const query = params.toString();
   return apiRequest<InventoryTransaction[]>(`/inventory/transactions${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
+}
+
+export async function updateInventory(workspaceId: string, inventoryId: string, payload: { incoming_quantity?: number | null; minimum_quantity?: number | null }, token?: string): Promise<Inventory> {
+  return apiRequest<Inventory>(`/inventory/${inventoryId}`, { method: "PUT", headers: workspaceHeaders(workspaceId, token), body: JSON.stringify(payload) });
 }
 
 export async function createInventoryTransaction(

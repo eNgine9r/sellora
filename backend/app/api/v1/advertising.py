@@ -14,6 +14,7 @@ from app.schemas.advertising import (
     AdCampaignUpdate,
     AdMetricCreate,
     AdMetricResponse,
+    AdMetricUpdate,
     AdvertisingSummaryResponse,
     AdvertisingTrendPoint,
     CampaignPerformanceResponse,
@@ -77,6 +78,14 @@ def list_metrics(workspace_id: UUID = Depends(get_workspace_id), current_user: U
 def create_metric(payload: AdMetricCreate, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_roles(RoleName.OWNER)), db: Session = Depends(get_db)) -> AdMetricResponse:
     try:
         return AdMetricService(db).create(workspace_id, payload, current_user.id)
+    except AdvertisingServiceError as exc:
+        raise _bad_request(exc)
+
+
+@router.put("/metrics/{metric_id}", response_model=AdMetricResponse)
+def update_metric(metric_id: UUID, payload: AdMetricUpdate, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_roles(RoleName.OWNER)), db: Session = Depends(get_db)) -> AdMetricResponse:
+    try:
+        return AdMetricService(db).update(workspace_id, metric_id, payload, current_user.id, _include_sensitive(current_user, workspace_id))
     except AdvertisingServiceError as exc:
         raise _bad_request(exc)
 

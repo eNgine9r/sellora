@@ -40,12 +40,18 @@ export async function fetchLeads(workspaceId: string, filters: LeadFilters, toke
   return apiRequest<Lead[]>(`/leads${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }
 
+export type LeadUpdatePayload = Partial<LeadCreatePayload> & { status?: LeadStatus | null; loss_reason?: string | null };
+
 export async function createLead(workspaceId: string, payload: LeadCreatePayload, token?: string): Promise<Lead> {
   return apiRequest<Lead>("/leads", {
     method: "POST",
     headers: workspaceHeaders(workspaceId, token),
     body: JSON.stringify(payload),
   });
+}
+
+export async function updateLead(workspaceId: string, leadId: string, payload: LeadUpdatePayload, token?: string): Promise<Lead> {
+  return apiRequest<Lead>(`/leads/${leadId}`, { method: "PUT", headers: workspaceHeaders(workspaceId, token), body: JSON.stringify(payload) });
 }
 
 export async function fetchCustomers(workspaceId: string, search?: string, token?: string): Promise<Customer[]> {
@@ -69,4 +75,8 @@ export async function createCustomer(workspaceId: string, payload: CustomerCreat
     headers: workspaceHeaders(workspaceId, token),
     body: JSON.stringify(payload),
   });
+}
+
+export async function updateCustomer(workspaceId: string, customerId: string, payload: Partial<CustomerCreatePayload>, token?: string): Promise<Customer> {
+  return apiRequest<Customer>(`/customers/${customerId}`, { method: "PUT", headers: workspaceHeaders(workspaceId, token), body: JSON.stringify(payload) });
 }

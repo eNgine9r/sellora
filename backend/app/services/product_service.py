@@ -62,7 +62,7 @@ class ProductService:
             user_id=actor_user_id,
             entity_type="Product",
             entity_id=product.id,
-            action="UPDATE",
+            action="PRODUCT_UPDATE",
             old_value=old_value,
             new_value=snapshot(product),
         )
@@ -116,6 +116,8 @@ class ProductService:
             raise ProductServiceError("Product does not exist in this workspace")
         if self.variants.find_by_identity(payload.product_id, payload.color, payload.size) is not None:
             raise ProductServiceError("Product variant with this product, color, and size already exists")
+        if self.variants.find_by_sku(workspace_id, payload.sku) is not None:
+            raise ProductServiceError("Product variant SKU already exists")
         variant = self.variants.create(
             ProductVariant(
                 workspace_id=workspace_id,
@@ -161,6 +163,10 @@ class ProductService:
         duplicate = self.variants.find_by_identity(variant.product_id, new_color, new_size)
         if duplicate and duplicate.id != variant.id:
             raise ProductServiceError("Product variant with this product, color, and size already exists")
+        new_sku = payload.sku if payload.sku is not None else variant.sku
+        duplicate_sku = self.variants.find_by_sku(workspace_id, new_sku)
+        if duplicate_sku and duplicate_sku.id != variant.id:
+            raise ProductServiceError("Product variant SKU already exists")
         old_value = snapshot(variant)
         for field, value in payload.model_dump(exclude_unset=True).items():
             setattr(variant, field, value)
@@ -169,7 +175,7 @@ class ProductService:
             user_id=actor_user_id,
             entity_type="ProductVariant",
             entity_id=variant.id,
-            action="UPDATE",
+            action="PRODUCT_VARIANT_UPDATE",
             old_value=old_value,
             new_value=snapshot(variant),
         )

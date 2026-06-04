@@ -250,3 +250,30 @@ def test_ad_metric_create_schema_rejects_negative_numbers() -> None:
         assert any(error["loc"] == ("spend",) for error in exc.errors())
     else:
         raise AssertionError("AdMetricCreate should reject negative spend")
+
+
+def test_ad_metric_update_changes_safe_fields_and_audits() -> None:
+    from app.schemas.advertising import AdMetricUpdate
+    service, workspace_id, campaign_id = _metric_service()
+    actor_id = uuid4()
+    metric = service.create(workspace_id, AdMetricCreate(campaign_id=campaign_id, metric_date=date.today(), spend=Decimal("10")), actor_id)
+
+    updated = service.update(workspace_id, metric.id, AdMetricUpdate(spend=Decimal("12.50"), clicks=3), actor_id)
+
+    assert updated.spend == Decimal("12.50")
+    assert updated.clicks == 3
+    assert "AD_METRIC_UPDATE" in service.audit_logs.actions
+
+
+def test_ad_metric_update_rejects_duplicate_campaign_date() -> None:
+    from app.schemas.advertising import AdMetricUpdate
+    service, workspace_id, campaign_id = _metric_service()
+    actor_id = uuid4()
+    metric = service.create(workspace_id, AdMetricCreate(campaign_id=campaign_id, metric_date=date.today(), spend=Decimal("10")), actor_id)
+    duplicate = AdMetric(id=uuid4(), workspace_id=workspace_id, campaign_id=campaign_id, metric_date=date.today() + timedelta(days=1), spend=Decimal("1"), impressions=0, reach=0, clicks=0, messages=0, leads=0, orders=0, revenue=Decimal("0"), net_profit=Decimal("0"))
+    service.metrics.metric = duplicate
+    original_get = service.metrics.get
+    service.metrics.get = lambda workspace_id, metric_id: metric if metric_id == metric.id else original_get(workspace_id, metric_id)
+
+    with pytest.raises(AdvertisingServiceError):
+        service.update(workspace_id, metric.id, AdMetricUpdate(metric_date=duplicate.metric_date), actor_id)

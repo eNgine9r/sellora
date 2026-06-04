@@ -16,6 +16,7 @@ from app.schemas.advertising import (
     AdCampaignUpdate,
     AdMetricCreate,
     AdMetricResponse,
+    AdMetricUpdate,
     AdvertisingSummaryResponse,
     AdvertisingTrendPoint,
     CampaignPerformanceResponse,
@@ -90,6 +91,25 @@ class AdMetricService:
         self.metrics.create(metric)
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="AdMetric", entity_id=metric.id, action="AD_METRIC_CREATE", new_value=snapshot(metric))
         self.db.commit(); self.db.refresh(metric); return metric_response(metric, include_sensitive=True)
+
+
+    def update(self, workspace_id: UUID, metric_id: UUID, payload: AdMetricUpdate, actor_user_id: UUID | None, include_sensitive: bool = True) -> AdMetricResponse:
+        metric = self.metrics.get(workspace_id, metric_id)
+        if metric is None:
+            raise AdvertisingServiceError("Advertising metric not found")
+        values = payload.model_dump(exclude_unset=True)
+        next_date = values.get("metric_date", metric.metric_date)
+        duplicate = self.metrics.find_by_campaign_date(workspace_id, metric.campaign_id, next_date)
+        if duplicate and duplicate.id != metric.id:
+            raise AdvertisingServiceError("Daily advertising metrics already exist for this campaign and date")
+        for field in self.non_negative_fields:
+            if field in values and values[field] is not None and values[field] < 0:
+                raise AdvertisingServiceError(f"{field} cannot be negative")
+        old_value = snapshot(metric)
+        for field, value in values.items():
+            setattr(metric, field, value)
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="AdMetric", entity_id=metric.id, action="AD_METRIC_UPDATE", old_value=old_value, new_value=snapshot(metric))
+        self.db.commit(); self.db.refresh(metric); return metric_response(metric, include_sensitive=include_sensitive)
 
     def delete(self, workspace_id: UUID, metric_id: UUID, actor_user_id: UUID | None) -> None:
         metric = self.metrics.get(workspace_id, metric_id)

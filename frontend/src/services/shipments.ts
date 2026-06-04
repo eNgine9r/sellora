@@ -17,6 +17,10 @@ export async function fetchShipmentSummary(workspaceId: string): Promise<Shipmen
   return apiRequest<ShipmentSummary>("/shipments/summary", { headers: workspaceHeaders(workspaceId) });
 }
 
+export async function updateShipment(workspaceId: string, shipmentId: string, payload: Partial<Omit<ShipmentCreatePayload, "order_id">>): Promise<Shipment> {
+  return apiRequest<Shipment>(`/shipments/${shipmentId}`, { method: "PUT", headers: workspaceHeaders(workspaceId), body: JSON.stringify(payload) });
+}
+
 export async function createShipment(workspaceId: string, payload: ShipmentCreatePayload): Promise<Shipment> {
   return apiRequest<Shipment>("/shipments", { method: "POST", headers: workspaceHeaders(workspaceId), body: JSON.stringify(payload) });
 }

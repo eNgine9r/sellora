@@ -84,3 +84,30 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 14. Create a test order from an imported variant.
 15. Verify dashboard still loads.
 16. Confirm no private business data is exposed in UI, docs, logs, screenshots, or tests.
+
+## MVP Edit Flow QA
+
+- Edit a lead name/status/notes and confirm the list refreshes.
+- Edit a customer name/phone/city and confirm customer details still load.
+- Edit a product SKU/name/category/brand/status and confirm variants and inventory are preserved.
+- Edit a product variant SKU/color/size/price/barcode/status and confirm duplicate SKUs are rejected.
+- Adjust inventory with a stock transaction, then update incoming and minimum quantity.
+- Edit order safe fields only: payment status, costs, and notes; keep status changes through status actions.
+- Edit shipment tracking/carrier/recipient/city/warehouse/cost fields; keep status changes through shipment status actions.
+- Edit an advertising campaign budget/status/date/notes.
+- Edit an advertising metric spend/counts/revenue/profit and confirm duplicate campaign/date is rejected.
+- Verify an analyst account cannot perform edit mutations.
+- Re-check create flows, Import Center dry-run/import, dashboard loading, and workspace header behavior after edits.
+
+## Edit Action Discoverability QA
+
+- Leads: open `/leads`, find a lead row, click **Edit lead**, save a safe field, and verify the list refreshes.
+- Customers: open `/customers`, find a customer row, click **Edit customer**; also select a customer and use the detail-panel **Edit customer** button.
+- Products: open `/products`, find a product row, click **Edit product**, and verify variants and inventory remain linked.
+- Variants: open `/products`, scroll to **Manage product variants**, find a variant row, click **Edit variant**, and confirm the create/edit variant dialog does not overflow on desktop or mobile.
+- Inventory: open `/inventory`, use row **Edit thresholds** for incoming/minimum values, then use the transaction form **Adjust stock** for stock corrections.
+- Orders: open `/orders`, find an order row, click **Edit order**, and edit only the safe cost/payment/notes fields.
+- Shipments: open `/shipments`, find a shipment row or mobile card, click **Edit shipment**, and keep status changes separate from editing.
+- Advertising campaigns: open `/advertising`, use the campaigns table **Edit campaign** action.
+- Advertising metrics: open `/advertising`, use the daily metrics table **Edit metric** action.
+- RBAC: verify OWNER and allowed MANAGER accounts see permitted edit actions, while ANALYST users see read-only states or no edit action.
