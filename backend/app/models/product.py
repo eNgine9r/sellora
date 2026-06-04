@@ -11,6 +11,8 @@ class Product(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Timest
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     sku: Mapped[str | None] = mapped_column(String(120), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    brand: Mapped[str | None] = mapped_column(String(120), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     variants = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")

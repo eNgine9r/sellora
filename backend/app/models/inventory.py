@@ -14,6 +14,7 @@ class Inventory(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Time
     product_variant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("product_variants.id", ondelete="CASCADE"), unique=True, nullable=False)
     stock_quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     reserved_quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    incoming_quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     minimum_quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     variant = relationship("ProductVariant", back_populates="inventory")

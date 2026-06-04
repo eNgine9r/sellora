@@ -65,3 +65,22 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Verify cards stack vertically without horizontal page overflow.
 - Verify tables either become cards or stay inside controlled horizontal scroll containers.
 - Verify forms and dialogs fit phone screens and primary buttons remain touch-friendly.
+
+## Real Product Catalog Import QA
+
+1. Login.
+2. Open `/settings/import`.
+3. Upload a private product catalog template from local storage.
+4. Select `your_jewelry_product_catalog_v1`.
+5. Click Suggest mapping.
+6. Preview rows.
+7. Run dry-run.
+8. Review product, variant, inventory, and image counts.
+9. Review sample warnings and errors.
+10. Import a small private test subset first when possible.
+11. Verify `/products`.
+12. Verify variants are available in selects.
+13. Verify `/inventory`.
+14. Create a test order from an imported variant.
+15. Verify dashboard still loads.
+16. Confirm no private business data is exposed in UI, docs, logs, screenshots, or tests.

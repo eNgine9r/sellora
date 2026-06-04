@@ -12,6 +12,8 @@ export type ProductCreatePayload = {
   name: string;
   sku: string | null;
   description: string | null;
+  category?: string | null;
+  brand?: string | null;
   is_active?: boolean;
   images: { image_url: string; alt_text?: string | null; sort_order?: number; is_primary?: boolean }[];
 };
@@ -22,6 +24,8 @@ export type ProductVariantCreatePayload = {
   color: string | null;
   size: string | null;
   price: number | null;
+  barcode?: string | null;
+  is_active?: boolean;
   initial_stock_quantity: number;
   minimum_quantity: number;
 };

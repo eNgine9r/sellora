@@ -124,6 +124,8 @@ class ProductService:
                 color=payload.color,
                 size=payload.size,
                 price=payload.price,
+                barcode=payload.barcode,
+                is_active=payload.is_active,
             )
         )
         from app.models.inventory import Inventory
@@ -134,6 +136,7 @@ class ProductService:
                 product_variant_id=variant.id,
                 stock_quantity=payload.initial_stock_quantity,
                 reserved_quantity=0,
+                incoming_quantity=0,
                 minimum_quantity=payload.minimum_quantity,
             )
         )

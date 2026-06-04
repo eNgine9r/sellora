@@ -12,6 +12,7 @@ class InventoryResponse(BaseModel):
     product_variant_id: UUID
     stock_quantity: int
     reserved_quantity: int
+    incoming_quantity: int
     minimum_quantity: int
     is_low_stock: bool
     created_at: datetime

@@ -50,6 +50,8 @@ export function buildProductCreatePayload(values: RawProductValues): ProductCrea
     name: cleanRequiredString(values.name),
     sku: cleanOptionalString(values.sku),
     description: cleanOptionalString(values.description),
+    category: cleanOptionalString(values.category),
+    brand: cleanOptionalString(values.brand),
     is_active: values.is_active ?? true,
     images: imageUrl ? [{ image_url: imageUrl, sort_order: 0, is_primary: true }] : [],
   };
@@ -64,6 +66,8 @@ export function buildProductVariantCreatePayload(values: RawProductVariantValues
     color: cleanOptionalString(values.color),
     size: cleanOptionalString(values.size),
     price: cleanOptionalNumber(values.price),
+    barcode: cleanOptionalString(values.barcode),
+    is_active: values.is_active === undefined ? true : Boolean(values.is_active),
     initial_stock_quantity: Math.max(0, cleanRequiredInteger(values.initial_stock_quantity)),
     minimum_quantity: Math.max(0, cleanRequiredInteger(values.minimum_quantity)),
   };
