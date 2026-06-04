@@ -52,6 +52,9 @@ def your_jewelry_preset() -> MappingPresetResponse:
     return MappingPresetResponse(**YOUR_JEWELRY_EXCEL_V1)
 
 
+@router.get("/presets/your_jewelry_product_catalog_v1", response_model=MappingPresetResponse, dependencies=[Depends(require_roles(RoleName.OWNER))])
+def your_jewelry_product_catalog_preset() -> MappingPresetResponse:
+    return MappingPresetResponse(**MappingSuggestionService().product_catalog_preset())
 
 
 @router.get("/presets/your-jewelry", response_model=YourJewelryPresetResponse, dependencies=[Depends(require_roles(RoleName.OWNER))])

@@ -45,9 +45,9 @@ function MetricStrip({ label, value, tone = "violet" }: { label: string; value: 
 }
 
 export default function DashboardPage() {
-  const { currentWorkspaceId } = useAuth();
+  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
-  const enabled = Boolean(workspaceId);
+  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
 
   const dashboard = useQuery({ queryKey: ["dashboard", workspaceId], queryFn: () => fetchAnalyticsDashboard(workspaceId), enabled });
   const advertising = useQuery({ queryKey: ["dashboard-advertising", workspaceId], queryFn: () => fetchAdvertisingSummary(workspaceId), enabled });

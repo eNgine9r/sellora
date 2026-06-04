@@ -66,6 +66,8 @@ class ShipmentService:
                 cod_amount=payload.cod_amount,
                 declared_value=payload.declared_value,
                 notes=payload.notes,
+                nova_poshta_city_ref=payload.nova_poshta_city_ref,
+                nova_poshta_warehouse_ref=payload.nova_poshta_warehouse_ref,
             )
         )
         self._stamp_status(shipment, payload.status)

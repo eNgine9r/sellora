@@ -44,7 +44,7 @@ class InventoryService:
             user_id=actor_user_id,
             entity_type="Inventory",
             entity_id=inventory.id,
-            action="UPDATE",
+            action="INVENTORY_ADJUSTMENT",
             old_value=old_value,
             new_value=snapshot(inventory),
         )

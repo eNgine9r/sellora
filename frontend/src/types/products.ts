@@ -16,6 +16,8 @@ export type Product = {
   name: string;
   sku: string | null;
   description: string | null;
+  category: string | null;
+  brand: string | null;
   is_active: boolean;
   images: ProductImage[];
   created_at: string;
@@ -30,6 +32,8 @@ export type ProductVariant = {
   color: string | null;
   size: string | null;
   price: string | null;
+  barcode: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -40,6 +44,7 @@ export type Inventory = {
   product_variant_id: string;
   stock_quantity: number;
   reserved_quantity: number;
+  incoming_quantity: number;
   minimum_quantity: number;
   is_low_stock: boolean;
   created_at: string;

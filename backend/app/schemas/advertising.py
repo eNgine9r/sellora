@@ -63,6 +63,19 @@ class AdMetricCreate(BaseModel):
     net_profit: Decimal = Decimal("0")
 
 
+class AdMetricUpdate(BaseModel):
+    metric_date: date | None = None
+    spend: Decimal | None = Field(default=None, ge=0)
+    impressions: int | None = Field(default=None, ge=0)
+    reach: int | None = Field(default=None, ge=0)
+    clicks: int | None = Field(default=None, ge=0)
+    messages: int | None = Field(default=None, ge=0)
+    leads: int | None = Field(default=None, ge=0)
+    orders: int | None = Field(default=None, ge=0)
+    revenue: Decimal | None = Field(default=None, ge=0)
+    net_profit: Decimal | None = None
+
+
 class AdMetricResponse(BaseModel):
     id: UUID
     workspace_id: UUID

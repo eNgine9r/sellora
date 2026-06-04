@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
+import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { CustomerDetails } from "@/features/customers/components/customer-details";
 import { CustomerForm } from "@/features/customers/components/customer-form";
 import { CustomerTable } from "@/features/customers/components/customer-table";
@@ -16,18 +18,23 @@ import {
   fetchCustomerTags,
   fetchTags,
 } from "@/services/crm-completion";
-import { createCustomer, CustomerCreatePayload, fetchCustomers } from "@/services/crm";
+import { createCustomer, CustomerCreatePayload, deleteCustomer, fetchCustomers, updateCustomer } from "@/services/crm";
 import { Customer } from "@/types/crm";
 import { useAuth } from "@/hooks/use-auth";
+import { buildCustomerUpdatePayload } from "@/lib/payload-builders";
+import { safeApiErrorMessage } from "@/services/api";
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
-  const { currentWorkspaceId } = useAuth();
+  const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const enabled = Boolean(workspaceId);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [archivingCustomer, setArchivingCustomer] = useState<Customer | null>(null);
+  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
+  const canEdit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
   const selectedId = selectedCustomer?.id ?? "";
 
   const customersQuery = useQuery({
@@ -75,6 +82,14 @@ export default function CustomersPage() {
       queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
     },
   });
+  const updateMutation = useMutation({
+    mutationFn: (values: Record<string, string>) => updateCustomer(workspaceId, editingCustomer?.id ?? "", buildCustomerUpdatePayload(values), undefined),
+    onSuccess: () => { setEditingCustomer(null); queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] }); },
+  });
+  const archiveMutation = useMutation({
+    mutationFn: () => deleteCustomer(workspaceId, archivingCustomer?.id ?? "", undefined),
+    onSuccess: () => { setArchivingCustomer(null); if (selectedCustomer?.id === archivingCustomer?.id) setSelectedCustomer(null); queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] }); invalidateDetails(); },
+  });
   const addTagMutation = useMutation({
     mutationFn: (tagId: string) => addCustomerTag(workspaceId, selectedId, tagId, undefined),
     onSuccess: invalidateDetails,
@@ -113,20 +128,32 @@ export default function CustomersPage() {
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          <CustomerTable customers={customersQuery.data ?? []} onSelect={setSelectedCustomer} />
+          <CustomerTable customers={customersQuery.data ?? []} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} />
           {selectedCustomer ? (
-            <CustomerDetails
-              customer={selectedCustomer}
-              tags={tagsQuery.data ?? []}
-              customerTags={customerTagsQuery.data ?? []}
-              notes={notesQuery.data ?? []}
-              addresses={addressesQuery.data ?? []}
-              attachments={attachmentsQuery.data ?? []}
-              onAddTag={(tagId) => addTagMutation.mutate(tagId)}
-              onAddNote={(note) => addNoteMutation.mutate(note)}
-              onAddAddress={(addressLine1, isDefault) => addAddressMutation.mutate({ addressLine1, isDefault })}
-              onAddAttachment={(fileUrl) => addAttachmentMutation.mutate(fileUrl)}
-            />
+            <div className="grid gap-3">
+              {canEdit ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700" onClick={() => setEditingCustomer(selectedCustomer)}>
+                    Edit customer
+                  </button>
+                  <button className="min-h-11 rounded-lg border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700" onClick={() => setArchivingCustomer(selectedCustomer)}>
+                    Archive customer
+                  </button>
+                </div>
+              ) : null}
+              <CustomerDetails
+                customer={selectedCustomer}
+                tags={tagsQuery.data ?? []}
+                customerTags={customerTagsQuery.data ?? []}
+                notes={notesQuery.data ?? []}
+                addresses={addressesQuery.data ?? []}
+                attachments={attachmentsQuery.data ?? []}
+                onAddTag={(tagId) => addTagMutation.mutate(tagId)}
+                onAddNote={(note) => addNoteMutation.mutate(note)}
+                onAddAddress={(addressLine1, isDefault) => addAddressMutation.mutate({ addressLine1, isDefault })}
+                onAddAttachment={(fileUrl) => addAttachmentMutation.mutate(fileUrl)}
+              />
+            </div>
           ) : (
             <aside className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-slate-500">
               Select a customer to manage CRM details.
@@ -139,6 +166,8 @@ export default function CustomersPage() {
             <CustomerForm onSubmit={(values) => createMutation.mutate(values)} />
           </div>
         ) : null}
+        {archivingCustomer ? <ConfirmActionDialog title="Archive customer?" description="This customer profile will be hidden from active CRM lists. Historical orders and shipments remain unchanged." actionLabel="Archive customer" isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingCustomer(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
+        {editingCustomer ? <EditRecordDialog title="Edit customer" fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "city", label: "City" }, { name: "region", label: "Region" }]} initialValues={editingCustomer} isSubmitting={updateMutation.isPending} submitError={updateMutation.isError ? safeApiErrorMessage(updateMutation.error, "Unable to save customer changes. Please try again.") : null} onClose={() => setEditingCustomer(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
       </div>
     </main>
   );

@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from re import sub
+from re import split, sub
 from uuid import UUID
 
 from fastapi import UploadFile
@@ -19,6 +19,7 @@ from app.models.import_job_log import ImportJobLog, ImportJobLogStatus
 from app.models.inventory import Inventory
 from app.models.order import Order, OrderStatus, PaymentStatus
 from app.models.product import Product
+from app.models.product_image import ProductImage
 from app.models.product_variant import ProductVariant
 from app.models.shipment import Shipment, ShipmentCarrier, ShipmentStatus
 from app.repositories.audit_log_repository import AuditLogRepository
@@ -26,8 +27,31 @@ from app.repositories.import_center_repository import ImportEntityLookupReposito
 from app.schemas.import_center import ImportReportResponse, ImportValidationIssue, ImportValidationReport, SuggestMappingResponse, YourJewelryPresetResponse
 from app.services.business_utils import snapshot
 
-SUPPORTED_ENTITY_TYPES = {"customers", "products", "product_variants", "inventory", "orders", "ad_campaigns", "ad_metrics", "shipments"}
+SUPPORTED_ENTITY_TYPES = {"customers", "products", "product_variants", "inventory", "orders", "ad_campaigns", "ad_metrics", "shipments", "product_catalog"}
 YOUR_JEWELRY_SHEETS = ["Замовлення 2022-2025", "Аналітика Реклами 2023-2025", "Наявність на складі годинників", "Main Watchh інфа про товар"]
+
+PRODUCT_CATALOG_PRESET_NAME = "your_jewelry_product_catalog_v1"
+PRODUCT_CATALOG_MAPPING = {
+    "product_sku": "Родительский артикул",
+    "product_sku_fallback": "Артикул для отображения на сайте",
+    "product_name": "Название (UA)",
+    "product_name_fallback": "Название модификации (UA)",
+    "category": "Раздел",
+    "description": "Описание товара (UA)",
+    "brand": "Бренд",
+    "is_active": "Отображать",
+    "variant_sku": "Артикул",
+    "color": "Цвет",
+    "size": "Розмір",
+    "selling_price": "Цена",
+    "barcode": "Штрихкод",
+    "currency": "Валюта",
+    "availability": "Наличие",
+    "quantity": "Количество",
+    "primary_image_url": "Фото",
+    "gallery_urls": "Галерея",
+}
+PRODUCT_CATALOG_COLUMNS = list(dict.fromkeys(PRODUCT_CATALOG_MAPPING.values()))
 FIELD_ALIASES: dict[str, dict[str, list[str]]] = {
     "customers": {
         "name": ["Імʼя", "Ім'я", "Клієнт", "Customer", "Name", "name"],
@@ -37,10 +61,14 @@ FIELD_ALIASES: dict[str, dict[str, list[str]]] = {
         "region": ["Область", "Region", "region"],
     },
     "products": {
-        "name": ["Назва", "Товар", "Product", "Product Name", "name"],
-        "sku": ["Артикул", "SKU", "product_sku", "sku"],
-        "description": ["Опис", "Description", "description"],
+        "name": ["Назва", "Товар", "Product", "Product Name", "name", "Название (UA)", "Название модификации (UA)"],
+        "sku": ["Артикул", "SKU", "product_sku", "sku", "Родительский артикул", "Артикул для отображения на сайте"],
+        "description": ["Опис", "Description", "description", "Описание товара (UA)"],
+        "category": ["Раздел", "Category", "category"],
+        "brand": ["Бренд", "Brand", "brand"],
+        "is_active": ["Отображать", "Active", "is_active"],
     },
+    "product_catalog": {field: [column] for field, column in PRODUCT_CATALOG_MAPPING.items()},
     "product_variants": {
         "product_name": ["Товар", "Назва", "Product", "product_name"],
         "product_sku": ["Артикул товару", "product_sku"],
@@ -275,6 +303,13 @@ class MappingSuggestionService:
         required_missing = [", ".join(group) for group in MappingValidationService.required_groups.get(entity_type, []) if not any(field in suggested for field in group)]
         return SuggestMappingResponse(suggested_mapping=suggested, confidence=confidence, unmapped_columns=[column for column in columns if column not in mapped_columns], required_fields_missing=required_missing)
 
+    def product_catalog_preset(self) -> dict:
+        return {
+            "name": PRODUCT_CATALOG_PRESET_NAME,
+            "sheets": ["Product catalog"],
+            "mappings": {"product_catalog": PRODUCT_CATALOG_MAPPING},
+        }
+
     def your_jewelry_preset(self) -> YourJewelryPresetResponse:
         return YourJewelryPresetResponse(
             preset_name="your_jewelry_excel_v1",
@@ -402,6 +437,162 @@ class MappingValidationService:
             if lookup.find_shipment_by_order(workspace_id, order.id):
                 return [issue(row_number, "WARNING", "order_number", "Active shipment already exists for order")]
         return []
+
+
+class ProductCatalogImportService:
+    availability_aliases = {
+        "в наявності": "IN_STOCK", "в наличии": "IN_STOCK", "in stock": "IN_STOCK",
+        "немає в наявності": "OUT_OF_STOCK", "нет в наличии": "OUT_OF_STOCK", "out of stock": "OUT_OF_STOCK",
+        "очікується": "EXPECTED", "ожидается": "EXPECTED", "expected": "EXPECTED",
+    }
+    visibility_aliases = {"да": True, "так": True, "yes": True, "true": True, "1": True, "ні": False, "нет": False, "no": False, "false": False, "0": False}
+
+    def __init__(self, db: Session) -> None:
+        self.db = db
+        self.lookup = ImportEntityLookupRepository(db)
+        self.normalizer = ExcelValueNormalizer()
+
+    def normalize_row(self, row: dict, mapping: dict[str, str]) -> dict:
+        raw = map_row(row, mapping)
+        product_sku = self.normalizer.text(raw.get("product_sku")) or self.normalizer.text(raw.get("product_sku_fallback"))
+        product_name = self.normalizer.text(raw.get("product_name")) or self.normalizer.text(raw.get("product_name_fallback"))
+        variant_sku = self.normalizer.text(raw.get("variant_sku"))
+        price = self.normalizer.number(raw.get("selling_price"))
+        quantity = self.normalizer.number(raw.get("quantity"))
+        availability = self._availability(raw.get("availability"))
+        stock_quantity = int(quantity) if quantity is not None and quantity > 0 else (1 if availability == "IN_STOCK" else 0)
+        incoming_quantity = 1 if quantity in (None, 0) and availability == "EXPECTED" else 0
+        return {
+            "product_sku": product_sku,
+            "product_name": product_name,
+            "category": self.normalizer.text(raw.get("category")),
+            "description": self.normalizer.text(raw.get("description")),
+            "brand": self.normalizer.text(raw.get("brand")),
+            "is_active": self._visibility(raw.get("is_active")),
+            "variant_sku": variant_sku,
+            "color": self.normalizer.text(raw.get("color")),
+            "size": self.normalizer.text(raw.get("size")),
+            "selling_price": price,
+            "barcode": self.normalizer.text(raw.get("barcode")),
+            "currency": (self.normalizer.text(raw.get("currency")) or "UAH").upper(),
+            "availability": availability,
+            "stock_quantity": stock_quantity,
+            "incoming_quantity": incoming_quantity,
+            "minimum_quantity": 0,
+            "image_urls": self._image_urls(raw.get("primary_image_url"), raw.get("gallery_urls")),
+            "raw_visibility": raw.get("is_active"),
+            "raw_availability": raw.get("availability"),
+            "raw_currency": raw.get("currency"),
+            "raw_price": raw.get("selling_price"),
+        }
+
+    def validate(self, rows: list[dict], mapping: dict[str, str], workspace_id: UUID | None = None) -> ImportValidationReport:
+        issues: list[ImportValidationIssue] = []
+        seen_products: set[str] = set(); seen_variants: set[str] = set()
+        for row_number, row in enumerate(rows, start=2):
+            data = self.normalize_row(row, mapping)
+            if not data["product_sku"]:
+                issues.append(issue(row_number, "ERROR", "product_sku", "missing product sku"))
+            if not data["product_name"]:
+                issues.append(issue(row_number, "ERROR", "product_name", "missing product name"))
+            if not data["variant_sku"]:
+                issues.append(issue(row_number, "ERROR", "variant_sku", "missing variant sku"))
+            if data["selling_price"] is None or data["selling_price"] < 0:
+                issues.append(issue(row_number, "ERROR", "selling_price", "invalid price"))
+            if data["availability"] is None:
+                issues.append(issue(row_number, "WARNING", "availability", "unknown availability"))
+            if self.normalizer.text(data["raw_visibility"]) is None:
+                issues.append(issue(row_number, "WARNING", "is_active", "visibility missing; defaulting to true"))
+            elif data["is_active"] is None:
+                issues.append(issue(row_number, "WARNING", "is_active", "invalid visibility value; defaulting to true"))
+            if not self.normalizer.text(data["raw_currency"]):
+                issues.append(issue(row_number, "WARNING", "currency", "currency missing; defaulting to UAH"))
+            elif data["currency"] != "UAH":
+                issues.append(issue(row_number, "WARNING", "currency", "currency is not UAH"))
+            if not data["category"]:
+                issues.append(issue(row_number, "WARNING", "category", "missing category warning"))
+            if not data["image_urls"]:
+                issues.append(issue(row_number, "WARNING", "image_url", "missing image warning"))
+            for url in data["image_urls"]:
+                if not self._valid_url(url):
+                    issues.append(issue(row_number, "WARNING", "image_url", "invalid image URL"))
+            if data["product_sku"]:
+                if data["product_sku"] in seen_products:
+                    issues.append(issue(row_number, "WARNING", "product_sku", "Duplicate product"))
+                seen_products.add(data["product_sku"])
+                if workspace_id and self.lookup.find_product_by_sku(workspace_id, data["product_sku"]):
+                    issues.append(issue(row_number, "WARNING", "product_sku", "Duplicate product"))
+            if data["variant_sku"]:
+                if data["variant_sku"] in seen_variants:
+                    issues.append(issue(row_number, "WARNING", "variant_sku", "Duplicate variant"))
+                seen_variants.add(data["variant_sku"])
+                if workspace_id and self.lookup.find_variant(workspace_id, sku=data["variant_sku"]):
+                    issues.append(issue(row_number, "WARNING", "variant_sku", "Duplicate variant"))
+        return report_from_issues(rows, issues)
+
+    def import_rows(self, workspace_id: UUID, rows: list[dict], mapping: dict[str, str]) -> list[tuple[int, ImportJobLogStatus, str]]:
+        results = []
+        for row_number, row in enumerate(rows, start=2):
+            validation = self.validate([row], mapping, workspace_id)
+            if any(item.severity == "ERROR" for item in validation.issues):
+                results.append((row_number, ImportJobLogStatus.FAILED, "; ".join(validation.errors)))
+                continue
+            data = self.normalize_row(row, mapping)
+            product = self.lookup.find_product_by_sku(workspace_id, data["product_sku"])
+            if product is None:
+                product = Product(workspace_id=workspace_id, sku=data["product_sku"], name=data["product_name"], category=data["category"], brand=data["brand"], description=data["description"], is_active=True if data["is_active"] is None else data["is_active"])
+                self.db.add(product); self.db.flush()
+            variant = self.lookup.find_variant(workspace_id, sku=data["variant_sku"])
+            if variant is not None:
+                results.append((row_number, ImportJobLogStatus.SKIPPED, "Duplicate variant skipped"))
+                continue
+            variant = ProductVariant(workspace_id=workspace_id, product_id=product.id, sku=data["variant_sku"], color=data["color"], size=data["size"], price=data["selling_price"], barcode=data["barcode"], is_active=True if data["is_active"] is None else data["is_active"])
+            self.db.add(variant); self.db.flush()
+            inventory = self.lookup.inventory_by_variant(workspace_id, variant.id)
+            if inventory is None:
+                inventory = Inventory(workspace_id=workspace_id, product_variant_id=variant.id)
+                self.db.add(inventory)
+            inventory.stock_quantity = data["stock_quantity"]; inventory.incoming_quantity = data["incoming_quantity"]; inventory.minimum_quantity = 0
+            self.db.flush()
+            for sort_order, url in enumerate([url for url in data["image_urls"] if self._valid_url(url)]):
+                self.db.add(ProductImage(workspace_id=workspace_id, product_id=product.id, image_url=url, sort_order=sort_order, is_primary=sort_order == 0))
+            self.db.flush()
+            status = ImportJobLogStatus.WARNING if validation.warnings else ImportJobLogStatus.SUCCESS
+            results.append((row_number, status, "Product catalog row imported" if status == ImportJobLogStatus.SUCCESS else "Product catalog row imported with warnings"))
+        return results
+
+    def metrics(self, rows: list[dict], mapping: dict[str, str], validation: ImportValidationReport) -> dict[str, int]:
+        normalized = [self.normalize_row(row, mapping) for row in rows]
+        duplicate_products = sum(1 for item in validation.issues if item.field == "product_sku" and "duplicate" in item.message)
+        duplicate_variants = sum(1 for item in validation.issues if item.field == "variant_sku" and "duplicate" in item.message)
+        return {
+            "products_detected": len({item["product_sku"] for item in normalized if item["product_sku"]}),
+            "variants_detected": len([item for item in normalized if item["variant_sku"]]),
+            "inventory_rows_detected": len([item for item in normalized if item["variant_sku"]]),
+            "images_detected": sum(len([url for url in item["image_urls"] if self._valid_url(url)]) for item in normalized),
+            "duplicate_products": duplicate_products,
+            "duplicate_variants": duplicate_variants,
+        }
+
+    def _availability(self, value) -> str | None:
+        text = self.normalizer.text(value)
+        return self.availability_aliases.get(text.lower()) if text else None
+
+    def _visibility(self, value) -> bool | None:
+        text = self.normalizer.text(value)
+        return self.visibility_aliases.get(text.lower()) if text else True
+
+    def _image_urls(self, primary, gallery) -> list[str]:
+        values = []
+        for item in (primary, gallery):
+            text = self.normalizer.text(item)
+            if text:
+                values.extend([part.strip() for part in split(r"[;,\n\r\t ]+", text) if part.strip()])
+        return list(dict.fromkeys(values))
+
+    def _valid_url(self, url: str) -> bool:
+        return url.startswith("https://") or url.startswith("http://")
+
 
 
 class EntityImportService:
@@ -535,6 +726,7 @@ class ImportService:
         self.validator = MappingValidationService()
         self.suggestions = MappingSuggestionService()
         self.entity_importer = EntityImportService(db)
+        self.product_catalog_importer = ProductCatalogImportService(db)
         self.lookup = ImportEntityLookupRepository(db)
         self.audit_logs = AuditLogRepository(db)
 
@@ -567,13 +759,17 @@ class ImportService:
     def suggest_mapping(self, workspace_id: UUID, job_id: UUID, sheet_name: str, entity_type: str) -> SuggestMappingResponse:
         job = self._job(workspace_id, job_id)
         columns, _rows = self.parser.preview(job.file_path, sheet_name, 1)
+        if entity_type == "product_catalog":
+            mapping = {field: column for field, column in PRODUCT_CATALOG_MAPPING.items() if column in columns}
+            required = [field for field in ("product_sku", "product_sku_fallback", "product_name", "product_name_fallback", "variant_sku", "selling_price") if field not in mapping]
+            return SuggestMappingResponse(suggested_mapping=mapping, confidence={field: 1.0 for field in mapping}, unmapped_columns=[column for column in columns if column not in mapping.values()], required_fields_missing=required)
         return self.suggestions.suggest(columns, entity_type)
 
     def dry_run(self, workspace_id: UUID, job_id: UUID, entity_type: str, sheet_name: str, column_mapping: dict[str, str], actor_user_id: UUID | None = None) -> ImportReportResponse:
         job = self._job(workspace_id, job_id)
         _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
-        report = self.validator.validate(entity_type, column_mapping, rows, workspace_id, self.lookup)
-        response = import_report(job.id, entity_type, sheet_name, rows, report)
+        report = self.product_catalog_importer.validate(rows, column_mapping, workspace_id) if entity_type == "product_catalog" else self.validator.validate(entity_type, column_mapping, rows, workspace_id, self.lookup)
+        response = import_report(job.id, entity_type, sheet_name, rows, report, self.product_catalog_importer.metrics(rows, column_mapping, report) if entity_type == "product_catalog" else None)
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="ImportJob", entity_id=job.id, action="IMPORT_DRY_RUN", new_value=response.model_dump(mode="json", exclude={"sample_errors", "sample_warnings"}))
         self.db.commit()
         return response
@@ -581,7 +777,7 @@ class ImportService:
     def validate(self, workspace_id: UUID, job_id: UUID, entity_type: str, sheet_name: str, column_mapping: dict[str, str], actor_user_id: UUID | None) -> ImportValidationReport:
         job = self._job(workspace_id, job_id)
         _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
-        report = self.validator.validate(entity_type, column_mapping, rows, workspace_id, self.lookup)
+        report = self.product_catalog_importer.validate(rows, column_mapping, workspace_id) if entity_type == "product_catalog" else self.validator.validate(entity_type, column_mapping, rows, workspace_id, self.lookup)
         job.total_rows = report.total_rows
         if report.is_valid:
             job.status = ImportJobStatus.VALIDATED.value
@@ -596,7 +792,7 @@ class ImportService:
             raise ImportServiceError("Only create_only import mode is supported")
         job = self._job(workspace_id, job_id)
         _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
-        report = self.validator.validate(entity_type, column_mapping, rows, workspace_id, self.lookup)
+        report = self.product_catalog_importer.validate(rows, column_mapping, workspace_id) if entity_type == "product_catalog" else self.validator.validate(entity_type, column_mapping, rows, workspace_id, self.lookup)
         if report.error_rows if hasattr(report, "error_rows") else any(item.severity == "ERROR" for item in report.issues):
             job.status = ImportJobStatus.FAILED.value
             job.failed_rows = len(rows)
@@ -609,9 +805,15 @@ class ImportService:
         job.success_rows = job.success_rows or 0
         job.failed_rows = job.failed_rows or 0
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="ImportJob", entity_id=job.id, action="IMPORT_EXECUTE", new_value={"entity_type": entity_type, "rows": len(rows)})
+        import_results = self.product_catalog_importer.import_rows(workspace_id, rows, column_mapping) if entity_type == "product_catalog" else None
         for index, row in enumerate(rows, start=2):
-            status, message = self.entity_importer.import_row(workspace_id, entity_type, row, column_mapping)
-            self.logs.create(ImportJobLog(workspace_id=workspace_id, import_job_id=job.id, row_number=index, entity_type=entity_type, status=status.value, message=message, raw_data=row))
+            if import_results is not None:
+                _row_number, status, message = import_results[index - 2]
+                raw_data = None
+            else:
+                status, message = self.entity_importer.import_row(workspace_id, entity_type, row, column_mapping)
+                raw_data = row
+            self.logs.create(ImportJobLog(workspace_id=workspace_id, import_job_id=job.id, row_number=index, entity_type=entity_type, status=status.value, message=message, raw_data=raw_data))
             job.processed_rows += 1
             if status == ImportJobLogStatus.SUCCESS:
                 job.success_rows += 1
@@ -662,14 +864,17 @@ def report_from_issues(rows: list[dict], issues: list[ImportValidationIssue]) ->
     return ImportValidationReport(is_valid=not errors, total_rows=len(rows), errors=errors, warnings=warnings, issues=issues)
 
 
-def import_report(job_id: UUID, entity_type: str, sheet_name: str, rows: list[dict], validation: ImportValidationReport) -> ImportReportResponse:
+def import_report(job_id: UUID, entity_type: str, sheet_name: str, rows: list[dict], validation: ImportValidationReport, extra_metrics: dict[str, int] | None = None) -> ImportReportResponse:
     issues_by_row: dict[int, list[ImportValidationIssue]] = defaultdict(list)
     for item in validation.issues:
         if item.row_number is not None:
             issues_by_row[item.row_number].append(item)
     error_rows = {row for row, issues in issues_by_row.items() if any(item.severity == "ERROR" for item in issues)}
     warning_rows = {row for row, issues in issues_by_row.items() if any(item.severity == "WARNING" for item in issues) and row not in error_rows}
-    duplicate_rows = {row for row, issues in issues_by_row.items() if any("Duplicate" in item.message for item in issues)}
+    if entity_type == "product_catalog":
+        duplicate_rows = {row for row, issues in issues_by_row.items() if any(item.field == "variant_sku" and "Duplicate" in item.message for item in issues)}
+    else:
+        duplicate_rows = {row for row, issues in issues_by_row.items() if any("Duplicate" in item.message for item in issues)}
     skipped_rows = duplicate_rows
     ready = max(len(rows) - len(error_rows) - len(skipped_rows), 0)
     return ImportReportResponse(
@@ -684,6 +889,12 @@ def import_report(job_id: UUID, entity_type: str, sheet_name: str, rows: list[di
         duplicate_rows=len(duplicate_rows),
         ready_to_import_rows=ready,
         estimated_entities_to_create=ready,
+        products_detected=(extra_metrics or {}).get("products_detected", 0),
+        variants_detected=(extra_metrics or {}).get("variants_detected", 0),
+        inventory_rows_detected=(extra_metrics or {}).get("inventory_rows_detected", 0),
+        images_detected=(extra_metrics or {}).get("images_detected", 0),
+        duplicate_products=(extra_metrics or {}).get("duplicate_products", 0),
+        duplicate_variants=(extra_metrics or {}).get("duplicate_variants", 0),
         sample_errors=[item for item in validation.issues if item.severity == "ERROR"][:5],
         sample_warnings=[item for item in validation.issues if item.severity == "WARNING"][:5],
     )

@@ -64,9 +64,15 @@ class FakeOrders:
         return history
 
     def get(self, workspace_id, order_id):
-        if self.order and self.order.workspace_id == workspace_id and self.order.id == order_id:
+        if self.order and self.order.workspace_id == workspace_id and self.order.id == order_id and self.order.deleted_at is None:
             return self.order
         return None
+
+    def soft_delete(self, order, deleted_by):
+        from datetime import UTC, datetime
+        order.deleted_at = datetime.now(UTC)
+        order.deleted_by = deleted_by
+        return order
 
     def next_sequence_for_year(self, workspace_id, year):
         return 1
@@ -201,3 +207,31 @@ def test_order_create_schema_rejects_invalid_item_quantity() -> None:
         assert any(error["loc"] == ("items", 0, "quantity") for error in exc.errors())
     else:
         raise AssertionError("OrderCreate should reject zero item quantity")
+
+
+def test_archive_new_order_soft_deletes_and_releases_reservation() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    actor_id = uuid4()
+
+    deleted = service.delete(inventory.workspace_id, order.id, actor_id)
+
+    assert deleted
+    assert order.deleted_at is not None
+    assert order.deleted_by == actor_id
+    assert inventory.reserved_quantity == 0
+    assert service.inventory_service.transactions[-1][0] == InventoryTransactionType.UNRESERVE
+    assert service.audit_logs.records[-1]["action"] == "ORDER_ARCHIVE"
+
+
+def test_archive_shipped_order_is_rejected() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED), actor_user_id=uuid4())
+
+    try:
+        service.delete(inventory.workspace_id, order.id, uuid4())
+    except Exception as exc:
+        assert "cannot be archived" in str(exc)
+    else:
+        raise AssertionError("Shipped order should not be archived through generic delete")

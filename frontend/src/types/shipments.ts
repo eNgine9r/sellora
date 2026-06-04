@@ -20,6 +20,15 @@ export type Shipment = {
   shipped_at: string | null;
   delivered_at: string | null;
   returned_at: string | null;
+  external_provider: string | null;
+  external_ref: string | null;
+  external_status: string | null;
+  nova_poshta_city_ref: string | null;
+  nova_poshta_warehouse_ref: string | null;
+  nova_poshta_document_ref: string | null;
+  nova_poshta_document_number: string | null;
+  nova_poshta_raw_status: string | null;
+  nova_poshta_synced_at: string | null;
   order_number: string | null;
   customer_name: string | null;
   created_at: string;
@@ -40,6 +49,8 @@ export type ShipmentCreatePayload = {
   cod_amount: number | null;
   declared_value: number | null;
   notes: string | null;
+  nova_poshta_city_ref?: string | null;
+  nova_poshta_warehouse_ref?: string | null;
 };
 
 export type ShipmentSummary = {

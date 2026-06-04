@@ -12,6 +12,8 @@ from app.models.tag import Tag
 from app.models.product import Product
 from app.models.product_variant import ProductVariant
 from app.models.import_job import ImportJob, ImportJobStatus
+from app.models.integration_connection import IntegrationConnection, IntegrationProvider, IntegrationStatus
+from app.models.integration_credential import IntegrationCredential
 from app.models.import_job_log import ImportJobLog, ImportJobLogStatus
 from app.models.inventory import Inventory
 from app.models.inventory_transaction import InventoryTransaction, InventoryTransactionType
@@ -25,4 +27,4 @@ from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_user import WorkspaceUser
 
-__all__ = ["AdCampaign", "AdCampaignBudgetType", "AdCampaignObjective", "AdCampaignPlatform", "AdCampaignStatus", "AdMetric", "Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "ImportJob", "ImportJobLog", "ImportJobLogStatus", "ImportJobStatus", "LeadStatus", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "Shipment", "ShipmentCarrier", "ShipmentStatus", "User", "Workspace", "WorkspaceUser"]
+__all__ = ["AdCampaign", "AdCampaignBudgetType", "AdCampaignObjective", "AdCampaignPlatform", "AdCampaignStatus", "AdMetric", "Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "ImportJob", "ImportJobLog", "ImportJobLogStatus", "ImportJobStatus", "IntegrationConnection", "IntegrationCredential", "IntegrationProvider", "IntegrationStatus", "LeadStatus", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "Shipment", "ShipmentCarrier", "ShipmentStatus", "User", "Workspace", "WorkspaceUser"]

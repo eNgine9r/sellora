@@ -1,3 +1,4 @@
+import { normalizeWorkspaceId } from "@/lib/workspace";
 import { CurrentUser, TokenPair, WorkspaceMembership } from "@/types/auth";
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
@@ -6,7 +7,6 @@ const ACCESS_TOKEN_KEY = "sellora.access_token";
 const REFRESH_TOKEN_KEY = "sellora.refresh_token";
 const CURRENT_USER_KEY = "sellora.current_user";
 const CURRENT_WORKSPACE_ID_KEY = "sellora.current_workspace_id";
-
 function isBrowser() {
   return typeof window !== "undefined";
 }
@@ -29,7 +29,13 @@ export const authStorage = {
     }
   },
   getCurrentWorkspaceId() {
-    return isBrowser() ? window.localStorage.getItem(CURRENT_WORKSPACE_ID_KEY) : null;
+    if (!isBrowser()) return null;
+    const workspaceId = normalizeWorkspaceId(window.localStorage.getItem(CURRENT_WORKSPACE_ID_KEY));
+    if (!workspaceId) {
+      window.localStorage.removeItem(CURRENT_WORKSPACE_ID_KEY);
+      return null;
+    }
+    return workspaceId;
   },
   setTokens(tokens: TokenPair) {
     if (!isBrowser()) return;
@@ -40,9 +46,14 @@ export const authStorage = {
     if (!isBrowser()) return;
     window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
   },
-  setCurrentWorkspaceId(workspaceId: string) {
+  setCurrentWorkspaceId(workspaceId: unknown) {
     if (!isBrowser()) return;
-    window.localStorage.setItem(CURRENT_WORKSPACE_ID_KEY, workspaceId);
+    const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
+    if (!normalizedWorkspaceId) {
+      window.localStorage.removeItem(CURRENT_WORKSPACE_ID_KEY);
+      return;
+    }
+    window.localStorage.setItem(CURRENT_WORKSPACE_ID_KEY, normalizedWorkspaceId);
   },
   clear() {
     if (!isBrowser()) return;
@@ -88,5 +99,5 @@ export async function fetchCurrentUser(accessToken: string): Promise<CurrentUser
 }
 
 export function firstAvailableWorkspace(user: CurrentUser): WorkspaceMembership | null {
-  return user.memberships[0] ?? null;
+  return user.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id)) ?? null;
 }

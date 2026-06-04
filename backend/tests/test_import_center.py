@@ -16,7 +16,7 @@ from app.models.product import Product
 from app.models.product_variant import ProductVariant
 from app.models.role import RoleName
 from app.schemas.import_center import ImportValidationRequest
-from app.services.import_center_service import EntityImportService, ExcelParserService, ExcelValueNormalizer, ImportService, MappingSuggestionService, MappingValidationService
+from app.services.import_center_service import EntityImportService, ExcelParserService, ExcelValueNormalizer, ImportService, MappingSuggestionService, MappingValidationService, PRODUCT_CATALOG_MAPPING, ProductCatalogImportService
 
 
 class FakeDb:
@@ -333,3 +333,130 @@ def test_advertising_import_tests_use_only_synthetic_data() -> None:
 
     assert private_filename not in source
     assert "Synthetic Campaign" in source
+
+
+def _synthetic_product_catalog_rows() -> list[dict]:
+    return [
+        {
+            "Родительский артикул": "PARENT-SYN-1",
+            "Артикул для отображения на сайте": "PARENT-SYN-1",
+            "Артикул": "VAR-SYN-1",
+            "Название (UA)": "Synthetic Catalog Product",
+            "Название модификации (UA)": "Synthetic Variant",
+            "Раздел": "Synthetic Category",
+            "Бренд": "Synthetic Brand",
+            "Цена": "350,00 грн",
+            "Валюта": "UAH",
+            "Отображать": "Так",
+            "Наличие": "В наявності",
+            "Количество": 0,
+            "Фото": "https://example.invalid/image-1.jpg",
+            "Галерея": "https://example.invalid/image-2.jpg; https://example.invalid/image-3.jpg",
+            "Описание товара (UA)": "Synthetic description",
+            "Цвет": "Synthetic Color",
+            "Розмір": "Synthetic Size",
+            "Штрихкод": "SYN-BARCODE-1",
+        },
+        {
+            "Родительский артикул": "PARENT-SYN-1",
+            "Артикул": "VAR-SYN-2",
+            "Название (UA)": "Synthetic Catalog Product",
+            "Цена": "100.00",
+            "Валюта": "EUR",
+            "Отображать": "No",
+            "Наличие": "Очікується",
+            "Количество": 0,
+            "Фото": "",
+        },
+    ]
+
+
+def test_product_catalog_preset_exists_and_suggests_key_columns(tmp_path) -> None:
+    preset = MappingSuggestionService().product_catalog_preset()
+    service = _import_service(tmp_path)
+    job = service.jobs.job
+    service.parser.rows = _synthetic_product_catalog_rows()
+    service.parser.preview = lambda file_path, sheet_name, limit: (list(_synthetic_product_catalog_rows()[0].keys()), service.parser.rows[:limit])
+
+    suggestion = service.suggest_mapping(job.workspace_id, job.id, "Synthetic", "product_catalog")
+
+    assert preset["name"] == "your_jewelry_product_catalog_v1"
+    assert suggestion.suggested_mapping["product_sku"] == "Родительский артикул"
+    assert suggestion.suggested_mapping["variant_sku"] == "Артикул"
+    assert suggestion.suggested_mapping["selling_price"] == "Цена"
+
+
+def test_product_catalog_dry_run_detects_entities_and_does_not_create_records(tmp_path) -> None:
+    service = _import_service(tmp_path)
+    job = service.jobs.job
+    rows = _synthetic_product_catalog_rows()
+    service.parser.rows = rows
+    service.product_catalog_importer = ProductCatalogImportService.__new__(ProductCatalogImportService)
+    service.product_catalog_importer.db = service.db
+    service.product_catalog_importer.lookup = service.lookup
+    service.product_catalog_importer.normalizer = ExcelValueNormalizer()
+
+    report = service.dry_run(job.workspace_id, job.id, "product_catalog", "Synthetic", PRODUCT_CATALOG_MAPPING, actor_user_id=uuid4())
+
+    assert report.products_detected == 1
+    assert report.variants_detected == 2
+    assert report.inventory_rows_detected == 2
+    assert report.images_detected == 3
+    assert report.warning_rows >= 1
+    assert report.error_rows == 0
+    assert service.db.added == []
+
+
+def test_product_catalog_validation_reports_row_level_errors_and_warnings() -> None:
+    db = FakeDb()
+    service = ProductCatalogImportService.__new__(ProductCatalogImportService)
+    service.db = db
+    service.lookup = SimpleNamespace(find_product_by_sku=lambda *args, **kwargs: None, find_variant=lambda *args, **kwargs: None)
+    service.normalizer = ExcelValueNormalizer()
+    rows = [{"Артикул": "", "Цена": "bad", "Наличие": "mystery", "Отображать": "maybe", "Валюта": ""}]
+
+    report = service.validate(rows, PRODUCT_CATALOG_MAPPING, uuid4())
+
+    assert any(issue.field == "product_sku" for issue in report.issues)
+    assert any(issue.field == "variant_sku" for issue in report.issues)
+    assert any(issue.field == "selling_price" for issue in report.issues)
+    assert any(issue.field == "availability" and issue.severity == "WARNING" for issue in report.issues)
+    assert any(issue.field == "is_active" and issue.severity == "WARNING" for issue in report.issues)
+
+
+def test_product_catalog_import_creates_product_variant_inventory_and_images() -> None:
+    db = FakeDb()
+    workspace_id = uuid4()
+    service = ProductCatalogImportService.__new__(ProductCatalogImportService)
+    service.db = db
+    service.normalizer = ExcelValueNormalizer()
+    def find_product(workspace_id, sku):
+        return next((item for item in db.added if isinstance(item, Product) and item.sku == sku), None)
+    def find_variant(workspace_id, sku=None, product_id=None, color=None, size=None):
+        return next((item for item in db.added if isinstance(item, ProductVariant) and item.sku == sku), None)
+    def inventory_by_variant(workspace_id, variant_id):
+        return next((item for item in db.added if isinstance(item, Inventory) and item.product_variant_id == variant_id), None)
+    service.lookup = SimpleNamespace(find_product_by_sku=find_product, find_variant=find_variant, inventory_by_variant=inventory_by_variant)
+
+    results = service.import_rows(workspace_id, [_synthetic_product_catalog_rows()[0]], PRODUCT_CATALOG_MAPPING)
+
+    assert results[0][1] in {ImportJobLogStatus.SUCCESS, ImportJobLogStatus.WARNING}
+    assert any(isinstance(item, Product) for item in db.added)
+    assert any(isinstance(item, ProductVariant) and item.barcode == "SYN-BARCODE-1" for item in db.added)
+    assert any(isinstance(item, Inventory) and item.stock_quantity == 1 for item in db.added)
+    assert len([item for item in db.added if item.__class__.__name__ == "ProductImage"]) == 3
+
+
+def test_product_catalog_duplicate_product_and_variant_are_warned() -> None:
+    workspace_id = uuid4()
+    existing_product = Product(id=uuid4(), workspace_id=workspace_id, name="Existing Synthetic", sku="PARENT-SYN-1")
+    existing_variant = ProductVariant(id=uuid4(), workspace_id=workspace_id, product_id=existing_product.id, sku="VAR-SYN-1")
+    service = ProductCatalogImportService.__new__(ProductCatalogImportService)
+    service.db = FakeDb()
+    service.normalizer = ExcelValueNormalizer()
+    service.lookup = SimpleNamespace(find_product_by_sku=lambda workspace_id, sku: existing_product if sku == existing_product.sku else None, find_variant=lambda workspace_id, sku=None, **kwargs: existing_variant if sku == existing_variant.sku else None)
+
+    report = service.validate([_synthetic_product_catalog_rows()[0]], PRODUCT_CATALOG_MAPPING, workspace_id)
+
+    assert any(issue.message == "Duplicate product" for issue in report.issues)
+    assert any(issue.message == "Duplicate variant" for issue in report.issues)

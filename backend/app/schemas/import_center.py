@@ -79,6 +79,12 @@ class ImportReportResponse(BaseModel):
     duplicate_rows: int
     ready_to_import_rows: int
     estimated_entities_to_create: int
+    products_detected: int = 0
+    variants_detected: int = 0
+    inventory_rows_detected: int = 0
+    images_detected: int = 0
+    duplicate_products: int = 0
+    duplicate_variants: int = 0
     sample_errors: list[ImportValidationIssue] = Field(default_factory=list)
     sample_warnings: list[ImportValidationIssue] = Field(default_factory=list)
 

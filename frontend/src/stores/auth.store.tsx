@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { normalizeWorkspaceId } from "@/lib/workspace";
 import { authStorage, fetchCurrentUser, firstAvailableWorkspace, loginWithPassword, refreshAccessToken } from "@/services/auth.service";
 import { CurrentUser, WorkspaceMembership } from "@/types/auth";
 
@@ -28,12 +29,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applyUser = useCallback((user: CurrentUser) => {
     const storedWorkspaceId = authStorage.getCurrentWorkspaceId();
-    const selectedWorkspace = user.memberships.find((membership) => membership.workspace_id === storedWorkspaceId) ?? firstAvailableWorkspace(user);
+    const selectedWorkspace = user.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id) === storedWorkspaceId) ?? firstAvailableWorkspace(user);
+    const normalizedWorkspaceId = normalizeWorkspaceId(selectedWorkspace?.workspace_id);
     authStorage.setCurrentUser(user);
     setCurrentUser(user);
-    if (selectedWorkspace) {
-      authStorage.setCurrentWorkspaceId(selectedWorkspace.workspace_id);
-      setCurrentWorkspaceId(selectedWorkspace.workspace_id);
+    if (normalizedWorkspaceId) {
+      authStorage.setCurrentWorkspaceId(normalizedWorkspaceId);
+      setCurrentWorkspaceId(normalizedWorkspaceId);
       setError(null);
       setStatus("authenticated");
     } else {
@@ -68,9 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = authStorage.getCurrentUser();
     const storedWorkspaceId = authStorage.getCurrentWorkspaceId();
     if (storedUser && authStorage.getAccessToken()) {
+      const selectedWorkspace = storedUser.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id) === storedWorkspaceId) ?? firstAvailableWorkspace(storedUser);
+      const normalizedWorkspaceId = normalizeWorkspaceId(selectedWorkspace?.workspace_id);
       setCurrentUser(storedUser);
-      setCurrentWorkspaceId(storedWorkspaceId);
-      setStatus("authenticated");
+      if (normalizedWorkspaceId) authStorage.setCurrentWorkspaceId(normalizedWorkspaceId);
+      setCurrentWorkspaceId(normalizedWorkspaceId);
+      setStatus(normalizedWorkspaceId ? "authenticated" : "loading");
       void reloadCurrentUser().catch(() => {
         authStorage.clear();
         setCurrentUser(null);
@@ -99,13 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const switchWorkspace = useCallback((workspaceId: string) => {
-    const workspace = currentUser?.memberships.find((membership) => membership.workspace_id === workspaceId);
-    if (!workspace) return;
-    authStorage.setCurrentWorkspaceId(workspaceId);
-    setCurrentWorkspaceId(workspaceId);
+    const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
+    const workspace = currentUser?.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id) === normalizedWorkspaceId);
+    if (!workspace || !normalizedWorkspaceId) return;
+    authStorage.setCurrentWorkspaceId(normalizedWorkspaceId);
+    setCurrentWorkspaceId(normalizedWorkspaceId);
   }, [currentUser]);
 
-  const currentWorkspace = useMemo(() => currentUser?.memberships.find((membership) => membership.workspace_id === currentWorkspaceId) ?? null, [currentUser, currentWorkspaceId]);
+  const currentWorkspace = useMemo(() => currentUser?.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id) === currentWorkspaceId) ?? null, [currentUser, currentWorkspaceId]);
 
   const value = useMemo<AuthContextValue>(() => ({ status, currentUser, currentWorkspaceId, currentWorkspace, error, login, logout, switchWorkspace, reloadCurrentUser }), [status, currentUser, currentWorkspaceId, currentWorkspace, error, login, logout, switchWorkspace, reloadCurrentUser]);
 

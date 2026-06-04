@@ -14,11 +14,11 @@ import { fetchCustomersSummary, fetchInventorySummary, fetchProfitSummary, fetch
 import { useAuth } from "@/hooks/use-auth";
 
 export default function AnalyticsPage() {
-  const { currentWorkspaceId } = useAuth();
+  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const enabled = Boolean(workspaceId);
+  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const sales = useQuery({ queryKey: ["analytics-sales", workspaceId, startDate, endDate], queryFn: () => fetchSalesSummary(workspaceId, undefined, startDate, endDate), enabled });
   const profit = useQuery({ queryKey: ["analytics-profit", workspaceId, startDate, endDate], queryFn: () => fetchProfitSummary(workspaceId, undefined, startDate, endDate), enabled });
   const trend = useQuery({ queryKey: ["analytics-trend", workspaceId, startDate, endDate], queryFn: () => fetchSalesTrend(workspaceId, undefined, startDate, endDate), enabled });

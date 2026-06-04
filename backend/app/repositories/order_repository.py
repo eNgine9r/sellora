@@ -30,6 +30,12 @@ class OrderRepository:
         self.db.flush()
         return order
 
+    def soft_delete(self, order: Order, deleted_by: UUID | None) -> Order:
+        order.deleted_at = datetime.now(UTC)
+        order.deleted_by = deleted_by
+        self.db.flush()
+        return order
+
     def add_item(self, item: OrderItem) -> OrderItem:
         self.db.add(item)
         self.db.flush()

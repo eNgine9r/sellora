@@ -61,6 +61,12 @@ class ProductVariantRepository:
         stmt = select(ProductVariant).where(ProductVariant.product_id == product_id, ProductVariant.color == color, ProductVariant.size == size, ProductVariant.deleted_at.is_(None))
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def find_by_sku(self, workspace_id: UUID, sku: str | None) -> ProductVariant | None:
+        if not sku:
+            return None
+        stmt = select(ProductVariant).where(ProductVariant.workspace_id == workspace_id, ProductVariant.sku == sku, ProductVariant.deleted_at.is_(None))
+        return self.db.execute(stmt).scalar_one_or_none()
+
     def create(self, variant: ProductVariant) -> ProductVariant:
         self.db.add(variant)
         self.db.flush()

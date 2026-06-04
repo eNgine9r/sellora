@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = Field(default=7, alias="REFRESH_TOKEN_EXPIRE_DAYS")
     import_storage_path: str = Field(default="storage/imports", alias="IMPORT_STORAGE_PATH")
     import_max_file_size_mb: int = Field(default=20, alias="IMPORT_MAX_FILE_SIZE_MB")
+    nova_poshta_api_url: str = Field(default="https://api.novaposhta.ua/v2.0/json/", alias="NOVA_POSHTA_API_URL")
 
     initial_admin_email: str = Field(default="admin@sellora.local", alias="INITIAL_ADMIN_EMAIL")
     initial_admin_password: str = Field(default="ChangeMe123!", alias="INITIAL_ADMIN_PASSWORD")

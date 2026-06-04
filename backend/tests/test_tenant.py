@@ -34,3 +34,15 @@ def test_soft_delete_mixin_adds_nullable_delete_metadata() -> None:
     assert deleted_by_column.nullable
     assert isinstance(deleted_by_column.type, PG_UUID)
     assert deleted_by_column.foreign_keys
+
+
+def test_psycopg_engine_disables_prepared_statements() -> None:
+    from app.database.session import engine_connect_args
+
+    assert engine_connect_args("postgresql+psycopg://user:pass@host:5432/db") == {"prepare_threshold": None}
+
+
+def test_non_psycopg_engine_has_no_psycopg_connect_args() -> None:
+    from app.database.session import engine_connect_args
+
+    assert engine_connect_args("sqlite+pysqlite:///:memory:") == {}

@@ -2,6 +2,7 @@
 
 import { Bell, Menu, Moon, Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { normalizeWorkspaceId } from "@/lib/workspace";
 import { CurrentUser, WorkspaceMembership } from "@/types/auth";
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
 
 export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, onOpenMenu, onLogout, onSwitchWorkspace }: Props) {
   const router = useRouter();
+  const validMemberships = currentUser?.memberships.filter((membership) => normalizeWorkspaceId(membership.workspace_id)) ?? [];
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-[#F8F7FC]/90 px-3 py-3 backdrop-blur-xl sm:px-4 md:px-6">
@@ -61,14 +63,14 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
           <p className="truncate text-xs text-slate-500">{currentUser?.email}</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {currentUser && currentUser.memberships.length > 1 ? (
+          {validMemberships.length > 1 ? (
             <select
               className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm shadow-sm"
               value={currentWorkspaceId ?? ""}
-              onChange={(event) => onSwitchWorkspace(event.target.value)}
+              onChange={(event) => { const workspaceId = normalizeWorkspaceId(event.target.value); if (workspaceId) onSwitchWorkspace(workspaceId); }}
               aria-label="Switch workspace"
             >
-              {currentUser.memberships.map((membership) => (
+              {validMemberships.map((membership) => (
                 <option key={membership.workspace_id} value={membership.workspace_id}>
                   {membership.workspace_name} · {membership.role}
                 </option>

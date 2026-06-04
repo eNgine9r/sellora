@@ -33,12 +33,14 @@ export async function fetchLeadSources(workspaceId: string, token?: string): Pro
 
 export async function fetchLeads(workspaceId: string, filters: LeadFilters, token?: string): Promise<Lead[]> {
   const params = new URLSearchParams();
-  if (filters.search) params.set("search", filters.search);
+  if (filters.search?.trim()) params.set("search", filters.search.trim());
   if (filters.status) params.set("status", filters.status);
-  if (filters.leadSourceId) params.set("lead_source_id", filters.leadSourceId);
+  if (filters.leadSourceId?.trim()) params.set("lead_source_id", filters.leadSourceId.trim());
   const query = params.toString();
   return apiRequest<Lead[]>(`/leads${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }
+
+export type LeadUpdatePayload = Partial<LeadCreatePayload> & { status?: LeadStatus | null; loss_reason?: string | null };
 
 export async function createLead(workspaceId: string, payload: LeadCreatePayload, token?: string): Promise<Lead> {
   return apiRequest<Lead>("/leads", {
@@ -48,9 +50,17 @@ export async function createLead(workspaceId: string, payload: LeadCreatePayload
   });
 }
 
+export async function updateLead(workspaceId: string, leadId: string, payload: LeadUpdatePayload, token?: string): Promise<Lead> {
+  return apiRequest<Lead>(`/leads/${leadId}`, { method: "PUT", headers: workspaceHeaders(workspaceId, token), body: JSON.stringify(payload) });
+}
+
+export async function deleteLead(workspaceId: string, leadId: string, token?: string): Promise<void> {
+  return apiRequest<void>(`/leads/${leadId}`, { method: "DELETE", headers: workspaceHeaders(workspaceId, token) });
+}
+
 export async function fetchCustomers(workspaceId: string, search?: string, token?: string): Promise<Customer[]> {
   const params = new URLSearchParams();
-  if (search) params.set("search", search);
+  if (search?.trim()) params.set("search", search.trim());
   const query = params.toString();
   return apiRequest<Customer[]>(`/customers${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }
@@ -69,4 +79,12 @@ export async function createCustomer(workspaceId: string, payload: CustomerCreat
     headers: workspaceHeaders(workspaceId, token),
     body: JSON.stringify(payload),
   });
+}
+
+export async function updateCustomer(workspaceId: string, customerId: string, payload: Partial<CustomerCreatePayload>, token?: string): Promise<Customer> {
+  return apiRequest<Customer>(`/customers/${customerId}`, { method: "PUT", headers: workspaceHeaders(workspaceId, token), body: JSON.stringify(payload) });
+}
+
+export async function deleteCustomer(workspaceId: string, customerId: string, token?: string): Promise<void> {
+  return apiRequest<void>(`/customers/${customerId}`, { method: "DELETE", headers: workspaceHeaders(workspaceId, token) });
 }
