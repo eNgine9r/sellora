@@ -19,6 +19,8 @@ class ShipmentBase(BaseModel):
     cod_amount: Decimal | None = Field(default=None, ge=0)
     declared_value: Decimal | None = Field(default=None, ge=0)
     notes: str | None = None
+    nova_poshta_city_ref: str | None = None
+    nova_poshta_warehouse_ref: str | None = None
 
     @model_validator(mode="after")
     def tracking_required_for_non_draft(self):
@@ -45,6 +47,8 @@ class ShipmentUpdate(BaseModel):
     cod_amount: Decimal | None = Field(default=None, ge=0)
     declared_value: Decimal | None = Field(default=None, ge=0)
     notes: str | None = None
+    nova_poshta_city_ref: str | None = None
+    nova_poshta_warehouse_ref: str | None = None
 
 
 class ShipmentStatusUpdate(BaseModel):
@@ -70,6 +74,15 @@ class ShipmentResponse(BaseModel):
     shipped_at: datetime | None
     delivered_at: datetime | None
     returned_at: datetime | None
+    external_provider: str | None
+    external_ref: str | None
+    external_status: str | None
+    nova_poshta_city_ref: str | None
+    nova_poshta_warehouse_ref: str | None
+    nova_poshta_document_ref: str | None
+    nova_poshta_document_number: str | None
+    nova_poshta_raw_status: str | None
+    nova_poshta_synced_at: datetime | None
     order_number: str | None = None
     customer_name: str | None = None
     created_at: datetime

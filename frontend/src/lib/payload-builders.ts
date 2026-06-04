@@ -131,6 +131,8 @@ export function buildShipmentCreatePayload(values: RawShipmentValues): ShipmentC
     recipient_phone: cleanOptionalString(values.recipient_phone),
     city: cleanOptionalString(values.city),
     warehouse: cleanOptionalString(values.warehouse),
+    nova_poshta_city_ref: cleanOptionalString(values.nova_poshta_city_ref),
+    nova_poshta_warehouse_ref: cleanOptionalString(values.nova_poshta_warehouse_ref),
     shipping_cost: cleanOptionalNumber(values.shipping_cost),
     cod_amount: cleanOptionalNumber(values.cod_amount),
     declared_value: cleanOptionalNumber(values.declared_value),
