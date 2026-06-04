@@ -106,6 +106,28 @@ class OrderService:
         self.db.refresh(order)
         return order
 
+
+    def delete(self, workspace_id: UUID, order_id: UUID, actor_user_id: UUID | None) -> bool:
+        order = self.get(workspace_id, order_id)
+        if order is None:
+            return False
+        current_status = OrderStatus(order.status)
+        if current_status not in {OrderStatus.NEW, OrderStatus.CANCELLED}:
+            raise OrderServiceError("This order cannot be archived in its current status. Cancel or return it through the status workflow first.")
+        old_value = snapshot(order)
+        if current_status == OrderStatus.NEW:
+            for item in order.items:
+                inventory = self.inventory.get_by_variant(workspace_id, item.product_variant_id)
+                if inventory is None:
+                    raise OrderServiceError("Inventory record not found for order item")
+                if inventory.reserved_quantity < item.quantity:
+                    raise OrderServiceError("This order cannot be archived because reserved inventory is inconsistent")
+                self._inventory_transaction(workspace_id, inventory.id, InventoryTransactionType.UNRESERVE, item.quantity, "Order archived", actor_user_id)
+        self.orders.soft_delete(order, actor_user_id)
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="ORDER_ARCHIVE", old_value=old_value, new_value=snapshot(order))
+        self.db.commit()
+        return True
+
     def change_status(self, workspace_id: UUID, order_id: UUID, payload: OrderStatusUpdate, actor_user_id: UUID | None) -> Order | None:
         order = self.get(workspace_id, order_id)
         if order is None:

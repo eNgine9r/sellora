@@ -68,7 +68,7 @@ class CustomerService:
             user_id=actor_user_id,
             entity_type="Customer",
             entity_id=customer.id,
-            action="DELETE",
+            action="CUSTOMER_ARCHIVE",
             old_value=old_value,
             new_value=snapshot(customer),
         )

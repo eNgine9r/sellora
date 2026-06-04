@@ -81,7 +81,7 @@ class ProductService:
             user_id=actor_user_id,
             entity_type="Product",
             entity_id=product.id,
-            action="DELETE",
+            action="PRODUCT_ARCHIVE",
             old_value=old_value,
             new_value=snapshot(product),
         )
@@ -187,6 +187,8 @@ class ProductService:
         variant = self.get_variant(workspace_id, variant_id)
         if variant is None:
             return False
+        if variant.inventory and variant.inventory.reserved_quantity > 0:
+            raise ProductServiceError("Product variant has reserved inventory. Cancel or complete related orders before archiving it.")
         old_value = snapshot(variant)
         self.variants.soft_delete(variant, actor_user_id)
         self.audit_logs.create(
@@ -194,7 +196,7 @@ class ProductService:
             user_id=actor_user_id,
             entity_type="ProductVariant",
             entity_id=variant.id,
-            action="DELETE",
+            action="PRODUCT_VARIANT_ARCHIVE",
             old_value=old_value,
             new_value=snapshot(variant),
         )

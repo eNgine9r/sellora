@@ -38,3 +38,7 @@ export async function updateOrder(workspaceId: string, orderId: string, payload:
 export async function changeOrderStatus(workspaceId: string, orderId: string, status: OrderStatus): Promise<Order> {
   return apiRequest<Order>(`/orders/${orderId}/status`, { method: "POST", headers: workspaceHeaders(workspaceId), body: JSON.stringify({ status }) });
 }
+
+export async function deleteOrder(workspaceId: string, orderId: string): Promise<void> {
+  return apiRequest<void>(`/orders/${orderId}`, { method: "DELETE", headers: workspaceHeaders(workspaceId) });
+}

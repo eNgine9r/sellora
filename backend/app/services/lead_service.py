@@ -87,7 +87,7 @@ class LeadService:
             user_id=actor_user_id,
             entity_type="Lead",
             entity_id=lead.id,
-            action="DELETE",
+            action="LEAD_ARCHIVE",
             old_value=old_value,
             new_value=snapshot(lead),
         )

@@ -54,6 +54,10 @@ export async function updateLead(workspaceId: string, leadId: string, payload: L
   return apiRequest<Lead>(`/leads/${leadId}`, { method: "PUT", headers: workspaceHeaders(workspaceId, token), body: JSON.stringify(payload) });
 }
 
+export async function deleteLead(workspaceId: string, leadId: string, token?: string): Promise<void> {
+  return apiRequest<void>(`/leads/${leadId}`, { method: "DELETE", headers: workspaceHeaders(workspaceId, token) });
+}
+
 export async function fetchCustomers(workspaceId: string, search?: string, token?: string): Promise<Customer[]> {
   const params = new URLSearchParams();
   if (search?.trim()) params.set("search", search.trim());
@@ -79,4 +83,8 @@ export async function createCustomer(workspaceId: string, payload: CustomerCreat
 
 export async function updateCustomer(workspaceId: string, customerId: string, payload: Partial<CustomerCreatePayload>, token?: string): Promise<Customer> {
   return apiRequest<Customer>(`/customers/${customerId}`, { method: "PUT", headers: workspaceHeaders(workspaceId, token), body: JSON.stringify(payload) });
+}
+
+export async function deleteCustomer(workspaceId: string, customerId: string, token?: string): Promise<void> {
+  return apiRequest<void>(`/customers/${customerId}`, { method: "DELETE", headers: workspaceHeaders(workspaceId, token) });
 }

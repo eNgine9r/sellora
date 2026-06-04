@@ -12,3 +12,6 @@ export const updateAdMetric = (workspaceId: string, metricId: string, token: str
 export const fetchAdvertisingSummary = (workspaceId: string, token?: string, startDate?: string, endDate?: string) => apiRequest<AdvertisingSummary>(`/advertising/summary${rangeQuery(startDate, endDate)}`, { headers: authHeaders(workspaceId, token) });
 export const fetchCampaignPerformance = (workspaceId: string, token?: string, startDate?: string, endDate?: string, limit = 10) => apiRequest<CampaignPerformance[]>(`/advertising/campaign-performance${rangeQuery(startDate, endDate, { limit })}`, { headers: authHeaders(workspaceId, token) });
 export const fetchAdvertisingTrend = (workspaceId: string, token?: string, startDate?: string, endDate?: string) => apiRequest<AdvertisingTrendPoint[]>(`/advertising/trend${rangeQuery(startDate, endDate)}`, { headers: authHeaders(workspaceId, token) });
+
+export const deleteAdCampaign = (workspaceId: string, campaignId: string, token?: string) => apiRequest<void>(`/advertising/campaigns/${campaignId}`, { method: "DELETE", headers: authHeaders(workspaceId, token) });
+export const deleteAdMetric = (workspaceId: string, metricId: string, token?: string) => apiRequest<void>(`/advertising/metrics/${metricId}`, { method: "DELETE", headers: authHeaders(workspaceId, token) });

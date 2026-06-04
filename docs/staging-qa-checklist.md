@@ -111,3 +111,17 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Advertising campaigns: open `/advertising`, use the campaigns table **Edit campaign** action.
 - Advertising metrics: open `/advertising`, use the daily metrics table **Edit metric** action.
 - RBAC: verify OWNER and allowed MANAGER accounts see permitted edit actions, while ANALYST users see read-only states or no edit action.
+
+## Delete / Archive Test Data Cleanup QA
+
+- Leads: `/leads` → row → **Archive lead** → confirm; converted leads should warn that customer records are not deleted.
+- Customers: `/customers` → row or detail panel → **Archive customer** → confirm; existing orders and shipments must remain available historically.
+- Products: `/products` → product row → **Archive product** → confirm; product disappears from active catalog lists/selects while historical orders remain unchanged.
+- Variants: `/products` → **Manage product variants** → row → **Archive variant** → confirm; variants with reserved inventory should be rejected until related orders are resolved.
+- Inventory: verify there is no hard-delete inventory action; use **Adjust stock** and **Edit thresholds** for corrections instead.
+- Orders: `/orders` → NEW or CANCELLED row → **Archive order** → confirm; shipped/completed orders should show archive unavailable or a safe workflow error.
+- Shipments: `/shipments` → row/card → **Archive shipment** → confirm; Nova Poshta TTNs are not cancelled by this action.
+- Advertising campaigns: `/advertising` → campaigns table → **Archive campaign** → confirm and verify summaries refresh.
+- Advertising metrics: `/advertising` → daily metrics table → **Delete metric** → confirm and verify summaries/trends refresh.
+- RBAC: verify ANALYST users do not see destructive actions, and backend permission errors are friendly if a role is not allowed.
+- Confirm archived/deleted records disappear from active lists and no sensitive records are hard deleted.

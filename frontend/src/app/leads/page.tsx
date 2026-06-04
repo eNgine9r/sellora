@@ -2,11 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { LeadForm } from "@/features/leads/components/lead-form";
 import { LeadTable } from "@/features/leads/components/lead-table";
 import { ApiError, safeApiErrorMessage } from "@/services/api";
-import { createLead, fetchLeads, fetchLeadSources, LeadCreatePayload, updateLead } from "@/services/crm";
+import { createLead, deleteLead, fetchLeads, fetchLeadSources, LeadCreatePayload, updateLead } from "@/services/crm";
 import { Lead, LeadStatus } from "@/types/crm";
 import { buildLeadUpdatePayload } from "@/lib/payload-builders";
 import { useAuth } from "@/hooks/use-auth";
@@ -34,6 +35,7 @@ export default function LeadsPage() {
   const [leadSourceId, setLeadSourceId] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [archivingLead, setArchivingLead] = useState<Lead | null>(null);
   const authReady = authStatus !== "loading";
   const enabled = authReady && authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const canEdit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
@@ -53,6 +55,13 @@ export default function LeadsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["leads", workspaceId] });
       setEditingLead(null);
+    },
+  });
+  const archiveMutation = useMutation({
+    mutationFn: () => deleteLead(workspaceId, archivingLead?.id ?? "", undefined),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["leads", workspaceId] });
+      setArchivingLead(null);
     },
   });
 
@@ -96,7 +105,7 @@ export default function LeadsPage() {
             action={<button className="min-h-11 rounded-2xl bg-blue-600 px-4 text-sm font-black text-white" onClick={() => setIsCreateOpen(true)}>Create lead</button>}
           />
         ) : null}
-        {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={leadsQuery.data ?? []} leadSources={sourcesQuery.data ?? []} onEdit={canEdit ? setEditingLead : undefined} /> : null}
+        {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={leadsQuery.data ?? []} leadSources={sourcesQuery.data ?? []} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} /> : null}
 
         {isCreateOpen ? (
           <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/40 p-4">
@@ -119,6 +128,7 @@ export default function LeadsPage() {
             </div>
           </div>
         ) : null}
+        {archivingLead ? <ConfirmActionDialog title="Archive lead?" description={archivingLead.status === "CONVERTED" ? "This lead is converted. Archiving it will not delete the customer." : "This lead will be hidden from active lead lists. Historical audit records remain available."} actionLabel="Archive lead" isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingLead(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
         {editingLead ? <EditRecordDialog title="Edit lead" fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "instagram_profile_url", label: "Instagram profile URL" }, { name: "lead_source_id", label: "Lead source ID" }, { name: "status", label: "Status", type: "select", options: STATUSES.filter(Boolean).map((item) => ({ value: item, label: item })) }, { name: "expected_revenue", label: "Expected revenue", type: "number" }, { name: "loss_reason", label: "Loss reason", type: "textarea" }, { name: "notes", label: "Notes", type: "textarea" }]} initialValues={editingLead} isSubmitting={updateMutation.isPending} submitError={updateError} onClose={() => setEditingLead(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
       </div>
     </main>

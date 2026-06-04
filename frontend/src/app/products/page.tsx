@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { ProductForm } from "@/features/products/components/product-form";
 import { ProductTable } from "@/features/products/components/product-table";
@@ -9,7 +10,7 @@ import { ProductVariantForm } from "@/features/products/components/product-varia
 import { useAuth } from "@/hooks/use-auth";
 import { buildProductUpdatePayload, buildProductVariantUpdatePayload } from "@/lib/payload-builders";
 import { safeApiErrorMessage } from "@/services/api";
-import { createProduct, createProductVariant, fetchProducts, fetchProductVariants, updateProduct, updateProductVariant } from "@/services/products";
+import { createProduct, createProductVariant, deleteProduct, deleteProductVariant, fetchProducts, fetchProductVariants, updateProduct, updateProductVariant } from "@/services/products";
 import { Product, ProductVariant } from "@/types/products";
 
 export default function ProductsPage() {
@@ -20,6 +21,8 @@ export default function ProductsPage() {
   const [dialog, setDialog] = useState<"product" | "variant" | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
+  const [archivingProduct, setArchivingProduct] = useState<Product | null>(null);
+  const [archivingVariant, setArchivingVariant] = useState<ProductVariant | null>(null);
   const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const canEdit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
 
@@ -68,6 +71,22 @@ export default function ProductsPage() {
       invalidateCatalog();
     },
   });
+  const archiveProductMutation = useMutation({
+    mutationFn: () => deleteProduct(workspaceId, archivingProduct?.id ?? "", undefined),
+    onSuccess: () => {
+      setArchivingProduct(null);
+      invalidateCatalog();
+      queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
+    },
+  });
+  const archiveVariantMutation = useMutation({
+    mutationFn: () => deleteProductVariant(workspaceId, archivingVariant?.id ?? "", undefined),
+    onSuccess: () => {
+      setArchivingVariant(null);
+      invalidateCatalog();
+      queryClient.invalidateQueries({ queryKey: ["orders", workspaceId] });
+    },
+  });
 
   const products = productsQuery.data ?? [];
   const variants = variantsQuery.data ?? [];
@@ -97,7 +116,7 @@ export default function ProductsPage() {
         </section>
 
         {listError ? <p className="rounded-lg bg-rose-50 p-4 text-rose-700">{listError}</p> : null}
-        <ProductTable products={products} onEdit={canEdit ? setEditingProduct : undefined} />
+        <ProductTable products={products} onEdit={canEdit ? setEditingProduct : undefined} onArchive={canEdit ? setArchivingProduct : undefined} />
 
         <section className="rounded-2xl bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -135,9 +154,14 @@ export default function ProductsPage() {
                     <td className="px-3 py-2">{variant.is_active ? "Active" : "Inactive"}</td>
                     <td className="px-3 py-2">
                       {canEdit ? (
-                        <button aria-label={`Edit variant ${variant.sku}`} className="min-h-10 rounded-lg border border-slate-300 px-3 py-2 font-semibold" onClick={() => setEditingVariant(variant)}>
-                          Edit variant
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button aria-label={`Edit variant ${variant.sku}`} className="min-h-10 rounded-lg border border-slate-300 px-3 py-2 font-semibold" onClick={() => setEditingVariant(variant)}>
+                            Edit variant
+                          </button>
+                          <button aria-label={`Archive variant ${variant.sku}`} className="min-h-10 rounded-lg border border-rose-200 px-3 py-2 font-semibold text-rose-700" onClick={() => setArchivingVariant(variant)}>
+                            Archive variant
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-xs font-semibold uppercase text-slate-400">Read-only</span>
                       )}
@@ -168,6 +192,12 @@ export default function ProductsPage() {
               onSubmit={(values) => createVariantMutation.mutate(values)}
             />
           </section>
+        ) : null}
+        {archivingProduct ? (
+          <ConfirmActionDialog title="Archive product?" description="Archiving this product hides it from the active catalog. Existing orders remain unchanged." actionLabel="Archive product" isSubmitting={archiveProductMutation.isPending} error={archiveProductMutation.isError ? safeApiErrorMessage(archiveProductMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingProduct(null)} onConfirm={() => archiveProductMutation.mutate()} />
+        ) : null}
+        {archivingVariant ? (
+          <ConfirmActionDialog title="Archive variant?" description="This variant will be hidden from active selectors. Inventory is not hard deleted, and historical order items remain unchanged." actionLabel="Archive variant" isSubmitting={archiveVariantMutation.isPending} error={archiveVariantMutation.isError ? safeApiErrorMessage(archiveVariantMutation.error, "This record cannot be deleted because it is used by other records.") : null} onCancel={() => setArchivingVariant(null)} onConfirm={() => archiveVariantMutation.mutate()} />
         ) : null}
         {editingProduct ? (
           <EditRecordDialog
