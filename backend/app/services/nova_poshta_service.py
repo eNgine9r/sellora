@@ -139,7 +139,9 @@ class NovaPoshtaShipmentService:
         shipment = self.shipments.get(workspace_id, shipment_id)
         errors = self._validate_for_ttn(shipment, connection.settings or {})
         if errors:
-            return NovaPoshtaTtnResponse(success=False, message="Shipment is missing required Nova Poshta fields.", errors=errors)
+            sender_fields = {"sender_city_ref is required", "sender_warehouse_ref is required", "sender_counterparty_ref is required", "sender_contact_ref is required", "sender_phone is required"}
+            message = "Sender settings are incomplete. Please fill sender city, warehouse, counterparty, contact person, and phone." if any(error in sender_fields for error in errors) else "Shipment is missing required Nova Poshta fields."
+            return NovaPoshtaTtnResponse(success=False, message=message, errors=errors)
         payload = self._document_payload(shipment, connection.settings or {})
         try:
             result = self.settings.client_factory(api_key).create_internet_document(payload)

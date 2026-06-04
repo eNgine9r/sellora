@@ -109,9 +109,10 @@ def test_rbac_owner_manager_analyst_nova_poshta_permissions() -> None:
     with pytest.raises(HTTPException): require_min_role(RoleName.MANAGER)(analyst, workspace_id)
 
 
-def _shipment_service(shipment):
+def _shipment_service(shipment, sender_settings_complete=True):
     settings = _settings_service(); workspace_id = shipment.workspace_id
-    settings.save_settings(workspace_id, NovaPoshtaSettingsRequest(api_key="synthetic-credential-value", sender_city_ref="sender-city", sender_warehouse_ref="sender-wh", sender_counterparty_ref="sender", sender_contact_ref="contact", sender_phone="0000000000"), uuid4())
+    payload = NovaPoshtaSettingsRequest(api_key="synthetic-credential-value", sender_city_ref="sender-city", sender_warehouse_ref="sender-wh", sender_counterparty_ref="sender", sender_contact_ref="contact", sender_phone="0000000000") if sender_settings_complete else NovaPoshtaSettingsRequest(api_key="synthetic-credential-value")
+    settings.save_settings(workspace_id, payload, uuid4())
     service = NovaPoshtaShipmentService.__new__(NovaPoshtaShipmentService)
     service.db = FakeDb(); service.settings = settings; service.audit_logs = FakeAudit(); service.shipments = SimpleNamespace(get=lambda workspace_id, shipment_id: shipment if shipment.workspace_id == workspace_id and shipment.id == shipment_id else None)
     return service
@@ -123,6 +124,16 @@ def test_create_ttn_validates_required_fields_before_api_call() -> None:
     response = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
     assert not response.success
     assert "customer is required" in response.errors
+
+
+def test_create_ttn_reports_clear_sender_settings_message() -> None:
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
+    service = _shipment_service(shipment, sender_settings_complete=False)
+    response = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
+    assert not response.success
+    assert response.message == "Sender settings are incomplete. Please fill sender city, warehouse, counterparty, contact person, and phone."
+    assert "sender_city_ref is required" in response.errors
 
 
 def test_create_ttn_updates_shipment_and_does_not_log_credential() -> None:
