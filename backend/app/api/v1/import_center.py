@@ -57,6 +57,16 @@ def your_jewelry_product_catalog_preset() -> MappingPresetResponse:
     return MappingPresetResponse(**MappingSuggestionService().product_catalog_preset())
 
 
+@router.get("/presets/your_jewelry_orders_history_v1", response_model=MappingPresetResponse, dependencies=[Depends(require_roles(RoleName.OWNER))])
+def your_jewelry_orders_history_preset() -> MappingPresetResponse:
+    return MappingPresetResponse(**MappingSuggestionService().orders_history_preset())
+
+
+@router.get("/presets/your_jewelry_advertising_history_v1", response_model=MappingPresetResponse, dependencies=[Depends(require_roles(RoleName.OWNER))])
+def your_jewelry_advertising_history_preset() -> MappingPresetResponse:
+    return MappingPresetResponse(**MappingSuggestionService().advertising_history_preset())
+
+
 @router.get("/presets/your-jewelry", response_model=YourJewelryPresetResponse, dependencies=[Depends(require_roles(RoleName.OWNER))])
 def your_jewelry_hardened_preset() -> YourJewelryPresetResponse:
     return MappingSuggestionService().your_jewelry_preset()
@@ -82,7 +92,7 @@ def preview_import(job_id: UUID, payload: ImportPreviewRequest, workspace_id: UU
 @router.post("/{job_id}/validate", response_model=ImportValidationReport)
 def validate_import(job_id: UUID, payload: ImportValidationRequest, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_roles(RoleName.OWNER)), db: Session = Depends(get_db)) -> ImportValidationReport:
     try:
-        return ImportService(db).validate(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, current_user.id)
+        return ImportService(db).validate(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, current_user.id, payload.options)
     except ImportServiceError as exc:
         raise _bad_request(exc)
 
@@ -100,7 +110,7 @@ def suggest_mapping(job_id: UUID, payload: SuggestMappingRequest, workspace_id: 
 @router.post("/{job_id}/dry-run", response_model=ImportReportResponse)
 def dry_run_import(job_id: UUID, payload: ImportValidationRequest, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_roles(RoleName.OWNER)), db: Session = Depends(get_db)) -> ImportReportResponse:
     try:
-        return ImportService(db).dry_run(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, current_user.id)
+        return ImportService(db).dry_run(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, current_user.id, payload.options)
     except ImportServiceError as exc:
         raise _bad_request(exc)
 
@@ -108,7 +118,7 @@ def dry_run_import(job_id: UUID, payload: ImportValidationRequest, workspace_id:
 @router.post("/{job_id}/execute", response_model=ImportExecuteResponse | ImportReportResponse)
 def execute_import(job_id: UUID, payload: ImportExecuteRequest, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_roles(RoleName.OWNER)), db: Session = Depends(get_db)) -> ImportExecuteResponse | ImportReportResponse:
     try:
-        result = ImportService(db).execute(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, payload.mode, current_user.id, payload.dry_run)
+        result = ImportService(db).execute(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, payload.mode, current_user.id, payload.dry_run, payload.options)
     except ImportServiceError as exc:
         raise _bad_request(exc)
     if isinstance(result, ImportReportResponse):

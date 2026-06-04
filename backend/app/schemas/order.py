@@ -16,7 +16,9 @@ class OrderItemCreate(BaseModel):
 
 class OrderCreate(BaseModel):
     customer_id: UUID | None = None
+    status: OrderStatus = OrderStatus.NEW
     payment_status: PaymentStatus = PaymentStatus.PENDING
+    is_historical: bool = False
     items: list[OrderItemCreate] = Field(min_length=1)
     ad_cost: Decimal = Field(default=0, ge=0)
     shipping_cost: Decimal = Field(default=0, ge=0)
@@ -76,6 +78,7 @@ class OrderResponse(BaseModel):
     customer_id: UUID | None
     status: OrderStatus
     payment_status: PaymentStatus
+    is_historical: bool = False
     revenue: Decimal
     product_cost: Decimal
     ad_cost: Decimal

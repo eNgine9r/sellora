@@ -157,3 +157,16 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Try to edit items after changing an order to SHIPPED; item controls should be locked with a clear workflow message.
 - Confirm safe fields such as payment status, costs, and notes still save for restricted statuses when allowed by backend policy.
 - Confirm order details list every item with quantity, product name, SKU, unit price, line total, and workspace currency totals.
+
+## Sprint 2.2 historical imports QA
+
+- Confirm the Import Center preset selector includes `your_jewelry_orders_history_v1` and `your_jewelry_advertising_history_v1`.
+- For historical orders, upload a small synthetic file, preview it, suggest mappings, and verify dry-run groups repeated order numbers into one multi-item order.
+- Verify historical order dry-run counters for orders, order items, customers, variants, shipments, duplicate orders, estimated revenue, ad cost, and profit.
+- Execute a synthetic historical orders import with `affect_inventory=false` and verify imported orders appear in `/orders` without changing current inventory reservations.
+- Verify a row with a tracking number creates a Sellora shipment record only and does not call Nova Poshta.
+- For advertising history, upload a small synthetic file, preview it, suggest mappings, and verify dry-run counters for campaigns, metrics, spend, revenue, net profit, and ROAS.
+- Execute a synthetic advertising import and verify imported campaigns and daily metrics appear in `/advertising` and update dashboard/analytics summaries.
+- Confirm duplicate orders and duplicate campaign/date metrics are skipped or warned in create-only mode.
+- Confirm Import Logs for historical order and advertising imports do not store raw row values or private customer/order/ad data.
+- Confirm product catalog import, create/edit/delete flows, auth/session refresh, workspace headers, and workspace currency formatting still work after historical imports.

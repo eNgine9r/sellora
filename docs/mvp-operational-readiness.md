@@ -42,3 +42,16 @@ If an import was incorrect, do not upload or expose private data in support chan
 - Do not commit real Excel, CSV, or exported business files.
 - Do not paste real product names, prices, costs, customer details, order details, URLs, or profit data into docs, tests, screenshots, issue comments, or logs.
 - Keep uploaded files in private import storage only.
+
+## Historical import readiness
+
+1. Import the synthetic-reviewed product catalog first so Products, Product Variants, and Inventory exist before historical sales are loaded.
+2. Verify products, variants, prices, and inventory rows before importing order history.
+3. Import historical orders second with `your_jewelry_orders_history_v1`.
+4. Always run preview, suggested mapping, validation, and dry-run before execution.
+5. Keep `affect_inventory` disabled for historical completed orders so current stock and reserved quantities are not changed.
+6. Import advertising daily metrics third with `your_jewelry_advertising_history_v1`.
+7. Verify dashboard, analytics, ROAS, and profit summaries after each import batch.
+8. Use edit/archive flows to correct mistakes instead of overwriting historical imports.
+9. Never commit real spreadsheets, raw order rows, customer private data, product costs, profit data, or ad performance data.
+10. Prefer a small synthetic or anonymized test subset before a full private import.

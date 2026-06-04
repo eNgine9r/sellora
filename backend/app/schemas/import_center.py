@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -48,6 +49,7 @@ class ImportValidationRequest(BaseModel):
     entity_type: str
     sheet_name: str
     column_mapping: dict[str, str]
+    options: dict | None = None
 
 
 class ImportValidationIssue(BaseModel):
@@ -85,6 +87,27 @@ class ImportReportResponse(BaseModel):
     images_detected: int = 0
     duplicate_products: int = 0
     duplicate_variants: int = 0
+    orders_detected: int = 0
+    order_items_detected: int = 0
+    customers_matched: int = 0
+    customers_to_create: int = 0
+    variants_matched: int = 0
+    variants_missing: int = 0
+    shipments_detected: int = 0
+    duplicate_orders: int = 0
+    ready_orders: int = 0
+    ready_items: int = 0
+    estimated_revenue: Decimal = Decimal("0")
+    estimated_ad_cost: Decimal = Decimal("0")
+    estimated_profit: Decimal = Decimal("0")
+    campaigns_detected: int = 0
+    campaigns_to_create: int = 0
+    campaigns_reused: int = 0
+    metrics_detected: int = 0
+    duplicate_metrics: int = 0
+    estimated_spend: Decimal = Decimal("0")
+    estimated_net_profit: Decimal = Decimal("0")
+    estimated_roas: Decimal = Decimal("0")
     sample_errors: list[ImportValidationIssue] = Field(default_factory=list)
     sample_warnings: list[ImportValidationIssue] = Field(default_factory=list)
 

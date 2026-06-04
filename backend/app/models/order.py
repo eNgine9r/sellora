@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,6 +35,7 @@ class Order(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Timestam
     customer_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default=OrderStatus.NEW.value, nullable=False)
     payment_status: Mapped[str] = mapped_column(String(30), default=PaymentStatus.PENDING.value, nullable=False)
+    is_historical: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     revenue: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     product_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     ad_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)

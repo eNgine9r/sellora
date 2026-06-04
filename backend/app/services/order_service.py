@@ -43,33 +43,39 @@ class OrderService:
         orders_today, revenue_today, profit_today = self.orders.dashboard_today(workspace_id)
         return OrderDashboardResponse(orders_today=orders_today, revenue_today=revenue_today, profit_today=profit_today)
 
-    def create(self, workspace_id: UUID, payload: OrderCreate, actor_user_id: UUID | None) -> Order:
+    def create(self, workspace_id: UUID, payload: OrderCreate, actor_user_id: UUID | None, affect_inventory: bool = True, order_number: str | None = None, created_at: datetime | None = None, completed_at: datetime | None = None) -> Order:
         prepared_items = []
         requested_by_inventory: dict[UUID, int] = {}
         for item_payload in payload.items:
             variant = self._get_variant(workspace_id, item_payload.product_variant_id)
-            inventory = self.inventory.get_by_variant(workspace_id, item_payload.product_variant_id)
-            if inventory is None:
-                raise OrderServiceError("Inventory record not found for variant")
-            requested_by_inventory[inventory.id] = requested_by_inventory.get(inventory.id, 0) + item_payload.quantity
-            if requested_by_inventory[inventory.id] > inventory.stock_quantity - inventory.reserved_quantity:
-                raise OrderServiceError("Cannot reserve more than available stock")
+            inventory = self.inventory.get_by_variant(workspace_id, item_payload.product_variant_id) if affect_inventory else None
+            if affect_inventory:
+                if inventory is None:
+                    raise OrderServiceError("Inventory record not found for variant")
+                requested_by_inventory[inventory.id] = requested_by_inventory.get(inventory.id, 0) + item_payload.quantity
+                if requested_by_inventory[inventory.id] > inventory.stock_quantity - inventory.reserved_quantity:
+                    raise OrderServiceError("Cannot reserve more than available stock")
             prepared_items.append((item_payload, variant, inventory))
 
+        initial_status = payload.status.value if hasattr(payload.status, "value") else str(payload.status)
         order = self.orders.create(
             Order(
                 workspace_id=workspace_id,
-                order_number=self._generate_order_number(workspace_id),
+                order_number=order_number or self._generate_order_number(workspace_id),
                 customer_id=payload.customer_id,
-                status=OrderStatus.NEW.value,
+                status=initial_status,
                 payment_status=payload.payment_status.value,
+                is_historical=payload.is_historical,
                 ad_cost=payload.ad_cost,
                 shipping_cost=payload.shipping_cost,
                 cod_fee=payload.cod_fee,
                 other_cost=payload.other_cost,
                 notes=payload.notes,
+                completed_at=completed_at,
             )
         )
+        if created_at is not None:
+            order.created_at = created_at
         revenue = Decimal("0")
         product_cost = Decimal("0")
         for item_payload, variant, inventory in prepared_items:
@@ -91,11 +97,12 @@ class OrderService:
                     line_cost=line_cost,
                 )
             )
-            self._inventory_transaction(workspace_id, inventory.id, InventoryTransactionType.RESERVE, item_payload.quantity, "Order reservation", actor_user_id)
+            if affect_inventory and inventory is not None:
+                self._inventory_transaction(workspace_id, inventory.id, InventoryTransactionType.RESERVE, item_payload.quantity, "Order reservation", actor_user_id)
         order.revenue = revenue
         order.product_cost = product_cost
         self._recalculate_profit(order)
-        self._add_status_history(order, None, OrderStatus.NEW, actor_user_id, "Order created")
+        self._add_status_history(order, None, OrderStatus(initial_status), actor_user_id, "Order created")
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="CREATE", new_value=snapshot(order))
         self.db.commit()
         self.db.refresh(order)

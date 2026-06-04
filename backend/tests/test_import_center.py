@@ -460,3 +460,55 @@ def test_product_catalog_duplicate_product_and_variant_are_warned() -> None:
 
     assert any(issue.message == "Duplicate product" for issue in report.issues)
     assert any(issue.message == "Duplicate variant" for issue in report.issues)
+
+
+def test_historical_orders_preset_and_mapping_suggestions() -> None:
+    preset = MappingSuggestionService().orders_history_preset()
+    assert preset["name"] == "your_jewelry_orders_history_v1"
+    columns = ["Order Number", "Order Date", "Customer Phone", "Variant SKU", "Quantity", "Unit Price"]
+    suggestion = MappingSuggestionService().suggest(columns, "orders_history")
+    assert suggestion.suggested_mapping["order_number"] == "Order Number"
+    assert suggestion.suggested_mapping["variant_sku"] == "Variant SKU"
+
+
+def test_historical_advertising_preset_and_mapping_suggestions() -> None:
+    preset = MappingSuggestionService().advertising_history_preset()
+    assert preset["name"] == "your_jewelry_advertising_history_v1"
+    columns = ["Campaign Name", "Platform", "Date", "Spend", "Revenue"]
+    suggestion = MappingSuggestionService().suggest(columns, "advertising_history")
+    assert suggestion.suggested_mapping["campaign_name"] == "Campaign Name"
+    assert suggestion.suggested_mapping["metric_date"] == "Date"
+
+
+def test_orders_history_dry_run_groups_multi_item_order_and_does_not_write() -> None:
+    from app.services.import_center_service import HistoricalImportService
+
+    workspace_id = uuid4()
+    db = FakeDb()
+    variant = SimpleNamespace(id=uuid4(), sku="SYN-SKU-A", purchase_price=Decimal("10.00"))
+    lookup = SimpleNamespace(
+        find_order_by_number=lambda *_args, **_kwargs: None,
+        find_variant=lambda *_args, **_kwargs: variant,
+        find_customer=lambda *_args, **_kwargs: None,
+    )
+    rows = [
+        {"Order Number": "SYN-100", "Order Date": "2026-01-01", "Customer Phone": "+100000000", "Variant SKU": "SYN-SKU-A", "Quantity": 1, "Unit Price": "30.00", "Ad Cost": "3.00"},
+        {"Order Number": "SYN-100", "Order Date": "2026-01-01", "Customer Phone": "+100000000", "Variant SKU": "SYN-SKU-A", "Quantity": 2, "Unit Price": "40.00", "Ad Cost": "3.00"},
+    ]
+    mapping = {"order_number": "Order Number", "order_date": "Order Date", "customer_phone": "Customer Phone", "variant_sku": "Variant SKU", "quantity": "Quantity", "unit_price": "Unit Price", "ad_cost": "Ad Cost"}
+    report = HistoricalImportService(db, lookup).dry_run(workspace_id, uuid4(), "orders_history", "Orders", rows, mapping)
+    assert report.orders_detected == 1
+    assert report.order_items_detected == 2
+    assert report.estimated_revenue == Decimal("110.00")
+    assert db.added == []
+
+
+def test_advertising_history_dry_run_rejects_negative_spend() -> None:
+    from app.services.import_center_service import HistoricalImportService
+
+    lookup = SimpleNamespace(find_ad_campaign_by_name=lambda *_args, **_kwargs: None, find_ad_metric_by_campaign_date=lambda *_args, **_kwargs: None)
+    rows = [{"Campaign Name": "Synthetic Launch", "Date": "2026-01-01", "Spend": "-1"}]
+    mapping = {"campaign_name": "Campaign Name", "metric_date": "Date", "spend": "Spend"}
+    report = HistoricalImportService(FakeDb(), lookup).dry_run(uuid4(), uuid4(), "advertising_history", "Ads", rows, mapping)
+    assert report.error_rows == 1
+    assert "Spend cannot be negative." in report.sample_errors[0].message
