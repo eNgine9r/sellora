@@ -1,0 +1,3 @@
+import { ImportJob } from "@/types/import-center";
+import { ImportJobStatusBadge } from "@/features/import-center/components/import-job-status-badge";
+export function ImportSummaryCard({ job }: { job?: ImportJob | null }) { if (!job) return null; return <section className="rounded-xl bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><h2 className="font-semibold">{job.file_name}</h2><ImportJobStatusBadge status={job.status} /></div><div className="mt-3 grid grid-cols-4 gap-2 text-sm"><span>Total {job.total_rows}</span><span>Processed {job.processed_rows}</span><span>Success {job.success_rows}</span><span>Failed {job.failed_rows}</span></div></section>; }
