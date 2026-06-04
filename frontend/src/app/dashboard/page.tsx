@@ -12,6 +12,7 @@ import { RecentOrdersTable } from "@/features/dashboard/components/recent-orders
 import { TopProductsCard } from "@/features/dashboard/components/top-products-card";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { useAuth } from "@/hooks/use-auth";
+import { formatMoney } from "@/lib/currency";
 import { fetchAdvertisingSummary } from "@/services/advertising";
 import { fetchAnalyticsDashboard } from "@/services/analytics";
 import { fetchOrders } from "@/services/orders";
@@ -45,8 +46,9 @@ function MetricStrip({ label, value, tone = "violet" }: { label: string; value: 
 }
 
 export default function DashboardPage() {
-  const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
+  const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
+  const currencyCode = currentWorkspace?.currency_code ?? "UAH";
   const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
 
   const dashboard = useQuery({ queryKey: ["dashboard", workspaceId], queryFn: () => fetchAnalyticsDashboard(workspaceId), enabled });
@@ -101,8 +103,8 @@ export default function DashboardPage() {
         ) : null}
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <KpiCard label="Дохід" value={`$${dashboard.data?.month_revenue ?? "0.00"}`} trend="+12%" />
-          <KpiCard label="Чистий прибуток" value={`$${dashboard.data?.month_profit ?? "0.00"}`} trend="+8%" />
+          <KpiCard label="Дохід" value={formatMoney(dashboard.data?.month_revenue, currencyCode)} trend="+12%" />
+          <KpiCard label="Чистий прибуток" value={formatMoney(dashboard.data?.month_profit, currencyCode)} trend="+8%" />
           <KpiCard label="Замовлення" value={dashboard.data?.month_orders ?? 0} trend="+5%" />
           <KpiCard label="Нові ліди" value={advertising.data?.total_leads ?? 0} trend="+14%" />
           <KpiCard label="ROAS" value={advertising.data?.roas ?? "—"} trend="+3%" />
@@ -166,7 +168,7 @@ export default function DashboardPage() {
 
           <ChartCard title="Advertising" subtitle="Campaign signal overview">
             <div className="grid gap-3 sm:grid-cols-2">
-              <MetricStrip label="Spend" value={`$${advertising.data?.total_spend ?? "0.00"}`} tone="violet" />
+              <MetricStrip label="Spend" value={formatMoney(advertising.data?.total_spend, currencyCode)} tone="violet" />
               <MetricStrip label="Messages" value={advertising.data?.total_messages ?? 0} tone="pink" />
               <MetricStrip label="Leads" value={advertising.data?.total_leads ?? 0} tone="orange" />
               <MetricStrip label="ROAS" value={advertising.data?.roas ?? "—"} tone="amber" />
@@ -175,8 +177,8 @@ export default function DashboardPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-          <RecentOrdersTable orders={orders.data ?? []} />
-          <TopProductsCard products={dashboard.data?.top_products ?? []} />
+          <RecentOrdersTable orders={orders.data ?? []} currencyCode={currencyCode} />
+          <TopProductsCard products={dashboard.data?.top_products ?? []} currencyCode={currencyCode} />
         </section>
 
         <section className="grid gap-6 lg:grid-cols-3">

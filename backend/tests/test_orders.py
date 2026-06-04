@@ -8,7 +8,7 @@ from app.models.inventory_transaction import InventoryTransactionType
 from app.models.order import OrderStatus
 from app.models.product import Product
 from app.models.product_variant import ProductVariant
-from app.schemas.order import OrderCreate, OrderItemCreate, OrderStatusUpdate
+from app.schemas.order import OrderCreate, OrderItemCreate, OrderStatusUpdate, OrderUpdate
 from app.services.order_service import OrderService
 
 
@@ -56,6 +56,12 @@ class FakeOrders:
         self.items.append(item)
         self.order.items = self.items
         return item
+
+    def delete_item(self, item):
+        if item in self.items:
+            self.items.remove(item)
+        if self.order and item in self.order.items:
+            self.order.items.remove(item)
 
     def add_status_history(self, history):
         history.id = history.id or uuid4()
@@ -338,3 +344,126 @@ def test_variant_price_edits_do_not_change_captured_order_item_price() -> None:
 
     assert order.items[0].unit_price == Decimal("50")
     assert order.items[0].line_total == Decimal("100")
+
+
+def test_update_new_order_items_from_one_to_two_recalculates_and_reserves_delta() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    second_variant, second_inventory = _add_second_variant(service, inventory.workspace_id)
+
+    updated = service.update(
+        inventory.workspace_id,
+        order.id,
+        OrderUpdate(
+            items=[
+                OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=2, unit_price=Decimal("50"), unit_cost=Decimal("20")),
+                OrderItemCreate(product_variant_id=second_variant.id, quantity=3, unit_price=Decimal("30"), unit_cost=Decimal("10")),
+            ],
+            ad_cost=Decimal("10"),
+            shipping_cost=Decimal("5"),
+            cod_fee=Decimal("3"),
+            other_cost=Decimal("2"),
+        ),
+        actor_user_id=uuid4(),
+    )
+
+    assert updated is order
+    assert len(order.items) == 2
+    assert order.revenue == Decimal("190")
+    assert order.product_cost == Decimal("70")
+    assert order.net_profit == Decimal("100")
+    assert inventory.reserved_quantity == 2
+    assert second_inventory.reserved_quantity == 3
+    assert service.audit_logs.records[-2]["action"] == "ORDER_ITEMS_UPDATE"
+
+
+def test_update_order_quantity_increase_and_decrease_reservation_delta() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+
+    service.update(inventory.workspace_id, order.id, OrderUpdate(items=[OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=4, unit_price=Decimal("50"), unit_cost=Decimal("20"))]), actor_user_id=uuid4())
+    assert inventory.reserved_quantity == 4
+
+    service.update(inventory.workspace_id, order.id, OrderUpdate(items=[OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=1, unit_price=Decimal("50"), unit_cost=Decimal("20"))]), actor_user_id=uuid4())
+    assert inventory.reserved_quantity == 1
+    assert order.revenue == Decimal("50")
+    assert order.product_cost == Decimal("20")
+
+
+def test_update_order_remove_item_releases_reservation() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    second_variant, second_inventory = _add_second_variant(service, inventory.workspace_id)
+    service.update(inventory.workspace_id, order.id, OrderUpdate(items=[OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=2, unit_price=Decimal("50"), unit_cost=Decimal("20")), OrderItemCreate(product_variant_id=second_variant.id, quantity=2, unit_price=Decimal("30"), unit_cost=Decimal("10"))]), actor_user_id=uuid4())
+
+    service.update(inventory.workspace_id, order.id, OrderUpdate(items=[OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=2, unit_price=Decimal("50"), unit_cost=Decimal("20"))]), actor_user_id=uuid4())
+
+    assert inventory.reserved_quantity == 2
+    assert second_inventory.reserved_quantity == 0
+    assert len(order.items) == 1
+
+
+def test_update_order_replace_variant_releases_old_and_reserves_new() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    second_variant, second_inventory = _add_second_variant(service, inventory.workspace_id)
+
+    service.update(inventory.workspace_id, order.id, OrderUpdate(items=[OrderItemCreate(product_variant_id=second_variant.id, quantity=2, unit_price=Decimal("35"), unit_cost=Decimal("12"))]), actor_user_id=uuid4())
+
+    assert inventory.reserved_quantity == 0
+    assert second_inventory.reserved_quantity == 2
+    assert order.items[0].product_variant_id == second_variant.id
+    assert order.revenue == Decimal("70")
+
+
+def test_update_order_insufficient_stock_rejects_without_partial_change() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    second_variant, second_inventory = _add_second_variant(service, inventory.workspace_id)
+    second_inventory.stock_quantity = 1
+
+    try:
+        service.update(inventory.workspace_id, order.id, OrderUpdate(items=[OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=2, unit_price=Decimal("50"), unit_cost=Decimal("20")), OrderItemCreate(product_variant_id=second_variant.id, quantity=2, unit_price=Decimal("30"), unit_cost=Decimal("10"))]), actor_user_id=uuid4())
+    except Exception as exc:
+        assert "Not enough available stock" in str(exc)
+    else:
+        raise AssertionError("Insufficient stock should reject item update")
+
+    assert inventory.reserved_quantity == 2
+    assert second_inventory.reserved_quantity == 0
+    assert len(order.items) == 1
+
+
+def test_shipped_order_rejects_item_edit_but_safe_fields_update() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED), actor_user_id=uuid4())
+
+    try:
+        service.update(inventory.workspace_id, order.id, OrderUpdate(items=[OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=1, unit_price=Decimal("50"), unit_cost=Decimal("20"))]), actor_user_id=uuid4())
+    except Exception as exc:
+        assert "Order items cannot be edited" in str(exc)
+    else:
+        raise AssertionError("Shipped order items should be locked")
+
+    updated = service.update(inventory.workspace_id, order.id, OrderUpdate(notes="Safe note", shipping_cost=Decimal("7")), actor_user_id=uuid4())
+    assert updated.notes == "Safe note"
+    assert updated.shipping_cost == Decimal("7")
+
+
+def test_update_order_variant_workspace_isolation() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    other_product = Product(id=uuid4(), workspace_id=uuid4(), name="Other", sku="OT")
+    other_variant = ProductVariant(id=uuid4(), workspace_id=other_product.workspace_id, product_id=other_product.id, sku="OT-1", product=other_product)
+    service.db.variants[other_variant.id] = other_variant
+
+    try:
+        service.update(inventory.workspace_id, order.id, OrderUpdate(items=[OrderItemCreate(product_variant_id=other_variant.id, quantity=1, unit_price=Decimal("10"), unit_cost=Decimal("1"))]), actor_user_id=uuid4())
+    except Exception as exc:
+        assert "Product variant does not exist" in str(exc)
+    else:
+        raise AssertionError("Cross-workspace variant should be rejected")
+
+    assert inventory.reserved_quantity == 2
+    assert order.items[0].product_variant_id == inventory.product_variant_id

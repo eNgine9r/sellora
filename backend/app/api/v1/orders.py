@@ -48,7 +48,10 @@ def get_order(order_id: UUID, workspace_id: UUID = Depends(get_workspace_id), db
 
 @router.put("/{order_id}", response_model=OrderResponse)
 def update_order(order_id: UUID, payload: OrderUpdate, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> OrderResponse:
-    order = OrderService(db).update(workspace_id, order_id, payload, current_user.id)
+    try:
+        order = OrderService(db).update(workspace_id, order_id, payload, current_user.id)
+    except OrderServiceError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order

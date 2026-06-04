@@ -206,7 +206,13 @@ export function buildInventoryUpdatePayload(values: Record<string, string | numb
   return stripUndefinedFields({ incoming_quantity: cleanOptionalInteger(values.incoming_quantity) ?? undefined, minimum_quantity: cleanOptionalInteger(values.minimum_quantity) ?? undefined });
 }
 export function buildOrderUpdatePayload(values: RawOrderValues) {
-  return stripUndefinedFields({ payment_status: cleanOptionalEnum(values.payment_status, PAYMENT_STATUSES) ?? undefined, ad_cost: cleanOptionalNumber(values.ad_cost) ?? undefined, shipping_cost: cleanOptionalNumber(values.shipping_cost) ?? undefined, cod_fee: cleanOptionalNumber(values.cod_fee) ?? undefined, other_cost: cleanOptionalNumber(values.other_cost) ?? undefined, notes: cleanOptionalString(values.notes) });
+  const items = values.items?.map((item) => ({
+    product_variant_id: cleanOptionalUuid(item.product_variant_id) ?? "",
+    quantity: Math.max(1, cleanRequiredInteger(item.quantity)),
+    unit_price: Math.max(0, cleanRequiredNumber(item.unit_price)),
+    unit_cost: Math.max(0, cleanRequiredNumber(item.unit_cost)),
+  }));
+  return stripUndefinedFields({ payment_status: cleanOptionalEnum(values.payment_status, PAYMENT_STATUSES) ?? undefined, ad_cost: cleanOptionalNumber(values.ad_cost) ?? undefined, shipping_cost: cleanOptionalNumber(values.shipping_cost) ?? undefined, cod_fee: cleanOptionalNumber(values.cod_fee) ?? undefined, other_cost: cleanOptionalNumber(values.other_cost) ?? undefined, notes: cleanOptionalString(values.notes), items });
 }
 export function buildShipmentUpdatePayload(values: RawShipmentValues) {
   const { order_id: _order_id, ...payload } = buildShipmentCreatePayload({ ...values, order_id: "00000000-0000-0000-0000-000000000000" });

@@ -41,6 +41,10 @@ class OrderRepository:
         self.db.flush()
         return item
 
+    def delete_item(self, item: OrderItem) -> None:
+        self.db.delete(item)
+        self.db.flush()
+
     def add_status_history(self, history: OrderStatusHistory) -> OrderStatusHistory:
         self.db.add(history)
         self.db.flush()

@@ -24,6 +24,7 @@ class WorkspaceMembership(BaseModel):
     workspace_name: str
     workspace_slug: str
     role: str
+    currency_code: str = "UAH"
 
 
 class CurrentUserResponse(BaseModel):

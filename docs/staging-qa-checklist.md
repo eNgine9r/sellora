@@ -138,3 +138,22 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Verify inventory reserved quantities increase for every selected variant and the dashboard/order counters refresh.
 - Confirm order status actions, safe-field order editing, and NEW/CANCELLED order archiving still work after multi-item order creation.
 - Check the create-order dialog at mobile width: item rows should stack vertically, totals should remain readable, and there should be no horizontal overflow.
+
+## Workspace Currency Settings QA
+
+- Open `/settings` as an OWNER and verify the **Workspace settings** section is visible.
+- Confirm the default currency is **UAH — Ukrainian hryvnia** for existing workspaces.
+- Save currency as UAH and verify order, dashboard, analytics, and advertising monetary values display with `₴`.
+- Change currency to USD and verify the same numeric values display with `$` without conversion.
+- Confirm MANAGER and ANALYST accounts see the currency section as owner-only and cannot save workspace currency.
+
+## Full Order Editing QA
+
+- Create a one-item order from `/orders`, open row **Edit order**, and confirm the existing item is pre-filled.
+- Add a second item, save, and verify order revenue/profit totals and inventory reserved quantity update for the added variant.
+- Re-open **Edit order**, increase item quantity, save, and verify only the reservation delta is added.
+- Re-open **Edit order**, decrease item quantity or remove an item, save, and verify released reservation quantity returns to available inventory.
+- Replace an item variant, save, and verify the old variant reservation is released while the new variant is reserved.
+- Try to edit items after changing an order to SHIPPED; item controls should be locked with a clear workflow message.
+- Confirm safe fields such as payment status, costs, and notes still save for restricted statuses when allowed by backend policy.
+- Confirm order details list every item with quantity, product name, SKU, unit price, line total, and workspace currency totals.

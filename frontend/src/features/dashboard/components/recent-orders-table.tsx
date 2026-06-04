@@ -1,8 +1,9 @@
 import { EmptyState } from "@/components/ui/states";
+import { formatMoney } from "@/lib/currency";
 import { Order } from "@/types/orders";
 import { StatusBadge } from "./status-badge";
 
-export function RecentOrdersTable({ orders }: { orders: Order[] }) {
+export function RecentOrdersTable({ orders, currencyCode = "UAH" }: { orders: Order[]; currencyCode?: string }) {
   const latestOrders = orders.slice(0, 6);
 
   return (
@@ -31,7 +32,7 @@ export function RecentOrdersTable({ orders }: { orders: Order[] }) {
                 {latestOrders.map((order) => (
                   <tr key={order.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
                     <td className="py-3 font-bold">{order.order_number}</td>
-                    <td>${order.revenue}</td>
+                    <td>{formatMoney(order.revenue, currencyCode)}</td>
                     <td>
                       <StatusBadge value={order.status} />
                     </td>
@@ -49,7 +50,7 @@ export function RecentOrdersTable({ orders }: { orders: Order[] }) {
                   <strong>{order.order_number}</strong>
                   <StatusBadge value={order.status} />
                 </div>
-                <p className="mt-2 text-sm text-slate-500">Revenue ${order.revenue}</p>
+                <p className="mt-2 text-sm text-slate-500">Revenue {formatMoney(order.revenue, currencyCode)}</p>
                 <p className="mt-1 text-xs text-slate-400">{new Date(order.created_at).toLocaleDateString()}</p>
               </article>
             ))}

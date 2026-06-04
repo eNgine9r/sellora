@@ -32,6 +32,7 @@ class OrderUpdate(BaseModel):
     cod_fee: Decimal | None = Field(default=None, ge=0)
     other_cost: Decimal | None = Field(default=None, ge=0)
     notes: str | None = None
+    items: list[OrderItemCreate] | None = Field(default=None, min_length=1)
 
 
 class OrderStatusUpdate(BaseModel):

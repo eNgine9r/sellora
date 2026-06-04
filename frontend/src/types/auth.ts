@@ -9,6 +9,7 @@ export type WorkspaceMembership = {
   workspace_name: string;
   workspace_slug: string;
   role: "OWNER" | "MANAGER" | "ANALYST";
+  currency_code: "UAH" | "USD";
 };
 
 export type CurrentUser = {

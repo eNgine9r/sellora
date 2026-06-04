@@ -1,7 +1,8 @@
 import { EmptyState } from "@/components/ui/states";
+import { formatMoney } from "@/lib/currency";
 import { TopProduct } from "@/types/analytics";
 
-export function TopProductsCard({ products }: { products: TopProduct[] }) {
+export function TopProductsCard({ products, currencyCode = "UAH" }: { products: TopProduct[]; currencyCode?: string }) {
   const topProducts = products.slice(0, 5);
 
   return (
@@ -19,7 +20,7 @@ export function TopProductsCard({ products }: { products: TopProduct[] }) {
                 {product.variant_sku} · {product.quantity_sold} sold
               </p>
             </div>
-            <strong className="shrink-0 text-violet-700">${product.revenue}</strong>
+            <strong className="shrink-0 text-violet-700">{formatMoney(product.revenue, currencyCode)}</strong>
           </div>
         ))}
         {topProducts.length === 0 ? <EmptyState title="No product data yet" description="Product performance will appear after orders are created or imported." /> : null}

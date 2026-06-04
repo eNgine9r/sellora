@@ -128,7 +128,7 @@ export default function CustomersPage() {
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          <CustomerTable customers={customersQuery.data ?? []} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} />
+          <CustomerTable customers={customersQuery.data ?? []} currencyCode={currentWorkspace?.currency_code ?? "UAH"} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} />
           {selectedCustomer ? (
             <div className="grid gap-3">
               {canEdit ? (

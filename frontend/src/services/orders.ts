@@ -31,7 +31,7 @@ export async function createOrder(workspaceId: string, payload: OrderCreatePaylo
   return apiRequest<Order>("/orders", { method: "POST", headers: workspaceHeaders(workspaceId), body: JSON.stringify(payload) });
 }
 
-export async function updateOrder(workspaceId: string, orderId: string, payload: Partial<Omit<OrderCreatePayload, "items" | "customer_id">>): Promise<Order> {
+export async function updateOrder(workspaceId: string, orderId: string, payload: Partial<Omit<OrderCreatePayload, "customer_id">>): Promise<Order> {
   return apiRequest<Order>(`/orders/${orderId}`, { method: "PUT", headers: workspaceHeaders(workspaceId), body: JSON.stringify(payload) });
 }
 

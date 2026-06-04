@@ -106,14 +106,78 @@ class OrderService:
         if order is None:
             return None
         old_value = snapshot(order)
-        for field, value in payload.model_dump(exclude_unset=True).items():
+        item_payloads = payload.items if "items" in payload.model_fields_set else None
+        changes = payload.model_dump(exclude_unset=True, exclude={"items"})
+        for field, value in changes.items():
             setattr(order, field, value.value if hasattr(value, "value") else value)
+        if item_payloads is not None:
+            self._replace_items_for_update(workspace_id, order, item_payloads, actor_user_id, old_value)
         self._recalculate_profit(order)
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="ORDER_UPDATE", old_value=old_value, new_value=snapshot(order))
         self.db.commit()
         self.db.refresh(order)
-        return order
+        return self.get(workspace_id, order_id) or order
 
+    def _replace_items_for_update(self, workspace_id: UUID, order: Order, item_payloads: list, actor_user_id: UUID | None, old_value: dict | None = None) -> None:
+        if OrderStatus(order.status) not in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
+            raise OrderServiceError("Order items cannot be edited after shipment workflow has started")
+        prepared_items = []
+        old_quantities: dict[UUID, int] = {}
+        new_quantities: dict[UUID, int] = {}
+        inventories = {}
+        for item in order.items:
+            old_quantities[item.product_variant_id] = old_quantities.get(item.product_variant_id, 0) + item.quantity
+        for item_payload in item_payloads:
+            variant = self._get_variant(workspace_id, item_payload.product_variant_id)
+            inventory = self.inventory.get_by_variant(workspace_id, item_payload.product_variant_id)
+            if inventory is None:
+                raise OrderServiceError("Inventory record not found for variant")
+            prepared_items.append((item_payload, variant, inventory))
+            inventories[item_payload.product_variant_id] = inventory
+            new_quantities[item_payload.product_variant_id] = new_quantities.get(item_payload.product_variant_id, 0) + item_payload.quantity
+        for variant_id in set(old_quantities) | set(new_quantities):
+            inventory = inventories.get(variant_id) or self.inventory.get_by_variant(workspace_id, variant_id)
+            if inventory is None:
+                raise OrderServiceError("Inventory record not found for order item")
+            delta = new_quantities.get(variant_id, 0) - old_quantities.get(variant_id, 0)
+            if delta > 0 and delta > inventory.stock_quantity - inventory.reserved_quantity:
+                raise OrderServiceError("Not enough available stock for one or more items")
+            if delta < 0 and abs(delta) > inventory.reserved_quantity:
+                raise OrderServiceError("Inventory changed. Please refresh and try again")
+        for variant_id in set(old_quantities) | set(new_quantities):
+            inventory = inventories.get(variant_id) or self.inventory.get_by_variant(workspace_id, variant_id)
+            delta = new_quantities.get(variant_id, 0) - old_quantities.get(variant_id, 0)
+            if delta > 0:
+                self._inventory_transaction(workspace_id, inventory.id, InventoryTransactionType.RESERVE, delta, "Order item edit reservation", actor_user_id)
+            elif delta < 0:
+                self._inventory_transaction(workspace_id, inventory.id, InventoryTransactionType.UNRESERVE, abs(delta), "Order item edit release reservation", actor_user_id)
+        for item in list(order.items):
+            self.orders.delete_item(item)
+        order.items = []
+        revenue = Decimal("0")
+        product_cost = Decimal("0")
+        for item_payload, variant, _inventory in prepared_items:
+            line_total = item_payload.unit_price * item_payload.quantity
+            line_cost = item_payload.unit_cost * item_payload.quantity
+            revenue += line_total
+            product_cost += line_cost
+            self.orders.add_item(
+                OrderItem(
+                    workspace_id=workspace_id,
+                    order_id=order.id,
+                    product_variant_id=variant.id,
+                    sku=variant.sku,
+                    product_name=variant.product.name,
+                    quantity=item_payload.quantity,
+                    unit_price=item_payload.unit_price,
+                    unit_cost=item_payload.unit_cost,
+                    line_total=line_total,
+                    line_cost=line_cost,
+                )
+            )
+        order.revenue = revenue
+        order.product_cost = product_cost
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="ORDER_ITEMS_UPDATE", old_value=old_value, new_value={"item_count": len(prepared_items)})
 
     def delete(self, workspace_id: UUID, order_id: UUID, actor_user_id: UUID | None) -> bool:
         order = self.get(workspace_id, order_id)

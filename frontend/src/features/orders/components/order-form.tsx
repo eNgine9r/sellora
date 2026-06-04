@@ -2,7 +2,9 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { buildOrderCreatePayload } from "@/lib/payload-builders";
+import { formatMoney } from "@/lib/currency";
 import { OrderCreatePayload } from "@/services/orders";
+import { Order } from "@/types/orders";
 import { Inventory, Product, ProductVariant } from "@/types/products";
 
 export type OrderFormValues = {
@@ -21,12 +23,24 @@ const numberValue = (value?: string | number | null) => {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
 };
-const money = (value: number) => value.toFixed(2);
+function initialOrderValues(order?: Order | null): OrderFormValues {
+  return {
+    customer_id: order?.customer_id ?? undefined,
+    payment_status: order?.payment_status ?? "PENDING",
+    items: order?.items.length ? order.items.map((item) => ({ product_variant_id: item.product_variant_id, quantity: String(item.quantity), unit_price: String(item.unit_price), unit_cost: String(item.unit_cost) })) : [emptyItem()],
+    ad_cost: order ? String(order.ad_cost) : undefined,
+    shipping_cost: order ? String(order.shipping_cost) : undefined,
+    cod_fee: order ? String(order.cod_fee) : undefined,
+    other_cost: order ? String(order.other_cost) : undefined,
+    notes: order?.notes ?? undefined,
+  };
+}
 
-export function OrderForm({ variants, products = [], inventory = [], showProfit = false, onSubmit }: { variants: ProductVariant[]; products?: Product[]; inventory?: Inventory[]; showProfit?: boolean; onSubmit: (values: OrderCreatePayload) => void }) {
-  const [values, setValues] = useState<OrderFormValues>({ payment_status: "PENDING", items: [emptyItem()] });
+export function OrderForm({ variants, products = [], inventory = [], showProfit = false, currencyCode = "UAH", initialOrder, lockedItems = false, submitLabel = "Create order", onSubmit }: { variants: ProductVariant[]; products?: Product[]; inventory?: Inventory[]; showProfit?: boolean; currencyCode?: string; initialOrder?: Order | null; lockedItems?: boolean; submitLabel?: string; onSubmit: (values: Partial<OrderCreatePayload>) => void }) {
+  const [values, setValues] = useState<OrderFormValues>(() => initialOrderValues(initialOrder));
   const [validationError, setValidationError] = useState<string | null>(null);
   const hasVariants = variants.length > 0;
+  const canEditItems = !lockedItems;
   const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
   const inventoryByVariantId = useMemo(() => new Map(inventory.map((item) => [item.product_variant_id, item])), [inventory]);
 
@@ -41,7 +55,7 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
   function variantLabel(variant: ProductVariant) {
     const product = productById.get(variant.product_id);
     const stock = inventoryByVariantId.get(variant.id);
-    const details = [product?.name, variant.sku, variant.color, variant.size ? `Size ${variant.size}` : null, stock ? `Available ${Math.max(0, stock.stock_quantity - stock.reserved_quantity)}` : null, variant.price ? `${variant.price} UAH` : null].filter(Boolean);
+    const details = [product?.name, variant.sku, variant.color, variant.size ? `Size ${variant.size}` : null, stock ? `Available ${Math.max(0, stock.stock_quantity - stock.reserved_quantity)}` : null, variant.price ? formatMoney(variant.price, currencyCode) : null].filter(Boolean);
     return details.join(" — ");
   }
 
@@ -63,8 +77,8 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
   }
 
   function validate(): string | null {
-    if (!hasVariants) return "Create a product variant first before creating an order.";
-    if (values.items.length === 0) return "Add at least one item.";
+    if (!lockedItems && !hasVariants) return "Create a product variant first before creating an order.";
+    if (!lockedItems && values.items.length === 0) return "Add at least one item.";
     for (const item of values.items) {
       if (!item.product_variant_id) return "Please select a variant.";
       if (numberValue(item.quantity) <= 0) return "Quantity must be greater than 0.";
@@ -83,12 +97,15 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
       return;
     }
     setValidationError(null);
-    onSubmit(buildOrderCreatePayload(values));
+    const payload = buildOrderCreatePayload(values);
+    if (lockedItems) delete (payload as Partial<OrderCreatePayload>).items;
+    onSubmit(payload);
   }
 
   return (
     <form className="grid max-h-[calc(100vh-9rem)] gap-4 overflow-y-auto overflow-x-hidden pr-1" onSubmit={submit} noValidate>
-      {!hasVariants ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">Create a product variant first before creating an order.</p> : null}
+      {!hasVariants && !lockedItems ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">Create a product variant first before creating an order.</p> : null}
+      {lockedItems ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">Items are locked because this order has already entered shipment workflow.</p> : null}
       <label className="grid gap-1 text-sm font-medium text-slate-700">Customer ID / Customer
         <input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" placeholder="Customer ID (optional)" value={values.customer_id ?? ""} onChange={(event) => setValues({ ...values, customer_id: event.target.value })} />
       </label>
@@ -104,7 +121,7 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
             <h3 className="font-bold text-slate-950">Order items</h3>
             <p className="text-sm text-slate-500">Price is auto-filled from the selected variant and can be adjusted for discounts.</p>
           </div>
-          <button className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" type="button" onClick={addItem}>Add item</button>
+          <button className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold" type="button" disabled={!canEditItems} onClick={addItem}>Add item</button>
         </div>
         {values.items.map((item, index) => {
           const lineTotal = numberValue(item.quantity) * numberValue(item.unit_price);
@@ -112,19 +129,19 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
             <article className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3" key={index}>
               <div className="flex items-center justify-between gap-3">
                 <h4 className="font-semibold">Item {index + 1}</h4>
-                <button className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={values.items.length === 1} type="button" onClick={() => removeItem(index)}>Remove item</button>
+                <button className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={values.items.length === 1 || !canEditItems} type="button" onClick={() => removeItem(index)}>Remove item</button>
               </div>
               <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">Variant
-                <select className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2" value={item.product_variant_id} disabled={!hasVariants} onChange={(event) => selectVariant(index, event.target.value)}>
+                <select className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2" value={item.product_variant_id} disabled={!hasVariants || !canEditItems} onChange={(event) => selectVariant(index, event.target.value)}>
                   <option value="">Select variant</option>
                   {variants.map((variant) => <option key={variant.id} value={variant.id}>{variantLabel(variant)}</option>)}
                 </select>
               </label>
               <div className="grid min-w-0 gap-3 sm:grid-cols-4">
-                <label className="grid gap-1 text-sm font-medium text-slate-700">Quantity<input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" min={1} type="number" value={item.quantity} onChange={(event) => updateItem(index, { quantity: event.target.value })} /></label>
-                <label className="grid gap-1 text-sm font-medium text-slate-700">Unit price<input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Unit price" value={item.unit_price} onChange={(event) => updateItem(index, { unit_price: event.target.value })} /></label>
-                <label className="grid gap-1 text-sm font-medium text-slate-700">Unit cost<input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Unit cost" value={item.unit_cost} onChange={(event) => updateItem(index, { unit_cost: event.target.value })} /></label>
-                <div className="rounded-lg bg-white px-3 py-2 text-sm"><span className="text-slate-500">Line total</span><strong className="block text-base">{money(lineTotal)} UAH</strong></div>
+                <label className="grid gap-1 text-sm font-medium text-slate-700">Quantity<input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" min={1} type="number" disabled={!canEditItems} value={item.quantity} onChange={(event) => updateItem(index, { quantity: event.target.value })} /></label>
+                <label className="grid gap-1 text-sm font-medium text-slate-700">Unit price<input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Unit price" disabled={!canEditItems} value={item.unit_price} onChange={(event) => updateItem(index, { unit_price: event.target.value })} /></label>
+                <label className="grid gap-1 text-sm font-medium text-slate-700">Unit cost<input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Unit cost" disabled={!canEditItems} value={item.unit_cost} onChange={(event) => updateItem(index, { unit_cost: event.target.value })} /></label>
+                <div className="rounded-lg bg-white px-3 py-2 text-sm"><span className="text-slate-500">Line total</span><strong className="block text-base">{formatMoney(lineTotal, currencyCode)}</strong></div>
               </div>
             </article>
           );
@@ -135,14 +152,14 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
       <textarea className="min-h-24 rounded-md border border-slate-300 px-3 py-2" placeholder="Notes" value={values.notes ?? ""} onChange={(event) => setValues({ ...values, notes: event.target.value })} />
 
       <section className="grid gap-2 rounded-xl bg-blue-50 p-4 text-sm text-slate-700 sm:grid-cols-2">
-        <span>Items subtotal</span><strong>{money(itemSubtotal)} UAH</strong>
-        {showProfit ? <><span>Product cost</span><strong>{money(productCost)} UAH</strong></> : null}
-        <span>Ad cost</span><strong>{money(adCost)} UAH</strong>
-        <span>Shipping / COD / Other</span><strong>{money(shippingCost + codFee + otherCost)} UAH</strong>
-        {showProfit ? <><span>Estimated profit</span><strong>{money(estimatedProfit)} UAH</strong></> : null}
+        <span>Items subtotal</span><strong>{formatMoney(itemSubtotal, currencyCode)}</strong>
+        {showProfit ? <><span>Product cost</span><strong>{formatMoney(productCost, currencyCode)}</strong></> : null}
+        <span>Ad cost</span><strong>{formatMoney(adCost, currencyCode)}</strong>
+        <span>Shipping / COD / Other</span><strong>{formatMoney(shippingCost + codFee + otherCost, currencyCode)}</strong>
+        {showProfit ? <><span>Estimated profit</span><strong>{formatMoney(estimatedProfit, currencyCode)}</strong></> : null}
       </section>
       {validationError ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">{validationError}</p> : null}
-      <button className="min-h-11 rounded-md bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={!hasVariants} type="submit">Create order</button>
+      <button className="min-h-11 rounded-md bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={!lockedItems && !hasVariants} type="submit">{submitLabel}</button>
     </form>
   );
 }

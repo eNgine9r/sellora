@@ -43,7 +43,7 @@ export function LandingDashboardPreview() {
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <div><p className="text-sm font-bold uppercase tracking-[0.3em] text-orange-300">Dashboard preview</p><h2 className="mt-3 text-3xl font-black sm:text-5xl">Вся операційка магазину — в одному екрані</h2><p className="mt-4 text-lg leading-8 text-slate-300">Бачте дохід, прибуток, ліди, ROAS, відправлення, топ-товари та активність команди без перемикання між таблицями.</p></div>
         <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-4 shadow-2xl shadow-purple-950/40 backdrop-blur">
-          <div className="grid gap-3 sm:grid-cols-3"><PreviewCard label="Дохід" value="$24.8k" /><PreviewCard label="ROAS" value="4.7x" /><PreviewCard label="Orders" value="312" /></div>
+          <div className="grid gap-3 sm:grid-cols-3"><PreviewCard label="Дохід" value="₴24.8k" /><PreviewCard label="ROAS" value="4.7x" /><PreviewCard label="Orders" value="312" /></div>
           <div className="mt-4 h-48 rounded-3xl bg-[radial-gradient(circle_at_20%_20%,rgba(236,72,153,.45),transparent_30%),linear-gradient(135deg,rgba(109,40,217,.45),rgba(249,115,22,.25))] p-5"><div className="h-full rounded-2xl border border-white/10 bg-black/20" /></div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2"><PreviewCard label="Recent orders" value="17 new" /><PreviewCard label="Shipments" value="8 in transit" /></div>
         </div>
