@@ -1,0 +1,188 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from uuid import UUID
+
+from sqlalchemy.orm import Session
+
+from app.models.customer import Customer
+from app.models.order import OrderStatus
+from app.models.shipment import Shipment, ShipmentStatus
+from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.order_repository import OrderRepository
+from app.repositories.shipment_repository import ShipmentRepository
+from app.schemas.order import OrderStatusUpdate
+from app.schemas.shipment import ShipmentCreate, ShipmentResponse, ShipmentSummaryResponse, ShipmentUpdate
+from app.services.business_utils import snapshot
+from app.services.order_service import OrderService, OrderServiceError
+
+
+class ShipmentServiceError(ValueError):
+    pass
+
+
+class ShipmentService:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+        self.shipments = ShipmentRepository(db)
+        self.orders = OrderRepository(db)
+        self.audit_logs = AuditLogRepository(db)
+        self.order_service = OrderService(db)
+
+    def list(self, workspace_id: UUID, status: ShipmentStatus | None = None, search: str | None = None) -> list[ShipmentResponse]:
+        return [self._response(shipment) for shipment in self.shipments.list_for_workspace(workspace_id, status.value if status else None, search)]
+
+    def get(self, workspace_id: UUID, shipment_id: UUID) -> ShipmentResponse | None:
+        shipment = self.shipments.get(workspace_id, shipment_id)
+        return self._response(shipment) if shipment else None
+
+    def get_for_order(self, workspace_id: UUID, order_id: UUID) -> ShipmentResponse | None:
+        if self.orders.get(workspace_id, order_id) is None:
+            raise ShipmentServiceError("Order not found")
+        shipment = self.shipments.get_by_order(workspace_id, order_id)
+        return self._response(shipment) if shipment else None
+
+    def create(self, workspace_id: UUID, payload: ShipmentCreate, actor_user_id: UUID | None) -> ShipmentResponse:
+        order = self.orders.get(workspace_id, payload.order_id)
+        if order is None:
+            raise ShipmentServiceError("Order not found in this workspace")
+        customer_id = self._validated_customer_id(workspace_id, payload.customer_id, order.customer_id)
+        self._validate_tracking(workspace_id, payload.tracking_number, payload.status)
+        if self.shipments.find_active_by_order(workspace_id, payload.order_id):
+            raise ShipmentServiceError("Active shipment already exists for this order")
+        shipment = self.shipments.create(
+            Shipment(
+                workspace_id=workspace_id,
+                order_id=payload.order_id,
+                customer_id=customer_id,
+                tracking_number=payload.tracking_number,
+                carrier=payload.carrier.value,
+                status=payload.status.value,
+                recipient_name=payload.recipient_name,
+                recipient_phone=payload.recipient_phone,
+                city=payload.city,
+                warehouse=payload.warehouse,
+                shipping_cost=payload.shipping_cost,
+                cod_amount=payload.cod_amount,
+                declared_value=payload.declared_value,
+                notes=payload.notes,
+                nova_poshta_city_ref=payload.nova_poshta_city_ref,
+                nova_poshta_warehouse_ref=payload.nova_poshta_warehouse_ref,
+            )
+        )
+        self._stamp_status(shipment, payload.status)
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="SHIPMENT_CREATE", new_value=snapshot(shipment))
+        self.db.commit()
+        self.db.refresh(shipment)
+        return self._response(self.shipments.get(workspace_id, shipment.id) or shipment)
+
+    def update(self, workspace_id: UUID, shipment_id: UUID, payload: ShipmentUpdate, actor_user_id: UUID | None) -> ShipmentResponse | None:
+        shipment = self.shipments.get(workspace_id, shipment_id)
+        if shipment is None:
+            return None
+        old_value = snapshot(shipment)
+        changes = payload.model_dump(exclude_unset=True)
+        if "customer_id" in changes:
+            order = self.orders.get(workspace_id, shipment.order_id)
+            if order is None:
+                raise ShipmentServiceError("Order not found in this workspace")
+            changes["customer_id"] = self._validated_customer_id(workspace_id, changes.get("customer_id"), order.customer_id)
+        next_status = ShipmentStatus(changes.get("status", shipment.status))
+        next_tracking = changes.get("tracking_number", shipment.tracking_number)
+        self._validate_tracking(workspace_id, next_tracking, next_status, shipment.id)
+        if self.shipments.find_active_by_order(workspace_id, shipment.order_id, shipment.id):
+            raise ShipmentServiceError("Active shipment already exists for this order")
+        for field, value in changes.items():
+            setattr(shipment, field, value.value if hasattr(value, "value") else value)
+        self._stamp_status(shipment, ShipmentStatus(shipment.status))
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="SHIPMENT_UPDATE", old_value=old_value, new_value=snapshot(shipment))
+        self.db.commit()
+        self.db.refresh(shipment)
+        return self._response(shipment)
+
+    def delete(self, workspace_id: UUID, shipment_id: UUID, actor_user_id: UUID | None) -> bool:
+        shipment = self.shipments.get(workspace_id, shipment_id)
+        if shipment is None:
+            return False
+        shipment.deleted_at = datetime.now(UTC)
+        shipment.deleted_by = actor_user_id
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="SHIPMENT_DELETE", old_value=snapshot(shipment))
+        self.db.commit()
+        return True
+
+    def change_status(self, workspace_id: UUID, shipment_id: UUID, status: ShipmentStatus, actor_user_id: UUID | None) -> ShipmentResponse | None:
+        shipment = self.shipments.get(workspace_id, shipment_id)
+        if shipment is None:
+            return None
+        self._validate_tracking(workspace_id, shipment.tracking_number, status, shipment.id)
+        old_value = snapshot(shipment)
+        old_status = ShipmentStatus(shipment.status)
+        if old_status != status:
+            shipment.status = status.value
+            self._stamp_status(shipment, status)
+            self._apply_order_transition(workspace_id, shipment, status, actor_user_id)
+            self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="SHIPMENT_STATUS_CHANGE", old_value=old_value, new_value=snapshot(shipment))
+            if status == ShipmentStatus.DELIVERED:
+                self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="SHIPMENT_DELIVERED", new_value={"status": status.value})
+            if status == ShipmentStatus.RETURNED:
+                self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="SHIPMENT_RETURNED", new_value={"status": status.value})
+            self.db.commit()
+        self.db.refresh(shipment)
+        return self._response(self.shipments.get(workspace_id, shipment.id) or shipment)
+
+    def summary(self, workspace_id: UUID) -> ShipmentSummaryResponse:
+        in_transit, arrived, delivered_today, returned_this_month = self.shipments.summary_counts(workspace_id)
+        return ShipmentSummaryResponse(in_transit_count=in_transit, arrived_count=arrived, delivered_today=delivered_today, returned_this_month=returned_this_month)
+
+    def _validated_customer_id(self, workspace_id: UUID, customer_id: UUID | None, order_customer_id: UUID | None) -> UUID | None:
+        if customer_id is None:
+            return order_customer_id
+        customer = self.db.get(Customer, customer_id)
+        if customer is None or customer.workspace_id != workspace_id or customer.deleted_at is not None:
+            raise ShipmentServiceError("Customer not found in this workspace")
+        if order_customer_id and customer_id != order_customer_id:
+            raise ShipmentServiceError("Shipment customer must match the order customer")
+        return customer_id
+
+    def _validate_tracking(self, workspace_id: UUID, tracking_number: str | None, status: ShipmentStatus, shipment_id: UUID | None = None) -> None:
+        if status != ShipmentStatus.DRAFT and not tracking_number:
+            raise ShipmentServiceError("tracking_number is required for non-draft shipments")
+        if self.shipments.find_by_tracking_number(workspace_id, tracking_number, shipment_id):
+            raise ShipmentServiceError("tracking_number already exists in this workspace")
+
+    def _stamp_status(self, shipment: Shipment, status: ShipmentStatus) -> None:
+        now = datetime.now(UTC)
+        if status == ShipmentStatus.IN_TRANSIT and shipment.shipped_at is None:
+            shipment.shipped_at = now
+        if status == ShipmentStatus.DELIVERED and shipment.delivered_at is None:
+            shipment.delivered_at = now
+        if status == ShipmentStatus.RETURNED and shipment.returned_at is None:
+            shipment.returned_at = now
+
+    def _apply_order_transition(self, workspace_id: UUID, shipment: Shipment, status: ShipmentStatus, actor_user_id: UUID | None) -> None:
+        order = self.orders.get(workspace_id, shipment.order_id)
+        if order is None:
+            raise ShipmentServiceError("Order not found in this workspace")
+        try:
+            if status == ShipmentStatus.IN_TRANSIT and OrderStatus(order.status) in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
+                self.order_service.change_status(workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED, note="Shipment marked in transit"), actor_user_id)
+            elif status == ShipmentStatus.DELIVERED and OrderStatus(order.status) != OrderStatus.DELIVERED:
+                current_status = OrderStatus(order.status)
+                if current_status in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
+                    self.order_service.change_status(workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED, note="Shipment delivered after transit"), actor_user_id)
+                    order.status = OrderStatus.SHIPPED.value
+                self.order_service.change_status(workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.DELIVERED, note="Shipment delivered"), actor_user_id)
+            elif status == ShipmentStatus.RETURNED and OrderStatus(order.status) != OrderStatus.RETURNED:
+                current_status = OrderStatus(order.status)
+                if current_status in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
+                    self.order_service.change_status(workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED, note="Shipment returned after transit"), actor_user_id)
+                    order.status = OrderStatus.SHIPPED.value
+                self.order_service.change_status(workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.RETURNED, note="Shipment returned"), actor_user_id)
+        except OrderServiceError as exc:
+            raise ShipmentServiceError(str(exc)) from exc
+
+    def _response(self, shipment: Shipment) -> ShipmentResponse:
+        return ShipmentResponse.model_validate(shipment, from_attributes=True).model_copy(update={
+            "order_number": shipment.order.order_number if shipment.order else None,
+            "customer_name": shipment.customer.name if shipment.customer else None,
+        })
