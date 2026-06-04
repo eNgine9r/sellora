@@ -44,6 +44,18 @@ class OrderService:
         return OrderDashboardResponse(orders_today=orders_today, revenue_today=revenue_today, profit_today=profit_today)
 
     def create(self, workspace_id: UUID, payload: OrderCreate, actor_user_id: UUID | None) -> Order:
+        prepared_items = []
+        requested_by_inventory: dict[UUID, int] = {}
+        for item_payload in payload.items:
+            variant = self._get_variant(workspace_id, item_payload.product_variant_id)
+            inventory = self.inventory.get_by_variant(workspace_id, item_payload.product_variant_id)
+            if inventory is None:
+                raise OrderServiceError("Inventory record not found for variant")
+            requested_by_inventory[inventory.id] = requested_by_inventory.get(inventory.id, 0) + item_payload.quantity
+            if requested_by_inventory[inventory.id] > inventory.stock_quantity - inventory.reserved_quantity:
+                raise OrderServiceError("Cannot reserve more than available stock")
+            prepared_items.append((item_payload, variant, inventory))
+
         order = self.orders.create(
             Order(
                 workspace_id=workspace_id,
@@ -60,11 +72,7 @@ class OrderService:
         )
         revenue = Decimal("0")
         product_cost = Decimal("0")
-        for item_payload in payload.items:
-            variant = self._get_variant(workspace_id, item_payload.product_variant_id)
-            inventory = self.inventory.get_by_variant(workspace_id, item_payload.product_variant_id)
-            if inventory is None:
-                raise OrderServiceError("Inventory record not found for variant")
+        for item_payload, variant, inventory in prepared_items:
             line_total = item_payload.unit_price * item_payload.quantity
             line_cost = item_payload.unit_cost * item_payload.quantity
             revenue += line_total

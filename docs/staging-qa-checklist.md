@@ -125,3 +125,16 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Advertising metrics: `/advertising` → daily metrics table → **Delete metric** → confirm and verify summaries/trends refresh.
 - RBAC: verify ANALYST users do not see destructive actions, and backend permission errors are friendly if a role is not allowed.
 - Confirm archived/deleted records disappear from active lists and no sensitive records are hard deleted.
+
+## Multi-Item Order QA
+
+- Open `/orders`, click **Create order**, select one product variant, and verify **Unit price** auto-fills from the variant price.
+- Change quantity and verify the item **Line total** and **Items subtotal** update immediately.
+- Click **Add item**, select a different variant, and verify the second row also auto-fills price and updates totals.
+- Remove an item row and confirm at least one item remains before submit.
+- Submit a one-item order and verify the order row/detail revenue equals quantity × unit price.
+- Submit a multi-item order and verify revenue equals the sum of all line totals.
+- Open the order details panel and confirm every item is listed with quantity, product name, SKU, unit price, and line total.
+- Verify inventory reserved quantities increase for every selected variant and the dashboard/order counters refresh.
+- Confirm order status actions, safe-field order editing, and NEW/CANCELLED order archiving still work after multi-item order creation.
+- Check the create-order dialog at mobile width: item rows should stack vertically, totals should remain readable, and there should be no horizontal overflow.

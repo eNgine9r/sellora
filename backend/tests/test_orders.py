@@ -14,7 +14,7 @@ from app.services.order_service import OrderService
 
 class FakeDb:
     def __init__(self, variant: ProductVariant, customer: Customer | None = None) -> None:
-        self.variant = variant
+        self.variants = {variant.id: variant}
         self.customer = customer
 
     def commit(self) -> None:
@@ -24,8 +24,8 @@ class FakeDb:
         pass
 
     def get(self, model, model_id):
-        if model is ProductVariant and model_id == self.variant.id:
-            return self.variant
+        if model is ProductVariant:
+            return self.variants.get(model_id)
         if model is Customer and self.customer and model_id == self.customer.id:
             return self.customer
         return None
@@ -84,30 +84,34 @@ class FakeOrders:
 class FakeInventoryRepo:
     def __init__(self, inventory: Inventory) -> None:
         self.inventory = inventory
+        self.inventories = {inventory.product_variant_id: inventory}
 
     def get_by_variant(self, workspace_id, product_variant_id):
-        if self.inventory.workspace_id == workspace_id and self.inventory.product_variant_id == product_variant_id:
-            return self.inventory
+        inventory = self.inventories.get(product_variant_id)
+        if inventory and inventory.workspace_id == workspace_id:
+            return inventory
         return None
 
 
 class FakeInventoryService:
     def __init__(self, inventory: Inventory) -> None:
         self.inventory = inventory
+        self.inventories_by_id = {inventory.id: inventory}
         self.transactions = []
 
     def record_transaction(self, workspace_id, inventory_id, payload, actor_user_id, commit=True):
-        previous_stock = self.inventory.stock_quantity
-        previous_reserved = self.inventory.reserved_quantity
+        inventory = self.inventories_by_id[inventory_id]
+        previous_stock = inventory.stock_quantity
+        previous_reserved = inventory.reserved_quantity
         if payload.transaction_type == InventoryTransactionType.RESERVE:
-            self.inventory.reserved_quantity += payload.quantity
+            inventory.reserved_quantity += payload.quantity
         elif payload.transaction_type == InventoryTransactionType.UNRESERVE:
-            self.inventory.reserved_quantity -= payload.quantity
+            inventory.reserved_quantity -= payload.quantity
         elif payload.transaction_type == InventoryTransactionType.STOCK_OUT:
-            self.inventory.stock_quantity -= payload.quantity
+            inventory.stock_quantity -= payload.quantity
         elif payload.transaction_type == InventoryTransactionType.RETURN:
-            self.inventory.stock_quantity += payload.quantity
-        self.transactions.append((payload.transaction_type, previous_stock, self.inventory.stock_quantity, previous_reserved, self.inventory.reserved_quantity))
+            inventory.stock_quantity += payload.quantity
+        self.transactions.append((payload.transaction_type, previous_stock, inventory.stock_quantity, previous_reserved, inventory.reserved_quantity))
         return SimpleNamespace(id=uuid4(), transaction_type=payload.transaction_type.value)
 
 
@@ -235,3 +239,102 @@ def test_archive_shipped_order_is_rejected() -> None:
         assert "cannot be archived" in str(exc)
     else:
         raise AssertionError("Shipped order should not be archived through generic delete")
+
+
+def _add_second_variant(service: OrderService, workspace_id):
+    product = Product(id=uuid4(), workspace_id=workspace_id, name="Boots", sku="BT")
+    variant = ProductVariant(id=uuid4(), workspace_id=workspace_id, product_id=product.id, sku="BT-BLK-38", color="Black", size="38", product=product)
+    inventory = Inventory(id=uuid4(), workspace_id=workspace_id, product_variant_id=variant.id, stock_quantity=8, reserved_quantity=0, minimum_quantity=1)
+    service.db.variants[variant.id] = variant
+    service.inventory.inventories[variant.id] = inventory
+    service.inventory_service.inventories_by_id[inventory.id] = inventory
+    return variant, inventory
+
+
+def test_order_creation_supports_multiple_items_and_reserves_each_inventory() -> None:
+    service, inventory, customer = _service()
+    second_variant, second_inventory = _add_second_variant(service, inventory.workspace_id)
+
+    order = service.create(
+        inventory.workspace_id,
+        OrderCreate(
+            customer_id=customer.id,
+            items=[
+                OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=2, unit_price=Decimal("50"), unit_cost=Decimal("20")),
+                OrderItemCreate(product_variant_id=second_variant.id, quantity=3, unit_price=Decimal("30"), unit_cost=Decimal("10")),
+            ],
+            ad_cost=Decimal("10"),
+            shipping_cost=Decimal("5"),
+            cod_fee=Decimal("3"),
+            other_cost=Decimal("2"),
+        ),
+        actor_user_id=uuid4(),
+    )
+
+    assert len(order.items) == 2
+    assert order.revenue == Decimal("190")
+    assert order.product_cost == Decimal("70")
+    assert order.net_profit == Decimal("100")
+    assert inventory.reserved_quantity == 2
+    assert second_inventory.reserved_quantity == 3
+    assert [transaction[0] for transaction in service.inventory_service.transactions[-2:]] == [InventoryTransactionType.RESERVE, InventoryTransactionType.RESERVE]
+
+
+def test_order_creation_rejects_invalid_second_item_without_partial_order_or_reservation() -> None:
+    service, inventory, customer = _service()
+
+    try:
+        service.create(
+            inventory.workspace_id,
+            OrderCreate(
+                customer_id=customer.id,
+                items=[
+                    OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=2, unit_price=Decimal("50"), unit_cost=Decimal("20")),
+                    OrderItemCreate(product_variant_id=uuid4(), quantity=1, unit_price=Decimal("30"), unit_cost=Decimal("10")),
+                ],
+            ),
+            actor_user_id=uuid4(),
+        )
+    except Exception as exc:
+        assert "Product variant does not exist" in str(exc)
+    else:
+        raise AssertionError("Order creation should reject a variant outside the workspace")
+
+    assert service.orders.order is None
+    assert inventory.reserved_quantity == 0
+    assert service.inventory_service.transactions == []
+
+
+def test_order_creation_rejects_aggregate_quantity_without_partial_reservation() -> None:
+    service, inventory, customer = _service()
+
+    try:
+        service.create(
+            inventory.workspace_id,
+            OrderCreate(
+                customer_id=customer.id,
+                items=[
+                    OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=6, unit_price=Decimal("50"), unit_cost=Decimal("20")),
+                    OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=5, unit_price=Decimal("45"), unit_cost=Decimal("18")),
+                ],
+            ),
+            actor_user_id=uuid4(),
+        )
+    except Exception as exc:
+        assert "Cannot reserve more than available stock" in str(exc)
+    else:
+        raise AssertionError("Order creation should reject aggregate quantity above available stock")
+
+    assert service.orders.order is None
+    assert inventory.reserved_quantity == 0
+    assert service.inventory_service.transactions == []
+
+
+def test_variant_price_edits_do_not_change_captured_order_item_price() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+
+    service.db.variants[inventory.product_variant_id].price = Decimal("999")
+
+    assert order.items[0].unit_price == Decimal("50")
+    assert order.items[0].line_total == Decimal("100")
