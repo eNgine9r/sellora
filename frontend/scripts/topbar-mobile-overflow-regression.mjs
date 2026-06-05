@@ -21,7 +21,7 @@ const files = {
 
 const source = Object.fromEntries(Object.entries(files).map(([key, path]) => [key, readFileSync(path, "utf8")]));
 
-assert.match(source.topbar, /relative hidden min-w-0 flex-1/, "Topbar search must be flex-safe and min-width constrained");
+assert.match(source.topbar, /relative hidden min-w-\[220px\] flex-1/, "Topbar search must be flex-safe and min-width constrained");
 assert.match(source.topbar, /lg:max-w-\[520px\]/, "Topbar search should have a stable desktop max width");
 assert.match(source.topbar, /h-12 w-40 shrink-0/, "Date range select must have stable width and not stretch");
 assert.match(source.topbar, /items-center gap-1 whitespace-nowrap/, "Create button text and arrow must stay on one line");

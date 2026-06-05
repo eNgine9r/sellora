@@ -37,8 +37,8 @@ export function CampaignForm({ onSubmit }: { onSubmit?: (payload: AdCampaignCrea
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <input className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Daily budget" value={values.daily_budget ?? ""} onChange={(event) => setValues({ ...values, daily_budget: event.target.value })} />
         <input className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Total budget" value={values.total_budget ?? ""} onChange={(event) => setValues({ ...values, total_budget: event.target.value })} />
-        <input className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" type="date" value={values.start_date ?? ""} onChange={(event) => setValues({ ...values, start_date: event.target.value })} />
-        <input className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" type="date" value={values.end_date ?? ""} onChange={(event) => setValues({ ...values, end_date: event.target.value })} />
+        <input className="sellora-date-input w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" type="date" value={values.start_date ?? ""} onChange={(event) => setValues({ ...values, start_date: event.target.value })} />
+        <input className="sellora-date-input w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" type="date" value={values.end_date ?? ""} onChange={(event) => setValues({ ...values, end_date: event.target.value })} />
       </div>
       <textarea className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" placeholder="Notes" value={values.notes ?? ""} onChange={(event) => setValues({ ...values, notes: event.target.value })} />
       {validationError ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">{validationError}</p> : null}

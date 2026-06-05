@@ -36,7 +36,7 @@ export function AdMetricForm({ campaigns = [], onSubmit }: { campaigns?: AdCampa
         <option value="">Select campaign</option>
         {campaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}
       </select>
-      <input className="min-h-11 w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" type="date" value={values.metric_date} onChange={(event) => setValues({ ...values, metric_date: event.target.value })} />
+      <input className="sellora-date-input min-h-11 w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" type="date" value={values.metric_date} onChange={(event) => setValues({ ...values, metric_date: event.target.value })} />
       <div className="grid min-w-0 gap-3 sm:grid-cols-3">
         {["spend", "impressions", "reach", "clicks", "messages", "leads", "orders", "revenue", "net_profit"].map((field) => <input key={field} className="min-h-11 w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder={field.replace("_", " ")} value={values[field] ?? ""} onChange={(event) => setValues({ ...values, [field]: event.target.value })} />)}
       </div>

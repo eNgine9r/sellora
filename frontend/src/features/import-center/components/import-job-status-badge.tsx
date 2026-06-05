@@ -1,2 +1,11 @@
+import { statusBadgeClass, StatusTone } from "@/lib/status-styles";
 import { ImportJobStatus } from "@/types/import-center";
-export function ImportJobStatusBadge({ status }: { status?: ImportJobStatus | string }) { if (!status) return null; return <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">{status}</span>; }
+
+function toneForStatus(status: string): StatusTone {
+  if (["COMPLETED", "EXECUTED"].includes(status)) return "success";
+  if (["FAILED", "ERROR"].includes(status)) return "danger";
+  if (["VALIDATED", "DRY_RUN"].includes(status)) return "warning";
+  return "info";
+}
+
+export function ImportJobStatusBadge({ status }: { status?: ImportJobStatus | string }) { if (!status) return null; return <span className={statusBadgeClass(toneForStatus(String(status)))}>{status}</span>; }

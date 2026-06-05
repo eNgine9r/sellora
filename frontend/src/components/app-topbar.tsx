@@ -22,7 +22,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
 
   return (
     <header className="mobile-safe-top sticky top-0 z-20 min-w-0 overflow-x-hidden border-b border-slate-200/70 bg-[#F8F7FC]/92 px-3 py-3 text-slate-950 backdrop-blur-xl dark:border-white/10 dark:bg-[#101120]/92 dark:text-white sm:px-4 md:px-6">
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3 lg:gap-4">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 lg:flex-nowrap lg:gap-4">
         <button className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/10 lg:hidden" onClick={onOpenMenu} aria-label="Open navigation">
           <Menu className="h-5 w-5" />
         </button>
@@ -35,7 +35,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
           </div>
         </div>
 
-        <div className="relative hidden min-w-0 flex-1 md:block lg:max-w-[520px] xl:max-w-[640px]">
+        <div className="relative hidden min-w-[220px] flex-1 md:block lg:max-w-[520px] xl:max-w-[640px]">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             className="h-12 w-full min-w-0 rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-950 shadow-sm outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/10 dark:text-white dark:placeholder:text-slate-400"
@@ -63,10 +63,20 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
         >
           <Plus className="h-5 w-5" />
         </button>
+
+        <div className="account-topbar-group hidden min-w-0 shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 shadow-sm dark:border-white/10 dark:bg-white/10 xl:flex">
+          <div className="min-w-0 max-w-[220px] leading-tight">
+            <p className="truncate text-sm font-black text-slate-900 dark:text-white">{currentWorkspace?.workspace_name ?? "Workspace"}</p>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
+          </div>
+          <button className="min-h-9 shrink-0 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100" onClick={onLogout}>
+            Log out
+          </button>
+        </div>
       </div>
 
-      <div className="mt-3 hidden min-w-0 items-center justify-between gap-3 lg:flex">
-        <div className="min-w-0">
+      <div className="account-topbar-group mt-3 hidden min-w-0 items-center justify-between gap-3 lg:flex xl:hidden">
+        <div className="min-w-0 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 shadow-sm dark:border-white/10 dark:bg-white/10">
           <p className="truncate text-sm font-black text-slate-900 dark:text-white">{currentWorkspace?.workspace_name ?? "Workspace"}</p>
           <p className="truncate text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
         </div>
