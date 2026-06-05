@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useI18n } from "@/i18n/provider";
 import { useAuth } from "@/hooks/use-auth";
 
 const protectedRoutes = [
@@ -34,6 +36,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { status, currentUser, currentWorkspace, currentWorkspaceId, error, logout, switchWorkspace } = useAuth();
+  const { t } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const protectedPath = isProtectedPath(pathname);
 
@@ -52,8 +55,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   if (!protectedPath) return <>{children}</>;
-  if (status === "loading") return <div className="grid min-h-screen place-items-center bg-[#F8F7FC] text-slate-600 dark:bg-[#101120] dark:text-slate-300">Loading Sellora…</div>;
-  if (status === "unauthenticated") return <div className="grid min-h-screen place-items-center bg-[#F8F7FC] text-slate-600 dark:bg-[#101120] dark:text-slate-300">Redirecting to login…</div>;
+  if (status === "loading") return <div className="grid min-h-screen place-items-center bg-[#F8F7FC] text-slate-600 dark:bg-[#101120] dark:text-slate-300">{t("common.loadingSellora")}</div>;
+  if (status === "unauthenticated") return <div className="grid min-h-screen place-items-center bg-[#F8F7FC] text-slate-600 dark:bg-[#101120] dark:text-slate-300">{t("common.redirectingLogin")}</div>;
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-[#F8F7FC] text-[#111827] dark:bg-[#101120] dark:text-slate-100 lg:flex">
@@ -83,8 +86,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="truncate text-xs text-slate-400">{currentUser?.email}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
+                <LanguageSwitcher />
                 <ThemeToggle />
-                <button className="min-h-11 rounded-2xl border border-white/10 bg-white/10 px-3 text-sm font-bold text-white" onClick={handleLogout}>Log out</button>
+                <button className="min-h-11 rounded-2xl border border-white/10 bg-white/10 px-3 text-sm font-bold text-white" onClick={handleLogout}>{t("actions.logout")}</button>
               </div>
             </div>
           </div>

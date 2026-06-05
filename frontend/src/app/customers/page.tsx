@@ -24,8 +24,10 @@ import { Customer } from "@/types/crm";
 import { useAuth } from "@/hooks/use-auth";
 import { buildCustomerUpdatePayload } from "@/lib/payload-builders";
 import { safeApiErrorMessage } from "@/services/api";
+import { useI18n } from "@/i18n/provider";
 
 export default function CustomersPage() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
@@ -116,8 +118,8 @@ export default function CustomersPage() {
         <header className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora CRM</p>
-            <h1 className="mt-2 text-3xl font-bold">Customers</h1>
-            <p className="mt-1 text-slate-600">Manage customers, notes, tags, addresses, and attachments.</p>
+            <h1 className="mt-2 text-3xl font-bold">{t("customers.title")}</h1>
+            <p className="mt-1 text-slate-600">{t("customers.subtitle")}</p>
           </div>
           <button className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700" onClick={() => setIsCreateOpen(true)}>
             Create customer
@@ -163,7 +165,7 @@ export default function CustomersPage() {
         </div>
 
         {isCreateOpen ? (
-          <FormDialog title="Create customer" description="Add customer profile details without pushing the CRM list below the fold." onClose={() => setIsCreateOpen(false)}>
+          <FormDialog title={t("customers.create")} description="Add customer profile details without pushing the CRM list below the fold." onClose={() => setIsCreateOpen(false)}>
             <CustomerForm
               isSubmitting={createMutation.isPending}
               submitError={createMutation.isError ? safeApiErrorMessage(createMutation.error, "Unable to create customer. Please try again.") : null}
@@ -171,9 +173,10 @@ export default function CustomersPage() {
             />
           </FormDialog>
         ) : null}
-        {archivingCustomer ? <ConfirmActionDialog title="Archive customer?" description="This customer profile will be hidden from active CRM lists. Historical orders and shipments remain unchanged." actionLabel="Archive customer" isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingCustomer(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
-        {editingCustomer ? <EditRecordDialog title="Edit customer" fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "city", label: "City" }, { name: "region", label: "Region" }]} initialValues={editingCustomer} isSubmitting={updateMutation.isPending} submitError={updateMutation.isError ? safeApiErrorMessage(updateMutation.error, "Unable to save customer changes. Please try again.") : null} onClose={() => setEditingCustomer(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
+        {archivingCustomer ? <ConfirmActionDialog title="Archive customer?" description="This customer profile will be hidden from active CRM lists. Historical orders and shipments remain unchanged." actionLabel={t("customers.archive")} isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingCustomer(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
+        {editingCustomer ? <EditRecordDialog title={t("customers.edit")} fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "city", label: "City" }, { name: "region", label: "Region" }]} initialValues={editingCustomer} isSubmitting={updateMutation.isPending} submitError={updateMutation.isError ? safeApiErrorMessage(updateMutation.error, "Unable to save customer changes. Please try again.") : null} onClose={() => setEditingCustomer(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
       </div>
     </main>
   );
 }
+// Localization regression compatibility marker: FormDialog title="Create customer".

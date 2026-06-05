@@ -12,6 +12,7 @@ import { RecentOrdersTable } from "@/features/dashboard/components/recent-orders
 import { TopProductsCard } from "@/features/dashboard/components/top-products-card";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { useAuth } from "@/hooks/use-auth";
+import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
 import { fetchAdvertisingSummary } from "@/services/advertising";
 import { fetchAnalyticsDashboard } from "@/services/analytics";
@@ -46,6 +47,7 @@ function MetricStrip({ label, value, tone = "violet" }: { label: string; value: 
 }
 
 export default function DashboardPage() {
+  const { t, formatStatus } = useI18n();
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const currencyCode = currentWorkspace?.currency_code ?? "UAH";
@@ -74,10 +76,10 @@ export default function DashboardPage() {
     <main className="overflow-x-hidden p-4 sm:p-6">
       <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
         <section className="rounded-[28px] bg-[linear-gradient(135deg,#6D28D9_0%,#EC4899_45%,#F97316_75%,#FACC15_100%)] p-5 text-white shadow-2xl shadow-pink-500/20 sm:p-6 lg:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/100 sm:text-sm">Sellora Dashboard</p>
-          <h1 className="mt-3 text-3xl font-black leading-tight sm:text-5xl">CRM for Instagram stores</h1>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/100 sm:text-sm">{t("dashboard.eyebrow")}</p>
+          <h1 className="mt-3 text-3xl font-black leading-tight sm:text-5xl">{t("dashboard.title")}</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-white/105 sm:text-base">
-            Ліди, клієнти, замовлення, склад, відправлення, реклама, фінанси та аналітика — в одному сучасному SaaS-інтерфейсі.
+            {t("dashboard.subtitle")}
           </p>
         </section>
 
@@ -111,7 +113,7 @@ export default function DashboardPage() {
         </section>
 
         <section className="grid min-w-0 gap-6 xl:grid-cols-[1.5fr_0.8fr]">
-          <ChartCard title="Sales chart" subtitle="Revenue and profit trend">
+          <ChartCard title={t("dashboard.salesChart")} subtitle={t("analytics.subtitle")}>
             {trend.length ? (
               <div className="h-72 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
@@ -136,7 +138,7 @@ export default function DashboardPage() {
             )}
           </ChartCard>
 
-          <ChartCard title="Order status" subtitle="Current funnel">
+          <ChartCard title={t("dashboard.orderStatus")} subtitle={t("dashboard.orderStatus")}>
             {orderStatusData.length ? (
               <div className="h-72 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
@@ -151,26 +153,26 @@ export default function DashboardPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <EmptyState title="No orders yet" description="Create your first order or import historical data to populate the order status funnel." />
+              <EmptyState title={t("emptyStates.noOrders")} description={t("orders.subtitle")} />
             )}
           </ChartCard>
         </section>
 
         <section className="grid min-w-0 gap-6 xl:grid-cols-2">
-          <ChartCard title="Logistics" subtitle="Shipment health for the current workspace">
+          <ChartCard title={t("dashboard.logistics")} subtitle={t("shipments.subtitle")}>
             <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-              <MetricStrip label="In transit" value={shipments.data?.in_transit_count ?? 0} tone="violet" />
-              <MetricStrip label="Arrived" value={shipments.data?.arrived_count ?? 0} tone="pink" />
-              <MetricStrip label="Delivered today" value={shipments.data?.delivered_today ?? 0} tone="orange" />
-              <MetricStrip label="Returned this month" value={shipments.data?.returned_this_month ?? 0} tone="amber" />
+              <MetricStrip label={t("dashboard.inTransit")} value={shipments.data?.in_transit_count ?? 0} tone="violet" />
+              <MetricStrip label={t("dashboard.arrived")} value={shipments.data?.arrived_count ?? 0} tone="pink" />
+              <MetricStrip label={t("dashboard.deliveredToday")} value={shipments.data?.delivered_today ?? 0} tone="orange" />
+              <MetricStrip label={t("dashboard.returnedThisMonth")} value={shipments.data?.returned_this_month ?? 0} tone="amber" />
             </div>
           </ChartCard>
 
-          <ChartCard title="Advertising" subtitle="Campaign signal overview">
+          <ChartCard title={t("dashboard.advertising")} subtitle={t("advertising.subtitle")}>
             <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-              <MetricStrip label="Spend" value={formatMoney(advertising.data?.total_spend, currencyCode)} tone="violet" />
-              <MetricStrip label="Messages" value={advertising.data?.total_messages ?? 0} tone="pink" />
-              <MetricStrip label="Leads" value={advertising.data?.total_leads ?? 0} tone="orange" />
+              <MetricStrip label={t("dashboard.spend")} value={formatMoney(advertising.data?.total_spend, currencyCode)} tone="violet" />
+              <MetricStrip label={t("dashboard.messages")} value={advertising.data?.total_messages ?? 0} tone="pink" />
+              <MetricStrip label={t("dashboard.leads")} value={advertising.data?.total_leads ?? 0} tone="orange" />
               <MetricStrip label="ROAS" value={advertising.data?.roas ?? "—"} tone="amber" />
             </div>
           </ChartCard>

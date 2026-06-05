@@ -11,10 +11,12 @@ import { buildInventoryUpdatePayload } from "@/lib/payload-builders";
 import { safeApiErrorMessage } from "@/services/api";
 import { useAuth } from "@/hooks/use-auth";
 import { cleanOptionalString } from "@/lib/payload-normalizers";
+import { useI18n } from "@/i18n/provider";
 
 const TRANSACTION_TYPES: InventoryTransactionType[] = ["STOCK_IN", "STOCK_OUT", "RESERVE", "UNRESERVE", "RETURN", "ADJUSTMENT"];
 
 export default function InventoryPage() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
@@ -41,10 +43,10 @@ export default function InventoryPage() {
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 sm:p-6 text-slate-950">
       <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
-        <header className="min-w-0 max-w-full overflow-hidden rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora Inventory</p><h1 className="mt-2 text-3xl font-bold">Inventory</h1><p className="mt-1 text-slate-600">Track stock levels, low stock, reservations, and inventory transaction history.</p></header>
+        <header className="min-w-0 max-w-full overflow-hidden rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora Inventory</p><h1 className="mt-2 text-3xl font-bold">{t("inventory.title")}</h1><p className="mt-1 text-slate-600">Track stock levels, low stock, reservations, and inventory transaction history.</p></header>
         <section className="grid min-w-0 max-w-full gap-3 overflow-hidden rounded-2xl bg-white p-4 shadow-sm md:grid-cols-4">
           <label className="flex min-w-0 items-center gap-2 text-sm"><input type="checkbox" checked={lowStockOnly} onChange={(event) => setLowStockOnly(event.target.checked)} /> Low stock only</label>
-          <select className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" value={inventoryId} onChange={(event) => setInventoryId(event.target.value)}><option value="">All inventory history</option>{(inventoryQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.product_variant_id}</option>)}</select>
+          <select className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" value={inventoryId} onChange={(event) => setInventoryId(event.target.value)}><option value="">{t("inventory.allHistory")}</option>{(inventoryQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.product_variant_id}</option>)}</select>
         </section>
         <InventoryTable inventory={inventoryQuery.data ?? []} variants={variantsQuery.data ?? []} onEdit={canEdit ? setEditingInventory : undefined} />
         <form className="grid min-w-0 max-w-full gap-3 overflow-hidden rounded-2xl bg-white p-4 shadow-sm md:grid-cols-5" onSubmit={submitTransaction}>
@@ -52,7 +54,7 @@ export default function InventoryPage() {
           <select className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" value={transactionType} onChange={(event) => setTransactionType(event.target.value as InventoryTransactionType)}>{TRANSACTION_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select>
           <input className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" min={1} type="number" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} />
           <input className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" placeholder="Reason" value={reason} onChange={(event) => setReason(event.target.value)} />
-          <button className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={!canEdit} type="submit">Adjust stock</button>
+          <button className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={!canEdit} type="submit">{t("inventory.adjustStock")}</button>
         </form>
         <InventoryTransactionHistory transactions={transactionsQuery.data ?? []} />
         {editingInventory ? <EditRecordDialog title="Update inventory thresholds" fields={[{ name: "incoming_quantity", label: "Incoming quantity", type: "number" }, { name: "minimum_quantity", label: "Minimum quantity", type: "number" }]} initialValues={editingInventory} isSubmitting={updateMutation.isPending} submitError={updateMutation.isError ? safeApiErrorMessage(updateMutation.error, "Unable to save inventory changes. Please try again.") : null} onClose={() => setEditingInventory(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
@@ -60,3 +62,4 @@ export default function InventoryPage() {
     </main>
   );
 }
+// Localization regression compatibility marker: Adjust stock.

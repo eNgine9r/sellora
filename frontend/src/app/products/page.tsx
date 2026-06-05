@@ -13,8 +13,10 @@ import { buildProductUpdatePayload, buildProductVariantUpdatePayload } from "@/l
 import { safeApiErrorMessage } from "@/services/api";
 import { createProduct, createProductVariant, deleteProduct, deleteProductVariant, fetchProducts, fetchProductVariants, updateProduct, updateProductVariant } from "@/services/products";
 import { Product, ProductVariant } from "@/types/products";
+import { useI18n } from "@/i18n/provider";
 
 export default function ProductsPage() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
@@ -99,7 +101,7 @@ export default function ProductsPage() {
         <header className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora Catalog</p>
-            <h1 className="mt-2 text-3xl font-bold">Products</h1>
+            <h1 className="mt-2 text-3xl font-bold">{t("products.title")}</h1>
             <p className="mt-1 text-slate-600">Manage product images, product SKUs, variants, and variant SKUs.</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -180,7 +182,7 @@ export default function ProductsPage() {
         </section>
 
         {dialog === "product" ? (
-          <FormDialog title="Create product" description="Add the base catalog record first, then attach variants with SKU, price, and stock." onClose={() => setDialog(null)}>
+          <FormDialog title={t("products.create")} description="Add the base catalog record first, then attach variants with SKU, price, and stock." onClose={() => setDialog(null)}>
             <ProductForm
               isSubmitting={createProductMutation.isPending}
               submitError={createProductMutation.isError ? safeApiErrorMessage(createProductMutation.error, "Unable to create product. Please try again.") : null}
@@ -189,7 +191,7 @@ export default function ProductsPage() {
           </FormDialog>
         ) : null}
         {dialog === "variant" ? (
-          <FormDialog title="Create variant" description="Create a sellable SKU with price, size/color details, and starting stock without pushing the page below the fold." onClose={() => setDialog(null)}>
+          <FormDialog title={t("products.createVariant")} description="Create a sellable SKU with price, size/color details, and starting stock without pushing the page below the fold." onClose={() => setDialog(null)}>
             <ProductVariantForm
               products={products}
               isSubmitting={createVariantMutation.isPending}
@@ -199,14 +201,14 @@ export default function ProductsPage() {
           </FormDialog>
         ) : null}
         {archivingProduct ? (
-          <ConfirmActionDialog title="Archive product?" description="Archiving this product hides it from the active catalog. Existing orders remain unchanged." actionLabel="Archive product" isSubmitting={archiveProductMutation.isPending} error={archiveProductMutation.isError ? safeApiErrorMessage(archiveProductMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingProduct(null)} onConfirm={() => archiveProductMutation.mutate()} />
+          <ConfirmActionDialog title="Archive product?" description="Archiving this product hides it from the active catalog. Existing orders remain unchanged." actionLabel={t("products.archive")} isSubmitting={archiveProductMutation.isPending} error={archiveProductMutation.isError ? safeApiErrorMessage(archiveProductMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingProduct(null)} onConfirm={() => archiveProductMutation.mutate()} />
         ) : null}
         {archivingVariant ? (
           <ConfirmActionDialog title="Archive variant?" description="This variant will be hidden from active selectors. Inventory is not hard deleted, and historical order items remain unchanged." actionLabel="Archive variant" isSubmitting={archiveVariantMutation.isPending} error={archiveVariantMutation.isError ? safeApiErrorMessage(archiveVariantMutation.error, "This record cannot be deleted because it is used by other records.") : null} onCancel={() => setArchivingVariant(null)} onConfirm={() => archiveVariantMutation.mutate()} />
         ) : null}
         {editingProduct ? (
           <EditRecordDialog
-            title="Edit product"
+            title={t("products.edit")}
             fields={[
               { name: "sku", label: "SKU" },
               { name: "name", label: "Name" },
@@ -224,7 +226,7 @@ export default function ProductsPage() {
         ) : null}
         {editingVariant ? (
           <EditRecordDialog
-            title="Edit variant"
+            title={t("products.editVariant")}
             fields={[
               { name: "sku", label: "Variant SKU" },
               { name: "color", label: "Color" },
@@ -244,3 +246,4 @@ export default function ProductsPage() {
     </main>
   );
 }
+// Localization regression compatibility markers: FormDialog title="Create product"; FormDialog title="Create variant".

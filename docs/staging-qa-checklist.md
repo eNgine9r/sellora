@@ -170,3 +170,14 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Confirm duplicate orders and duplicate campaign/date metrics are skipped or warned in create-only mode.
 - Confirm Import Logs for historical order and advertising imports do not store raw row values or private customer/order/ad data.
 - Confirm product catalog import, create/edit/delete flows, auth/session refresh, workspace headers, and workspace currency formatting still work after historical imports.
+
+
+## Localization QA
+
+- Confirm first visit defaults to Ukrainian (`uk`).
+- Switch to English from the topbar language switcher and confirm the app updates immediately.
+- Switch language from Settings and confirm the preference persists after reload via `sellora_locale`.
+- Verify enum labels are localized in the UI while submitted/backend values remain unchanged (`NEW`, `DELIVERED`, `PAID`, `ACTIVE`, etc.).
+- Confirm create/edit/archive/import/order flows still submit backend enum values, not translated labels.
+- Confirm the mobile language switcher is visible and does not cause topbar or drawer overflow.
+- Scan main screens for mixed hardcoded Ukrainian/English labels before Sprint 2.3.

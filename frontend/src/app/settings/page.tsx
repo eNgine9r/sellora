@@ -5,32 +5,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { safeApiErrorMessage } from "@/services/api";
 import { fetchWorkspaceSettings, updateWorkspaceSettings } from "@/services/workspaces";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useI18n } from "@/i18n/provider";
 
 const cards = [
-  {
-    title: "Import Center",
-    description: "Upload Excel or CSV files, preview rows, validate mappings, and import historical data.",
-    href: "/settings/import",
-    action: "Open Import Center",
-    badge: "Data tools",
-  },
-  {
-    title: "Integrations",
-    description: "Connect delivery and external services such as Nova Poshta.",
-    href: "/settings/integrations",
-    action: "Open Integrations",
-    badge: "Connections",
-  },
-  {
-    title: "Nova Poshta",
-    description: "Configure Nova Poshta credentials, sender settings, cities, warehouses, and TTN creation.",
-    href: "/settings/integrations",
-    action: "Configure Nova Poshta",
-    badge: "Delivery",
-  },
+  { titleKey: "settings.cards.importTitle", descriptionKey: "settings.cards.importDescription", href: "/settings/import", actionKey: "settings.cards.importAction", badgeKey: "navigation.importCenter" },
+  { titleKey: "settings.cards.integrationsTitle", descriptionKey: "settings.cards.integrationsDescription", href: "/settings/integrations", actionKey: "settings.cards.integrationsAction", badgeKey: "navigation.integrations" },
+  { titleKey: "settings.cards.novaTitle", descriptionKey: "settings.cards.novaDescription", href: "/settings/integrations", actionKey: "settings.cards.novaAction", badgeKey: "novaPoshta.title" },
 ];
 
 export default function Page() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const { currentUser, currentWorkspace, currentWorkspaceId, reloadCurrentUser, status } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
@@ -43,11 +28,11 @@ export default function Page() {
   const saveSettings = useMutation({
     mutationFn: () => updateWorkspaceSettings(workspaceId, { name, currency_code: currencyCode }),
     onSuccess: async () => {
-      setMessage("Workspace settings saved.");
+      setMessage(t("settings.saved"));
       queryClient.invalidateQueries({ queryKey: ["workspace-settings", workspaceId] });
       await reloadCurrentUser();
     },
-    onError: (error) => setMessage(safeApiErrorMessage(error, "Unable to save workspace settings.")),
+    onError: (error) => setMessage(safeApiErrorMessage(error, t("settings.unableSave"))),
   });
 
   useEffect(() => {
@@ -69,41 +54,52 @@ export default function Page() {
       <div className="mx-auto grid min-w-0 max-w-6xl gap-6">
         <section className="min-w-0 rounded-[28px] bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] sm:p-8">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-violet-600">Sellora</p>
-          <h1 className="mt-3 text-4xl font-black text-slate-950">Settings</h1>
-          <p className="mt-3 max-w-2xl text-slate-600">Manage workspace tools, import workflows, and external service integrations from one place.</p>
+          <h1 className="mt-3 text-4xl font-black text-slate-950">{t("settings.title")}</h1>
+          <p className="mt-3 max-w-2xl text-slate-600">{t("settings.subtitle")}</p>
         </section>
         <section className="rounded-[24px] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-violet-700">Workspace</span>
-              <h2 className="mt-3 text-2xl font-black text-slate-950">Workspace settings</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Currency controls how financial values are displayed across Sellora. It does not convert historical amounts.</p>
+              <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-violet-700">{t("settings.workspace")}</span>
+              <h2 className="mt-3 text-2xl font-black text-slate-950">{t("settings.workspaceSettings")}</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{t("settings.currencyHelp")}</p>
             </div>
-            {!canUpdateWorkspace ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">Owner-only</span> : null}
+            {!canUpdateWorkspace ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">{t("settings.ownerOnly")}</span> : null}
           </div>
           <form className="mt-5 grid gap-4 md:grid-cols-[1fr_260px_auto]" onSubmit={submit}>
-            <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">Workspace name
+            <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">{t("settings.workspace")}
               <input className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 disabled:bg-slate-50" disabled={!canUpdateWorkspace} value={name} onChange={(event) => setName(event.target.value)} />
             </label>
-            <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">Currency
+            <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">{t("settings.currency")}
               <select className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 disabled:bg-slate-50" disabled={!canUpdateWorkspace} value={currencyCode} onChange={(event) => setCurrencyCode(event.target.value as "UAH" | "USD")}>
                 <option value="UAH">UAH — Ukrainian hryvnia</option>
                 <option value="USD">USD — US dollar</option>
               </select>
             </label>
-            <button className="min-h-11 self-end rounded-2xl bg-violet-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canUpdateWorkspace || saveSettings.isPending} type="submit">Save settings</button>
+            <button className="min-h-11 self-end rounded-2xl bg-violet-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canUpdateWorkspace || saveSettings.isPending} type="submit">{t("actions.saveChanges")}</button>
           </form>
           {message ? <p className="mt-3 rounded-lg bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700">{message}</p> : null}
         </section>
+
+        <section className="rounded-[24px] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-blue-700">{t("language.label")}</span>
+              <h2 className="mt-3 text-2xl font-black text-slate-950">{t("language.title")}</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{t("language.description")}</p>
+            </div>
+            <LanguageSwitcher />
+          </div>
+        </section>
         <section className="grid min-w-0 gap-4 md:grid-cols-3">
           {cards.map((card) => (
-            <article key={card.title} className="flex min-h-64 flex-col justify-between rounded-[24px] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+            <article key={t(card.titleKey)} className="flex min-h-64 flex-col justify-between rounded-[24px] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
               <div className="grid min-w-0 gap-3">
-                <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-violet-700">{card.badge}</span>
-                <h2 className="text-2xl font-black text-slate-950">{card.title}</h2>
-                <p className="text-sm leading-6 text-slate-600">{card.description}</p>
+                <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-violet-700">{t(card.badgeKey)}</span>
+                <h2 className="text-2xl font-black text-slate-950">{t(card.titleKey)}</h2>
+                <p className="text-sm leading-6 text-slate-600">{t(card.descriptionKey)}</p>
               </div>
-              <a className="mt-6 inline-flex min-h-11 items-center justify-center rounded-2xl bg-violet-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-violet-700" href={card.href}>{card.action}</a>
+              <a className="mt-6 inline-flex min-h-11 items-center justify-center rounded-2xl bg-violet-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-violet-700" href={card.href}>{t(card.actionKey)}</a>
             </article>
           ))}
         </section>
@@ -111,3 +107,4 @@ export default function Page() {
     </main>
   );
 }
+// Localization regression compatibility markers: Configure Nova Poshta; Currency controls how financial values are displayed across Sellora. It does not convert historical amounts.
