@@ -152,10 +152,18 @@ button {
   min-width: 0;
 }
 
+.sellora-mobile-page,
+.sellora-page,
+.sellora-card,
+.sellora-form,
+.sellora-form-control {
+  max-width: 100%;
+  min-width: 0;
+}
+
 input,
 select,
 textarea {
-  width: 100%;
   max-width: 100%;
 }
 

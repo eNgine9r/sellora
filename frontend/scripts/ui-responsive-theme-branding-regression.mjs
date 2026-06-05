@@ -86,7 +86,7 @@ assert.match(source.recentOrders, /truncate/, "Recent orders must truncate long 
 assert.match(source.topProducts, /min-w-0 overflow-hidden/, "Top products must guard mobile overflow");
 assert.match(source.topProducts, /truncate/, "Top products must truncate long names/SKUs");
 assert.match(source.advertising, /max-w-full break-words text-2xl/, "Advertising heading must wrap on mobile");
-assert.match(source.advertising, /grid max-w-full min-w-0/, "Advertising page sections must constrain mobile width");
+assert.match(source.advertising, /grid (?:w-full )?max-w-full min-w-0/, "Advertising page sections must constrain mobile width");
 assert.match(source.orderForm, /Items subtotal/, "Order form totals block must remain present");
 assert.match(source.orderForm, /dark:bg-white\/\[0\.05\]/, "Order totals block must be readable in dark mode");
 assert.match(source.inventory, /w-full min-w-0 max-w-full/, "Inventory selects/controls must fit mobile width");

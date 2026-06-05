@@ -21,8 +21,8 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
   const validMemberships = currentUser?.memberships.filter((membership) => normalizeWorkspaceId(membership.workspace_id)) ?? [];
 
   return (
-    <header className="mobile-safe-top sticky top-0 z-20 min-w-0 border-b border-slate-200/70 bg-[#F8F7FC]/92 px-3 py-3 text-slate-950 backdrop-blur-xl dark:border-white/10 dark:bg-[#101120]/92 dark:text-white sm:px-4 md:px-6">
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+    <header className="mobile-safe-top sticky top-0 z-20 min-w-0 overflow-x-hidden border-b border-slate-200/70 bg-[#F8F7FC]/92 px-3 py-3 text-slate-950 backdrop-blur-xl dark:border-white/10 dark:bg-[#101120]/92 dark:text-white sm:px-4 md:px-6">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3 lg:gap-4">
         <button className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/10 lg:hidden" onClick={onOpenMenu} aria-label="Open navigation">
           <Menu className="h-5 w-5" />
         </button>
@@ -35,7 +35,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
           </div>
         </div>
 
-        <div className="relative hidden min-w-0 flex-1 md:block">
+        <div className="relative hidden min-w-0 flex-1 md:block lg:max-w-[520px] xl:max-w-[640px]">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             className="h-12 w-full min-w-0 rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-950 shadow-sm outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/10 dark:text-white dark:placeholder:text-slate-400"
@@ -43,14 +43,14 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
           />
         </div>
 
-        <select className="hidden h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/10 dark:text-white lg:block" aria-label="Dashboard date range">
+        <select className="hidden h-12 w-40 shrink-0 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/10 dark:text-white lg:block" aria-label="Dashboard date range">
           <option>Last 30 days</option>
           <option>This month</option>
           <option>Today</option>
         </select>
 
-        <button className="hidden h-12 items-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 md:inline-flex">
-          Create ▾
+        <button className="hidden h-12 shrink-0 items-center gap-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 md:inline-flex">
+          <span>Create</span><span aria-hidden="true">▾</span>
         </button>
         <ThemeToggle compact />
         <button className="hidden h-12 w-12 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 sm:grid" aria-label="Notifications">
@@ -70,10 +70,10 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
           <p className="truncate text-sm font-black text-slate-900 dark:text-white">{currentWorkspace?.workspace_name ?? "Workspace"}</p>
           <p className="truncate text-xs text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
         </div>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 shrink-0 items-center gap-2">
           {validMemberships.length > 1 ? (
             <select
-              className="min-h-11 min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/10 dark:text-white"
+              className="min-h-11 w-48 min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/10 dark:text-white"
               value={currentWorkspaceId ?? ""}
               onChange={(event) => { const workspaceId = normalizeWorkspaceId(event.target.value); if (workspaceId) onSwitchWorkspace(workspaceId); }}
               aria-label="Switch workspace"
@@ -85,7 +85,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
               ))}
             </select>
           ) : null}
-          <button className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100" onClick={onLogout}>
+          <button className="min-h-11 shrink-0 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100" onClick={onLogout}>
             Log out
           </button>
         </div>
