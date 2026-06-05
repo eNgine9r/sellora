@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
+import { FormDialog } from "@/components/form-dialog";
 import { CustomerDetails } from "@/features/customers/components/customer-details";
 import { CustomerForm } from "@/features/customers/components/customer-form";
 import { CustomerTable } from "@/features/customers/components/customer-table";
@@ -162,9 +163,13 @@ export default function CustomersPage() {
         </div>
 
         {isCreateOpen ? (
-          <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
-            <CustomerForm onSubmit={(values) => createMutation.mutate(values)} />
-          </div>
+          <FormDialog title="Create customer" description="Add customer profile details without pushing the CRM list below the fold." onClose={() => setIsCreateOpen(false)}>
+            <CustomerForm
+              isSubmitting={createMutation.isPending}
+              submitError={createMutation.isError ? safeApiErrorMessage(createMutation.error, "Unable to create customer. Please try again.") : null}
+              onSubmit={(values) => createMutation.mutate(values)}
+            />
+          </FormDialog>
         ) : null}
         {archivingCustomer ? <ConfirmActionDialog title="Archive customer?" description="This customer profile will be hidden from active CRM lists. Historical orders and shipments remain unchanged." actionLabel="Archive customer" isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingCustomer(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
         {editingCustomer ? <EditRecordDialog title="Edit customer" fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "city", label: "City" }, { name: "region", label: "Region" }]} initialValues={editingCustomer} isSubmitting={updateMutation.isPending} submitError={updateMutation.isError ? safeApiErrorMessage(updateMutation.error, "Unable to save customer changes. Please try again.") : null} onClose={() => setEditingCustomer(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}

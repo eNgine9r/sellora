@@ -12,7 +12,7 @@ export type CustomerFormValues = {
   region?: string;
 };
 
-export function CustomerForm({ onSubmit }: { onSubmit: (values: CustomerCreatePayload) => void }) {
+export function CustomerForm({ onSubmit, isSubmitting = false, submitError }: { onSubmit: (values: CustomerCreatePayload) => void; isSubmitting?: boolean; submitError?: string | null }) {
   const [values, setValues] = useState<CustomerFormValues>({ name: "" });
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -28,31 +28,32 @@ export function CustomerForm({ onSubmit }: { onSubmit: (values: CustomerCreatePa
   }
 
   return (
-    <form className="grid gap-4" onSubmit={submit}>
-      <label className="grid gap-1 text-sm font-medium text-slate-700">
+    <form className="grid min-w-0 gap-4 overflow-x-hidden" onSubmit={submit} noValidate>
+      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
         Name
         <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} />
       </label>
-      <label className="grid gap-1 text-sm font-medium text-slate-700">
+      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
         Phone
         <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.phone ?? ""} onChange={(event) => setValues({ ...values, phone: event.target.value })} />
       </label>
-      <label className="grid gap-1 text-sm font-medium text-slate-700">
+      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
         Instagram username
         <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.instagram_username ?? ""} onChange={(event) => setValues({ ...values, instagram_username: event.target.value })} />
       </label>
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="grid gap-1 text-sm font-medium text-slate-700">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2">
+        <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
           City
           <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.city ?? ""} onChange={(event) => setValues({ ...values, city: event.target.value })} />
         </label>
-        <label className="grid gap-1 text-sm font-medium text-slate-700">
+        <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
           Region
           <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.region ?? ""} onChange={(event) => setValues({ ...values, region: event.target.value })} />
         </label>
       </div>
       {validationError ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">{validationError}</p> : null}
-      <button className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700" type="submit">Create customer</button>
+      {submitError ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">{submitError}</p> : null}
+      <button className="min-h-11 w-full rounded-md bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={isSubmitting} type="submit">{isSubmitting ? "Creating…" : "Create customer"}</button>
     </form>
   );
 }

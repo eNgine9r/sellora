@@ -21,7 +21,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
   const validMemberships = currentUser?.memberships.filter((membership) => normalizeWorkspaceId(membership.workspace_id)) ?? [];
 
   return (
-    <header className="sticky top-0 z-20 min-w-0 border-b border-slate-200/70 bg-[#F8F7FC]/92 px-3 py-3 text-slate-950 backdrop-blur-xl dark:border-white/10 dark:bg-[#101120]/92 dark:text-white sm:px-4 md:px-6">
+    <header className="mobile-safe-top sticky top-0 z-20 min-w-0 border-b border-slate-200/70 bg-[#F8F7FC]/92 px-3 py-3 text-slate-950 backdrop-blur-xl dark:border-white/10 dark:bg-[#101120]/92 dark:text-white sm:px-4 md:px-6">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/10 lg:hidden" onClick={onOpenMenu} aria-label="Open navigation">
           <Menu className="h-5 w-5" />

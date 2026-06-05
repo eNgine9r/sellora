@@ -26,13 +26,13 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top_left,rgba(109,40,217,.35),transparent_36%),#080812] text-white">
+    <aside className="sellora-sidebar flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top_left,rgba(109,40,217,.35),transparent_36%),#080812] text-white">
       <div className="px-4 py-5 sm:px-5">
         <Link href="/dashboard" onClick={onNavigate} aria-label="Sellora dashboard" className="block rounded-3xl border border-white/10 bg-white/[0.04] px-3 py-3 shadow-2xl shadow-black/20 transition hover:bg-white/[0.07]">
           <BrandLockup markClassName="h-10 w-10" textClassName="text-white" />
         </Link>
       </div>
-      <nav className="grid min-w-0 gap-1 overflow-y-auto px-3 pb-44 lg:pb-5" aria-label="Main navigation">
+      <nav className="sidebar-scrollbar grid min-w-0 gap-1 overflow-y-auto px-3 pb-44 lg:pb-5" aria-label="Main navigation">
         {items.map(([href, label, Icon]) => {
           const active = pathname === href || pathname.startsWith(`${href}/`) || (href === "/dashboard" && pathname === "/overview");
           return (

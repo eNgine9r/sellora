@@ -105,3 +105,42 @@ html {
 .dark main th {
   border-color: rgba(255, 255, 255, 0.1);
 }
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .mobile-safe-top {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .mobile-safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+.sellora-sidebar {
+  background: radial-gradient(circle at top left, rgba(109, 40, 217, 0.35), transparent 36%), #080812 !important;
+  color: #fff !important;
+}
+
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.34);
+}
