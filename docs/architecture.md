@@ -63,3 +63,10 @@ The Import Center recognizes `ad_campaigns` and `ad_metrics` for dry-run and cre
 - Products keep using the existing `product.category` string field rather than introducing a categories table in this sprint.
 - The product list API accepts an optional additive `category` query parameter; omitting it preserves the previous all-products response.
 - Inventory visual joins are performed from existing product, variant, and inventory endpoints in the frontend so stock transaction behavior and reservation logic remain unchanged.
+
+## Sprint 2.2.13 pagination and list-performance notes
+
+- Product, variant, and inventory lists use MVP frontend pagination with a default page size of 5 and options for 15 or 30 rows/cards.
+- Product list API behavior remains backward compatible; no pagination parameters are required for existing consumers.
+- Order item product selection renders only filtered product cards with images/placeholders instead of a large text-only native product select.
+- Shipments received localization and internal Sellora scrollbar polish; broad server-backed pagination for non-catalog modules remains a future hardening step.

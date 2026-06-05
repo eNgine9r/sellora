@@ -6,7 +6,18 @@
     "redirectingLogin": "Redirecting to login…",
     "readOnly": "Read-only",
     "none": "none",
-    "live": "Live"
+    "live": "Live",
+    "allStatuses": "All statuses",
+    "searchByTrackingNumber": "Search by tracking number",
+    "chooseFile": "Choose file",
+    "noFileSelected": "No file selected",
+    "show": "Show",
+    "items": "items",
+    "details": "Details",
+    "customer": "Customer",
+    "order": "Order",
+    "created": "Created",
+    "draft": "Draft"
   },
   "actions": {
     "create": "Create",
@@ -243,7 +254,22 @@
     "item": "Item",
     "unitPrice": "Unit price",
     "unitCost": "Unit cost",
-    "quantity": "Quantity"
+    "quantity": "Quantity",
+    "productOption": {
+      "available": "Available",
+      "price": "Price",
+      "noImage": "No image",
+      "noProducts": "No products match this category and search."
+    },
+    "adCost": "Ad cost",
+    "shipping": "Shipping",
+    "codFee": "COD fee",
+    "other": "Other",
+    "notes": "Notes",
+    "itemsSubtotal": "Items subtotal",
+    "productCost": "Product cost",
+    "shippingCodOther": "Shipping / COD / Other",
+    "estimatedProfit": "Estimated profit"
   },
   "products": {
     "title": "Products",
@@ -308,7 +334,38 @@
     "cod": "COD",
     "createTtn": "Create Nova Poshta TTN",
     "syncStatus": "Sync status",
-    "empty": "No shipments found."
+    "empty": "No shipments found.",
+    "logisticsLabel": "Sellora Logistics",
+    "heroSubtitle": "Create TTN records manually, track delivery lifecycle, and keep order statuses in sync.",
+    "inTransit": "In Transit",
+    "arrived": "Arrived",
+    "deliveredToday": "Delivered Today",
+    "returnedThisMonth": "Returned This Month",
+    "selectPrompt": "Select a shipment to view details and status actions.",
+    "draftShipment": "Draft shipment",
+    "tracking": "Tracking",
+    "order": "Order",
+    "customer": "Customer",
+    "recipientName": "Recipient name",
+    "recipientPhone": "Recipient phone",
+    "shippingCost": "Shipping cost",
+    "codAmount": "COD amount",
+    "declaredValue": "Declared value",
+    "manualDescription": "Manual shipment entry remains available; Nova Poshta fields are optional until TTN creation.",
+    "archiveTitle": "Archive shipment?",
+    "archiveNpDescription": "This only archives the Sellora shipment record. It does not cancel the Nova Poshta TTN.",
+    "archiveDescription": "This shipment will be hidden from active logistics lists. The related order remains unchanged.",
+    "noNextActions": "No next shipment actions available.",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "returned": "Returned",
+    "notes": "Notes",
+    "trackingTtn": "Tracking / TTN",
+    "recipient": "Recipient",
+    "phone": "Phone",
+    "selectOrder": "Select order",
+    "orderRequired": "Order is required.",
+    "trackingRequired": "Tracking number is required for non-draft shipments."
   },
   "advertising": {
     "title": "Advertising",
@@ -490,5 +547,16 @@
     "sets": "Sets",
     "watches": "Watches",
     "other": "Other"
+  },
+  "pagination": {
+    "show": "Show",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "of": "of",
+    "itemsPerPage": "Items per page",
+    "showing": "Showing",
+    "results": "results",
+    "emptyPage": "No results on this page."
   }
 }

@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useI18n } from "@/i18n/provider";
-import { CategoryFilter, categoryMatches, normalizeCategoryKey, productSearchMatches, translatedCategoryOptions } from "@/lib/categories";
+import { CategoryFilter, categoryMatches, displayCategory, normalizeCategoryKey, productSearchMatches, translatedCategoryOptions } from "@/lib/categories";
 import { buildOrderCreatePayload } from "@/lib/payload-builders";
 import { formatMoney } from "@/lib/currency";
 import { OrderCreatePayload } from "@/services/orders";
@@ -70,6 +70,21 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
       productId: filter.productId || selectedVariant?.product_id || "",
       productSearch: filter.productSearch,
     };
+  }
+
+
+  function productImage(product: Product) {
+    return product.images.find((image) => image.is_primary) ?? product.images[0];
+  }
+
+  function productSummary(product: Product) {
+    const productVariants = variants.filter((variant) => variant.product_id === product.id);
+    const available = productVariants.reduce((sum, variant) => {
+      const stock = inventoryByVariantId.get(variant.id);
+      return sum + (stock ? Math.max(0, stock.stock_quantity - stock.reserved_quantity) : 0);
+    }, 0);
+    const firstPrice = productVariants.find((variant) => variant.price)?.price;
+    return [product.sku, displayCategory(product.category, t), `${t("orders.productOption.available")}: ${available}`, firstPrice ? `${t("orders.productOption.price")}: ${formatMoney(firstPrice, currencyCode)}` : null].filter(Boolean).join(" — ");
   }
 
   function variantLabel(variant: ProductVariant) {
@@ -186,12 +201,24 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
                 <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">{t("orders.searchProduct")}
                   <input className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2" value={filter.productSearch} disabled={!canEditItems} placeholder={t("orders.searchProduct")} onChange={(event) => setFilter(index, { productSearch: event.target.value })} />
                 </label>
-                <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">{t("orders.selectProduct")}
-                  <select className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2" value={filter.productId} disabled={!canEditItems || filteredProducts.length === 0} onChange={(event) => selectProduct(index, event.target.value)}>
-                    <option value="">{filteredProducts.length ? t("orders.selectProduct") : t("orders.noProductsInCategory")}</option>
-                    {filteredProducts.map((product) => <option key={product.id} value={product.id}>{product.name} {product.sku ? `— ${product.sku}` : ""}</option>)}
-                  </select>
-                </label>
+                <div className="grid min-w-0 gap-2 md:col-span-1">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{t("orders.selectProduct")}</span>
+                  <div className="sellora-scrollbar grid max-h-56 min-w-0 gap-2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 dark:border-white/10 dark:bg-slate-950">
+                    {filteredProducts.length ? filteredProducts.slice(0, 8).map((product) => {
+                      const image = productImage(product);
+                      const isSelected = filter.productId === product.id;
+                      return (
+                        <button className={`flex min-w-0 items-center gap-3 rounded-xl border p-2 text-left transition ${isSelected ? "border-blue-600 bg-blue-50 dark:bg-blue-500/10" : "border-slate-100 hover:border-blue-200 dark:border-white/10 dark:hover:border-blue-300/40"}`} disabled={!canEditItems} key={product.id} type="button" onClick={() => selectProduct(index, product.id)}>
+                          {image ? <img className="h-10 w-10 shrink-0 rounded-lg object-cover" src={image.image_url} alt={image.alt_text ?? product.name} /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-black uppercase text-slate-400 dark:bg-white/10">{t("orders.productOption.noImage")}</span>}
+                          <span className="min-w-0 flex-1">
+                            <strong className="block truncate text-sm text-slate-950 dark:text-white">{product.name}</strong>
+                            <span className="block truncate text-xs text-slate-500 dark:text-slate-300">{productSummary(product)}</span>
+                          </span>
+                        </button>
+                      );
+                    }) : <p className="p-3 text-sm text-slate-500 dark:text-slate-300">{t("orders.productOption.noProducts")}</p>}
+                  </div>
+                </div>
               </div>
               <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">{t("orders.selectVariant")}
                 <select className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2" value={item.product_variant_id} disabled={!hasVariants || !canEditItems || variantOptions.length === 0} onChange={(event) => selectVariant(index, event.target.value)}>
@@ -210,15 +237,15 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
         })}
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-4"><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Ad cost" value={values.ad_cost ?? ""} onChange={(event) => setValues({ ...values, ad_cost: event.target.value })} /><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Shipping" value={values.shipping_cost ?? ""} onChange={(event) => setValues({ ...values, shipping_cost: event.target.value })} /><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="COD fee" value={values.cod_fee ?? ""} onChange={(event) => setValues({ ...values, cod_fee: event.target.value })} /><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Other" value={values.other_cost ?? ""} onChange={(event) => setValues({ ...values, other_cost: event.target.value })} /></div>
-      <textarea className="min-h-24 min-w-0 rounded-md border border-slate-300 px-3 py-2" placeholder="Notes" value={values.notes ?? ""} onChange={(event) => setValues({ ...values, notes: event.target.value })} />
+      <div className="grid gap-3 sm:grid-cols-4"><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder={t("orders.adCost")} value={values.ad_cost ?? ""} onChange={(event) => setValues({ ...values, ad_cost: event.target.value })} /><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder={t("orders.shipping")} value={values.shipping_cost ?? ""} onChange={(event) => setValues({ ...values, shipping_cost: event.target.value })} /><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder={t("orders.codFee")} value={values.cod_fee ?? ""} onChange={(event) => setValues({ ...values, cod_fee: event.target.value })} /><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder={t("orders.other")} value={values.other_cost ?? ""} onChange={(event) => setValues({ ...values, other_cost: event.target.value })} /></div>
+      <textarea className="min-h-24 min-w-0 rounded-md border border-slate-300 px-3 py-2" placeholder={t("orders.notes")} value={values.notes ?? ""} onChange={(event) => setValues({ ...values, notes: event.target.value })} />
 
       <section className="grid min-w-0 gap-2 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-slate-700 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 sm:grid-cols-2">
-        <span>Items subtotal</span><strong className="text-slate-950 dark:text-white">{formatMoney(itemSubtotal, currencyCode)}</strong>
-        {showProfit ? <><span>Product cost</span><strong className="text-slate-950 dark:text-white">{formatMoney(productCost, currencyCode)}</strong></> : null}
-        <span>Ad cost</span><strong className="text-slate-950 dark:text-white">{formatMoney(adCost, currencyCode)}</strong>
-        <span>Shipping / COD / Other</span><strong className="text-slate-950 dark:text-white">{formatMoney(shippingCost + codFee + otherCost, currencyCode)}</strong>
-        {showProfit ? <><span>Estimated profit</span><strong className="text-emerald-700 dark:text-emerald-200">{formatMoney(estimatedProfit, currencyCode)}</strong></> : null}
+        <span>{t("orders.itemsSubtotal")}</span><strong className="text-slate-950 dark:text-white">{formatMoney(itemSubtotal, currencyCode)}</strong>
+        {showProfit ? <><span>{t("orders.productCost")}</span><strong className="text-slate-950 dark:text-white">{formatMoney(productCost, currencyCode)}</strong></> : null}
+        <span>{t("orders.adCost")}</span><strong className="text-slate-950 dark:text-white">{formatMoney(adCost, currencyCode)}</strong>
+        <span>{t("orders.shippingCodOther")}</span><strong className="text-slate-950 dark:text-white">{formatMoney(shippingCost + codFee + otherCost, currencyCode)}</strong>
+        {showProfit ? <><span>{t("orders.estimatedProfit")}</span><strong className="text-emerald-700 dark:text-emerald-200">{formatMoney(estimatedProfit, currencyCode)}</strong></> : null}
       </section>
       {validationError ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">{validationError}</p> : null}
       <button className="min-h-11 rounded-md bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={!lockedItems && !hasVariants} type="submit">{submitLabel}</button>
@@ -226,3 +253,4 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
   );
 }
 // Regression compatibility markers: Create a product variant first before creating an order.; Add item; Remove item; Price is auto-filled from the selected variant and can be adjusted for discounts.; Line total; Items are locked because this order has already entered shipment workflow.
+// Regression compatibility markers: Items subtotal; Estimated profit.

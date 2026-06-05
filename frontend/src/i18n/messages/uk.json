@@ -6,7 +6,18 @@
     "redirectingLogin": "Перенаправлення до входу…",
     "readOnly": "Лише перегляд",
     "none": "немає",
-    "live": "Наживо"
+    "live": "Наживо",
+    "allStatuses": "Усі статуси",
+    "searchByTrackingNumber": "Пошук за номером ТТН",
+    "chooseFile": "Оберіть файл",
+    "noFileSelected": "Файл не обрано",
+    "show": "Показати",
+    "items": "елементи",
+    "details": "Деталі",
+    "customer": "Клієнт",
+    "order": "Замовлення",
+    "created": "Створено",
+    "draft": "Чернетка"
   },
   "actions": {
     "create": "Створити",
@@ -243,7 +254,22 @@
     "item": "Позиція",
     "unitPrice": "Ціна за одиницю",
     "unitCost": "Собівартість",
-    "quantity": "Кількість"
+    "quantity": "Кількість",
+    "productOption": {
+      "available": "Залишок",
+      "price": "Ціна",
+      "noImage": "Без фото",
+      "noProducts": "Немає товарів для цієї категорії та пошуку."
+    },
+    "adCost": "Витрати на рекламу",
+    "shipping": "Доставка",
+    "codFee": "Комісія COD",
+    "other": "Інше",
+    "notes": "Нотатки",
+    "itemsSubtotal": "Сума позицій",
+    "productCost": "Собівартість товарів",
+    "shippingCodOther": "Доставка / COD / інше",
+    "estimatedProfit": "Орієнтовний прибуток"
   },
   "products": {
     "title": "Товари",
@@ -308,7 +334,38 @@
     "cod": "COD",
     "createTtn": "Створити TTN Nova Poshta",
     "syncStatus": "Оновити статус",
-    "empty": "Відправлень не знайдено."
+    "empty": "Відправлень не знайдено.",
+    "logisticsLabel": "Логістика Sellora",
+    "heroSubtitle": "Створюйте ТТН вручну, відстежуйте доставку та синхронізуйте статуси замовлень.",
+    "inTransit": "У дорозі",
+    "arrived": "Прибуло",
+    "deliveredToday": "Доставлено сьогодні",
+    "returnedThisMonth": "Повернено цього місяця",
+    "selectPrompt": "Оберіть відправлення, щоб переглянути деталі та змінити статус.",
+    "draftShipment": "Чернетка відправлення",
+    "tracking": "Трекінг",
+    "order": "Замовлення",
+    "customer": "Клієнт",
+    "recipientName": "Ім’я отримувача",
+    "recipientPhone": "Телефон отримувача",
+    "shippingCost": "Вартість доставки",
+    "codAmount": "Сума COD",
+    "declaredValue": "Оголошена вартість",
+    "manualDescription": "Ручне створення відправлення доступне; поля Nova Poshta необов’язкові до створення ТТН.",
+    "archiveTitle": "Архівувати відправлення?",
+    "archiveNpDescription": "Це архівує лише запис Sellora. ТТН Nova Poshta не скасовується.",
+    "archiveDescription": "Відправлення буде приховано з активних списків логістики. Пов’язане замовлення не зміниться.",
+    "noNextActions": "Немає доступних наступних дій для відправлення.",
+    "shipped": "Відправлено",
+    "delivered": "Доставлено",
+    "returned": "Повернено",
+    "notes": "Нотатки",
+    "trackingTtn": "Трекінг / ТТН",
+    "recipient": "Отримувач",
+    "phone": "Телефон",
+    "selectOrder": "Оберіть замовлення",
+    "orderRequired": "Потрібно обрати замовлення.",
+    "trackingRequired": "Для нечернеткових відправлень потрібен трек-номер."
   },
   "advertising": {
     "title": "Реклама",
@@ -490,5 +547,16 @@
     "sets": "Комплекти",
     "watches": "Годинники",
     "other": "Інше"
+  },
+  "pagination": {
+    "show": "Показувати",
+    "previous": "Назад",
+    "next": "Далі",
+    "page": "Сторінка",
+    "of": "з",
+    "itemsPerPage": "Елементів на сторінці",
+    "showing": "Показано",
+    "results": "результатів",
+    "emptyPage": "На цій сторінці немає результатів."
   }
 }

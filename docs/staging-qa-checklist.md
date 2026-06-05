@@ -204,3 +204,34 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
   - Confirm new category/product/order/inventory UI appears in Ukrainian by default and in English after switching language.
   - Confirm category labels are localized at display level only; backend/API enum values and payload values remain stable.
   - Confirm no private catalog, customer, order, inventory, advertising, token, key, or workspace data appears in UI examples or docs.
+
+## Sprint 2.2.13 — Pagination, List Performance & UX Cleanup QA
+
+- Product pagination
+  - Confirm `/products` renders 5 products by default and supports 15/30 page sizes.
+  - Confirm page navigation works with category chips and product search.
+  - Confirm changing search/category resets to page 1 while preserving page size.
+  - Confirm mobile product cards and desktop table still show image/category/SKU/status/actions.
+- Product variants pagination
+  - Confirm Manage variants renders 5 variants by default and supports 15/30 page sizes.
+  - Confirm create/edit/archive variant invalidates data and leaves pagination on a valid page.
+  - Confirm variant SKU, product relationship, price, and actions remain visible.
+- Inventory pagination
+  - Confirm `/inventory` renders 5 rows/cards by default and supports 15/30 page sizes.
+  - Confirm pagination works with category filter and low-stock-only filter.
+  - Confirm product image/category/name/variant SKU remain visible in desktop table and mobile cards.
+  - Confirm stock adjustment, transaction history, and threshold editing still work.
+- Order product selector with images
+  - Confirm Create/Edit Order product selection shows thumbnail or placeholder, name, SKU, category, available stock, and price.
+  - Confirm product matches are limited by category/search before rendering options.
+  - Confirm selected product scopes variants, clears invalid variant selections, and preserves price auto-fill.
+- Shipments localization and scrollbar
+  - Confirm `/shipments` header, KPI labels, status filter, search placeholder, empty detail prompt, table/cards, details, and form labels are localized in Ukrainian.
+  - Confirm shipment status action labels are localized while backend status values remain unchanged.
+  - Confirm shipment table uses Sellora scrollbar styling and mobile cards avoid body-level horizontal scroll.
+- Large-list review decisions
+  - Products, variants, and inventory received MVP frontend pagination because they are the largest catalog/inventory surfaces.
+  - Orders, customers, leads, shipments, and advertising remain candidates for later server-backed pagination; this sprint only localized/polished shipments to avoid broad business-flow churn before Sprint 2.3.
+- Full Ukrainian localization review
+  - Review dashboard, products, orders, inventory, shipments, leads, customers, advertising, finance, reports, analytics, settings, topbar, sidebar, modals, dropdowns, empty/loading/error states, and buttons for obvious English UI.
+  - Confirm technical IDs, route paths, provider constants, and backend/API enum values remain untranslated.

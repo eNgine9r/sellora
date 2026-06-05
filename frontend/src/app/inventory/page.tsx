@@ -1,8 +1,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
+import { PaginationControls, clampPage, paginateItems } from "@/components/pagination-controls";
 import { InventoryTable } from "@/features/inventory/components/inventory-table";
 import { InventoryTransactionHistory } from "@/features/inventory/components/inventory-transaction-history";
 import { createInventoryTransaction, fetchInventory, fetchInventoryTransactions, fetchProducts, fetchProductVariants, updateInventory } from "@/services/products";
@@ -23,6 +24,8 @@ export default function InventoryPage() {
   const workspaceId = currentWorkspaceId ?? "";
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [inventoryPage, setInventoryPage] = useState(1);
+  const [inventoryPageSize, setInventoryPageSize] = useState(5);
   const [inventoryId, setInventoryId] = useState("");
   const [transactionType, setTransactionType] = useState<InventoryTransactionType>("STOCK_IN");
   const [quantity, setQuantity] = useState(1);
@@ -39,13 +42,21 @@ export default function InventoryPage() {
   const updateMutation = useMutation({ mutationFn: (values: Record<string, string>) => updateInventory(workspaceId, editingInventory?.id ?? "", buildInventoryUpdatePayload(values), undefined), onSuccess: () => { setEditingInventory(null); queryClient.invalidateQueries({ queryKey: ["inventory", workspaceId] }); queryClient.invalidateQueries({ queryKey: ["inventory-transactions", workspaceId] }); } });
 
   const categoryOptions = translatedCategoryOptions(t);
-  const variantById = new Map((variantsQuery.data ?? []).map((variant) => [variant.id, variant]));
-  const productById = new Map((productsQuery.data ?? []).map((product) => [product.id, product]));
-  const visibleInventory = (inventoryQuery.data ?? []).filter((item) => {
+  const variantById = useMemo(() => new Map((variantsQuery.data ?? []).map((variant) => [variant.id, variant])), [variantsQuery.data]);
+  const productById = useMemo(() => new Map((productsQuery.data ?? []).map((product) => [product.id, product])), [productsQuery.data]);
+  const visibleInventory = useMemo(() => (inventoryQuery.data ?? []).filter((item) => {
     const variant = variantById.get(item.product_variant_id);
     const product = variant ? productById.get(variant.product_id) : undefined;
     return categoryMatches(product?.category, categoryFilter);
-  });
+  }), [inventoryQuery.data, variantById, productById, categoryFilter]);
+  const paginatedInventory = paginateItems(visibleInventory, inventoryPage, inventoryPageSize);
+
+  useEffect(() => {
+    setInventoryPage(1);
+  }, [categoryFilter, lowStockOnly]);
+  useEffect(() => {
+    setInventoryPage((page) => clampPage(page, inventoryPageSize, visibleInventory.length));
+  }, [inventoryPageSize, visibleInventory.length]);
 
   function submitTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,7 +72,8 @@ export default function InventoryPage() {
           <select className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" aria-label={t("inventory.filterByCategory")} value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}><option value="all">{t("inventory.allCategories")}</option>{categoryOptions.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}</select>
           <select className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" value={inventoryId} onChange={(event) => setInventoryId(event.target.value)}><option value="">{t("inventory.allHistory")}</option>{visibleInventory.map((item) => <option key={item.id} value={item.id}>{item.product_variant_id}</option>)}</select>
         </section>
-        <InventoryTable inventory={visibleInventory} variants={variantsQuery.data ?? []} products={productsQuery.data ?? []} onEdit={canEdit ? setEditingInventory : undefined} />
+        <InventoryTable inventory={paginatedInventory} variants={variantsQuery.data ?? []} products={productsQuery.data ?? []} onEdit={canEdit ? setEditingInventory : undefined} />
+        <PaginationControls page={inventoryPage} pageSize={inventoryPageSize} totalItems={visibleInventory.length} onPageChange={setInventoryPage} onPageSizeChange={(size) => { setInventoryPageSize(size); setInventoryPage(1); }} />
         <form className="grid min-w-0 max-w-full gap-3 overflow-hidden rounded-2xl bg-white p-4 shadow-sm md:grid-cols-5" onSubmit={submitTransaction}>
           <select className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" required value={inventoryId} onChange={(event) => setInventoryId(event.target.value)}><option value="">{t("inventory.selectInventory")}</option>{visibleInventory.map((item) => <option key={item.id} value={item.id}>{item.product_variant_id}</option>)}</select>
           <select className="w-full min-w-0 max-w-full rounded-md border border-slate-300 px-3 py-2" value={transactionType} onChange={(event) => setTransactionType(event.target.value as InventoryTransactionType)}>{TRANSACTION_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select>

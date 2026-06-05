@@ -1,10 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FormDialog } from "@/components/form-dialog";
+import { PaginationControls, clampPage, paginateItems } from "@/components/pagination-controls";
 import { ProductForm } from "@/features/products/components/product-form";
 import { ProductTable } from "@/features/products/components/product-table";
 import { ProductVariantForm } from "@/features/products/components/product-variant-form";
@@ -23,6 +24,10 @@ export default function ProductsPage() {
   const workspaceId = currentWorkspaceId ?? "";
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [productPage, setProductPage] = useState(1);
+  const [productPageSize, setProductPageSize] = useState(5);
+  const [variantPage, setVariantPage] = useState(1);
+  const [variantPageSize, setVariantPageSize] = useState(5);
   const [dialog, setDialog] = useState<"product" | "variant" | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
@@ -96,8 +101,20 @@ export default function ProductsPage() {
   const products = productsQuery.data ?? [];
   const variants = variantsQuery.data ?? [];
   const categoryOptions = translatedCategoryOptions(t);
-  const visibleProducts = products.filter((product) => categoryMatches(product.category, categoryFilter) && productSearchMatches(product, search));
+  const visibleProducts = useMemo(() => products.filter((product) => categoryMatches(product.category, categoryFilter) && productSearchMatches(product, search)), [products, categoryFilter, search]);
+  const paginatedProducts = paginateItems(visibleProducts, productPage, productPageSize);
+  const paginatedVariants = paginateItems(variants, variantPage, variantPageSize);
   const listError = productsQuery.isError ? safeApiErrorMessage(productsQuery.error, "Unable to load products.") : null;
+
+  useEffect(() => {
+    setProductPage(1);
+  }, [categoryFilter, search]);
+  useEffect(() => {
+    setProductPage((page) => clampPage(page, productPageSize, visibleProducts.length));
+  }, [productPageSize, visibleProducts.length]);
+  useEffect(() => {
+    setVariantPage((page) => clampPage(page, variantPageSize, variants.length));
+  }, [variantPageSize, variants.length]);
 
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
@@ -138,7 +155,8 @@ export default function ProductsPage() {
         </section>
 
         {listError ? <p className="rounded-lg bg-rose-50 p-4 text-rose-700">{listError}</p> : null}
-        <ProductTable products={visibleProducts} onEdit={canEdit ? setEditingProduct : undefined} onArchive={canEdit ? setArchivingProduct : undefined} />
+        <ProductTable products={paginatedProducts} onEdit={canEdit ? setEditingProduct : undefined} onArchive={canEdit ? setArchivingProduct : undefined} />
+        <PaginationControls page={productPage} pageSize={productPageSize} totalItems={visibleProducts.length} onPageChange={setProductPage} onPageSizeChange={(size) => { setProductPageSize(size); setProductPage(1); }} />
 
         <section className="min-w-0 rounded-2xl bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -165,7 +183,7 @@ export default function ProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {variants.map((variant) => (
+                {paginatedVariants.map((variant) => (
                   <tr key={variant.id} className="border-t">
                     <td className="px-3 py-2 font-semibold">{variant.sku}</td>
                     <td className="px-3 py-2">{products.find((product) => product.id === variant.product_id)?.name ?? "—"}</td>
@@ -190,7 +208,7 @@ export default function ProductsPage() {
                     </td>
                   </tr>
                 ))}
-                {variants.length === 0 ? (
+                {paginatedVariants.length === 0 ? (
                   <tr>
                     <td className="px-3 py-6 text-slate-500" colSpan={8}>{t("products.createProductVariantFirst")}</td>
                   </tr>
@@ -199,6 +217,7 @@ export default function ProductsPage() {
             </table>
           </div>
         </section>
+        <PaginationControls page={variantPage} pageSize={variantPageSize} totalItems={variants.length} onPageChange={setVariantPage} onPageSizeChange={(size) => { setVariantPageSize(size); setVariantPage(1); }} />
 
         {dialog === "product" ? (
           <FormDialog title={t("products.create")} description={t("products.createDescription")} onClose={() => setDialog(null)}>
