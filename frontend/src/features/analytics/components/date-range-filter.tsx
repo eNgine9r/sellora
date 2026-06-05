@@ -1,0 +1,3 @@
+export function DateRangeFilter({ startDate, endDate, onStartDateChange, onEndDateChange }: { startDate: string; endDate: string; onStartDateChange: (value: string) => void; onEndDateChange: (value: string) => void }) {
+  return <div className="grid gap-3 rounded-xl bg-white p-4 shadow-sm md:grid-cols-2"><input className="rounded-md border border-slate-300 px-3 py-2" type="date" value={startDate} onChange={(event) => onStartDateChange(event.target.value)} /><input className="rounded-md border border-slate-300 px-3 py-2" type="date" value={endDate} onChange={(event) => onEndDateChange(event.target.value)} /></div>;
+}
