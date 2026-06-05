@@ -27,8 +27,8 @@ class ProductService:
         self.inventory_transactions = InventoryTransactionRepository(db)
         self.audit_logs = AuditLogRepository(db)
 
-    def list_products(self, workspace_id: UUID, search: str | None = None) -> list[Product]:
-        return self.products.list_for_workspace(workspace_id, search)
+    def list_products(self, workspace_id: UUID, search: str | None = None, category: str | None = None) -> list[Product]:
+        return self.products.list_for_workspace(workspace_id, search, category)
 
     def get_product(self, workspace_id: UUID, product_id: UUID) -> Product | None:
         return self.products.get(workspace_id, product_id)

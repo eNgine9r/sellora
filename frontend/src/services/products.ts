@@ -30,9 +30,10 @@ export type ProductVariantCreatePayload = {
   minimum_quantity: number;
 };
 
-export async function fetchProducts(workspaceId: string, search?: string, token?: string): Promise<Product[]> {
+export async function fetchProducts(workspaceId: string, search?: string, token?: string, category?: string): Promise<Product[]> {
   const params = new URLSearchParams();
   if (search?.trim()) params.set("search", search.trim());
+  if (category?.trim()) params.set("category", category.trim());
   const query = params.toString();
   return apiRequest<Product[]>(`/products${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }

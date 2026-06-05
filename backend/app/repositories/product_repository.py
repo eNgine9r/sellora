@@ -15,11 +15,13 @@ class ProductRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list_for_workspace(self, workspace_id: UUID, search: str | None = None) -> list[Product]:
+    def list_for_workspace(self, workspace_id: UUID, search: str | None = None, category: str | None = None) -> list[Product]:
         stmt: Select[tuple[Product]] = select(Product).where(Product.workspace_id == workspace_id, Product.deleted_at.is_(None)).options(selectinload(Product.images))
         if search:
             query = f"%{search}%"
             stmt = stmt.where(or_(Product.name.ilike(query), Product.sku.ilike(query)))
+        if category:
+            stmt = stmt.where(Product.category == category)
         return list(self.db.execute(stmt.order_by(Product.created_at.desc())).scalars())
 
     def get(self, workspace_id: UUID, product_id: UUID) -> Product | None:

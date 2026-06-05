@@ -231,7 +231,19 @@
     "details": "Order details",
     "items": "Order items",
     "empty": "No orders found.",
-    "archiveUnavailable": "Archive unavailable"
+    "archiveUnavailable": "Archive unavailable",
+    "selectCategory": "Select category",
+    "selectProduct": "Select product",
+    "searchProduct": "Search product",
+    "selectVariant": "Select variant",
+    "available": "Available",
+    "noVariantsForProduct": "No variants for this product.",
+    "noProductsInCategory": "No products in this category.",
+    "lineTotal": "Line total",
+    "item": "Item",
+    "unitPrice": "Unit price",
+    "unitCost": "Unit cost",
+    "quantity": "Quantity"
   },
   "products": {
     "title": "Products",
@@ -242,7 +254,22 @@
     "createVariant": "Create variant",
     "editVariant": "Edit variant",
     "manageVariants": "Manage variants",
-    "empty": "No products found."
+    "empty": "No products found.",
+    "catalogLabel": "Sellora Catalog",
+    "category": "Category",
+    "productCategory": "Product category",
+    "filterByCategory": "Filter by category",
+    "searchInCategory": "Search in category",
+    "searchProducts": "Search products",
+    "noProductsInCategory": "No products in this category.",
+    "createDescription": "Add the base catalog record first, then attach variants with SKU, price, and stock.",
+    "variantsDescription": "Use each row action to edit variant SKU, color, size, price, barcode, and status.",
+    "primaryImageUrl": "Primary image URL",
+    "description": "Description",
+    "brand": "Brand",
+    "active": "Active",
+    "inactive": "Inactive",
+    "createProductVariantFirst": "Create a product first before adding variants."
   },
   "inventory": {
     "title": "Inventory",
@@ -254,7 +281,17 @@
     "adjustStock": "Adjust stock",
     "editThresholds": "Edit thresholds",
     "transactionHistory": "Transaction history",
-    "empty": "No inventory records found."
+    "empty": "No inventory records found.",
+    "product": "Product",
+    "productImage": "Product image",
+    "category": "Category",
+    "allCategories": "All categories",
+    "filterByCategory": "Filter by category",
+    "selectInventory": "Select inventory",
+    "reason": "Reason",
+    "updateThresholds": "Update inventory thresholds",
+    "incomingQuantity": "Incoming quantity",
+    "minimumQuantity": "Minimum quantity"
   },
   "shipments": {
     "title": "Shipments",
@@ -440,5 +477,18 @@
     "noOrders": "No orders found",
     "noCustomers": "No customers found",
     "noProducts": "No products found"
+  },
+  "categories": {
+    "all": "All",
+    "allProducts": "All products",
+    "allCategories": "All categories",
+    "rings": "Rings",
+    "earrings": "Earrings",
+    "pendants": "Pendants",
+    "bracelets": "Bracelets",
+    "chains": "Chains",
+    "sets": "Sets",
+    "watches": "Watches",
+    "other": "Other"
   }
 }

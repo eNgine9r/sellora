@@ -43,6 +43,14 @@ class FakeProducts:
         self.product = product
         return product
 
+    def list_for_workspace(self, workspace_id, search=None, category=None):
+        products = [self.product] if self.product and self.product.workspace_id == workspace_id else []
+        if search:
+            products = [product for product in products if search.lower() in (product.name or "").lower() or search.lower() in (product.sku or "").lower()]
+        if category:
+            products = [product for product in products if product.category == category]
+        return products
+
     def create_image(self, image):
         image.id = image.id or uuid4()
         self.images.append(image)
@@ -134,6 +142,23 @@ def test_product_creation_supports_sku_and_images() -> None:
     assert product.sku == "DR-001"
     assert service.products.images[0].image_url == "https://cdn.example/dress.jpg"
     assert service.audit_logs.records[-1]["action"] == "CREATE"
+
+
+
+def test_product_category_can_be_saved_and_filtered() -> None:
+    workspace_id = uuid4()
+    service = _product_service()
+
+    product = service.create_product(
+        workspace_id,
+        ProductCreate(name="Synthetic ring", sku="RING-1", category="rings", brand="Synthetic Brand"),
+        actor_user_id=uuid4(),
+    )
+
+    assert product.category == "rings"
+    assert service.list_products(workspace_id, category="rings") == [product]
+    assert service.list_products(workspace_id, search="ring", category="rings") == [product]
+    assert service.list_products(workspace_id, category="earrings") == []
 
 
 def test_product_variant_uniqueness_and_inventory_auto_creation() -> None:

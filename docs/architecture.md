@@ -57,3 +57,9 @@ Import hardening adds dry-run reporting, value normalization, fuzzy mapping sugg
 Advertising is implemented as a manual, workspace-scoped module with `AdCampaign` and `AdMetric` entities. It intentionally avoids Meta Ads API, Instagram Graph API, Nova Poshta API, and AI integrations. Campaign and metric writes are OWNER-only, while read APIs support OWNER, MANAGER, and ANALYST; service-level filtering hides sensitive `net_profit` and `roi` values from MANAGER responses.
 
 The Import Center recognizes `ad_campaigns` and `ad_metrics` for dry-run and create-only import flows using confirmed column mappings and synthetic-test-only confidentiality practices.
+
+## Sprint 2.2.12 catalog and inventory UX notes
+
+- Products keep using the existing `product.category` string field rather than introducing a categories table in this sprint.
+- The product list API accepts an optional additive `category` query parameter; omitting it preserves the previous all-products response.
+- Inventory visual joins are performed from existing product, variant, and inventory endpoints in the frontend so stock transaction behavior and reservation logic remain unchanged.

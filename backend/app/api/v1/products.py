@@ -18,8 +18,8 @@ def _bad_request(exc: ProductServiceError) -> HTTPException:
 
 
 @router.get("", response_model=list[ProductResponse], dependencies=[Depends(require_min_role(RoleName.ANALYST))])
-def list_products(workspace_id: UUID = Depends(get_workspace_id), search: str | None = Query(default=None), db: Session = Depends(get_db)) -> list[ProductResponse]:
-    return ProductService(db).list_products(workspace_id, search)
+def list_products(workspace_id: UUID = Depends(get_workspace_id), search: str | None = Query(default=None), category: str | None = Query(default=None), db: Session = Depends(get_db)) -> list[ProductResponse]:
+    return ProductService(db).list_products(workspace_id, search, category)
 
 
 @router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)

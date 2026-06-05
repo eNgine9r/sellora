@@ -181,3 +181,26 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Confirm create/edit/archive/import/order flows still submit backend enum values, not translated labels.
 - Confirm the mobile language switcher is visible and does not cause topbar or drawer overflow.
 - Scan main screens for mixed hardcoded Ukrainian/English labels before Sprint 2.3.
+
+## Sprint 2.2.12 — Catalog Categories & Inventory UX QA
+
+- Products category filtering
+  - Confirm `/products` shows localized category chips for all products and common catalog categories.
+  - Confirm selecting a category filters the product list and product cards/table show each product category.
+  - Confirm search works together with the selected category.
+  - Confirm create/edit product supports category while product archive/edit and variant management still work.
+- Order item selection
+  - Confirm Create/Edit Order uses category, product search/select, then variant/SKU selection instead of one unstructured large variant list.
+  - Confirm changing category clears incompatible product/variant selections.
+  - Confirm changing product scopes the variant list to that product.
+  - Confirm variant labels include product name, SKU, color/size when present, available stock, and formatted price.
+  - Confirm multi-item order creation, full order editing, inventory reservation, and price auto-fill still work.
+- Inventory visual usability
+  - Confirm `/inventory` shows product image or placeholder, category, product name, variant SKU, color/size, stock, reserved, incoming, minimum, status, and actions.
+  - Confirm category filter and low-stock-only filter can be combined safely.
+  - Confirm inventory transaction history, stock adjustment, and threshold editing still work.
+  - Confirm mobile inventory cards are readable and do not cause body-level horizontal scrolling.
+- Localization safety
+  - Confirm new category/product/order/inventory UI appears in Ukrainian by default and in English after switching language.
+  - Confirm category labels are localized at display level only; backend/API enum values and payload values remain stable.
+  - Confirm no private catalog, customer, order, inventory, advertising, token, key, or workspace data appears in UI examples or docs.
