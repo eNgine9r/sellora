@@ -1,0 +1,6 @@
+import { ReactNode } from "react";
+import { TrendBadge } from "./trend-badge";
+
+export function KpiCard({ label, value, helper, trend, icon }: { label: string; value: ReactNode; helper?: string; trend?: string; icon?: ReactNode }) {
+  return <article className="min-w-0 rounded-[20px] border border-slate-100 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(109,40,217,0.12)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none"><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="text-sm font-semibold text-slate-500 dark:text-slate-400">{label}</p><div className="mt-3 break-words text-3xl font-black tracking-tight text-slate-950 dark:text-white">{value}</div></div><div className="shrink-0 rounded-2xl bg-violet-50 p-3 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">{icon ?? "✦"}</div></div><div className="mt-4 flex min-w-0 items-center justify-between gap-3 text-sm"><span className="min-w-0 break-words text-slate-500 dark:text-slate-400">{helper ?? "За поточний період"}</span>{trend ? <TrendBadge value={trend} /> : null}</div></article>;
+}
