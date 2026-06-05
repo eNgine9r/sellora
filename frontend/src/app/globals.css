@@ -1,0 +1,279 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --border: 214.3 31.8% 91.4%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  @apply bg-background text-foreground;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.dark body {
+  background: #101120;
+  color: #e5e7eb;
+}
+
+.dark main.bg-\[\#F8F7FC\],
+.dark main.bg-slate-100 {
+  background: #101120;
+  color: #e5e7eb;
+}
+
+.dark main .bg-white,
+.dark main section.bg-white,
+.dark main aside.bg-white,
+.dark main div.bg-white {
+  background-color: #171827;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark main .bg-slate-50,
+.dark main .hover\:bg-slate-50:hover {
+  background-color: #111827;
+}
+
+.dark main .text-slate-950,
+.dark main .text-slate-900,
+.dark main .text-slate-800,
+.dark main .font-bold,
+.dark main .font-semibold {
+  color: #f8fafc;
+}
+
+.dark main .text-slate-700,
+.dark main .text-slate-600,
+.dark main .text-slate-500 {
+  color: #cbd5e1;
+}
+
+.dark main input,
+.dark main select,
+.dark main textarea {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+.dark main input::placeholder,
+.dark main textarea::placeholder {
+  color: #94a3b8;
+}
+
+.dark main table,
+.dark main tr,
+.dark main td,
+.dark main th {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .mobile-safe-top {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .mobile-safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+.sellora-sidebar {
+  background: radial-gradient(circle at top left, rgba(109, 40, 217, 0.35), transparent 36%), #080812 !important;
+  color: #fff !important;
+}
+
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.34);
+}
+
+input,
+select,
+textarea,
+button {
+  min-width: 0;
+}
+
+.sellora-mobile-page,
+.sellora-page,
+.sellora-card,
+.sellora-form,
+.sellora-form-control {
+  max-width: 100%;
+  min-width: 0;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+.sellora-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.55) rgba(148, 163, 184, 0.12);
+}
+
+.dark .sellora-scrollbar {
+  scrollbar-color: rgba(203, 213, 225, 0.38) rgba(15, 23, 42, 0.55);
+}
+
+.sellora-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sellora-scrollbar::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 999px;
+}
+
+.dark .sellora-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.sellora-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.55);
+  border-radius: 999px;
+}
+
+.dark .sellora-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.38);
+}
+
+.sellora-status-badge {
+  white-space: nowrap;
+}
+
+input[type="date"] {
+  min-width: 0;
+  max-width: 100%;
+  color-scheme: light dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  flex-shrink: 0;
+  margin-inline-start: 0.25rem;
+}
+
+select,
+option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.dark select,
+.dark option {
+  background-color: #111827;
+  color: #f8fafc;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  color-scheme: dark;
+}
+
+input[type="file"] {
+  max-width: 100%;
+  color: #475569;
+}
+
+.dark input[type="file"] {
+  color: #cbd5e1;
+}
+
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0.625rem 0.875rem;
+  font-weight: 700;
+}
+
+.dark input[type="file"]::file-selector-button {
+  background: #7c3aed;
+}
+
+.sellora-dialog-overlay {
+  isolation: isolate;
+}
+
+.sellora-dialog-panel {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
+}
+
+.sellora-dialog-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sellora-dialog-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sellora-dialog-panel::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.55);
+  border-radius: 999px;
+}
