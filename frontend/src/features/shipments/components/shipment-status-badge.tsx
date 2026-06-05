@@ -1,0 +1,16 @@
+import { statusBadgeClass, StatusTone } from "@/lib/status-styles";
+import { ShipmentStatus } from "@/types/shipments";
+
+const STATUS_TONES: Record<ShipmentStatus, StatusTone> = {
+  DRAFT: "neutral",
+  CREATED: "info",
+  IN_TRANSIT: "violet",
+  ARRIVED: "warning",
+  DELIVERED: "success",
+  RETURNED: "danger",
+  CANCELLED: "neutral",
+};
+
+export function ShipmentStatusBadge({ status }: { status: ShipmentStatus }) {
+  return <span className={statusBadgeClass(STATUS_TONES[status])}>{status.replaceAll("_", " ")}</span>;
+}

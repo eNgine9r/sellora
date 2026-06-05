@@ -1,0 +1,19 @@
+import { formatMoney } from "@/lib/currency";
+import { statusBadgeClass, StatusTone } from "@/lib/status-styles";
+import { Order } from "@/types/orders";
+
+function toneForStatus(status: string): StatusTone {
+  if (["DELIVERED", "COMPLETED", "PAID"].includes(status)) return "success";
+  if (["RETURNED", "CANCELLED", "FAILED", "REFUNDED"].includes(status)) return "danger";
+  if (["CONFIRMED", "PARTIALLY_PAID"].includes(status)) return "warning";
+  if (["SHIPPED", "IN_TRANSIT"].includes(status)) return "violet";
+  return "info";
+}
+
+function StatusPill({ value }: { value: string }) {
+  return <span className={statusBadgeClass(toneForStatus(value))}>{value.replaceAll("_", " ")}</span>;
+}
+
+export function OrderTable({ orders, currencyCode = "UAH", onSelect, onEdit, onArchive }: { orders: Order[]; currencyCode?: string; onSelect: (order: Order) => void; onEdit?: (order: Order) => void; onArchive?: (order: Order) => void }) {
+  return <div className="sellora-scrollbar w-full min-w-0 max-w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm"><table className="w-full min-w-[680px] divide-y divide-slate-200 text-sm"><thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th className="px-3 py-3">Order</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Payment</th><th className="px-3 py-3">Revenue</th><th className="px-3 py-3">Profit</th><th className="px-3 py-3">Created</th><th className="px-3 py-3">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{orders.map((order) => <tr key={order.id} className="cursor-pointer hover:bg-slate-50" onClick={() => onSelect(order)}><td className="max-w-[160px] truncate px-3 py-3 font-medium" title={order.order_number}>{order.order_number}</td><td className="px-3 py-3"><StatusPill value={order.status} /></td><td className="px-3 py-3"><StatusPill value={order.payment_status} /></td><td className="whitespace-nowrap px-3 py-3">{formatMoney(order.revenue, currencyCode)}</td><td className="whitespace-nowrap px-3 py-3">{formatMoney(order.net_profit, currencyCode)}</td><td className="whitespace-nowrap px-3 py-3">{new Date(order.created_at).toLocaleDateString()}</td><td className="px-3 py-3"><div className="flex max-w-[220px] flex-wrap gap-2">{onEdit ? <button aria-label={`Edit order ${order.order_number}`} className="rounded-lg border border-slate-300 px-3 py-2 font-semibold" onClick={(event) => { event.stopPropagation(); onEdit(order); }}>Edit order</button> : <span className="text-slate-400">Read-only</span>}{onArchive && ["NEW", "CANCELLED"].includes(order.status) ? <button aria-label={`Archive order ${order.order_number}`} className="rounded-lg border border-rose-200 px-3 py-2 font-semibold text-rose-700 dark:border-rose-400/30 dark:text-rose-100" onClick={(event) => { event.stopPropagation(); onArchive(order); }}>Archive order</button> : onArchive ? <span className="text-xs font-semibold text-slate-400">Archive unavailable</span> : null}</div></td></tr>)}{orders.length === 0 ? <tr><td className="px-4 py-8 text-center text-slate-500" colSpan={7}>No orders found.</td></tr> : null}</tbody></table></div>;
+}
