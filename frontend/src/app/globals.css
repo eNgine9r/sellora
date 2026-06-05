@@ -10,6 +10,31 @@
   --primary-foreground: 210 40% 98%;
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   @apply bg-background text-foreground;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  max-width: 100%;
 }

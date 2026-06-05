@@ -39,15 +39,15 @@ export default function InventoryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F7FC] p-4 sm:p-6 text-slate-950">
-      <div className="mx-auto grid max-w-7xl gap-6">
-        <header className="rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora Inventory</p><h1 className="mt-2 text-3xl font-bold">Inventory</h1><p className="mt-1 text-slate-600">Track stock levels, low stock, reservations, and inventory transaction history.</p></header>
-        <section className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-4">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 sm:p-6 text-slate-950">
+      <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
+        <header className="min-w-0 rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora Inventory</p><h1 className="mt-2 text-3xl font-bold">Inventory</h1><p className="mt-1 text-slate-600">Track stock levels, low stock, reservations, and inventory transaction history.</p></header>
+        <section className="grid min-w-0 gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-4">
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={lowStockOnly} onChange={(event) => setLowStockOnly(event.target.checked)} /> Low stock only</label>
           <select className="rounded-md border border-slate-300 px-3 py-2" value={inventoryId} onChange={(event) => setInventoryId(event.target.value)}><option value="">All inventory history</option>{(inventoryQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.product_variant_id}</option>)}</select>
         </section>
         <InventoryTable inventory={inventoryQuery.data ?? []} variants={variantsQuery.data ?? []} onEdit={canEdit ? setEditingInventory : undefined} />
-        <form className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-5" onSubmit={submitTransaction}>
+        <form className="grid min-w-0 gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-5" onSubmit={submitTransaction}>
           <select className="rounded-md border border-slate-300 px-3 py-2" required value={inventoryId} onChange={(event) => setInventoryId(event.target.value)}><option value="">Select inventory</option>{(inventoryQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.product_variant_id}</option>)}</select>
           <select className="rounded-md border border-slate-300 px-3 py-2" value={transactionType} onChange={(event) => setTransactionType(event.target.value as InventoryTransactionType)}>{TRANSACTION_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select>
           <input className="rounded-md border border-slate-300 px-3 py-2" min={1} type="number" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} />

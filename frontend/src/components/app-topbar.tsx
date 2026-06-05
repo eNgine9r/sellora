@@ -19,8 +19,8 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
   const validMemberships = currentUser?.memberships.filter((membership) => normalizeWorkspaceId(membership.workspace_id)) ?? [];
 
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-[#F8F7FC]/90 px-3 py-3 backdrop-blur-xl sm:px-4 md:px-6">
-      <div className="flex items-center gap-2 sm:gap-3">
+    <header className="sticky top-0 z-20 min-w-0 border-b border-slate-200/70 bg-[#F8F7FC]/90 px-3 py-3 backdrop-blur-xl sm:px-4 md:px-6">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white shadow-sm lg:hidden" onClick={onOpenMenu} aria-label="Open navigation">
           <Menu className="h-5 w-5" />
         </button>
@@ -57,15 +57,15 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
         </button>
       </div>
 
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="truncate text-sm font-black text-slate-900">{currentWorkspace?.workspace_name ?? "Workspace"}</p>
           <p className="truncate text-xs text-slate-500">{currentUser?.email}</p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
           {validMemberships.length > 1 ? (
             <select
-              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm shadow-sm"
+              className="min-h-11 min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 text-sm shadow-sm"
               value={currentWorkspaceId ?? ""}
               onChange={(event) => { const workspaceId = normalizeWorkspaceId(event.target.value); if (workspaceId) onSwitchWorkspace(workspaceId); }}
               aria-label="Switch workspace"

@@ -110,8 +110,8 @@ export default function CustomersPage() {
   });
 
   return (
-    <main className="min-h-screen bg-[#F8F7FC] p-4 sm:p-6 text-slate-950">
-      <div className="mx-auto grid max-w-7xl gap-6">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 sm:p-6 text-slate-950">
+      <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
         <header className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora CRM</p>
@@ -123,16 +123,16 @@ export default function CustomersPage() {
           </button>
         </header>
 
-        <section className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-3">
+        <section className="grid min-w-0 gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-3">
           <input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Search customers" value={search} onChange={(event) => setSearch(event.target.value)} />
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_380px]">
           <CustomerTable customers={customersQuery.data ?? []} currencyCode={currentWorkspace?.currency_code ?? "UAH"} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} />
           {selectedCustomer ? (
-            <div className="grid gap-3">
+            <div className="grid min-w-0 gap-3">
               {canEdit ? (
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid min-w-0 gap-2 sm:grid-cols-2">
                   <button className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700" onClick={() => setEditingCustomer(selectedCustomer)}>
                     Edit customer
                   </button>
@@ -162,7 +162,7 @@ export default function CustomersPage() {
         </div>
 
         {isCreateOpen ? (
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
             <CustomerForm onSubmit={(values) => createMutation.mutate(values)} />
           </div>
         ) : null}

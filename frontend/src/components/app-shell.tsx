@@ -45,11 +45,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (status === "unauthenticated") return <div className="grid min-h-screen place-items-center bg-[#F8F7FC] text-slate-600">Redirecting to login…</div>;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#F8F7FC] text-[#111827] lg:flex">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#F8F7FC] text-[#111827] lg:flex">
       <aside className="hidden lg:fixed lg:inset-y-0 lg:block lg:w-72">
         <AppSidebar />
       </aside>
-      <div className="min-w-0 flex-1 lg:pl-72">
+      <div className="min-w-0 flex-1 overflow-x-hidden lg:pl-72">
         <AppTopbar
           currentUser={currentUser}
           currentWorkspace={currentWorkspace}
@@ -67,7 +67,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {mobileMenuOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button className="absolute inset-0 bg-slate-950/60" aria-label="Close menu" onClick={() => setMobileMenuOpen(false)} />
-          <div className="relative h-full w-[86vw] max-w-sm shadow-2xl">
+          <div className="relative h-full w-[88vw] max-w-sm overflow-hidden shadow-2xl">
             <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
           </div>
         </div>

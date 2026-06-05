@@ -72,7 +72,7 @@ export default function DashboardPage() {
 
   return (
     <main className="overflow-x-hidden p-4 sm:p-6">
-      <div className="mx-auto grid max-w-7xl gap-6">
+      <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
         <section className="rounded-[28px] bg-[linear-gradient(135deg,#6D28D9_0%,#EC4899_45%,#F97316_75%,#FACC15_100%)] p-5 text-white shadow-2xl shadow-pink-500/20 sm:p-6 lg:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/80 sm:text-sm">Sellora Dashboard</p>
           <h1 className="mt-3 text-3xl font-black leading-tight sm:text-5xl">CRM for Instagram stores</h1>
@@ -94,7 +94,7 @@ export default function DashboardPage() {
         ) : null}
 
         {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <LoadingSkeleton rows={2} title="Loading dashboard…" />
             <LoadingSkeleton rows={2} title="Loading orders…" />
             <LoadingSkeleton rows={2} title="Loading shipments…" />
@@ -102,7 +102,7 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <KpiCard label="Дохід" value={formatMoney(dashboard.data?.month_revenue, currencyCode)} trend="+12%" />
           <KpiCard label="Чистий прибуток" value={formatMoney(dashboard.data?.month_profit, currencyCode)} trend="+8%" />
           <KpiCard label="Замовлення" value={dashboard.data?.month_orders ?? 0} trend="+5%" />
@@ -110,7 +110,7 @@ export default function DashboardPage() {
           <KpiCard label="ROAS" value={advertising.data?.roas ?? "—"} trend="+3%" />
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.5fr_0.8fr]">
+        <section className="grid min-w-0 gap-6 xl:grid-cols-[1.5fr_0.8fr]">
           <ChartCard title="Sales chart" subtitle="Revenue and profit trend">
             {trend.length ? (
               <div className="h-72 sm:h-80">
@@ -156,9 +156,9 @@ export default function DashboardPage() {
           </ChartCard>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-2">
+        <section className="grid min-w-0 gap-6 xl:grid-cols-2">
           <ChartCard title="Logistics" subtitle="Shipment health for the current workspace">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
               <MetricStrip label="In transit" value={shipments.data?.in_transit_count ?? 0} tone="violet" />
               <MetricStrip label="Arrived" value={shipments.data?.arrived_count ?? 0} tone="pink" />
               <MetricStrip label="Delivered today" value={shipments.data?.delivered_today ?? 0} tone="orange" />
@@ -167,7 +167,7 @@ export default function DashboardPage() {
           </ChartCard>
 
           <ChartCard title="Advertising" subtitle="Campaign signal overview">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
               <MetricStrip label="Spend" value={formatMoney(advertising.data?.total_spend, currencyCode)} tone="violet" />
               <MetricStrip label="Messages" value={advertising.data?.total_messages ?? 0} tone="pink" />
               <MetricStrip label="Leads" value={advertising.data?.total_leads ?? 0} tone="orange" />
@@ -176,12 +176,12 @@ export default function DashboardPage() {
           </ChartCard>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+        <section className="grid min-w-0 gap-6 xl:grid-cols-[1.25fr_0.75fr]">
           <RecentOrdersTable orders={orders.data ?? []} currencyCode={currencyCode} />
           <TopProductsCard products={dashboard.data?.top_products ?? []} currencyCode={currencyCode} />
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-3">
+        <section className="grid min-w-0 gap-6 lg:grid-cols-3">
           <NotificationsCard />
           <QuickActionsCard />
           <ActivityFeed />

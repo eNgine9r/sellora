@@ -71,8 +71,8 @@ export default function LeadsPage() {
   const sourcesError = sourcesQuery.isError ? messageForApiError(sourcesQuery.error, "sources") : null;
 
   return (
-    <main className="min-h-screen bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
-      <div className="mx-auto grid max-w-7xl gap-6">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
+      <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
         <header className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora CRM</p>
@@ -82,7 +82,7 @@ export default function LeadsPage() {
           <button className="min-h-11 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={!enabled} onClick={() => setIsCreateOpen(true)}>Create lead</button>
         </header>
 
-        <section className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-5">
+        <section className="grid min-w-0 gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-5">
           <input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" placeholder="Search leads" value={search} onChange={(event) => setSearch(event.target.value)} />
           <select className="min-h-11 rounded-md border border-slate-300 px-3 py-2" value={status} onChange={(event) => setStatus(event.target.value as LeadStatus | "")}>
             {STATUSES.map((item) => <option key={item || "all"} value={item}>{item || "All statuses"}</option>)}

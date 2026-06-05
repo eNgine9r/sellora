@@ -93,8 +93,8 @@ export default function ProductsPage() {
   const listError = productsQuery.isError ? safeApiErrorMessage(productsQuery.error, "Unable to load products.") : null;
 
   return (
-    <main className="min-h-screen bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
-      <div className="mx-auto grid max-w-7xl gap-6">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
+      <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
         <header className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora Catalog</p>
@@ -111,14 +111,14 @@ export default function ProductsPage() {
           </div>
         </header>
 
-        <section className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-3">
+        <section className="grid min-w-0 gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-3">
           <input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Search products" value={search} onChange={(event) => setSearch(event.target.value)} />
         </section>
 
         {listError ? <p className="rounded-lg bg-rose-50 p-4 text-rose-700">{listError}</p> : null}
         <ProductTable products={products} onEdit={canEdit ? setEditingProduct : undefined} onArchive={canEdit ? setArchivingProduct : undefined} />
 
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
+        <section className="min-w-0 rounded-2xl bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Manage product variants</h2>
@@ -129,7 +129,7 @@ export default function ProductsPage() {
             </button>
           </div>
           <div className="mt-3 overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
+            <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-3 py-2">SKU</th>
@@ -179,12 +179,12 @@ export default function ProductsPage() {
         </section>
 
         {dialog === "product" ? (
-          <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <section className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
             <ProductForm onSubmit={(values) => createProductMutation.mutate(values)} />
           </section>
         ) : null}
         {dialog === "variant" ? (
-          <section className="rounded-2xl bg-white p-4 shadow-sm sm:p-6">
+          <section className="min-w-0 rounded-2xl bg-white p-4 shadow-sm sm:p-6">
             <ProductVariantForm
               products={products}
               isSubmitting={createVariantMutation.isPending}

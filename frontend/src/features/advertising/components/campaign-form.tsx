@@ -25,22 +25,22 @@ export function CampaignForm({ onSubmit }: { onSubmit?: (payload: AdCampaignCrea
   }
 
   return (
-    <form className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm" onSubmit={submit}>
+    <form className="grid min-w-0 gap-3 rounded-2xl bg-white p-4 shadow-sm" onSubmit={submit}>
       <h2 className="text-lg font-semibold">Create Campaign</h2>
-      <input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Campaign name" required value={values.name ?? ""} onChange={(event) => setValues({ ...values, name: event.target.value })} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <select className="rounded-md border border-slate-300 px-3 py-2" value={values.platform} onChange={(event) => setValues({ ...values, platform: event.target.value })}>{PLATFORMS.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-        <select className="rounded-md border border-slate-300 px-3 py-2" value={values.status} onChange={(event) => setValues({ ...values, status: event.target.value })}>{STATUSES.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-        <select className="rounded-md border border-slate-300 px-3 py-2" value={values.objective} onChange={(event) => setValues({ ...values, objective: event.target.value })}>{OBJECTIVES.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-        <select className="rounded-md border border-slate-300 px-3 py-2" value={values.budget_type} onChange={(event) => setValues({ ...values, budget_type: event.target.value })}>{BUDGET_TYPES.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+      <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" placeholder="Campaign name" required value={values.name ?? ""} onChange={(event) => setValues({ ...values, name: event.target.value })} />
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+        <select className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.platform} onChange={(event) => setValues({ ...values, platform: event.target.value })}>{PLATFORMS.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+        <select className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.status} onChange={(event) => setValues({ ...values, status: event.target.value })}>{STATUSES.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+        <select className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.objective} onChange={(event) => setValues({ ...values, objective: event.target.value })}>{OBJECTIVES.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+        <select className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.budget_type} onChange={(event) => setValues({ ...values, budget_type: event.target.value })}>{BUDGET_TYPES.map((item) => <option key={item} value={item}>{item}</option>)}</select>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <input className="rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Daily budget" value={values.daily_budget ?? ""} onChange={(event) => setValues({ ...values, daily_budget: event.target.value })} />
-        <input className="rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Total budget" value={values.total_budget ?? ""} onChange={(event) => setValues({ ...values, total_budget: event.target.value })} />
-        <input className="rounded-md border border-slate-300 px-3 py-2" type="date" value={values.start_date ?? ""} onChange={(event) => setValues({ ...values, start_date: event.target.value })} />
-        <input className="rounded-md border border-slate-300 px-3 py-2" type="date" value={values.end_date ?? ""} onChange={(event) => setValues({ ...values, end_date: event.target.value })} />
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+        <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Daily budget" value={values.daily_budget ?? ""} onChange={(event) => setValues({ ...values, daily_budget: event.target.value })} />
+        <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Total budget" value={values.total_budget ?? ""} onChange={(event) => setValues({ ...values, total_budget: event.target.value })} />
+        <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" type="date" value={values.start_date ?? ""} onChange={(event) => setValues({ ...values, start_date: event.target.value })} />
+        <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" type="date" value={values.end_date ?? ""} onChange={(event) => setValues({ ...values, end_date: event.target.value })} />
       </div>
-      <textarea className="rounded-md border border-slate-300 px-3 py-2" placeholder="Notes" value={values.notes ?? ""} onChange={(event) => setValues({ ...values, notes: event.target.value })} />
+      <textarea className="min-w-0 rounded-md border border-slate-300 px-3 py-2" placeholder="Notes" value={values.notes ?? ""} onChange={(event) => setValues({ ...values, notes: event.target.value })} />
       {validationError ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">{validationError}</p> : null}
       <button className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white" type="submit">Create campaign</button>
     </form>

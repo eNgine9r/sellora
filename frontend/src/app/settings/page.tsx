@@ -65,9 +65,9 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
-      <div className="mx-auto grid max-w-6xl gap-6">
-        <section className="rounded-[28px] bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] sm:p-8">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
+      <div className="mx-auto grid min-w-0 max-w-6xl gap-6">
+        <section className="min-w-0 rounded-[28px] bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] sm:p-8">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-violet-600">Sellora</p>
           <h1 className="mt-3 text-4xl font-black text-slate-950">Settings</h1>
           <p className="mt-3 max-w-2xl text-slate-600">Manage workspace tools, import workflows, and external service integrations from one place.</p>
@@ -82,10 +82,10 @@ export default function Page() {
             {!canUpdateWorkspace ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">Owner-only</span> : null}
           </div>
           <form className="mt-5 grid gap-4 md:grid-cols-[1fr_260px_auto]" onSubmit={submit}>
-            <label className="grid gap-1 text-sm font-semibold text-slate-700">Workspace name
+            <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">Workspace name
               <input className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 disabled:bg-slate-50" disabled={!canUpdateWorkspace} value={name} onChange={(event) => setName(event.target.value)} />
             </label>
-            <label className="grid gap-1 text-sm font-semibold text-slate-700">Currency
+            <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">Currency
               <select className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 disabled:bg-slate-50" disabled={!canUpdateWorkspace} value={currencyCode} onChange={(event) => setCurrencyCode(event.target.value as "UAH" | "USD")}>
                 <option value="UAH">UAH — Ukrainian hryvnia</option>
                 <option value="USD">USD — US dollar</option>
@@ -95,10 +95,10 @@ export default function Page() {
           </form>
           {message ? <p className="mt-3 rounded-lg bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700">{message}</p> : null}
         </section>
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid min-w-0 gap-4 md:grid-cols-3">
           {cards.map((card) => (
             <article key={card.title} className="flex min-h-64 flex-col justify-between rounded-[24px] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-              <div className="grid gap-3">
+              <div className="grid min-w-0 gap-3">
                 <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-violet-700">{card.badge}</span>
                 <h2 className="text-2xl font-black text-slate-950">{card.title}</h2>
                 <p className="text-sm leading-6 text-slate-600">{card.description}</p>

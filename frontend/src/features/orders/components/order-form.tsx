@@ -103,20 +103,20 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
   }
 
   return (
-    <form className="grid max-h-[calc(100vh-9rem)] gap-4 overflow-y-auto overflow-x-hidden pr-1" onSubmit={submit} noValidate>
+    <form className="grid max-h-[calc(100dvh-9rem)] min-w-0 gap-4 overflow-y-auto overflow-x-hidden pr-1" onSubmit={submit} noValidate>
       {!hasVariants && !lockedItems ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">Create a product variant first before creating an order.</p> : null}
       {lockedItems ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">Items are locked because this order has already entered shipment workflow.</p> : null}
-      <label className="grid gap-1 text-sm font-medium text-slate-700">Customer ID / Customer
-        <input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" placeholder="Customer ID (optional)" value={values.customer_id ?? ""} onChange={(event) => setValues({ ...values, customer_id: event.target.value })} />
+      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">Customer ID / Customer
+        <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" placeholder="Customer ID (optional)" value={values.customer_id ?? ""} onChange={(event) => setValues({ ...values, customer_id: event.target.value })} />
       </label>
-      <label className="grid gap-1 text-sm font-medium text-slate-700">Payment status
-        <select className="min-h-11 rounded-md border border-slate-300 px-3 py-2" value={values.payment_status} onChange={(event) => setValues({ ...values, payment_status: event.target.value as OrderFormValues["payment_status"] })}>
+      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">Payment status
+        <select className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.payment_status} onChange={(event) => setValues({ ...values, payment_status: event.target.value as OrderFormValues["payment_status"] })}>
           {(["PENDING", "PAID", "COD", "REFUNDED"] as const).map((status) => <option key={status} value={status}>{status}</option>)}
         </select>
       </label>
 
-      <section className="grid gap-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <section className="grid min-w-0 gap-3">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="font-bold text-slate-950">Order items</h3>
             <p className="text-sm text-slate-500">Price is auto-filled from the selected variant and can be adjusted for discounts.</p>
@@ -127,7 +127,7 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
           const lineTotal = numberValue(item.quantity) * numberValue(item.unit_price);
           return (
             <article className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3" key={index}>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h4 className="font-semibold">Item {index + 1}</h4>
                 <button className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={values.items.length === 1 || !canEditItems} type="button" onClick={() => removeItem(index)}>Remove item</button>
               </div>
@@ -138,9 +138,9 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
                 </select>
               </label>
               <div className="grid min-w-0 gap-3 sm:grid-cols-4">
-                <label className="grid gap-1 text-sm font-medium text-slate-700">Quantity<input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" min={1} type="number" disabled={!canEditItems} value={item.quantity} onChange={(event) => updateItem(index, { quantity: event.target.value })} /></label>
-                <label className="grid gap-1 text-sm font-medium text-slate-700">Unit price<input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Unit price" disabled={!canEditItems} value={item.unit_price} onChange={(event) => updateItem(index, { unit_price: event.target.value })} /></label>
-                <label className="grid gap-1 text-sm font-medium text-slate-700">Unit cost<input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Unit cost" disabled={!canEditItems} value={item.unit_cost} onChange={(event) => updateItem(index, { unit_cost: event.target.value })} /></label>
+                <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">Quantity<input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" min={1} type="number" disabled={!canEditItems} value={item.quantity} onChange={(event) => updateItem(index, { quantity: event.target.value })} /></label>
+                <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">Unit price<input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Unit price" disabled={!canEditItems} value={item.unit_price} onChange={(event) => updateItem(index, { unit_price: event.target.value })} /></label>
+                <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">Unit cost<input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Unit cost" disabled={!canEditItems} value={item.unit_cost} onChange={(event) => updateItem(index, { unit_cost: event.target.value })} /></label>
                 <div className="rounded-lg bg-white px-3 py-2 text-sm"><span className="text-slate-500">Line total</span><strong className="block text-base">{formatMoney(lineTotal, currencyCode)}</strong></div>
               </div>
             </article>
@@ -148,10 +148,10 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
         })}
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-4"><input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Ad cost" value={values.ad_cost ?? ""} onChange={(event) => setValues({ ...values, ad_cost: event.target.value })} /><input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Shipping" value={values.shipping_cost ?? ""} onChange={(event) => setValues({ ...values, shipping_cost: event.target.value })} /><input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="COD fee" value={values.cod_fee ?? ""} onChange={(event) => setValues({ ...values, cod_fee: event.target.value })} /><input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Other" value={values.other_cost ?? ""} onChange={(event) => setValues({ ...values, other_cost: event.target.value })} /></div>
-      <textarea className="min-h-24 rounded-md border border-slate-300 px-3 py-2" placeholder="Notes" value={values.notes ?? ""} onChange={(event) => setValues({ ...values, notes: event.target.value })} />
+      <div className="grid gap-3 sm:grid-cols-4"><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Ad cost" value={values.ad_cost ?? ""} onChange={(event) => setValues({ ...values, ad_cost: event.target.value })} /><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Shipping" value={values.shipping_cost ?? ""} onChange={(event) => setValues({ ...values, shipping_cost: event.target.value })} /><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="COD fee" value={values.cod_fee ?? ""} onChange={(event) => setValues({ ...values, cod_fee: event.target.value })} /><input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" placeholder="Other" value={values.other_cost ?? ""} onChange={(event) => setValues({ ...values, other_cost: event.target.value })} /></div>
+      <textarea className="min-h-24 min-w-0 rounded-md border border-slate-300 px-3 py-2" placeholder="Notes" value={values.notes ?? ""} onChange={(event) => setValues({ ...values, notes: event.target.value })} />
 
-      <section className="grid gap-2 rounded-xl bg-blue-50 p-4 text-sm text-slate-700 sm:grid-cols-2">
+      <section className="grid min-w-0 gap-2 rounded-xl bg-blue-50 p-4 text-sm text-slate-700 sm:grid-cols-2">
         <span>Items subtotal</span><strong>{formatMoney(itemSubtotal, currencyCode)}</strong>
         {showProfit ? <><span>Product cost</span><strong>{formatMoney(productCost, currencyCode)}</strong></> : null}
         <span>Ad cost</span><strong>{formatMoney(adCost, currencyCode)}</strong>

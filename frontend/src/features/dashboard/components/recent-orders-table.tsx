@@ -19,7 +19,7 @@ export function RecentOrdersTable({ orders, currencyCode = "UAH" }: { orders: Or
       {latestOrders.length ? (
         <>
           <div className="hidden overflow-x-auto md:block">
-            <table className="min-w-full text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="text-xs uppercase text-slate-400">
                 <tr>
                   <th className="py-2">Order</th>

@@ -46,34 +46,34 @@ export function LeadForm({
     <form className="grid gap-4" onSubmit={submit}>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Name
-        <input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} />
+        <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} />
       </label>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Phone
-        <input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" value={values.phone ?? ""} onChange={(event) => setValues({ ...values, phone: event.target.value })} />
+        <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.phone ?? ""} onChange={(event) => setValues({ ...values, phone: event.target.value })} />
       </label>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Instagram username
-        <input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" value={values.instagram_username ?? ""} onChange={(event) => setValues({ ...values, instagram_username: event.target.value })} />
+        <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.instagram_username ?? ""} onChange={(event) => setValues({ ...values, instagram_username: event.target.value })} />
       </label>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Instagram profile URL
-        <input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" value={values.instagram_profile_url ?? ""} onChange={(event) => setValues({ ...values, instagram_profile_url: event.target.value })} />
+        <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.instagram_profile_url ?? ""} onChange={(event) => setValues({ ...values, instagram_profile_url: event.target.value })} />
       </label>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Source
-        <select className="min-h-11 rounded-md border border-slate-300 px-3 py-2" value={values.lead_source_id ?? ""} onChange={(event) => setValues({ ...values, lead_source_id: event.target.value })}>
+        <select className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.lead_source_id ?? ""} onChange={(event) => setValues({ ...values, lead_source_id: event.target.value })}>
           <option value="">No source / Manual</option>
           {leadSources.map((source) => <option key={source.id} value={source.id}>{source.name}</option>)}
         </select>
       </label>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Expected revenue
-        <input className="min-h-11 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" min="0" step="0.01" type="number" value={values.expected_revenue ?? ""} onChange={(event) => setValues({ ...values, expected_revenue: event.target.value })} />
+        <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" min="0" step="0.01" type="number" value={values.expected_revenue ?? ""} onChange={(event) => setValues({ ...values, expected_revenue: event.target.value })} />
       </label>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Notes
-        <textarea className="min-h-24 rounded-md border border-slate-300 px-3 py-2" value={values.notes ?? ""} onChange={(event) => setValues({ ...values, notes: event.target.value })} />
+        <textarea className="min-h-24 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.notes ?? ""} onChange={(event) => setValues({ ...values, notes: event.target.value })} />
       </label>
       {validationError ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">{validationError}</p> : null}
       {submitError ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">{submitError}</p> : null}
