@@ -144,3 +144,81 @@ html {
 .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.34);
 }
+
+input,
+select,
+textarea,
+button {
+  min-width: 0;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  max-width: 100%;
+}
+
+select,
+option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.dark select,
+.dark option {
+  background-color: #111827;
+  color: #f8fafc;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  color-scheme: dark;
+}
+
+input[type="file"] {
+  max-width: 100%;
+  color: #475569;
+}
+
+.dark input[type="file"] {
+  color: #cbd5e1;
+}
+
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0.625rem 0.875rem;
+  font-weight: 700;
+}
+
+.dark input[type="file"]::file-selector-button {
+  background: #7c3aed;
+}
+
+.sellora-dialog-overlay {
+  isolation: isolate;
+}
+
+.sellora-dialog-panel {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
+}
+
+.sellora-dialog-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sellora-dialog-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sellora-dialog-panel::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.55);
+  border-radius: 999px;
+}

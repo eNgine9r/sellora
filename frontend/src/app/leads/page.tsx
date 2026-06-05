@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
+import { FormDialog } from "@/components/form-dialog";
 import { LeadForm } from "@/features/leads/components/lead-form";
 import { LeadTable } from "@/features/leads/components/lead-table";
 import { ApiError, safeApiErrorMessage } from "@/services/api";
@@ -108,25 +109,16 @@ export default function LeadsPage() {
         {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={leadsQuery.data ?? []} leadSources={sourcesQuery.data ?? []} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} /> : null}
 
         {isCreateOpen ? (
-          <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/40 p-4">
-            <div className="max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-bold">Create lead</h2>
-                  <p className="mt-1 text-sm text-slate-500">Only the name is required. Empty optional fields are safely omitted.</p>
-                </div>
-                <button className="min-h-11 rounded-xl px-3 text-slate-500 hover:bg-slate-100" onClick={() => setIsCreateOpen(false)}>Close</button>
-              </div>
-              <LeadForm
-                isSubmitting={createMutation.isPending}
-                leadSources={sourcesQuery.data ?? []}
-                submitError={createError}
-                onSubmit={async (payload) => {
-                  await createMutation.mutateAsync(payload);
-                }}
-              />
-            </div>
-          </div>
+          <FormDialog title="Create lead" description="Only the name is required. Empty optional fields are safely omitted." size="md" onClose={() => setIsCreateOpen(false)}>
+            <LeadForm
+              isSubmitting={createMutation.isPending}
+              leadSources={sourcesQuery.data ?? []}
+              submitError={createError}
+              onSubmit={async (payload) => {
+                await createMutation.mutateAsync(payload);
+              }}
+            />
+          </FormDialog>
         ) : null}
         {archivingLead ? <ConfirmActionDialog title="Archive lead?" description={archivingLead.status === "CONVERTED" ? "This lead is converted. Archiving it will not delete the customer." : "This lead will be hidden from active lead lists. Historical audit records remain available."} actionLabel="Archive lead" isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingLead(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
         {editingLead ? <EditRecordDialog title="Edit lead" fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "instagram_profile_url", label: "Instagram profile URL" }, { name: "lead_source_id", label: "Lead source ID" }, { name: "status", label: "Status", type: "select", options: STATUSES.filter(Boolean).map((item) => ({ value: item, label: item })) }, { name: "expected_revenue", label: "Expected revenue", type: "number" }, { name: "loss_reason", label: "Loss reason", type: "textarea" }, { name: "notes", label: "Notes", type: "textarea" }]} initialValues={editingLead} isSubmitting={updateMutation.isPending} submitError={updateError} onClose={() => setEditingLead(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}

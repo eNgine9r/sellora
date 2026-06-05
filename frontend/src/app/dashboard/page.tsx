@@ -31,16 +31,16 @@ const orderStatusColors: Record<OrderStatus, string> = {
 
 function MetricStrip({ label, value, tone = "violet" }: { label: string; value: string | number; tone?: "violet" | "pink" | "orange" | "amber" }) {
   const tones = {
-    violet: "from-violet-50 to-white text-violet-700",
-    pink: "from-pink-50 to-white text-pink-700",
-    orange: "from-orange-50 to-white text-orange-700",
-    amber: "from-amber-50 to-white text-amber-700",
+    violet: "from-violet-50 to-white text-violet-700 dark:from-violet-500/20 dark:to-violet-400/10 dark:text-violet-100",
+    pink: "from-pink-50 to-white text-pink-700 dark:from-pink-500/20 dark:to-pink-400/10 dark:text-pink-100",
+    orange: "from-orange-50 to-white text-orange-700 dark:from-orange-500/20 dark:to-orange-400/10 dark:text-orange-100",
+    amber: "from-amber-50 to-white text-amber-700 dark:from-amber-500/20 dark:to-amber-400/10 dark:text-amber-100",
   };
 
   return (
-    <div className={`rounded-[20px] border border-slate-100 bg-gradient-to-br ${tones[tone]} p-4 shadow-sm`}>
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
+    <div className={`min-w-0 overflow-hidden rounded-[20px] border border-slate-100 bg-gradient-to-br ${tones[tone]} p-4 shadow-sm dark:border-white/10 dark:bg-slate-900/100 dark:shadow-none`}>
+      <p className="break-words text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">{label}</p>
+      <p className="mt-2 truncate text-2xl font-black text-slate-950 dark:text-white">{value}</p>
     </div>
   );
 }
@@ -74,9 +74,9 @@ export default function DashboardPage() {
     <main className="overflow-x-hidden p-4 sm:p-6">
       <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
         <section className="rounded-[28px] bg-[linear-gradient(135deg,#6D28D9_0%,#EC4899_45%,#F97316_75%,#FACC15_100%)] p-5 text-white shadow-2xl shadow-pink-500/20 sm:p-6 lg:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/80 sm:text-sm">Sellora Dashboard</p>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/100 sm:text-sm">Sellora Dashboard</p>
           <h1 className="mt-3 text-3xl font-black leading-tight sm:text-5xl">CRM for Instagram stores</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-white/85 sm:text-base">
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-white/105 sm:text-base">
             Ліди, клієнти, замовлення, склад, відправлення, реклама, фінанси та аналітика — в одному сучасному SaaS-інтерфейсі.
           </p>
         </section>
