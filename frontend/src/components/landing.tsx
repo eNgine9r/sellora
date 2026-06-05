@@ -24,12 +24,12 @@ export function LandingHero() {
     <section className="relative overflow-hidden bg-[#080812] text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_10%,rgba(109,40,217,.35),transparent_34%),radial-gradient(circle_at_86%_12%,rgba(236,72,153,.22),transparent_30%),linear-gradient(180deg,#080812_0%,#111022_52%,#080812_100%)]" />
       <div className="pointer-events-none absolute left-1/2 top-[-220px] h-[440px] w-[min(760px,90vw)] -translate-x-1/2 rounded-full bg-[linear-gradient(135deg,#6D28D9_0%,#EC4899_45%,#F97316_100%)] opacity-30 blur-3xl" />
-      <div className="relative mx-auto grid min-h-[86vh] w-full max-w-7xl content-center gap-12 px-4 py-10 sm:px-6 lg:grid-cols-[0.98fr_1.02fr] lg:items-center lg:px-8 lg:py-16">
+      <nav className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-8">
+        <Link href="/" aria-label="Sellora home" className="min-w-0"><BrandLockup /></Link>
+        <Link href="/login" className="shrink-0 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur transition hover:bg-white/15">Увійти</Link>
+      </nav>
+      <div className="relative mx-auto grid min-h-[78vh] w-full max-w-7xl content-center gap-12 px-4 pb-10 pt-4 sm:px-6 lg:grid-cols-[0.98fr_1.02fr] lg:items-center lg:px-8 lg:pb-16 lg:pt-8">
         <div className="min-w-0">
-          <nav className="mb-12 flex items-center justify-between gap-4">
-            <Link href="/" aria-label="Sellora home"><BrandLockup /></Link>
-            <Link href="/login" className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur transition hover:bg-white/15">Увійти</Link>
-          </nav>
           <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-pink-100"><Sparkles className="h-4 w-4" /> CRM для Instagram-магазинів</p>
           <h1 className="mt-6 max-w-4xl text-balance text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">Операційна система для продажів з Instagram — без хаосу в таблицях</h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">Sellora обʼєднує Direct-ліди, клієнтів, замовлення, склад, відправлення, рекламу та прибуток у premium CRM, яка зручно працює на десктопі й мобільному.</p>

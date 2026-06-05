@@ -32,7 +32,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
           <BrandLockup markClassName="h-10 w-10" textClassName="text-white" />
         </Link>
       </div>
-      <nav className="grid min-w-0 gap-1 overflow-y-auto px-3 pb-5" aria-label="Main navigation">
+      <nav className="grid min-w-0 gap-1 overflow-y-auto px-3 pb-44 lg:pb-5" aria-label="Main navigation">
         {items.map(([href, label, Icon]) => {
           const active = pathname === href || pathname.startsWith(`${href}/`) || (href === "/dashboard" && pathname === "/overview");
           return (
@@ -42,7 +42,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               className={`group flex min-h-11 min-w-0 items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${
-                active ? "bg-white text-violet-700 shadow-lg" : "text-slate-300 hover:bg-white/10 hover:text-white"
+                active ? "bg-white text-violet-700 shadow-lg" : "text-slate-100/90 hover:bg-white/10 hover:text-white"
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />

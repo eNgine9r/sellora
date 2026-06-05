@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
+import { FormDialog } from "@/components/form-dialog";
 import { ProductForm } from "@/features/products/components/product-form";
 import { ProductTable } from "@/features/products/components/product-table";
 import { ProductVariantForm } from "@/features/products/components/product-variant-form";
@@ -179,19 +180,23 @@ export default function ProductsPage() {
         </section>
 
         {dialog === "product" ? (
-          <section className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
-            <ProductForm onSubmit={(values) => createProductMutation.mutate(values)} />
-          </section>
+          <FormDialog title="Create product" description="Add the base catalog record first, then attach variants with SKU, price, and stock." onClose={() => setDialog(null)}>
+            <ProductForm
+              isSubmitting={createProductMutation.isPending}
+              submitError={createProductMutation.isError ? safeApiErrorMessage(createProductMutation.error, "Unable to create product. Please try again.") : null}
+              onSubmit={(values) => createProductMutation.mutate(values)}
+            />
+          </FormDialog>
         ) : null}
         {dialog === "variant" ? (
-          <section className="min-w-0 rounded-2xl bg-white p-4 shadow-sm sm:p-6">
+          <FormDialog title="Create variant" description="Create a sellable SKU with price, size/color details, and starting stock without pushing the page below the fold." onClose={() => setDialog(null)}>
             <ProductVariantForm
               products={products}
               isSubmitting={createVariantMutation.isPending}
               submitError={createVariantMutation.isError ? safeApiErrorMessage(createVariantMutation.error, "Unable to create variant. Please try again.") : null}
               onSubmit={(values) => createVariantMutation.mutate(values)}
             />
-          </section>
+          </FormDialog>
         ) : null}
         {archivingProduct ? (
           <ConfirmActionDialog title="Archive product?" description="Archiving this product hides it from the active catalog. Existing orders remain unchanged." actionLabel="Archive product" isSubmitting={archiveProductMutation.isPending} error={archiveProductMutation.isError ? safeApiErrorMessage(archiveProductMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingProduct(null)} onConfirm={() => archiveProductMutation.mutate()} />
