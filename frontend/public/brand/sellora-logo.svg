@@ -1,6 +1,43 @@
 <svg width="640" height="180" viewBox="0 0 640 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="180" height="180" rx="40" fill="#2563EB"/>
-  <path d="M48 110c11 16 28 24 51 24 24 0 43-12 43-32 0-19-14-26-40-32l-17-4c-12-3-17-7-17-15 0-9 8-14 22-14 14 0 26 6 34 17l18-17C130 20 112 12 90 12 64 12 46 27 46 52c0 19 13 29 39 36l17 4c14 4 19 8 19 15 0 8-9 13-23 13-17 0-30-8-40-22L48 110Z" fill="white"/>
-  <text x="220" y="111" font-family="Inter, Arial, sans-serif" font-size="72" font-weight="800" fill="#0F172A">Sellora</text>
-  <text x="224" y="144" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="500" fill="#64748B">CRM for Instagram stores</text>
+  <defs>
+    <linearGradient id="bg" x1="25" y1="25" x2="155" y2="154" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#130B5B"/>
+      <stop offset="0.42" stop-color="#341064"/>
+      <stop offset="0.72" stop-color="#9D174D"/>
+      <stop offset="1" stop-color="#EA580C"/>
+    </linearGradient>
+    <linearGradient id="topRibbon" x1="55" y1="85" x2="139" y2="53" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4C1DFF"/>
+      <stop offset="0.45" stop-color="#C026D3"/>
+      <stop offset="1" stop-color="#FF3D63"/>
+    </linearGradient>
+    <linearGradient id="bottomRibbon" x1="52" y1="119" x2="121" y2="137" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F72585"/>
+      <stop offset="0.5" stop-color="#FF4D2E"/>
+      <stop offset="1" stop-color="#FFB703"/>
+    </linearGradient>
+    <linearGradient id="tailRibbon" x1="111" y1="85" x2="148" y2="125" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE135"/>
+      <stop offset="0.55" stop-color="#FFB703"/>
+      <stop offset="1" stop-color="#FF6A00"/>
+    </linearGradient>
+    <linearGradient id="selloraText" x1="205" y1="50" x2="500" y2="125" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.32" stop-color="#EC4899"/>
+      <stop offset="0.66" stop-color="#F97316"/>
+      <stop offset="1" stop-color="#FACC15"/>
+    </linearGradient>
+    <filter id="softShadow" x="18" y="25" width="155" height="143" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#05010F" flood-opacity="0.34"/>
+    </filter>
+  </defs>
+  <rect x="18" y="18" width="144" height="144" rx="32" fill="url(#bg)"/>
+  <g filter="url(#softShadow)">
+    <path d="M139 62L108 80C104 82 100 82 97 79L93 76C90 74 87 74 84 76L52 96C43 101 32 96 31 86C30 80 32 74 38 71L90 39C98 34 108 35 115 40L139 57C141 58 141 61 139 62Z" fill="url(#topRibbon)"/>
+    <path d="M31 121L61 103C65 101 69 101 73 104L84 110C87 112 91 112 94 110L105 103C112 99 121 103 122 111C123 116 120 121 116 124L81 145C73 150 64 150 56 145L31 128C27 126 27 123 31 121Z" fill="url(#bottomRibbon)"/>
+    <path d="M99 86L132 107C143 114 144 129 134 137L116 152C120 144 120 134 116 125L99 92C97 89 97 87 99 86Z" fill="url(#tailRibbon)"/>
+    <path d="M72 105L96 90C99 88 103 89 106 91L116 98L106 104C99 109 89 109 82 104L74 100L72 105Z" fill="#140A2D" fill-opacity="0.72"/>
+  </g>
+  <text x="200" y="92" font-family="Inter, Arial, sans-serif" font-size="64" font-weight="900" fill="url(#selloraText)">Sellora</text>
+  <text x="204" y="128" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="5" fill="#94A3B8">INSTAGRAM CRM</text>
 </svg>
