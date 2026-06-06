@@ -1,3 +1,39 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <image width="512" height="512" href="data:image/png;base64,__PLACEHOLDER__" preserveAspectRatio="xMidYMid meet"/>
+  <defs>
+    <linearGradient id="bg" x1="64" y1="70" x2="448" y2="445" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#130B5B"/>
+      <stop offset="0.42" stop-color="#341064"/>
+      <stop offset="0.72" stop-color="#9D174D"/>
+      <stop offset="1" stop-color="#EA580C"/>
+    </linearGradient>
+    <linearGradient id="topRibbon" x1="126" y1="229" x2="401" y2="124" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4C1DFF"/>
+      <stop offset="0.45" stop-color="#C026D3"/>
+      <stop offset="1" stop-color="#FF3D63"/>
+    </linearGradient>
+    <linearGradient id="bottomRibbon" x1="115" y1="347" x2="340" y2="408" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F72585"/>
+      <stop offset="0.5" stop-color="#FF4D2E"/>
+      <stop offset="1" stop-color="#FFB703"/>
+    </linearGradient>
+    <linearGradient id="tailRibbon" x1="292" y1="241" x2="422" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE135"/>
+      <stop offset="0.55" stop-color="#FFB703"/>
+      <stop offset="1" stop-color="#FF6A00"/>
+    </linearGradient>
+    <filter id="softShadow" x="52" y="72" width="408" height="374" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="22" stdDeviation="18" flood-color="#05010F" flood-opacity="0.36"/>
+    </filter>
+    <filter id="innerGlow" x="0" y="0" width="512" height="512" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="0" stdDeviation="34" flood-color="#F97316" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <rect x="32" y="31" width="448" height="450" rx="86" fill="url(#bg)" filter="url(#innerGlow)"/>
+  <g filter="url(#softShadow)">
+    <path d="M394 154L310 204C300 210 288 209 278 202L267 195C260 190 250 190 243 195L154 249C131 263 102 249 97 223C94 207 101 191 115 182L258 94C279 81 306 82 326 96L394 142C399 145 399 151 394 154Z" fill="url(#topRibbon)"/>
+    <path d="M97 318L179 268C190 262 203 262 214 269L244 287C253 292 264 292 273 286L302 268C321 256 346 268 349 290C351 304 345 318 333 326L238 385C217 398 190 398 169 385L97 339C89 334 89 323 97 318Z" fill="url(#bottomRibbon)"/>
+    <path d="M287 221L378 278C407 296 410 337 383 359L333 399C344 377 344 350 332 327L285 238C281 230 280 225 287 221Z" fill="url(#tailRibbon)"/>
+    <path d="M213 274L276 236C285 231 296 232 304 238L331 256L306 272C285 285 259 285 238 272L216 259L213 274Z" fill="#140A2D" fill-opacity="0.72"/>
+    <path d="M243 195L168 240C153 249 136 249 121 241L97 228C101 238 109 246 120 251C131 256 144 255 154 249L243 195Z" fill="#2A0A69" fill-opacity="0.42"/>
+  </g>
 </svg>
