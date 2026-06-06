@@ -1,43 +1,58 @@
-<svg width="640" height="180" viewBox="0 0 640 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="760" height="200" viewBox="0 0 760 200" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="25" y1="25" x2="155" y2="154" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#130B5B"/>
-      <stop offset="0.42" stop-color="#341064"/>
-      <stop offset="0.72" stop-color="#9D174D"/>
-      <stop offset="1" stop-color="#EA580C"/>
+    <linearGradient id="bg" x1="32.5" y1="32.2" x2="166.9" y2="169.7" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07051B"/>
+      <stop offset="0.34" stop-color="#160858"/>
+      <stop offset="0.68" stop-color="#7A124F"/>
+      <stop offset="1" stop-color="#F56A00"/>
     </linearGradient>
-    <linearGradient id="topRibbon" x1="55" y1="85" x2="139" y2="53" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#4C1DFF"/>
-      <stop offset="0.45" stop-color="#C026D3"/>
-      <stop offset="1" stop-color="#FF3D63"/>
+    <radialGradient id="warm" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(146.6 146.9) rotate(-135) scale(128.1)">
+      <stop stop-color="#F97316" stop-opacity="0.82"/>
+      <stop offset="0.42" stop-color="#BE185D" stop-opacity="0.54"/>
+      <stop offset="1" stop-color="#05040D" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="top" x1="44.1" y1="100" x2="146.9" y2="56.3" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3429FF"/>
+      <stop offset="0.39" stop-color="#8A19E6"/>
+      <stop offset="0.74" stop-color="#EC1E98"/>
+      <stop offset="1" stop-color="#FF3D55"/>
     </linearGradient>
-    <linearGradient id="bottomRibbon" x1="52" y1="119" x2="121" y2="137" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#F72585"/>
-      <stop offset="0.5" stop-color="#FF4D2E"/>
-      <stop offset="1" stop-color="#FFB703"/>
+    <linearGradient id="side" x1="44.1" y1="93.1" x2="107.2" y2="133.1" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2817E9"/>
+      <stop offset="0.55" stop-color="#3E12A9"/>
+      <stop offset="1" stop-color="#210832"/>
     </linearGradient>
-    <linearGradient id="tailRibbon" x1="111" y1="85" x2="148" y2="125" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFE135"/>
-      <stop offset="0.55" stop-color="#FFB703"/>
-      <stop offset="1" stop-color="#FF6A00"/>
+    <linearGradient id="bottom" x1="51.3" y1="129.4" x2="132.8" y2="143.4" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF147F"/>
+      <stop offset="0.52" stop-color="#FF4B2D"/>
+      <stop offset="1" stop-color="#FF9800"/>
     </linearGradient>
-    <linearGradient id="selloraText" x1="205" y1="50" x2="500" y2="125" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="0.32" stop-color="#EC4899"/>
-      <stop offset="0.66" stop-color="#F97316"/>
+    <linearGradient id="mid" x1="73.8" y1="94.4" x2="122.8" y2="126.9" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C015B7"/>
+      <stop offset="0.42" stop-color="#FF2B5D"/>
+      <stop offset="1" stop-color="#FF7A00"/>
+    </linearGradient>
+    <linearGradient id="yellow" x1="110" y1="86.3" x2="152.8" y2="141.3" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE91E"/>
+      <stop offset="0.42" stop-color="#FFC400"/>
+      <stop offset="1" stop-color="#FF7A00"/>
+    </linearGradient>
+    <linearGradient id="text" x1="224" y1="42" x2="612" y2="143" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FAFC"/>
+      <stop offset="0.34" stop-color="#EC4899"/>
+      <stop offset="0.7" stop-color="#F97316"/>
       <stop offset="1" stop-color="#FACC15"/>
     </linearGradient>
-    <filter id="softShadow" x="18" y="25" width="155" height="143" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#05010F" flood-opacity="0.34"/>
-    </filter>
   </defs>
-  <rect x="18" y="18" width="144" height="144" rx="32" fill="url(#bg)"/>
-  <g filter="url(#softShadow)">
-    <path d="M139 62L108 80C104 82 100 82 97 79L93 76C90 74 87 74 84 76L52 96C43 101 32 96 31 86C30 80 32 74 38 71L90 39C98 34 108 35 115 40L139 57C141 58 141 61 139 62Z" fill="url(#topRibbon)"/>
-    <path d="M31 121L61 103C65 101 69 101 73 104L84 110C87 112 91 112 94 110L105 103C112 99 121 103 122 111C123 116 120 121 116 124L81 145C73 150 64 150 56 145L31 128C27 126 27 123 31 121Z" fill="url(#bottomRibbon)"/>
-    <path d="M99 86L132 107C143 114 144 129 134 137L116 152C120 144 120 134 116 125L99 92C97 89 97 87 99 86Z" fill="url(#tailRibbon)"/>
-    <path d="M72 105L96 90C99 88 103 89 106 91L116 98L106 104C99 109 89 109 82 104L74 100L72 105Z" fill="#140A2D" fill-opacity="0.72"/>
-  </g>
-  <text x="200" y="92" font-family="Inter, Arial, sans-serif" font-size="64" font-weight="900" fill="url(#selloraText)">Sellora</text>
-  <text x="204" y="128" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="5" fill="#94A3B8">INSTAGRAM CRM</text>
+  <rect x="26" y="25.7" width="148.8" height="149.4" rx="27.5" fill="url(#bg)"/>
+  <rect x="26" y="25.7" width="148.8" height="149.4" rx="27.5" fill="url(#warm)"/>
+  <path d="M146.3 65.1L117.5 83.2C114.4 85.1 110.4 85.1 107.3 82.9L103.2 79.8C100.7 77.9 97.2 77.9 94.4 79.8L59.4 103.2C52.9 107.6 44.1 103.8 41.9 96.3C40.4 90.7 42.6 84.8 47.6 81.3L99.2 48.8C106.6 44.1 116.3 44.4 123.5 49.4L146.9 62.9C148.5 63.8 148.1 66.6 146.3 65.1Z" fill="url(#top)"/>
+  <path d="M47.6 81.3C42.6 84.8 40.4 90.7 41.9 96.3C43.2 101 46.9 104.4 51.3 105.7L95 134.1C99.4 136.9 105 136.9 109.4 133.8L118.5 127.5C122.5 124.7 122.5 118.5 118.5 115.7L78.1 88.2L59.4 103.2C52.9 107.6 44.1 103.8 41.9 96.3C40.4 90.7 42.6 84.8 47.6 81.3Z" fill="url(#side)" opacity="0.96"/>
+  <path d="M78.1 88.2L118.1 115.4C122.5 118.2 122.8 124.4 118.5 127.5L109.4 133.8C105 136.9 99.4 136.9 95 134.1L67.8 116C64.7 113.8 65 109.1 68.5 107.3L78.1 88.2Z" fill="#17082E" fill-opacity="0.58"/>
+  <path d="M56.3 130.3L75.3 118.1C79.7 115.4 85 115.7 89.1 118.8L98.8 125.3C102.5 127.8 107.2 127.8 111 125.3L120 119.4C126.6 115 135.9 118.5 138.1 126C139.7 131.6 137.2 137.8 132.2 140.9L97.8 162.8C90.3 167.5 81 167.5 73.8 162.5L55.9 151C49.1 146.6 49.1 134.7 56.3 130.3Z" fill="url(#bottom)"/>
+  <path d="M77 93.8L118.5 122.2C123.1 125.3 122.8 132.5 118.1 135.3L111 140C106.6 142.8 100.6 142.8 96.3 139.7L69.7 121.6C66.3 119.1 66.6 114.1 70 111.9L77 93.8Z" fill="url(#mid)" opacity="0.92"/>
+  <path d="M112 86.9L139.4 104.7C152.5 113.2 154.1 131.9 142.5 142.5L123.5 160.3C130.3 150.3 132.2 138.1 127.5 126.6L111 90C110 88.2 110 87.2 112 86.9Z" fill="url(#yellow)"/>
+  <path d="M112 86.9L130.1 98.8C133.8 101.3 134.1 106.6 130.3 109.1L121.9 114.7L111 90C110 88.2 110 87.2 112 86.9Z" fill="#17082E" fill-opacity="0.44"/>
+  <text x="220" y="108" font-family="Inter, Arial, sans-serif" font-size="78" font-weight="900" fill="url(#text)">Sellora</text>
+  <text x="226" y="148" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="6" fill="#94A3B8">INSTAGRAM CRM</text>
 </svg>
