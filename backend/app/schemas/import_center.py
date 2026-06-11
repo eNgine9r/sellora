@@ -75,6 +75,13 @@ class ImportReportResponse(BaseModel):
     sheet_name: str
     total_rows: int
     valid_rows: int
+    invalid_rows: int = 0
+    created_count: int = 0
+    updated_count: int = 0
+    warnings_count: int = 0
+    errors_count: int = 0
+    errors_by_row: dict[int, list[ImportValidationIssue]] = Field(default_factory=dict)
+    warnings_by_row: dict[int, list[ImportValidationIssue]] = Field(default_factory=dict)
     warning_rows: int
     error_rows: int
     skipped_rows: int

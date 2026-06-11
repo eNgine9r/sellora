@@ -49,6 +49,9 @@ PRODUCT_CATALOG_MAPPING = {
     "color": "Цвет",
     "size": "Розмір",
     "selling_price": "Цена",
+    "unit_cost": "Собівартість",
+    "minimum_quantity": "Мінімальний залишок",
+    "incoming_quantity": "Очікується",
     "barcode": "Штрихкод",
     "currency": "Валюта",
     "availability": "Наличие",
@@ -569,12 +572,13 @@ class ProductCatalogImportService:
             "color": self.normalizer.text(raw.get("color")),
             "size": self.normalizer.text(raw.get("size")),
             "selling_price": price,
+            "unit_cost": self.normalizer.number(raw.get("unit_cost")),
             "barcode": self.normalizer.text(raw.get("barcode")),
             "currency": (self.normalizer.text(raw.get("currency")) or "UAH").upper(),
             "availability": availability,
             "stock_quantity": stock_quantity,
-            "incoming_quantity": incoming_quantity,
-            "minimum_quantity": 0,
+            "incoming_quantity": int(self.normalizer.number(raw.get("incoming_quantity")) or incoming_quantity or 0),
+            "minimum_quantity": int(self.normalizer.number(raw.get("minimum_quantity")) or 0),
             "image_urls": self._image_urls(raw.get("primary_image_url"), raw.get("gallery_urls")),
             "raw_visibility": raw.get("is_active"),
             "raw_availability": raw.get("availability"),
@@ -587,12 +591,16 @@ class ProductCatalogImportService:
         seen_products: set[str] = set(); seen_variants: set[str] = set()
         for row_number, row in enumerate(rows, start=2):
             data = self.normalize_row(row, mapping)
-            if not data["product_sku"]:
-                issues.append(issue(row_number, "ERROR", "product_sku", "missing product sku"))
+            if not data["product_sku"] and not data["product_name"]:
+                issues.append(issue(row_number, "ERROR", "product_sku", "missing product sku or product name"))
+            elif not data["product_sku"]:
+                issues.append(issue(row_number, "WARNING", "product_sku", "missing product sku; matching by normalized product name"))
             if not data["product_name"]:
                 issues.append(issue(row_number, "ERROR", "product_name", "missing product name"))
-            if not data["variant_sku"]:
-                issues.append(issue(row_number, "ERROR", "variant_sku", "missing variant sku"))
+            if not data["variant_sku"] and not (data["color"] or data["size"]):
+                issues.append(issue(row_number, "ERROR", "variant_sku", "missing variant sku or color/size fallback"))
+            elif not data["variant_sku"]:
+                issues.append(issue(row_number, "WARNING", "variant_sku", "missing variant sku; matching by product/color/size"))
             if data["selling_price"] is None or data["selling_price"] < 0:
                 issues.append(issue(row_number, "ERROR", "selling_price", "invalid price"))
             if data["availability"] is None:
@@ -634,21 +642,22 @@ class ProductCatalogImportService:
                 results.append((row_number, ImportJobLogStatus.FAILED, "; ".join(validation.errors)))
                 continue
             data = self.normalize_row(row, mapping)
-            product = self.lookup.find_product_by_sku(workspace_id, data["product_sku"])
+            product = self.lookup.find_product_by_sku(workspace_id, data["product_sku"]) or self._find_product_by_normalized_name(workspace_id, data["product_name"])
             if product is None:
                 product = Product(workspace_id=workspace_id, sku=data["product_sku"], name=data["product_name"], category=data["category"], brand=data["brand"], description=data["description"], is_active=True if data["is_active"] is None else data["is_active"])
                 self.db.add(product); self.db.flush()
-            variant = self.lookup.find_variant(workspace_id, sku=data["variant_sku"])
+            variant = self.lookup.find_variant(workspace_id, sku=data["variant_sku"]) if data["variant_sku"] else self.lookup.find_variant(workspace_id, product_id=product.id, color=data["color"], size=data["size"])
             if variant is not None:
                 results.append((row_number, ImportJobLogStatus.SKIPPED, "Duplicate variant skipped"))
                 continue
-            variant = ProductVariant(workspace_id=workspace_id, product_id=product.id, sku=data["variant_sku"], color=data["color"], size=data["size"], price=data["selling_price"], barcode=data["barcode"], is_active=True if data["is_active"] is None else data["is_active"])
+            variant_sku = data["variant_sku"] or f"{product.sku or normalize_name(product.name)}-{normalize_name(data["color"])}-{normalize_name(data["size"])}"[:120]
+            variant = ProductVariant(workspace_id=workspace_id, product_id=product.id, sku=variant_sku, color=data["color"], size=data["size"], price=data["selling_price"], barcode=data["barcode"], is_active=True if data["is_active"] is None else data["is_active"])
             self.db.add(variant); self.db.flush()
             inventory = self.lookup.inventory_by_variant(workspace_id, variant.id)
             if inventory is None:
                 inventory = Inventory(workspace_id=workspace_id, product_variant_id=variant.id)
                 self.db.add(inventory)
-            inventory.stock_quantity = data["stock_quantity"]; inventory.incoming_quantity = data["incoming_quantity"]; inventory.minimum_quantity = 0
+            inventory.stock_quantity = data["stock_quantity"]; inventory.incoming_quantity = data["incoming_quantity"]; inventory.minimum_quantity = data["minimum_quantity"]
             self.db.flush()
             for sort_order, url in enumerate([url for url in data["image_urls"] if self._valid_url(url)]):
                 self.db.add(ProductImage(workspace_id=workspace_id, product_id=product.id, image_url=url, sort_order=sort_order, is_primary=sort_order == 0))
@@ -656,6 +665,15 @@ class ProductCatalogImportService:
             status = ImportJobLogStatus.WARNING if validation.warnings else ImportJobLogStatus.SUCCESS
             results.append((row_number, status, "Product catalog row imported" if status == ImportJobLogStatus.SUCCESS else "Product catalog row imported with warnings"))
         return results
+
+    def _find_product_by_normalized_name(self, workspace_id: UUID, product_name: str | None) -> Product | None:
+        if not product_name:
+            return None
+        normalized = normalize_name(product_name)
+        if not hasattr(self.db, "execute"):
+            return None
+        products = self.db.execute(select(Product).where(Product.workspace_id == workspace_id, Product.deleted_at.is_(None))).scalars()
+        return next((product for product in products if normalize_name(product.name) == normalized), None)
 
     def metrics(self, rows: list[dict], mapping: dict[str, str], validation: ImportValidationReport) -> dict[str, int]:
         normalized = [self.normalize_row(row, mapping) for row in rows]
@@ -819,7 +837,9 @@ class HistoricalImportService:
         return {"issues": issues, "metrics": dict(metrics)}
 
     def _find_customer(self, workspace_id: UUID, data: dict) -> Customer | None:
-        customer = self.lookup.find_customer(workspace_id, data.get("customer_phone"), data.get("instagram_username"))
+        phone = normalize_phone(data.get("customer_phone"))
+        instagram = normalize_instagram(data.get("instagram_username"))
+        customer = self.lookup.find_customer(workspace_id, phone, instagram)
         if customer or not data.get("customer_name"):
             return customer
         return self.db.execute(select(Customer).where(Customer.workspace_id == workspace_id, Customer.deleted_at.is_(None), Customer.name == data.get("customer_name"))).scalar_one_or_none()
@@ -830,7 +850,7 @@ class HistoricalImportService:
             return customer
         if not (data.get("customer_name") or data.get("customer_phone") or data.get("instagram_username")):
             return None
-        customer = Customer(workspace_id=workspace_id, name=data.get("customer_name") or data.get("customer_phone") or "Historical customer", phone=data.get("customer_phone"), instagram_username=data.get("instagram_username"))
+        customer = Customer(workspace_id=workspace_id, name=data.get("customer_name") or normalize_phone(data.get("customer_phone")) or "Historical customer", phone=normalize_phone(data.get("customer_phone")), instagram_username=normalize_instagram(data.get("instagram_username")))
         self.db.add(customer); self.db.flush()
         return customer
 
@@ -1034,7 +1054,9 @@ class EntityImportService:
         return ImportJobLogStatus.SUCCESS, "Inventory updated"
 
     def _order(self, workspace_id: UUID, data: dict) -> tuple[ImportJobLogStatus, str]:
-        customer = self.lookup.find_customer(workspace_id, data.get("customer_phone"), data.get("instagram_username"))
+        phone = normalize_phone(data.get("customer_phone"))
+        instagram = normalize_instagram(data.get("instagram_username"))
+        customer = self.lookup.find_customer(workspace_id, phone, instagram)
         revenue = data.get("revenue") or data.get("order_total")
         created_at = data.get("created_at") or data.get("order_date")
         if revenue is None or created_at is None:
@@ -1234,8 +1256,22 @@ def parse_datetime(value) -> datetime | None:
     return ExcelValueNormalizer().date(value)
 
 
-def normalize_name(value: str) -> str:
-    return sub(r"[^\wа-яА-ЯіїєґІЇЄҐ]+", "", value.lower())
+def normalize_name(value: str | None) -> str:
+    return sub(r"[^\wа-яА-ЯіїєґІЇЄҐ]+", "", (value or "").lower())
+
+
+def normalize_phone(value: str | None) -> str | None:
+    digits = sub(r"\D+", "", value or "")
+    if digits.startswith("380") and len(digits) == 12:
+        return digits
+    if digits.startswith("0") and len(digits) == 10:
+        return f"38{digits}"
+    return digits or None
+
+
+def normalize_instagram(value: str | None) -> str | None:
+    text = ExcelValueNormalizer().text(value)
+    return text.lower().lstrip("@") if text else None
 
 
 def issue(row_number: int | None, severity: str, field: str | None, message: str, raw_value=None, normalized_value=None) -> ImportValidationIssue:
@@ -1267,6 +1303,13 @@ def import_report(job_id: UUID, entity_type: str, sheet_name: str, rows: list[di
         sheet_name=sheet_name,
         total_rows=len(rows),
         valid_rows=len(rows) - len(error_rows),
+        invalid_rows=len(error_rows),
+        created_count=ready,
+        updated_count=0,
+        warnings_count=sum(1 for item in validation.issues if item.severity == "WARNING"),
+        errors_count=sum(1 for item in validation.issues if item.severity == "ERROR"),
+        errors_by_row={row: [item for item in items if item.severity == "ERROR"] for row, items in issues_by_row.items() if any(item.severity == "ERROR" for item in items)},
+        warnings_by_row={row: [item for item in items if item.severity == "WARNING"] for row, items in issues_by_row.items() if any(item.severity == "WARNING" for item in items)},
         warning_rows=len(warning_rows),
         error_rows=len(error_rows),
         skipped_rows=len(skipped_rows),

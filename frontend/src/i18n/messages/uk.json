@@ -908,5 +908,85 @@
     "custom": "Власний період",
     "dateFrom": "Дата від",
     "dateTo": "Дата до"
+  },
+  "imports": {
+    "presets": {
+      "productCatalog": "Імпорт каталогу товарів",
+      "ordersHistory": "Імпорт історії замовлень",
+      "advertisingHistory": "Імпорт історії реклами"
+    },
+    "dryRun": {
+      "reportTitle": "Підсумок dry-run",
+      "success": "Dry-run успішний",
+      "withWarnings": "Dry-run завершено з попередженнями",
+      "failed": "Dry-run не пройшов"
+    },
+    "validation": {
+      "row": "Рядок {row}",
+      "recognizedColumns": "Розпізнані колонки",
+      "missingRequiredColumns": "Відсутні обовʼязкові колонки",
+      "optionalColumns": "Опційні колонки"
+    },
+    "errors": {
+      "sampleErrors": "Приклади помилок",
+      "rowLevel": "Помилки по рядках"
+    },
+    "warnings": {
+      "sampleWarnings": "Приклади попереджень",
+      "duplicates": "Попередження про дублікати"
+    },
+    "duplicates": {
+      "products": "Дублікати товарів",
+      "variants": "Дублікати варіантів",
+      "orders": "Дублікати замовлень",
+      "metrics": "Дублікати метрик"
+    },
+    "results": {
+      "totalRows": "Усього рядків",
+      "validRows": "Валідні рядки",
+      "invalidRows": "Невалідні рядки",
+      "readyRows": "Готові рядки",
+      "warnings": "Попередження",
+      "errors": "Помилки",
+      "duplicates": "Дублікати",
+      "skipped": "Пропущено",
+      "created": "Створити",
+      "updated": "Оновити",
+      "products": "Товари",
+      "variants": "Варіанти",
+      "inventoryRows": "Рядки складу",
+      "images": "Зображення",
+      "ordersDetected": "Знайдено замовлень",
+      "orderItemsDetected": "Знайдено позицій",
+      "customersMatched": "Клієнтів знайдено",
+      "customersToCreate": "Клієнтів створити",
+      "variantsMatched": "Варіантів знайдено",
+      "variantsMissing": "Варіантів немає",
+      "shipmentsDetected": "Відправлень знайдено",
+      "readyOrders": "Готові замовлення",
+      "readyItems": "Готові позиції",
+      "estimatedRevenue": "Оцінка доходу",
+      "estimatedAdCost": "Оцінка реклами",
+      "estimatedProfit": "Оцінка прибутку",
+      "campaignsDetected": "Кампаній знайдено",
+      "campaignsToCreate": "Кампаній створити",
+      "campaignsReused": "Кампаній повторно",
+      "metricsDetected": "Метрик знайдено",
+      "estimatedSpend": "Оцінка витрат",
+      "estimatedNetProfit": "Оцінка чистого прибутку",
+      "estimatedRoas": "Оцінка ROAS"
+    },
+    "demoData": {
+      "title": "Синтетичний демо-набір",
+      "description": "Для staging і демо використовуйте лише згенеровані DEMO записи."
+    },
+    "migration": {
+      "title": "Безпека міграції",
+      "description": "Імпорти обмежені workspace, починаються з dry-run і враховують дублікати."
+    },
+    "analyticsVerification": {
+      "title": "Перевірка аналітики",
+      "description": "Після імпорту перевірте Dashboard, продажі, товари, рекламу, клієнтів, склад та інсайти."
+    }
   }
 }

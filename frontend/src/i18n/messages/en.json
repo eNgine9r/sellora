@@ -908,5 +908,85 @@
     "custom": "Custom period",
     "dateFrom": "Date from",
     "dateTo": "Date to"
+  },
+  "imports": {
+    "presets": {
+      "productCatalog": "Product catalog import",
+      "ordersHistory": "Historical orders import",
+      "advertisingHistory": "Advertising history import"
+    },
+    "dryRun": {
+      "reportTitle": "Dry-run result summary",
+      "success": "Dry-run success",
+      "withWarnings": "Dry-run completed with warnings",
+      "failed": "Dry-run failed"
+    },
+    "validation": {
+      "row": "Row {row}",
+      "recognizedColumns": "Recognized columns",
+      "missingRequiredColumns": "Missing required columns",
+      "optionalColumns": "Optional columns"
+    },
+    "errors": {
+      "sampleErrors": "Sample errors",
+      "rowLevel": "Row-level errors"
+    },
+    "warnings": {
+      "sampleWarnings": "Sample warnings",
+      "duplicates": "Duplicate warnings"
+    },
+    "duplicates": {
+      "products": "Duplicate products",
+      "variants": "Duplicate variants",
+      "orders": "Duplicate orders",
+      "metrics": "Duplicate metrics"
+    },
+    "results": {
+      "totalRows": "Total rows",
+      "validRows": "Valid rows",
+      "invalidRows": "Invalid rows",
+      "readyRows": "Ready rows",
+      "warnings": "Warnings",
+      "errors": "Errors",
+      "duplicates": "Duplicates",
+      "skipped": "Skipped",
+      "created": "Created",
+      "updated": "Updated",
+      "products": "Products",
+      "variants": "Variants",
+      "inventoryRows": "Inventory rows",
+      "images": "Images",
+      "ordersDetected": "Orders detected",
+      "orderItemsDetected": "Order items detected",
+      "customersMatched": "Customers matched",
+      "customersToCreate": "Customers to create",
+      "variantsMatched": "Variants matched",
+      "variantsMissing": "Variants missing",
+      "shipmentsDetected": "Shipments detected",
+      "readyOrders": "Ready orders",
+      "readyItems": "Ready items",
+      "estimatedRevenue": "Estimated revenue",
+      "estimatedAdCost": "Estimated ad cost",
+      "estimatedProfit": "Estimated profit",
+      "campaignsDetected": "Campaigns detected",
+      "campaignsToCreate": "Campaigns to create",
+      "campaignsReused": "Campaigns reused",
+      "metricsDetected": "Metrics detected",
+      "estimatedSpend": "Estimated spend",
+      "estimatedNetProfit": "Estimated net profit",
+      "estimatedRoas": "Estimated ROAS"
+    },
+    "demoData": {
+      "title": "Synthetic demo dataset",
+      "description": "Use only generated DEMO records for staging and sales demos."
+    },
+    "migration": {
+      "title": "Migration safety",
+      "description": "Imports are workspace-scoped, dry-run first, and duplicate-aware."
+    },
+    "analyticsVerification": {
+      "title": "Analytics verification",
+      "description": "After import, verify Dashboard, Sales, Products, Advertising, Customers, Inventory and Insights."
+    }
   }
 }

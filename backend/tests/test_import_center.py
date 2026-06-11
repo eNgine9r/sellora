@@ -246,7 +246,7 @@ def test_validation_detects_duplicate_customer_product_variant_and_inventory_row
     )
     validator = MappingValidationService()
 
-    customer = validator.validate("customers", {"phone": "Phone"}, [{"Phone": "+380000000000"}], workspace_id, lookup)
+    customer = validator.validate("customers", {"phone": "Phone"}, [{"Phone": "0630000000"}], workspace_id, lookup)
     product = validator.validate("products", {"name": "Name", "sku": "SKU"}, [{"Name": "Synthetic Product", "SKU": "SKU-1"}], workspace_id, lookup)
     variant = validator.validate("product_variants", {"product_name": "Product", "variant_sku": "SKU"}, [{"Product": "Synthetic Product", "SKU": "SKU-1"}], workspace_id, lookup)
     inventory = validator.validate("inventory", {"variant_sku": "SKU", "stock_quantity": "Qty"}, [{"SKU": "SKU-1", "Qty": 1}, {"SKU": "SKU-1", "Qty": 2}], workspace_id, lookup)
@@ -512,3 +512,48 @@ def test_advertising_history_dry_run_rejects_negative_spend() -> None:
     report = HistoricalImportService(FakeDb(), lookup).dry_run(uuid4(), uuid4(), "advertising_history", "Ads", rows, mapping)
     assert report.error_rows == 1
     assert "Spend cannot be negative." in report.sample_errors[0].message
+
+
+def test_product_catalog_accepts_name_and_color_size_fallback_with_duplicate_warnings() -> None:
+    service = ProductCatalogImportService.__new__(ProductCatalogImportService)
+    service.db = FakeDb()
+    service.normalizer = ExcelValueNormalizer()
+    service.lookup = SimpleNamespace(
+        find_product_by_sku=lambda workspace_id, sku: None,
+        find_variant=lambda workspace_id, sku=None, product_id=None, color=None, size=None: None,
+    )
+
+    rows = [
+        {"Name": "DEMO Каблучка Luna", "Color": "Gold", "Size": "17", "Price": "890", "Qty": 3, "Min": 5},
+        {"Name": "DEMO Каблучка Luna", "Color": "Gold", "Size": "17", "Price": "890", "Qty": 3, "Min": 5},
+    ]
+    mapping = {"product_name": "Name", "color": "Color", "size": "Size", "selling_price": "Price", "quantity": "Qty", "minimum_quantity": "Min"}
+    report = service.validate(rows, mapping, uuid4())
+
+    assert report.is_valid
+    assert any(issue.field == "product_sku" and issue.severity == "WARNING" for issue in report.issues)
+    assert any(issue.field == "variant_sku" and issue.severity == "WARNING" for issue in report.issues)
+
+
+def test_import_report_contains_structured_row_error_warning_counters() -> None:
+    from app.services.import_center_service import import_report, issue, report_from_issues
+
+    job_id = uuid4()
+    rows = [{"SKU": "DEMO-1"}, {"SKU": "DEMO-1"}]
+    issues = [issue(2, "ERROR", "sku", "Missing SKU"), issue(3, "WARNING", "variant_sku", "Duplicate variant")]
+    validation = report_from_issues(rows, issues)
+    report = import_report(job_id, "product_catalog", "Products", rows, validation)
+
+    assert report.invalid_rows == 1
+    assert report.errors_count == 1
+    assert report.warnings_count == 1
+    assert 2 in report.errors_by_row
+    assert 3 in report.warnings_by_row
+    assert report.duplicate_rows == 1
+
+
+def test_customer_normalization_helpers_are_safe_for_historical_imports() -> None:
+    from app.services.import_center_service import normalize_instagram, normalize_phone
+
+    assert normalize_phone(" 063 000 00 00 ") == "380630000000"
+    assert normalize_instagram("@Olena_Demo") == "olena_demo"

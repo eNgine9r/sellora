@@ -181,3 +181,7 @@ All endpoints are additive under `/api/v1/analytics`, require the `X-Workspace-I
 - Backend enum values remain English and unchanged; localization happens only in frontend i18n.
 - Revenue includes `NEW`, `CONFIRMED`, `SHIPPED`, `DELIVERED`, and `COMPLETED`, and excludes `CANCELLED` and `RETURNED`.
 - Historical/imported orders are included when their metric date is inside the selected range and they are not soft-deleted.
+
+## Sprint 2.6 Import Analytics Verification
+
+Imported product catalog rows initialize catalog, variant, inventory, and optional image data. Imported historical orders are included in backend analytics when their metric date is inside the selected range and the order is not soft-deleted. Historical imports preserve captured item prices/costs so product and category reports do not recalculate old revenue from current catalog prices. Advertising imports feed the advertising report through campaign/date metrics, with duplicate daily metrics skipped by default.

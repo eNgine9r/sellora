@@ -350,3 +350,14 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] `/api/v1/analytics/dashboard-summary` keeps Dashboard KPI values consistent with Reports for the same date range.
 - [ ] Frontend `/dashboard` and `/analytics` use backend aggregates where available and show loading, empty, error, and restricted states safely.
 - [ ] `npm --prefix frontend run typecheck` and backend analytics tests pass or any unrelated existing issues are documented.
+
+## Sprint 2.6 — Import and Demo Dataset QA
+
+- [ ] Product catalog dry-run reports expected columns, missing required fields, row-level warnings/errors, duplicate products/variants, and inventory row counts.
+- [ ] Product catalog import matches by product SKU or normalized product name and by variant SKU or product/color/size fallback.
+- [ ] Catalog import initializes `stock_quantity`, `incoming_quantity`, and `minimum_quantity` without changing `reserved_quantity`.
+- [ ] Historical order dry-run groups repeated order numbers into multi-item orders and reports duplicate order warnings.
+- [ ] Historical order import matches customers by normalized phone/Instagram and keeps `affect_inventory=false` by default.
+- [ ] Advertising history dry-run reports duplicate campaign/date metrics and safe estimates for spend/revenue/ROAS.
+- [ ] `backend/scripts_seed_demo.py` creates only synthetic DEMO records and can be run twice without duplicates.
+- [ ] After demo seed/import, Dashboard and Analytics reports show non-empty revenue, top products, advertising metrics, customer totals, inventory alerts, and business insights.
