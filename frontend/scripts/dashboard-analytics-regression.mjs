@@ -18,9 +18,9 @@ assert(provider.includes("previousDateRange") && presets.includes("previousDateR
 assert(dashboard.includes("fetchSalesSummary") && dashboard.includes("fetchProfitSummary") && dashboard.includes("fetchSalesTrend") && dashboard.includes("fetchTopProducts"), "dashboard uses real analytics hooks");
 assert(dashboard.includes("fetchAdvertisingSummary") && dashboard.includes("fetchInventorySummary") && dashboard.includes("fetchShipmentSummary"), "dashboard uses real advertising, inventory and shipment data hooks");
 assert(dashboard.includes("fetchOrders") && dashboard.includes("fetchLeads") && dashboard.includes("currentOrders") && dashboard.includes("currentLeads"), "dashboard derives period order and lead metrics from real data");
-assert(dashboard.includes("safeRatio") && dashboard.includes("deltaPercent") && !/[+][0-9]+%/.test(dashboard), "dashboard avoids fake static percentage markers and guards ratio math");
+assert(dashboard.includes("formatSafeRatio") && dashboard.includes("formatDeltaPercent") && !/[+][0-9]+%/.test(dashboard), "dashboard avoids fake static percentage markers and uses shared guarded ratio math");
 assert(dashboard.includes("canSeeProfit") && dashboard.includes("dashboard.restricted") && dashboard.includes("enabled: enabled && canSeeProfit"), "dashboard has role-aware profit/financial visibility markers");
-assert(dashboard.includes("orderStatusData") && dashboard.includes("DASHBOARD_ORDER_STATUSES") && dashboard.includes("formatStatus(\"order\""), "order status funnel uses localized real status counts");
+assert(dashboard.includes("orderStatusData") && dashboard.includes("ANALYTICS_ORDER_STATUSES") && dashboard.includes("formatStatus(\"order\""), "order status funnel uses localized real status counts");
 assert(topProducts.includes("TopProductView") && topProducts.includes("imageUrl") && topProducts.includes("quantity_sold") && topProducts.includes("dashboard.topProducts"), "top products block shows image/category/quantity/revenue markers");
 assert(dashboard.includes("topCategories") && dashboard.includes("dashboard.topCategories") && dashboard.includes("displayCategory"), "top categories block derives localized categories");
 assert(dashboard.includes("dashboard.advertising") && dashboard.includes("average_cpa") && dashboard.includes("average_cpl"), "advertising summary includes CPA/CPL markers");

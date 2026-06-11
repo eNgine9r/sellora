@@ -307,3 +307,35 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Confirm backend/API enum values are not translated in payloads or database values.
 - Confirm auth/session/workspace headers still gate all dashboard queries and no cross-workspace data is visible.
 - Confirm no secrets, tokens, workspace IDs, customer/order/profit details, Nova Poshta credentials, or private business data appear in docs, logs, source comments, or screenshots.
+
+## Sprint 2.4 — Analytics Accuracy, Reports & Business Insights QA
+
+### Formula source of truth
+- Confirm `docs/analytics-metrics.md` defines revenue, net profit, AOV, margin, ROAS, CPA, CPL, conversion, return rate, repeat customer rate, low stock, and out-of-stock formulas.
+- Confirm Dashboard and `/analytics` use the shared analytics formula helpers so revenue, ROAS, low stock, and zero-denominator behavior match for the same period.
+- Confirm revenue includes NEW, CONFIRMED, SHIPPED, DELIVERED, and COMPLETED orders while excluding CANCELLED and RETURNED from revenue totals.
+
+### Sales report
+- Open `/analytics`, change the shared report period, and verify the Sales report updates.
+- Confirm Sales report shows revenue, net profit when allowed, orders count, AOV, margin, return rate, cancelled orders, delivered orders, daily rows, order status breakdown, and payment status breakdown.
+- Confirm AOV, margin, and return rate show `—` when denominators are zero.
+
+### Product/category and inventory reports
+- Confirm Product & Category report shows product, SKU, category, quantity sold, revenue, optional profit, current stock, reserved quantity, and status.
+- Confirm Top Categories uses localized category labels and revenue share for the selected period.
+- Confirm Inventory report shows low-stock count, out-of-stock count, reserved quantity, incoming quantity, and sales context for low-stock items.
+
+### Advertising and customer reports
+- Confirm Advertising report shows spend, revenue, ROAS, CPA, CPL, messages/leads/orders where available, and campaign rows.
+- Confirm ROAS/CPA/CPL show `—` when spend/orders/leads denominators are zero and never show unsafe numeric values.
+- Confirm Customer report shows new customers, repeat customer rate, average spend, customers with orders, top/recent customer rows, safe contact display, and last order date.
+
+### Business insights and RBAC
+- Confirm Business Insights are deterministic and based on real data: low stock, ad spend without orders, ROAS below 1, returns/cancellations, leads without orders, or healthy state.
+- Confirm insights include type, title, description, source metric, and CTA where useful.
+- Confirm unauthorized roles do not see restricted profit, margin, product cost, or profit trend values.
+
+### Localization and safety
+- Confirm Ukrainian and English analytics report labels, tooltips, empty states, errors, insight text, and table headers are localized.
+- Confirm backend/API enum values remain unchanged and are only localized for display.
+- Confirm no secrets, tokens, workspace IDs, API keys, customer private data, order data, profit data, or advertising data appear in docs, logs, examples, screenshots, or comments.

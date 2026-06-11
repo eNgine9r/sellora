@@ -15,6 +15,7 @@ import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states"
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
+import { ANALYTICS_ORDER_STATUSES, ANALYTICS_REVENUE_INCLUDED_STATUSES, formatDeltaPercent, formatSafeRatio, isInDateRange, summarizeOrders, toFiniteNumber } from "@/lib/analytics-formulas";
 import { formatMoney } from "@/lib/currency";
 import { useDateRange } from "@/providers/date-range-provider";
 import { fetchAdvertisingSummary } from "@/services/advertising";
@@ -28,32 +29,6 @@ import { Lead } from "@/types/crm";
 import { Order, OrderStatus } from "@/types/orders";
 
 const orderStatusColors: Record<OrderStatus, string> = { NEW: "#7C3AED", CONFIRMED: "#8B5CF6", SHIPPED: "#EC4899", DELIVERED: "#F97316", COMPLETED: "#16A34A", RETURNED: "#F59E0B", CANCELLED: "#94A3B8" };
-const DASHBOARD_ORDER_STATUSES: OrderStatus[] = ["NEW", "CONFIRMED", "SHIPPED", "DELIVERED", "COMPLETED", "RETURNED", "CANCELLED"];
-const DASHBOARD_INCLUDED_REVENUE_STATUSES: OrderStatus[] = ["NEW", "CONFIRMED", "SHIPPED", "DELIVERED", "COMPLETED", "RETURNED"];
-
-function numberValue(value?: string | number | null) {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function isInRange(dateValue: string | null | undefined, from: string, to: string) {
-  if (!dateValue) return false;
-  const dateOnly = dateValue.slice(0, 10);
-  return (!from || dateOnly >= from) && (!to || dateOnly <= to);
-}
-
-function deltaPercent(current: number, previous: number) {
-  if (!previous) return null;
-  const percent = ((current - previous) / previous) * 100;
-  if (!Number.isFinite(percent)) return null;
-  return `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}%`;
-}
-
-function safeRatio(numerator: number, denominator: number) {
-  if (!denominator) return "—";
-  const ratio = numerator / denominator;
-  return Number.isFinite(ratio) ? ratio.toFixed(2) : "—";
-}
 
 function productImage(product?: { images?: { image_url: string; is_primary: boolean }[] }) {
   return product?.images?.find((image) => image.is_primary)?.image_url ?? product?.images?.[0]?.image_url ?? null;
@@ -97,15 +72,15 @@ export default function DashboardPage() {
   const products = useQuery({ queryKey: ["dashboard-products", workspaceId], queryFn: () => fetchProducts(workspaceId), enabled });
   const variants = useQuery({ queryKey: ["dashboard-variants", workspaceId], queryFn: () => fetchProductVariants(workspaceId, undefined, undefined), enabled });
 
-  const currentOrders = useMemo(() => (orders.data ?? []).filter((order) => isInRange(order.created_at, range.date_from, range.date_to)), [orders.data, range.date_from, range.date_to]);
-  const currentLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInRange(lead.created_at, range.date_from, range.date_to)), [leads.data, range.date_from, range.date_to]);
-  const previousLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInRange(lead.created_at, previousRange.date_from, previousRange.date_to)), [leads.data, previousRange.date_from, previousRange.date_to]);
+  const currentOrders = useMemo(() => (orders.data ?? []).filter((order) => isInDateRange(order.created_at, range)), [orders.data, range.date_from, range.date_to]);
+  const currentLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, range)), [leads.data, range.date_from, range.date_to]);
+  const previousLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, previousRange)), [leads.data, previousRange.date_from, previousRange.date_to]);
 
-  const trend = useMemo(() => (salesTrend.data ?? []).map((item) => ({ ...item, revenueNumber: numberValue(item.revenue), profitNumber: numberValue(item.net_profit), ordersCount: item.orders_count })), [salesTrend.data]);
+  const trend = useMemo(() => (salesTrend.data ?? []).map((item) => ({ ...item, revenueNumber: toFiniteNumber(item.revenue), profitNumber: toFiniteNumber(item.net_profit), ordersCount: item.orders_count })), [salesTrend.data]);
 
   const orderStatusData = useMemo(() => {
     const total = currentOrders.length;
-    return DASHBOARD_ORDER_STATUSES.map((status) => {
+    return ANALYTICS_ORDER_STATUSES.map((status) => {
       const value = currentOrders.filter((order) => order.status === status).length;
       return { name: status, label: formatStatus("order", status), value, percent: total ? Math.round((value / total) * 100) : 0, color: orderStatusColors[status] };
     }).filter((item) => item.value > 0);
@@ -121,14 +96,14 @@ export default function DashboardPage() {
 
   const topCategories = useMemo(() => {
     const grouped = new Map<string, { categoryLabel: string; quantity: number; revenue: number; profit: number }>();
-    currentOrders.filter((order) => DASHBOARD_INCLUDED_REVENUE_STATUSES.includes(order.status)).flatMap((order) => order.items).forEach((item) => {
+    currentOrders.filter((order) => ANALYTICS_REVENUE_INCLUDED_STATUSES.includes(order.status)).flatMap((order) => order.items).forEach((item) => {
       const variant = variantById.get(item.product_variant_id);
       const product = variant ? productById.get(variant.product_id) : undefined;
       const categoryLabel = displayCategory(product?.category, t);
       const current = grouped.get(categoryLabel) ?? { categoryLabel, quantity: 0, revenue: 0, profit: 0 };
       current.quantity += item.quantity;
-      current.revenue += numberValue(item.line_total);
-      current.profit += numberValue(item.line_total) - numberValue(item.line_cost);
+      current.revenue += toFiniteNumber(item.line_total);
+      current.profit += toFiniteNumber(item.line_total) - toFiniteNumber(item.line_cost);
       grouped.set(categoryLabel, current);
     });
     const totalRevenue = Array.from(grouped.values()).reduce((sum, item) => sum + item.revenue, 0);
@@ -149,13 +124,15 @@ export default function DashboardPage() {
 
   const isLoading = salesSummary.isLoading || (canSeeProfit && salesTrend.isLoading) || advertising.isLoading || orders.isLoading || leads.isLoading || inventory.isLoading || shipments.isLoading;
   const hasError = salesSummary.isError || (canSeeProfit && salesTrend.isError) || advertising.isError || orders.isError || leads.isError || inventory.isError || shipments.isError;
-  const totalRevenue = numberValue(salesSummary.data?.total_revenue);
-  const previousRevenue = numberValue(previousSalesSummary.data?.total_revenue);
-  const netProfit = numberValue(profitSummary.data?.total_net_profit);
-  const previousProfit = numberValue(previousProfitSummary.data?.total_net_profit);
-  const adSpend = numberValue(advertising.data?.total_spend);
-  const adRevenue = numberValue(advertising.data?.total_revenue);
-  const roas = safeRatio(adRevenue, adSpend);
+  const currentOrderSummary = summarizeOrders(currentOrders);
+  const previousOrderSummary = summarizeOrders(orders.data?.filter((order) => isInDateRange(order.created_at, previousRange)) ?? []);
+  const totalRevenue = currentOrderSummary.revenue;
+  const previousRevenue = previousOrderSummary.revenue;
+  const netProfit = canSeeProfit ? toFiniteNumber(profitSummary.data?.total_net_profit) : 0;
+  const previousProfit = canSeeProfit ? toFiniteNumber(previousProfitSummary.data?.total_net_profit) : 0;
+  const adSpend = toFiniteNumber(advertising.data?.total_spend);
+  const adRevenue = toFiniteNumber(advertising.data?.total_revenue);
+  const roas = formatSafeRatio(adRevenue, adSpend);
 
   return (
     <main className="overflow-x-hidden p-4 sm:p-6">
@@ -171,11 +148,11 @@ export default function DashboardPage() {
         {isLoading ? <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4"><LoadingSkeleton rows={2} title={t("dashboard.loading.dashboard")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.orders")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.shipments")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.ads")} /></div> : null}
 
         <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <KpiCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={t("dashboard.tooltips.revenue")} trend={deltaPercent(totalRevenue, previousRevenue) ?? undefined} />
-          <KpiCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? formatMoney(netProfit, currencyCode) : t("dashboard.restricted")} helper={t("dashboard.tooltips.netProfit")} trend={canSeeProfit ? deltaPercent(netProfit, previousProfit) ?? undefined : undefined} />
-          <KpiCard label={t("dashboard.kpis.orders")} value={salesSummary.data?.total_orders ?? 0} helper={t("dashboard.tooltips.orders")} trend={deltaPercent(salesSummary.data?.total_orders ?? 0, previousSalesSummary.data?.total_orders ?? 0) ?? undefined} />
-          <KpiCard label={t("dashboard.kpis.newLeads")} value={currentLeads.length} helper={t("dashboard.tooltips.newLeads")} trend={deltaPercent(currentLeads.length, previousLeads.length) ?? undefined} />
-          <KpiCard label={t("dashboard.kpis.roas")} value={roas} helper={t("dashboard.tooltips.roas")} trend={deltaPercent(numberValue(advertising.data?.roas), numberValue(previousAdvertising.data?.roas)) ?? undefined} />
+          <KpiCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={t("dashboard.tooltips.revenue")} trend={formatDeltaPercent(totalRevenue, previousRevenue)} />
+          <KpiCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? formatMoney(netProfit, currencyCode) : t("dashboard.restricted")} helper={t("dashboard.tooltips.netProfit")} trend={canSeeProfit ? formatDeltaPercent(netProfit, previousProfit) : undefined} />
+          <KpiCard label={t("dashboard.kpis.orders")} value={currentOrderSummary.ordersCount} helper={t("dashboard.tooltips.orders")} trend={formatDeltaPercent(currentOrderSummary.ordersCount, previousOrderSummary.ordersCount)} />
+          <KpiCard label={t("dashboard.kpis.newLeads")} value={currentLeads.length} helper={t("dashboard.tooltips.newLeads")} trend={formatDeltaPercent(currentLeads.length, previousLeads.length)} />
+          <KpiCard label={t("dashboard.kpis.roas")} value={roas} helper={t("dashboard.tooltips.roas")} trend={formatDeltaPercent(toFiniteNumber(advertising.data?.roas), toFiniteNumber(previousAdvertising.data?.roas))} />
         </section>
 
         <section className="grid min-w-0 gap-6 xl:grid-cols-[1.45fr_0.85fr]">

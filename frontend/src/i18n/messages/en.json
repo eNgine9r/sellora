@@ -530,7 +530,158 @@
   "analytics": {
     "title": "Analytics",
     "subtitle": "Financial, advertising, and operational Sellora metrics.",
-    "comingSoon": "Detailed analytics will arrive in the next sprint."
+    "comingSoon": "Detailed analytics will arrive in the next sprint.",
+    "reports": {
+      "eyebrow": "Sellora reports",
+      "title": "Analytics & reports",
+      "subtitle": "Formula-backed reports for sales, products, advertising, customers, inventory and deterministic business insights.",
+      "loading": "Loading report data…"
+    },
+    "sales": {
+      "title": "Sales report",
+      "subtitle": "Revenue, orders, AOV, margin, returns and status/payment breakdowns for the selected period.",
+      "byStatus": "By order status",
+      "byPayment": "By payment status"
+    },
+    "products": {
+      "title": "Product & category report",
+      "subtitle": "Top products, category share, current stock and low-stock best sellers from the same formulas used on the dashboard.",
+      "topByRevenue": "Top by revenue",
+      "lowStockBestSellers": "Low-stock best sellers",
+      "categoriesTracked": "Categories tracked",
+      "unitsSold": "units sold"
+    },
+    "advertising": {
+      "title": "Advertising report",
+      "subtitle": "Manual/imported ad spend, revenue, ROAS, CPA and CPL with safe unavailable states.",
+      "trendNote": "Advertising trend points in range: {days}"
+    },
+    "customers": {
+      "title": "Customer report",
+      "subtitle": "Repeat customer health, average spend and recent high-value customers."
+    },
+    "inventory": {
+      "title": "Inventory report",
+      "subtitle": "Stock risks, reserved/incoming quantities and sales context for low-stock items.",
+      "lowStockStatus": "Low stock",
+      "healthyStatus": "Healthy"
+    },
+    "insights": {
+      "title": "Business insights",
+      "subtitle": "Deterministic rules from existing orders, ads, leads and inventory data — no AI or fake events.",
+      "types": {
+        "positive": "Positive",
+        "warning": "Warning",
+        "critical": "Critical",
+        "info": "Info"
+      },
+      "lowStockTitle": "Low stock needs attention",
+      "lowStockDescription": "{count} product variants are at or below the minimum stock threshold.",
+      "adSpendNoOrdersTitle": "Ad spend has no orders",
+      "adSpendNoOrdersDescription": "Advertising spend exists for this period, but no orders were recorded from ads.",
+      "lowRoasTitle": "ROAS is below 1",
+      "lowRoasDescription": "Advertising revenue is lower than spend, so the campaign mix may not be paying back.",
+      "returnsTitle": "Returns or cancellations need review",
+      "returnsDescription": "Returns: {returns}. Cancelled orders: {cancelled}.",
+      "leadsNoOrdersTitle": "Leads have not converted",
+      "leadsNoOrdersDescription": "Leads exist in the period, but no orders were created in the same period.",
+      "healthyTitle": "No urgent issues detected",
+      "healthyDescription": "Core sales, advertising and inventory checks do not show urgent warnings for this period.",
+      "ctaInventory": "Open inventory",
+      "ctaAdvertising": "Open advertising",
+      "ctaOrders": "Open orders",
+      "ctaLeads": "Open leads"
+    },
+    "metrics": {
+      "revenue": "Revenue",
+      "netProfit": "Net profit",
+      "orders": "Orders",
+      "aov": "AOV",
+      "margin": "Margin",
+      "returnRate": "Return rate",
+      "cancelledOrders": "Cancelled orders",
+      "deliveredOrders": "Delivered orders",
+      "spend": "Spend",
+      "roas": "ROAS",
+      "cpa": "CPA",
+      "cpl": "CPL",
+      "newCustomers": "New customers",
+      "repeatCustomerRate": "Repeat customer rate",
+      "averageSpend": "Average spend",
+      "customersWithOrders": "Customers with orders",
+      "lowStock": "Low stock",
+      "outOfStock": "Out of stock",
+      "reservedStock": "Reserved stock",
+      "incomingStock": "Incoming",
+      "restricted": "Restricted",
+      "leadConversionRate": "Lead conversion rate"
+    },
+    "tooltips": {
+      "revenue": "Revenue includes NEW, CONFIRMED, SHIPPED, DELIVERED and COMPLETED orders; CANCELLED and RETURNED are excluded.",
+      "netProfit": "Net profit = revenue − product cost − ads − shipping − COD fees − other costs.",
+      "aov": "AOV = revenue / included orders. It is unavailable when there are no included orders.",
+      "roas": "ROAS = ad revenue / ad spend. It is unavailable when spend is zero.",
+      "cpa": "CPA = ad spend / ad orders. It is unavailable when orders are zero.",
+      "cpl": "CPL = ad spend / ad leads. It is unavailable when leads are zero.",
+      "margin": "Margin = net profit / revenue.",
+      "returnRate": "Return rate = returned orders / shipped, delivered, completed or returned orders.",
+      "repeatCustomerRate": "Repeat customer rate = customers with 2+ orders / customers with orders.",
+      "lowStock": "Low stock means stock quantity is less than or equal to minimum quantity.",
+      "reservedStock": "Reserved stock is quantity held for open orders.",
+      "conversionRate": "Lead conversion = converted leads / total leads in the selected period."
+    },
+    "emptyStates": {
+      "noSales": "No sales rows in this period",
+      "noSalesDescription": "Create or import orders to populate the sales report.",
+      "noProducts": "No product performance yet",
+      "noProductsDescription": "Product and category reports appear after order items exist in the selected period.",
+      "noAdvertising": "No advertising metrics in this period",
+      "noAdvertisingDescription": "Add manual campaign metrics or import advertising history.",
+      "noCustomers": "No customers yet",
+      "noCustomersDescription": "Customer analytics appears after customers and orders are created or imported.",
+      "noInventoryAlerts": "Inventory looks healthy",
+      "noInventoryAlertsDescription": "No low-stock rows require action right now."
+    },
+    "errors": {
+      "loadFailed": "Analytics reports could not be loaded. Check workspace access and retry."
+    },
+    "filters": {
+      "period": "Report period",
+      "periodHelp": "Dashboard and reports share this period so metrics stay consistent."
+    },
+    "sorting": {
+      "revenueDesc": "Revenue high to low",
+      "quantityDesc": "Quantity high to low",
+      "profitDesc": "Profit high to low"
+    },
+    "tables": {
+      "date": "Date",
+      "orders": "Orders",
+      "revenue": "Revenue",
+      "netProfit": "Net profit",
+      "aov": "AOV",
+      "returns": "Returns",
+      "cancelled": "Cancelled",
+      "product": "Product",
+      "sku": "SKU",
+      "category": "Category",
+      "quantitySold": "Quantity sold",
+      "stock": "Stock",
+      "reserved": "Reserved",
+      "status": "Status",
+      "campaign": "Campaign",
+      "platform": "Platform",
+      "spend": "Spend",
+      "leads": "Leads",
+      "roas": "ROAS",
+      "customer": "Customer",
+      "contact": "Contact",
+      "totalSpent": "Total spent",
+      "lastOrder": "Last order",
+      "incoming": "Incoming",
+      "minimum": "Minimum",
+      "salesInPeriod": "Sales in period"
+    }
   },
   "settings": {
     "title": "Settings",
