@@ -100,3 +100,30 @@ Severity if failed:
 Expected result: No body-level horizontal overflow; topbar, cards, tables and import actions remain usable.
 Notes:
 Severity if failed:
+
+## Sprint 2.8 feedback and release checks
+
+[ ] Action: Open the Feedback form from the topbar.
+Expected result: Category, optional rating, required message, current page and privacy hint are visible.
+Notes:
+Severity if failed:
+
+[ ] Action: Submit feedback with an empty message.
+Expected result: Submit is blocked or validation appears.
+Notes:
+Severity if failed:
+
+[ ] Action: Submit valid feedback.
+Expected result: Loading state appears, then localized success message appears.
+Notes:
+Severity if failed:
+
+[ ] Action: Open `/settings/feedback` as owner/manager.
+Expected result: Workspace-scoped feedback list appears without raw internal IDs in the primary UI.
+Notes:
+Severity if failed:
+
+[ ] Action: Review known limitations and pilot release notes with the pilot user.
+Expected result: User understands what is manual, what is not automated yet, and how to report problems safely.
+Notes:
+Severity if failed:

@@ -11,6 +11,7 @@ import { useI18n } from "@/i18n/provider";
 const cards = [
   { titleKey: "settings.cards.importTitle", descriptionKey: "settings.cards.importDescription", href: "/settings/import", actionKey: "settings.cards.importAction", badgeKey: "navigation.importCenter" },
   { titleKey: "settings.cards.integrationsTitle", descriptionKey: "settings.cards.integrationsDescription", href: "/settings/integrations", actionKey: "settings.cards.integrationsAction", badgeKey: "navigation.integrations" },
+  { titleKey: "settings.cards.feedbackTitle", descriptionKey: "settings.cards.feedbackDescription", href: "/settings/feedback", actionKey: "settings.cards.feedbackAction", badgeKey: "feedback.button" },
   { titleKey: "settings.cards.novaTitle", descriptionKey: "settings.cards.novaDescription", href: "/settings/integrations", actionKey: "settings.cards.novaAction", badgeKey: "novaPoshta.title" },
 ];
 

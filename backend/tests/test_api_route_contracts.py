@@ -15,6 +15,12 @@ def test_static_product_variant_routes_are_registered_before_product_id_route() 
     assert _route_index("/api/v1/products/variants", "POST") < _route_index("/api/v1/products/{product_id}", "GET")
 
 
+def test_feedback_routes_are_registered() -> None:
+    assert _route_index("/api/v1/feedback", "POST") >= 0
+    assert _route_index("/api/v1/feedback", "GET") >= 0
+    assert _route_index("/api/v1/feedback/{feedback_id}", "PATCH") >= 0
+
+
 def test_static_order_and_shipment_routes_are_registered_before_uuid_routes() -> None:
     assert _route_index("/api/v1/orders/dashboard", "GET") < _route_index("/api/v1/orders/{order_id}", "GET")
     assert _route_index("/api/v1/shipments/summary", "GET") < _route_index("/api/v1/shipments/{shipment_id}", "GET")

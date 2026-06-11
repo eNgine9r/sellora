@@ -6,6 +6,7 @@ import { BrandIcon } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { DateRangeSelector } from "@/components/date-range-selector";
+import { FeedbackDialog } from "@/components/feedback-dialog";
 import { useI18n } from "@/i18n/provider";
 import { normalizeWorkspaceId } from "@/lib/workspace";
 import { CurrentUser, WorkspaceMembership } from "@/types/auth";
@@ -52,6 +53,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
         <button className="hidden h-12 shrink-0 items-center gap-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 md:inline-flex">
           <span>{t("topbar.create")}</span><span aria-hidden="true">▾</span>
         </button>
+        <FeedbackDialog workspaceId={currentWorkspaceId} />
         <LanguageSwitcher compact />
         <ThemeToggle compact />
         <button className="hidden h-12 w-12 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 sm:grid" aria-label={t("topbar.notifications")}>

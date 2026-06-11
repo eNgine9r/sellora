@@ -373,3 +373,15 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Mobile QA covers Dashboard, Orders, Products, Inventory, Analytics, Import Center, Integrations and Advertising at 375px, 390px, 430px and 768px.
 - [ ] Demo workspace Dashboard and Analytics show meaningful data after `backend/scripts_seed_demo.py`.
 - [ ] Safety/privacy scan confirms no real private data, tokens, workspace IDs, API keys or private spreadsheets were committed.
+
+## Sprint 2.8 — Pilot Feedback and Pre-MVP Release QA
+
+- [ ] Feedback button is visible in the topbar and opens a mobile-safe modal.
+- [ ] Feedback form requires category and message, supports optional rating, captures current page path, and shows privacy hint.
+- [ ] Feedback submit button has loading state, success state and error state.
+- [ ] `/settings/feedback` is workspace-scoped and available only to roles allowed by backend RBAC.
+- [ ] Owner can update feedback status; restricted users cannot manage feedback.
+- [ ] Pre-MVP checklist, known limitations, pilot release notes and feedback process docs exist and are honest about MVP limitations.
+- [ ] Empty/loading/error final pass confirms empty states do not appear during loading and submit buttons disable while submitting.
+- [ ] Mobile QA includes feedback modal/form at 375px plus Dashboard, Analytics, Orders, Products, Inventory, Import Center and Advertising.
+- [ ] Safety scans show no secrets, API keys, tokens, workspace IDs, private spreadsheets or real private customer/order data.

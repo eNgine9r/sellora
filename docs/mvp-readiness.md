@@ -32,3 +32,9 @@
 3. Harden Nova Poshta real-credential workflows.
 4. Prioritize Instagram/Meta automation based on pilot pain points.
 5. Add billing only after value and pricing are validated.
+
+## Sprint 2.8 pre-MVP feedback readiness
+
+- In-app feedback is available from the topbar with category, optional rating, message, current page and privacy hint.
+- Feedback records are workspace-scoped in backend storage; owners/managers can review them in `/settings/feedback` and owners can update status.
+- Pre-MVP release checks, known limitations and pilot release notes are documented for controlled external pilots.

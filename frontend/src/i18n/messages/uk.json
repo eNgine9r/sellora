@@ -703,7 +703,10 @@
       "integrationsAction": "Відкрити інтеграції",
       "novaTitle": "Nova Poshta",
       "novaDescription": "Налаштуйте ключі, відправника, міста, склади та створення TTN.",
-      "novaAction": "Налаштувати Nova Poshta"
+      "novaAction": "Налаштувати Nova Poshta",
+      "feedbackTitle": "Пілотний фідбек",
+      "feedbackDescription": "Переглядайте проблеми, ідеї та незрозумілі місця від пілотних користувачів.",
+      "feedbackAction": "Відкрити фідбек"
     },
     "label": "Налаштування Sellora",
     "integrationsTitle": "Інтеграції",
@@ -1058,5 +1061,80 @@
   "pilotDocs": {
     "title": "Пілотна документація",
     "description": "Використовуйте onboarding guide, demo script і QA checklist для збору фідбеку перших магазинів."
+  },
+  "feedback": {
+    "button": "Фідбек",
+    "categories": {
+      "ISSUE": "Проблема",
+      "IDEA": "Ідея",
+      "CONFUSION": "Незрозуміло",
+      "PRAISE": "Сподобалось",
+      "OTHER": "Інше"
+    },
+    "statuses": {
+      "NEW": "Новий",
+      "REVIEWED": "Переглянуто",
+      "PLANNED": "Заплановано",
+      "FIXED": "Виправлено",
+      "WONT_FIX": "Не виправляємо"
+    },
+    "form": {
+      "title": "Повідомити про проблему або фідбек",
+      "description": "Опишіть, що заблокувало роботу, що було незрозуміло або що зробить Sellora кориснішою для магазину.",
+      "category": "Категорія",
+      "rating": "Оцінка",
+      "ratingOptional": "Оцінка необовʼязкова",
+      "message": "Повідомлення",
+      "messagePlaceholder": "Опишіть, що сталося або який результат очікували.",
+      "privacyHint": "Не додавайте паролі, API-ключі, токени або приватні дані клієнтів у повідомлення.",
+      "currentPage": "Поточна сторінка: {page}",
+      "submit": "Надіслати фідбек",
+      "submitting": "Надсилаємо…"
+    },
+    "success": {
+      "submitted": "Дякуємо — фідбек надіслано на перегляд."
+    },
+    "errors": {
+      "submitFailed": "Не вдалося надіслати фідбек. Спробуйте ще раз або напишіть контакту пілоту.",
+      "loadFailed": "Не вдалося завантажити фідбек. Спробуйте ще раз.",
+      "restrictedTitle": "Керування фідбеком обмежене",
+      "restrictedDescription": "Переглядати пілотний фідбек можуть лише власники та менеджери workspace."
+    },
+    "management": {
+      "eyebrow": "Пілотний фідбек",
+      "title": "Керування фідбеком",
+      "description": "Переглядайте workspace-scoped фідбек без показу внутрішніх ID або секретів. Власники можуть змінювати статус для triage.",
+      "loading": "Завантажуємо фідбек",
+      "emptyTitle": "Фідбеку ще немає",
+      "emptyDescription": "Фідбек, надісланий із topbar, зʼявиться тут для власників і менеджерів.",
+      "rating": "Оцінка {rating}/5"
+    }
+  },
+  "pilotFeedback": {
+    "title": "Цикл пілотного фідбеку",
+    "description": "Фідбек збирається в застосунку з категорією, необовʼязковою оцінкою, повідомленням і поточною сторінкою."
+  },
+  "preMvpRelease": {
+    "title": "Pre-MVP release checklist",
+    "description": "Використовуйте release checklist перед запрошенням зовнішніх пілотних магазинів."
+  },
+  "knownLimitations": {
+    "title": "Відомі обмеження",
+    "description": "Пілотні користувачі мають розуміти, що поки ручне або не автоматизоване."
+  },
+  "pilotReleaseNotes": {
+    "title": "Pilot release notes",
+    "description": "Поясніть, що готово, що тестувати і які дані не вводити під час пілоту."
+  },
+  "qaSeverity": {
+    "critical": "Critical",
+    "major": "Major",
+    "minor": "Minor",
+    "improvement": "Improvement",
+    "question": "Question"
+  },
+  "supportProcess": {
+    "title": "Процес підтримки",
+    "description": "Triage фідбек за severity, комунікуйте виправлення і оновлюйте known limitations."
   }
 }

@@ -5,6 +5,7 @@ from app.api.v1.analytics import router as analytics_router
 from app.api.v1.attachments import router as attachments_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.customers import router as customers_router
+from app.api.v1.feedback import router as feedback_router
 from app.api.v1.lead_sources import router as lead_sources_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.nova_poshta import router as nova_poshta_router
@@ -23,6 +24,7 @@ api_router.include_router(auth_router)
 api_router.include_router(lead_sources_router)
 api_router.include_router(leads_router)
 api_router.include_router(customers_router)
+api_router.include_router(feedback_router)
 api_router.include_router(products_router)
 api_router.include_router(import_center_router)
 api_router.include_router(inventory_router)

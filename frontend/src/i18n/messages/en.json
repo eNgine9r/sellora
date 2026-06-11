@@ -703,7 +703,10 @@
       "integrationsAction": "Open Integrations",
       "novaTitle": "Nova Poshta",
       "novaDescription": "Configure Nova Poshta credentials, sender settings, cities, warehouses, and TTN creation.",
-      "novaAction": "Configure Nova Poshta"
+      "novaAction": "Configure Nova Poshta",
+      "feedbackTitle": "Pilot feedback",
+      "feedbackDescription": "Review issue reports, ideas and confusion signals from pilot users.",
+      "feedbackAction": "Open feedback"
     },
     "label": "Sellora Settings",
     "integrationsTitle": "Integrations",
@@ -1058,5 +1061,80 @@
   "pilotDocs": {
     "title": "Pilot documentation",
     "description": "Use the pilot onboarding guide, demo script and QA checklist for first-store feedback."
+  },
+  "feedback": {
+    "button": "Feedback",
+    "categories": {
+      "ISSUE": "Issue",
+      "IDEA": "Idea",
+      "CONFUSION": "Confusing",
+      "PRAISE": "Praise",
+      "OTHER": "Other"
+    },
+    "statuses": {
+      "NEW": "New",
+      "REVIEWED": "Reviewed",
+      "PLANNED": "Planned",
+      "FIXED": "Fixed",
+      "WONT_FIX": "Won’t fix"
+    },
+    "form": {
+      "title": "Report an issue or share feedback",
+      "description": "Tell us what blocked you, what was confusing, or what would make Sellora more useful for your shop.",
+      "category": "Category",
+      "rating": "Rating",
+      "ratingOptional": "Optional rating",
+      "message": "Message",
+      "messagePlaceholder": "Describe what happened or what you expected.",
+      "privacyHint": "Do not include passwords, API keys, tokens, or private customer data in your message.",
+      "currentPage": "Current page: {page}",
+      "submit": "Send feedback",
+      "submitting": "Sending…"
+    },
+    "success": {
+      "submitted": "Thanks — your feedback was submitted for review."
+    },
+    "errors": {
+      "submitFailed": "Unable to submit feedback. Please try again or tell the pilot contact.",
+      "loadFailed": "Unable to load feedback. Please try again.",
+      "restrictedTitle": "Feedback management is restricted",
+      "restrictedDescription": "Only workspace owners and managers can review pilot feedback."
+    },
+    "management": {
+      "eyebrow": "Pilot feedback",
+      "title": "Feedback management",
+      "description": "Review workspace-scoped pilot feedback without exposing internal IDs or secrets. Owners can update status for triage.",
+      "loading": "Loading feedback",
+      "emptyTitle": "No feedback yet",
+      "emptyDescription": "Pilot feedback submitted from the topbar will appear here for owners and managers.",
+      "rating": "Rating {rating}/5"
+    }
+  },
+  "pilotFeedback": {
+    "title": "Pilot feedback loop",
+    "description": "Feedback is collected in-app with category, optional rating, message and current page."
+  },
+  "preMvpRelease": {
+    "title": "Pre-MVP release checklist",
+    "description": "Use the release checklist before inviting external pilot stores."
+  },
+  "knownLimitations": {
+    "title": "Known limitations",
+    "description": "Pilot users should understand what is manual or not automated yet."
+  },
+  "pilotReleaseNotes": {
+    "title": "Pilot release notes",
+    "description": "Share what is ready, what to test, and what data to avoid during pilot."
+  },
+  "qaSeverity": {
+    "critical": "Critical",
+    "major": "Major",
+    "minor": "Minor",
+    "improvement": "Improvement",
+    "question": "Question"
+  },
+  "supportProcess": {
+    "title": "Support process",
+    "description": "Triage feedback by severity, communicate fixes, and keep known limitations updated."
   }
 }
