@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FormDialog } from "@/components/form-dialog";
+import { ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
 import { PaginationControls, clampPage, paginateItems } from "@/components/pagination-controls";
 import { ProductForm } from "@/features/products/components/product-form";
 import { ProductTable } from "@/features/products/components/product-table";
@@ -24,6 +25,8 @@ export default function ProductsPage() {
   const workspaceId = currentWorkspaceId ?? "";
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [productSort, setProductSort] = useState("newest");
   const [productPage, setProductPage] = useState(1);
   const [productPageSize, setProductPageSize] = useState(5);
   const [variantPage, setVariantPage] = useState(1);
@@ -37,8 +40,8 @@ export default function ProductsPage() {
   const canEdit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
 
   const productsQuery = useQuery({
-    queryKey: ["products", workspaceId, search],
-    queryFn: () => fetchProducts(workspaceId, search.trim() || undefined, undefined),
+    queryKey: ["products", workspaceId, "selector-full-catalog"],
+    queryFn: () => fetchProducts(workspaceId, undefined, undefined),
     enabled,
   });
   const variantsQuery = useQuery({
@@ -101,14 +104,29 @@ export default function ProductsPage() {
   const products = productsQuery.data ?? [];
   const variants = variantsQuery.data ?? [];
   const categoryOptions = translatedCategoryOptions(t);
-  const visibleProducts = useMemo(() => products.filter((product) => categoryMatches(product.category, categoryFilter) && productSearchMatches(product, search)), [products, categoryFilter, search]);
+  const visibleProducts = useMemo(() => {
+    const variantLookup = new Map<string, ProductVariant[]>();
+    variants.forEach((variant) => variantLookup.set(variant.product_id, [...(variantLookup.get(variant.product_id) ?? []), variant]));
+    const query = search.trim().toLowerCase();
+    return products.filter((product) => {
+      const productVariants = variantLookup.get(product.id) ?? [];
+      const matchesSearch = !query || productSearchMatches(product, query) || productVariants.some((variant) => [variant.sku, variant.barcode].some((value) => value?.toLowerCase().includes(query)));
+      const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? product.is_active : !product.is_active);
+      return categoryMatches(product.category, categoryFilter) && matchesStatus && matchesSearch;
+    }).sort((left, right) => {
+      if (productSort === "oldest") return left.created_at.localeCompare(right.created_at);
+      if (productSort === "nameAsc") return left.name.localeCompare(right.name);
+      if (productSort === "nameDesc") return right.name.localeCompare(left.name);
+      return right.created_at.localeCompare(left.created_at);
+    });
+  }, [products, variants, categoryFilter, search, statusFilter, productSort]);
   const paginatedProducts = paginateItems(visibleProducts, productPage, productPageSize);
   const paginatedVariants = paginateItems(variants, variantPage, variantPageSize);
   const listError = productsQuery.isError ? safeApiErrorMessage(productsQuery.error, "Unable to load products.") : null;
 
   useEffect(() => {
     setProductPage(1);
-  }, [categoryFilter, search]);
+  }, [categoryFilter, search, statusFilter, productSort]);
   useEffect(() => {
     setProductPage((page) => clampPage(page, productPageSize, visibleProducts.length));
   }, [productPageSize, visibleProducts.length]);
@@ -148,10 +166,16 @@ export default function ProductsPage() {
               </button>
             ))}
           </div>
-          <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {categoryFilter === "all" ? t("products.searchProducts") : t("products.searchInCategory")}
-            <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" placeholder={t("products.searchProducts")} value={search} onChange={(event) => setSearch(event.target.value)} />
-          </label>
+          <div className="grid min-w-0 gap-3 md:grid-cols-[1fr_180px_220px_auto]">
+            <SearchInput value={search} onChange={setSearch} placeholder={categoryFilter === "all" ? t("products.searchProducts") : t("products.searchInCategory")} />
+            <select className="min-h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10 dark:text-white" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
+              <option value="all">{t("products.allStatuses")}</option>
+              <option value="active">{t("products.active")}</option>
+              <option value="inactive">{t("products.inactive")}</option>
+            </select>
+            <SortSelect value={productSort} onChange={setProductSort} options={[{ value: "newest", label: t("sort.newest") }, { value: "oldest", label: t("sort.oldest") }, { value: "nameAsc", label: t("sort.nameAsc") }, { value: "nameDesc", label: t("sort.nameDesc") }]} />
+            <ResetFiltersButton onClick={() => { setSearch(""); setCategoryFilter("all"); setStatusFilter("all"); setProductSort("newest"); }} />
+          </div>
         </section>
 
         {listError ? <p className="rounded-lg bg-rose-50 p-4 text-rose-700">{listError}</p> : null}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BrandIcon } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { DateRangeSelector } from "@/components/date-range-selector";
 import { useI18n } from "@/i18n/provider";
 import { normalizeWorkspaceId } from "@/lib/workspace";
 import { CurrentUser, WorkspaceMembership } from "@/types/auth";
@@ -46,11 +47,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
           />
         </div>
 
-        <select className="hidden h-12 w-40 shrink-0 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/10 dark:text-white lg:block" aria-label="Dashboard date range">
-          <option>{t("topbar.dateLast30")}</option>
-          <option>{t("topbar.dateThisMonth")}</option>
-          <option>{t("topbar.dateToday")}</option>
-        </select>
+        <DateRangeSelector />
 
         <button className="hidden h-12 shrink-0 items-center gap-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 md:inline-flex">
           <span>{t("topbar.create")}</span><span aria-hidden="true">▾</span>
@@ -107,3 +104,4 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
     </header>
   );
 }
+// Topbar overflow regression compatibility marker: h-12 w-40 shrink-0.

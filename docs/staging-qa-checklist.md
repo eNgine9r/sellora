@@ -235,3 +235,34 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Full Ukrainian localization review
   - Review dashboard, products, orders, inventory, shipments, leads, customers, advertising, finance, reports, analytics, settings, topbar, sidebar, modals, dropdowns, empty/loading/error states, and buttons for obvious English UI.
   - Confirm technical IDs, route paths, provider constants, and backend/API enum values remain untranslated.
+
+
+## Sprint 2.2.14 — Post-Pagination QA Fixes
+
+### Orders product selector full catalog behavior
+- Open `/orders`, create or edit an order, choose all categories, and confirm product search can find catalog items beyond the first visible selector subset.
+- Choose a specific category and confirm search still checks the full category list before rendering compact visible options.
+- Confirm product selector options show a compact thumbnail or placeholder, product name, SKU, category, stock and price metadata.
+
+### Filters, sorting and global period selector
+- Verify orders, products and inventory search/filter/sort controls reset cleanly and do not break existing create/edit/archive flows.
+- Verify the topbar period selector supports Today, Last 7 days, Last 30 days, This month, All time and Custom period with date_from/date_to controls.
+- Confirm date inputs keep ISO submission values while showing localized labels/helpers.
+
+### Loading, empty/error states and scrollbars
+- Confirm data-driven tables and selectors show loading states before empty states.
+- Confirm table, modal, dropdown, product selector and transaction-history scroll areas use the Sellora scrollbar style and avoid body-level horizontal overflow.
+
+### Inventory transaction history
+- Confirm Transaction History shows five records by default, supports 5/15/30 page sizes and paginates independently from main inventory rows.
+- Confirm transaction type, reason, quantity, stock and reserved labels are localized in Ukrainian while backend enum values remain unchanged.
+
+### Integrations and Nova Poshta QA
+- Confirm `/settings/integrations` is localized in Ukrainian, including connection, credential, sender settings and action labels.
+- Search/select sender city, verify city ref populates, then search/select warehouse and verify warehouse ref populates.
+- Confirm warehouse search stays disabled until a sender city ref is present and safe localized errors appear for API failures.
+- Confirm ERROR badge and sender warning/info blocks are readable in dark theme.
+
+### Full Ukrainian localization sweep
+- Review `/dashboard`, `/orders`, `/products`, `/inventory`, `/settings/integrations`, `/shipments`, `/leads`, `/customers`, `/advertising`, topbar, sidebar, modals, badges, empty states and table headers for obvious English copy in Ukrainian mode.
+- Confirm backend/API enum values and route/preset identifiers are not translated in submitted payloads.

@@ -24,6 +24,8 @@ type ItemFilter = { category: CategoryFilter; productId: string; productSearch: 
 
 const emptyItem = () => ({ product_variant_id: "", quantity: "1", unit_price: "", unit_cost: "0" });
 const emptyFilter = (): ItemFilter => ({ category: "all", productId: "", productSearch: "" });
+const MAX_PRODUCT_SELECTOR_OPTIONS = 30;
+
 const numberValue = (value?: string | number | null) => {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -84,7 +86,7 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
       return sum + (stock ? Math.max(0, stock.stock_quantity - stock.reserved_quantity) : 0);
     }, 0);
     const firstPrice = productVariants.find((variant) => variant.price)?.price;
-    return [product.sku, displayCategory(product.category, t), `${t("orders.productOption.available")}: ${available}`, firstPrice ? `${t("orders.productOption.price")}: ${formatMoney(firstPrice, currencyCode)}` : null].filter(Boolean).join(" — ");
+    return [product.sku, displayCategory(product.category, t), `${t("orders.productOption.available")}: ${available}`, firstPrice ? `${t("orders.productOption.price")}: ${formatMoney(firstPrice, currencyCode)}` : null].filter(Boolean).join(" · ");
   }
 
   function variantLabel(variant: ProductVariant) {
@@ -180,6 +182,8 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
           const lineTotal = numberValue(item.quantity) * numberValue(item.unit_price);
           const filter = itemFilter(index, item);
           const filteredProducts = products.filter((product) => categoryMatches(product.category, filter.category) && productSearchMatches(product, filter.productSearch));
+          const visibleProductOptions = filteredProducts.slice(0, MAX_PRODUCT_SELECTOR_OPTIONS);
+          const hasMoreProductOptions = filteredProducts.length > visibleProductOptions.length;
           const variantOptions = variants.filter((variant) => {
             const product = productById.get(variant.product_id);
             if (filter.productId) return variant.product_id === filter.productId;
@@ -203,20 +207,21 @@ export function OrderForm({ variants, products = [], inventory = [], showProfit 
                 </label>
                 <div className="grid min-w-0 gap-2 md:col-span-1">
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{t("orders.selectProduct")}</span>
-                  <div className="sellora-scrollbar grid max-h-56 min-w-0 gap-2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 dark:border-white/10 dark:bg-slate-950">
-                    {filteredProducts.length ? filteredProducts.slice(0, 8).map((product) => {
+                  <div className="product-selector-combobox sellora-scrollbar grid max-h-64 min-w-0 gap-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 dark:border-white/10 dark:bg-slate-950">
+                    {filteredProducts.length ? visibleProductOptions.map((product) => {
                       const image = productImage(product);
                       const isSelected = filter.productId === product.id;
                       return (
-                        <button className={`flex min-w-0 items-center gap-3 rounded-xl border p-2 text-left transition ${isSelected ? "border-blue-600 bg-blue-50 dark:bg-blue-500/10" : "border-slate-100 hover:border-blue-200 dark:border-white/10 dark:hover:border-blue-300/40"}`} disabled={!canEditItems} key={product.id} type="button" onClick={() => selectProduct(index, product.id)}>
-                          {image ? <img className="h-10 w-10 shrink-0 rounded-lg object-cover" src={image.image_url} alt={image.alt_text ?? product.name} /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-black uppercase text-slate-400 dark:bg-white/10">{t("orders.productOption.noImage")}</span>}
+                        <button className={`product-select-item flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition ${isSelected ? "border-blue-600 bg-blue-50 dark:bg-blue-500/10" : "border-transparent hover:border-blue-200 hover:bg-slate-50 dark:border-transparent dark:hover:border-blue-300/40 dark:hover:bg-white/5"}`} disabled={!canEditItems} key={product.id} type="button" onClick={() => selectProduct(index, product.id)}>
+                          {image ? <img className="h-9 w-9 shrink-0 rounded-lg object-cover" src={image.image_url} alt={image.alt_text ?? product.name} /> : <span className="product-option-placeholder flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[9px] font-black uppercase text-slate-400 dark:bg-white/10">{t("orders.productOption.noImage")}</span>}
                           <span className="min-w-0 flex-1">
-                            <strong className="block truncate text-sm text-slate-950 dark:text-white">{product.name}</strong>
-                            <span className="block truncate text-xs text-slate-500 dark:text-slate-300">{productSummary(product)}</span>
+                            <strong className="block truncate text-sm leading-5 text-slate-950 dark:text-white">{product.name}</strong>
+                            <span className="block truncate text-[11px] leading-4 text-slate-500 dark:text-slate-300">{productSummary(product)}</span>
                           </span>
                         </button>
                       );
                     }) : <p className="p-3 text-sm text-slate-500 dark:text-slate-300">{t("orders.productOption.noProducts")}</p>}
+                    {hasMoreProductOptions ? <p className="px-2 py-1 text-xs font-semibold text-slate-500 dark:text-slate-300">{t("orders.productOption.refineSearch")}</p> : null}
                   </div>
                 </div>
               </div>

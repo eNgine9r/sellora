@@ -23,7 +23,7 @@ assert(productsPage.includes("paginatedProducts") && productsPage.includes("prod
 assert(productsPage.includes("paginatedVariants") && productsPage.includes("variantPageSize") && productsPage.includes("PaginationControls"), "product variants list uses pagination");
 assert(inventoryPage.includes("paginatedInventory") && inventoryPage.includes("inventoryPageSize") && inventoryPage.includes("PaginationControls"), "inventory page uses pagination");
 assert(productsPage.includes("categoryFilter") && productsPage.includes("productSearchMatches") && inventoryPage.includes("categoryMatches"), "pagination works with category/search markers");
-assert(orderForm.includes("productImage(product)") && orderForm.includes("orders.productOption.noImage") && orderForm.includes("slice(0, 8)"), "order product selector supports image/placeholder and limited option rendering");
+assert(orderForm.includes("productImage(product)") && orderForm.includes("orders.productOption.noImage") && orderForm.includes("MAX_PRODUCT_SELECTOR_OPTIONS = 30"), "order product selector supports image/placeholder and selector-specific option rendering");
 assert(shipmentsPage.includes("shipments.logisticsLabel") && shipmentsPage.includes("common.searchByTrackingNumber") && shipmentDetails.includes("formatStatus(\"shipment\"") && uk.includes("Логістика Sellora"), "shipments page has localized shipment keys");
 assert(shipmentTable.includes("sellora-scrollbar") && shipmentTable.includes("md:hidden"), "shipments table uses Sellora scrollbar and mobile cards");
 assert(en.includes('"pagination"') && uk.includes('"pagination"') && en.includes('"productOption"') && uk.includes('"productOption"'), "new pagination and product option strings use i18n keys");

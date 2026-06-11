@@ -1,9 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
+import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
 import { FormDialog } from "@/components/form-dialog";
 import { CustomerDetails } from "@/features/customers/components/customer-details";
 import { CustomerForm } from "@/features/customers/components/customer-form";
@@ -32,6 +33,7 @@ export default function CustomersPage() {
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const [search, setSearch] = useState("");
+  const [customerSort, setCustomerSort] = useState("newest");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -111,6 +113,12 @@ export default function CustomersPage() {
       addAttachment(workspaceId, { entity_type: "CUSTOMER", entity_id: selectedId, file_url: fileUrl }, undefined),
     onSuccess: invalidateDetails,
   });
+  const visibleCustomers = useMemo(() => [...(customersQuery.data ?? [])].sort((left, right) => {
+    if (customerSort === "oldest") return left.created_at.localeCompare(right.created_at);
+    if (customerSort === "nameAsc") return left.name.localeCompare(right.name);
+    if (customerSort === "nameDesc") return right.name.localeCompare(left.name);
+    return right.created_at.localeCompare(left.created_at);
+  }), [customersQuery.data, customerSort]);
 
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 sm:p-6 text-slate-950">
@@ -122,16 +130,18 @@ export default function CustomersPage() {
             <p className="mt-1 text-slate-600">{t("customers.subtitle")}</p>
           </div>
           <button className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700" onClick={() => setIsCreateOpen(true)}>
-            Create customer
+            {t("customers.create")}
           </button>
         </header>
 
-        <section className="grid min-w-0 gap-3 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-3">
-          <input className="rounded-md border border-slate-300 px-3 py-2" placeholder="Search customers" value={search} onChange={(event) => setSearch(event.target.value)} />
-        </section>
+        <FilterBar>
+          <SearchInput value={search} onChange={setSearch} placeholder={t("customers.searchPlaceholder")} />
+          <SortSelect value={customerSort} onChange={setCustomerSort} options={[{ value: "newest", label: t("sort.newest") }, { value: "oldest", label: t("sort.oldest") }, { value: "nameAsc", label: t("sort.nameAsc") }, { value: "nameDesc", label: t("sort.nameDesc") }]} />
+          <ResetFiltersButton onClick={() => { setSearch(""); setCustomerSort("newest"); }} />
+        </FilterBar>
 
         <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_380px]">
-          <CustomerTable customers={customersQuery.data ?? []} currencyCode={currentWorkspace?.currency_code ?? "UAH"} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} />
+          <CustomerTable customers={visibleCustomers} currencyCode={currentWorkspace?.currency_code ?? "UAH"} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} />
           {selectedCustomer ? (
             <div className="grid min-w-0 gap-3">
               {canEdit ? (
@@ -159,7 +169,7 @@ export default function CustomersPage() {
             </div>
           ) : (
             <aside className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-slate-500">
-              Select a customer to manage CRM details.
+              {t("customers.selectPrompt")}
             </aside>
           )}
         </div>

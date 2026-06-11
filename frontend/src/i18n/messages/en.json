@@ -222,7 +222,9 @@
     "create": "Create lead",
     "edit": "Edit lead",
     "archive": "Archive lead",
-    "empty": "No leads found."
+    "empty": "No leads found.",
+    "searchPlaceholder": "Search leads by name, phone, Instagram or notes",
+    "allSources": "All sources"
   },
   "customers": {
     "title": "Customers",
@@ -231,7 +233,9 @@
     "edit": "Edit customer",
     "archive": "Archive customer",
     "details": "Customer details",
-    "empty": "No customers found."
+    "empty": "No customers found.",
+    "searchPlaceholder": "Search customers by name, phone, Instagram or email",
+    "selectPrompt": "Select a customer to manage CRM details."
   },
   "orders": {
     "title": "Orders",
@@ -259,7 +263,8 @@
       "available": "Available",
       "price": "Price",
       "noImage": "No image",
-      "noProducts": "No products match this category and search."
+      "noProducts": "No products match this category and search.",
+      "refineSearch": "Refine search to narrow results."
     },
     "adCost": "Ad cost",
     "shipping": "Shipping",
@@ -269,7 +274,16 @@
     "itemsSubtotal": "Items subtotal",
     "productCost": "Product cost",
     "shippingCodOther": "Shipping / COD / Other",
-    "estimatedProfit": "Estimated profit"
+    "estimatedProfit": "Estimated profit",
+    "searchPlaceholder": "Search by order, customer, item, SKU or notes",
+    "allPaymentStatuses": "All payment statuses",
+    "todaySummary": "Today: {count} orders · {revenue} revenue · {profit} profit",
+    "selectPrompt": "Select an order to view details, status history, and profit.",
+    "createDescription": "Reserve inventory, add costs, and keep profit totals in the same mobile-safe modal style.",
+    "editDescription": "Order items can be edited while the order is NEW or CONFIRMED.",
+    "updateError": "Please check the order items and costs.",
+    "archiveTitle": "Archive order?",
+    "archiveDescription": "Only NEW or CANCELLED orders can be archived. Reservations are released when needed."
   },
   "products": {
     "title": "Products",
@@ -295,7 +309,8 @@
     "brand": "Brand",
     "active": "Active",
     "inactive": "Inactive",
-    "createProductVariantFirst": "Create a product first before adding variants."
+    "createProductVariantFirst": "Create a product first before adding variants.",
+    "allStatuses": "All statuses"
   },
   "inventory": {
     "title": "Inventory",
@@ -317,7 +332,26 @@
     "reason": "Reason",
     "updateThresholds": "Update inventory thresholds",
     "incomingQuantity": "Incoming quantity",
-    "minimumQuantity": "Minimum quantity"
+    "minimumQuantity": "Minimum quantity",
+    "searchPlaceholder": "Search product, SKU or variant SKU",
+    "allTransactionTypes": "All transaction types",
+    "qty": "Qty",
+    "stockLabel": "stock",
+    "reservedLabel": "reserved",
+    "noTransactionsYet": "No transactions yet",
+    "transactionTypes": {
+      "STOCK_IN": "Stock in",
+      "STOCK_OUT": "Stock out",
+      "RESERVE": "Reserve",
+      "UNRESERVE": "Unreserve",
+      "RETURN": "Return",
+      "ADJUSTMENT": "Adjustment"
+    },
+    "transactionReasons": {
+      "order_reservation": "Order reservation",
+      "order_shipped_release_reservation": "Order shipped release reservation",
+      "order_shipped_stock_out": "Order shipped stock out"
+    }
   },
   "shipments": {
     "title": "Shipments",
@@ -425,7 +459,10 @@
       "novaTitle": "Nova Poshta",
       "novaDescription": "Configure Nova Poshta credentials, sender settings, cities, warehouses, and TTN creation.",
       "novaAction": "Configure Nova Poshta"
-    }
+    },
+    "label": "Sellora Settings",
+    "integrationsTitle": "Integrations",
+    "integrationsSubtitle": "Configure delivery integrations for this workspace."
   },
   "importCenter": {
     "title": "Import Center",
@@ -463,7 +500,44 @@
     "connected": "Connected",
     "disconnected": "Disconnected",
     "testConnection": "Test connection",
-    "disconnect": "Disconnect"
+    "disconnect": "Disconnect",
+    "subtitle": "Connect delivery directory search and TTN creation.",
+    "savedKey": "Saved key",
+    "connection": "Connection",
+    "credentialHelp": "Enter a new credential only when connecting or rotating access. Saved credentials remain masked.",
+    "credential": "Nova Poshta credential",
+    "enterCredential": "Enter credential",
+    "saveApiKey": "Save API key",
+    "senderHelp": "Nova Poshta TTN creation requires sender references. City and warehouse refs can be searched here; counterparty and contact person refs may require account setup.",
+    "searchSenderCity": "Search sender city",
+    "searchSenderWarehouse": "Search sender warehouse",
+    "cityHelper": "Selecting a city fills Sender city ref.",
+    "warehouseHelper": "Selecting a warehouse fills Sender warehouse ref.",
+    "senderCityRef": "Sender city ref",
+    "senderWarehouseRef": "Sender warehouse ref",
+    "senderCounterpartyRef": "Sender counterparty ref",
+    "senderContactRef": "Sender contact person ref",
+    "senderPhone": "Sender phone",
+    "senderWarning": "Counterparty and contact person refs are required before TTN creation. Keep these values in Settings → Integrations and rotate the credential if account access changes.",
+    "maskedCredentials": "Saved credentials are masked and never displayed raw.",
+    "searchCityPlaceholder": "Search Nova Poshta city",
+    "searchWarehousePlaceholder": "Search Nova Poshta warehouse",
+    "citySearchFailed": "Unable to search Nova Poshta cities. Please try again.",
+    "warehouseSearchFailed": "Unable to load warehouses for the selected city.",
+    "searchingCities": "Searching cities…",
+    "loadingWarehouses": "Loading warehouses…",
+    "selectCityFirst": "Select or enter a sender city ref before loading warehouses.",
+    "noCitiesFound": "No cities found.",
+    "noWarehousesFound": "No warehouses found.",
+    "saveSuccess": "Nova Poshta settings saved.",
+    "saveFailed": "Unable to save Nova Poshta settings.",
+    "testFailed": "Unable to test Nova Poshta connection.",
+    "disconnectSuccess": "Nova Poshta disconnected.",
+    "status": {
+      "CONNECTED": "Connected",
+      "DISCONNECTED": "Disconnected",
+      "ERROR": "Error"
+    }
   },
   "statuses": {
     "lead": {
@@ -527,7 +601,8 @@
     "somethingWrong": "Something went wrong",
     "unableLoad": "Unable to load data",
     "noPermission": "You do not have permission.",
-    "required": "Please complete required fields."
+    "required": "Please complete required fields.",
+    "deleteFailed": "This record cannot be deleted in its current state."
   },
   "emptyStates": {
     "noData": "No data found",
@@ -558,5 +633,35 @@
     "showing": "Showing",
     "results": "results",
     "emptyPage": "No results on this page."
+  },
+  "filters": {
+    "sort": "Sort",
+    "reset": "Reset filters",
+    "search": "Search"
+  },
+  "sort": {
+    "newest": "Newest first",
+    "oldest": "Oldest first",
+    "nameAsc": "Name A → Z",
+    "nameDesc": "Name Z → A",
+    "revenueDesc": "Revenue high → low",
+    "revenueAsc": "Revenue low → high",
+    "profitDesc": "Profit high → low",
+    "profitAsc": "Profit low → high",
+    "stockDesc": "Stock high → low",
+    "stockAsc": "Stock low → high",
+    "reservedDesc": "Reserved high → low",
+    "minimumDesc": "Minimum threshold high → low"
+  },
+  "dateRange": {
+    "label": "Date range",
+    "today": "Today",
+    "last7": "Last 7 days",
+    "last30": "Last 30 days",
+    "thisMonth": "This month",
+    "allTime": "All time",
+    "custom": "Custom period",
+    "dateFrom": "Date from",
+    "dateTo": "Date to"
   }
 }

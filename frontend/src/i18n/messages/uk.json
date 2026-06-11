@@ -222,7 +222,9 @@
     "create": "Створити лід",
     "edit": "Редагувати лід",
     "archive": "Архівувати лід",
-    "empty": "Лідів не знайдено."
+    "empty": "Лідів не знайдено.",
+    "searchPlaceholder": "Пошук лідів за імʼям, телефоном, Instagram або нотатками",
+    "allSources": "Усі джерела"
   },
   "customers": {
     "title": "Клієнти",
@@ -231,7 +233,9 @@
     "edit": "Редагувати клієнта",
     "archive": "Архівувати клієнта",
     "details": "Деталі клієнта",
-    "empty": "Клієнтів не знайдено."
+    "empty": "Клієнтів не знайдено.",
+    "searchPlaceholder": "Пошук клієнтів за імʼям, телефоном, Instagram або email",
+    "selectPrompt": "Оберіть клієнта, щоб керувати CRM-деталями."
   },
   "orders": {
     "title": "Замовлення",
@@ -259,7 +263,8 @@
       "available": "Залишок",
       "price": "Ціна",
       "noImage": "Без фото",
-      "noProducts": "Немає товарів для цієї категорії та пошуку."
+      "noProducts": "Немає товарів для цієї категорії та пошуку.",
+      "refineSearch": "Уточніть пошук, щоб звузити список."
     },
     "adCost": "Витрати на рекламу",
     "shipping": "Доставка",
@@ -269,7 +274,16 @@
     "itemsSubtotal": "Сума позицій",
     "productCost": "Собівартість товарів",
     "shippingCodOther": "Доставка / COD / інше",
-    "estimatedProfit": "Орієнтовний прибуток"
+    "estimatedProfit": "Орієнтовний прибуток",
+    "searchPlaceholder": "Пошук за замовленням, клієнтом, товаром, SKU або нотатками",
+    "allPaymentStatuses": "Усі статуси оплати",
+    "todaySummary": "Сьогодні: {count} замовл. · {revenue} виручки · {profit} прибутку",
+    "selectPrompt": "Оберіть замовлення, щоб переглянути деталі, історію статусів і прибуток.",
+    "createDescription": "Резервуйте склад, додавайте витрати й контролюйте підсумки прибутку в мобільно-безпечному вікні.",
+    "editDescription": "Позиції замовлення можна редагувати, поки статус NEW або CONFIRMED.",
+    "updateError": "Перевірте позиції замовлення та витрати.",
+    "archiveTitle": "Архівувати замовлення?",
+    "archiveDescription": "Архівувати можна лише замовлення NEW або CANCELLED. Резерви буде знято за потреби."
   },
   "products": {
     "title": "Товари",
@@ -295,7 +309,8 @@
     "brand": "Бренд",
     "active": "Активний",
     "inactive": "Неактивний",
-    "createProductVariantFirst": "Спочатку створіть товар, а потім додавайте варіанти."
+    "createProductVariantFirst": "Спочатку створіть товар, а потім додавайте варіанти.",
+    "allStatuses": "Усі статуси"
   },
   "inventory": {
     "title": "Склад",
@@ -317,7 +332,26 @@
     "reason": "Причина",
     "updateThresholds": "Оновити пороги складу",
     "incomingQuantity": "Очікувана кількість",
-    "minimumQuantity": "Мінімальна кількість"
+    "minimumQuantity": "Мінімальна кількість",
+    "searchPlaceholder": "Пошук за товаром, SKU або SKU варіанта",
+    "allTransactionTypes": "Усі типи руху",
+    "qty": "К-сть",
+    "stockLabel": "залишок",
+    "reservedLabel": "резерв",
+    "noTransactionsYet": "Рухів складу ще немає",
+    "transactionTypes": {
+      "STOCK_IN": "Надходження",
+      "STOCK_OUT": "Списання",
+      "RESERVE": "Резерв",
+      "UNRESERVE": "Зняття резерву",
+      "RETURN": "Повернення",
+      "ADJUSTMENT": "Коригування"
+    },
+    "transactionReasons": {
+      "order_reservation": "Резервування під замовлення",
+      "order_shipped_release_reservation": "Зняття резерву після відправлення",
+      "order_shipped_stock_out": "Списання після відправлення"
+    }
   },
   "shipments": {
     "title": "Відправлення",
@@ -425,7 +459,10 @@
       "novaTitle": "Nova Poshta",
       "novaDescription": "Налаштуйте ключі, відправника, міста, склади та створення TTN.",
       "novaAction": "Налаштувати Nova Poshta"
-    }
+    },
+    "label": "Налаштування Sellora",
+    "integrationsTitle": "Інтеграції",
+    "integrationsSubtitle": "Налаштуйте інтеграції доставки для цього робочого простору."
   },
   "importCenter": {
     "title": "Імпорт",
@@ -457,13 +494,50 @@
     "affectInventoryWarning": "Це може змінити поточні залишки та резерви. Використовуйте лише для активних операційних замовлень."
   },
   "novaPoshta": {
-    "title": "Nova Poshta",
+    "title": "Нова Пошта",
     "apiKey": "API-ключ",
     "senderSettings": "Налаштування відправника",
     "connected": "Підключено",
     "disconnected": "Не підключено",
-    "testConnection": "Перевірити з’єднання",
-    "disconnect": "Відключити"
+    "testConnection": "Перевірити підключення",
+    "disconnect": "Відключити",
+    "subtitle": "Підключіть пошук міст, відділень та створення ТТН.",
+    "savedKey": "Збережений ключ",
+    "connection": "Підключення",
+    "credentialHelp": "Введіть новий ключ лише при першому підключенні або оновленні доступу. Збережені дані залишаються прихованими.",
+    "credential": "API-ключ Нової Пошти",
+    "enterCredential": "Введіть ключ",
+    "saveApiKey": "Зберегти API-ключ",
+    "senderHelp": "Для створення ТТН Нової Пошти потрібні дані відправника. Ref міста й відділення можна знайти тут; Ref контрагента та контактної особи можуть вимагати налаштування кабінету.",
+    "searchSenderCity": "Пошук міста відправника",
+    "searchSenderWarehouse": "Пошук відділення відправника",
+    "cityHelper": "Вибір міста заповнює Ref міста відправника.",
+    "warehouseHelper": "Вибір відділення заповнює Ref відділення відправника.",
+    "senderCityRef": "Ref міста відправника",
+    "senderWarehouseRef": "Ref відділення відправника",
+    "senderCounterpartyRef": "Ref контрагента відправника",
+    "senderContactRef": "Ref контактної особи відправника",
+    "senderPhone": "Телефон відправника",
+    "senderWarning": "Ref контрагента та контактної особи потрібні перед створенням ТТН. Зберігайте ці значення в Інтеграціях і оновлюйте ключ при зміні доступу.",
+    "maskedCredentials": "Збережені облікові дані приховані й ніколи не показуються повністю.",
+    "searchCityPlaceholder": "Пошук міста Нової Пошти",
+    "searchWarehousePlaceholder": "Пошук відділення Нової Пошти",
+    "citySearchFailed": "Не вдалося завантажити міста Нової Пошти.",
+    "warehouseSearchFailed": "Не вдалося завантажити відділення Нової Пошти.",
+    "searchingCities": "Пошук міст…",
+    "loadingWarehouses": "Завантаження відділень…",
+    "selectCityFirst": "Спочатку оберіть місто відправника.",
+    "noCitiesFound": "Міст не знайдено.",
+    "noWarehousesFound": "Відділень не знайдено.",
+    "saveSuccess": "Налаштування Нової Пошти збережено.",
+    "saveFailed": "Не вдалося зберегти налаштування Нової Пошти.",
+    "testFailed": "Не вдалося перевірити підключення Нової Пошти.",
+    "disconnectSuccess": "Нову Пошту відключено.",
+    "status": {
+      "CONNECTED": "Підключено",
+      "DISCONNECTED": "Не підключено",
+      "ERROR": "Помилка"
+    }
   },
   "statuses": {
     "lead": {
@@ -527,7 +601,8 @@
     "somethingWrong": "Щось пішло не так",
     "unableLoad": "Не вдалося завантажити дані",
     "noPermission": "У вас немає доступу.",
-    "required": "Заповніть обов’язкові поля."
+    "required": "Заповніть обов’язкові поля.",
+    "deleteFailed": "Цей запис не можна видалити в поточному стані."
   },
   "emptyStates": {
     "noData": "Даних не знайдено",
@@ -558,5 +633,35 @@
     "showing": "Показано",
     "results": "результатів",
     "emptyPage": "На цій сторінці немає результатів."
+  },
+  "filters": {
+    "sort": "Сортування",
+    "reset": "Скинути фільтри",
+    "search": "Пошук"
+  },
+  "sort": {
+    "newest": "Спочатку нові",
+    "oldest": "Спочатку старі",
+    "nameAsc": "Назва А → Я",
+    "nameDesc": "Назва Я → А",
+    "revenueDesc": "Виручка за спаданням",
+    "revenueAsc": "Виручка за зростанням",
+    "profitDesc": "Прибуток за спаданням",
+    "profitAsc": "Прибуток за зростанням",
+    "stockDesc": "Залишок за спаданням",
+    "stockAsc": "Залишок за зростанням",
+    "reservedDesc": "Резерв за спаданням",
+    "minimumDesc": "Мінімум за спаданням"
+  },
+  "dateRange": {
+    "label": "Період",
+    "today": "Сьогодні",
+    "last7": "Останні 7 днів",
+    "last30": "Останні 30 днів",
+    "thisMonth": "Цей місяць",
+    "allTime": "Увесь період",
+    "custom": "Власний період",
+    "dateFrom": "Дата від",
+    "dateTo": "Дата до"
   }
 }
