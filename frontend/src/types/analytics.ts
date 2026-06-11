@@ -1,0 +1,9 @@
+export type SalesSummary = { total_orders: number; total_revenue: string; average_order_value: string; completed_orders: number; cancelled_orders: number; returned_orders: number };
+export type ProfitSummary = { total_revenue: string; total_product_cost: string; total_ad_cost: string; total_shipping_cost: string; total_cod_fee: string; total_other_cost: string; total_net_profit: string; margin_percent: string };
+export type SalesTrendItem = { date: string; orders_count: number; revenue: string; net_profit: string };
+export type TopProduct = { product_id: string; product_name: string; variant_id: string; variant_sku: string; color?: string | null; size?: string | null; quantity_sold: number; revenue: string; net_profit: string };
+export type TopCustomer = { customer_id: string; name: string; phone?: string | null; instagram_username?: string | null; total_orders: number; total_spent: string };
+export type CustomersSummary = { total_customers: number; new_customers: number; repeat_customers: number; repeat_purchase_rate: string; top_customers: TopCustomer[] };
+export type LowStockItem = { product_id: string; product_name: string; variant_id: string; variant_sku: string; color?: string | null; size?: string | null; stock_quantity: number; reserved_quantity: number; incoming_quantity: number; minimum_quantity: number };
+export type InventorySummary = { total_variants: number; low_stock_count: number; out_of_stock_count: number; total_stock_units: number; low_stock_items: LowStockItem[] };
+export type DashboardAnalytics = { today_orders: number; today_revenue: string; today_profit: string; month_orders: number; month_revenue: string; month_profit: string; average_order_value: string; low_stock_count: number; top_products: TopProduct[]; top_customers: TopCustomer[]; sales_trend: SalesTrendItem[] };
