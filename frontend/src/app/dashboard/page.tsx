@@ -12,6 +12,7 @@ import { RecentOrdersTable } from "@/features/dashboard/components/recent-orders
 import { TopProductsCard, TopProductView } from "@/features/dashboard/components/top-products-card";
 import { DateRangeSelector } from "@/components/date-range-selector";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
+import { DemoWorkspaceNotice, FirstRunEmptyCtas, SetupChecklist } from "@/components/pilot-readiness";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
@@ -135,6 +136,14 @@ export default function DashboardPage() {
   const adSpend = toFiniteNumber(backendDashboard.data?.advertising.spend ?? advertising.data?.total_spend);
   const adRevenue = toFiniteNumber(backendDashboard.data?.advertising.revenue ?? advertising.data?.total_revenue);
   const roas = formatSafeRatio(adRevenue, adSpend);
+  const setupItems = [
+    { key: "products", href: "/products", done: (products.data?.length ?? 0) > 0 },
+    { key: "orders", href: "/orders", done: (orders.data?.length ?? 0) > 0 },
+    { key: "advertising", href: "/advertising", done: toFiniteNumber(backendDashboard.data?.advertising.spend ?? advertising.data?.total_spend) > 0 },
+    { key: "integrations", href: "/settings/integrations", done: false },
+    { key: "analytics", href: "/analytics", done: totalRevenue > 0 || (backendDashboard.data?.sales.orders_count ?? currentOrderSummary.ordersCount) > 0 },
+  ];
+  const isFirstRun = !isLoading && !hasError && setupItems.every((item) => !item.done);
 
   return (
     <main className="overflow-x-hidden p-4 sm:p-6">
@@ -148,6 +157,9 @@ export default function DashboardPage() {
 
         {hasError ? <ErrorState description={t("dashboard.errors.loadFailed")} onRetry={() => { backendDashboard.refetch(); salesSummary.refetch(); if (canSeeProfit) { profitSummary.refetch(); salesTrend.refetch(); topProducts.refetch(); } advertising.refetch(); orders.refetch(); leads.refetch(); inventory.refetch(); shipments.refetch(); }} /> : null}
         {isLoading ? <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4"><LoadingSkeleton rows={2} title={t("dashboard.loading.dashboard")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.orders")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.shipments")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.ads")} /></div> : null}
+        <DemoWorkspaceNotice workspace={currentWorkspace} />
+        <SetupChecklist items={setupItems} />
+        {isFirstRun ? <EmptyState title={t("firstRun.empty.title")} description={t("firstRun.empty.description")} action={<FirstRunEmptyCtas />} /> : null}
 
         <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <KpiCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={t("dashboard.tooltips.revenue")} trend={formatDeltaPercent(totalRevenue, previousRevenue)} />

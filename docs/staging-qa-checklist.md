@@ -361,3 +361,15 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Advertising history dry-run reports duplicate campaign/date metrics and safe estimates for spend/revenue/ROAS.
 - [ ] `backend/scripts_seed_demo.py` creates only synthetic DEMO records and can be run twice without duplicates.
 - [ ] After demo seed/import, Dashboard and Analytics reports show non-empty revenue, top products, advertising metrics, customer totals, inventory alerts, and business insights.
+
+## Sprint 2.7 — Demo Workspace, Onboarding and Pilot Readiness QA
+
+- [ ] Demo seed runs once and can be rerun without duplicating DEMO records.
+- [ ] Demo badge/notice appears only for demo workspace and never exposes workspace IDs.
+- [ ] Dashboard setup checklist appears, is localized, and links to Products, Import, Orders, Advertising, Integrations and Analytics.
+- [ ] Empty/new workspace shows useful first-run CTAs without appearing during loading.
+- [ ] Import Center helper text explains dry-run, warnings, errors, duplicates and next actions after a successful dry-run.
+- [ ] Pilot docs exist: `pilot-onboarding-guide.md`, `demo-script.md`, `pilot-qa-checklist.md`, and `mvp-readiness.md`.
+- [ ] Mobile QA covers Dashboard, Orders, Products, Inventory, Analytics, Import Center, Integrations and Advertising at 375px, 390px, 430px and 768px.
+- [ ] Demo workspace Dashboard and Analytics show meaningful data after `backend/scripts_seed_demo.py`.
+- [ ] Safety/privacy scan confirms no real private data, tokens, workspace IDs, API keys or private spreadsheets were committed.

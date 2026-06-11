@@ -54,3 +54,7 @@ Dry-run returns a structured report with total rows, valid/invalid rows, created
 ## Migration safety
 
 No schema migration is required for Sprint 2.6. Existing migrations remain additive. Import queries and writes must remain scoped to `workspace_id`, and soft-deleted records are ignored for duplicate checks unless intentionally restored by a future feature.
+
+## Pilot-user helper text
+
+For pilot users, Import Center explains that dry-run validates files without saving data, warnings require attention but may allow import, errors block affected rows, and duplicates are skipped by default. After a successful dry-run, the next action is to execute the import and verify source modules plus Dashboard/Analytics.

@@ -850,10 +850,13 @@
     "deleteFailed": "This record cannot be deleted in its current state."
   },
   "emptyStates": {
-    "noData": "No data found",
-    "noOrders": "No orders found",
-    "noCustomers": "No customers found",
-    "noProducts": "No products found"
+    "products": "Add products manually or import a catalog to start selling and reporting.",
+    "orders": "Create an order or import historical orders to see revenue and profit.",
+    "customers": "Add customers or import order history to build customer profiles.",
+    "leads": "Create leads from Instagram conversations before converting them to customers.",
+    "inventory": "Inventory appears after products and variants have stock rows.",
+    "advertising": "Add manual advertising metrics to understand ROAS and customer acquisition costs.",
+    "analytics": "Analytics becomes useful after orders, products, customers and advertising data exist."
   },
   "categories": {
     "all": "All",
@@ -988,5 +991,72 @@
       "title": "Analytics verification",
       "description": "After import, verify Dashboard, Sales, Products, Advertising, Customers, Inventory and Insights."
     }
+  },
+  "demoWorkspace": {
+    "badge": "Demo workspace",
+    "title": "Synthetic demo data",
+    "description": "This workspace uses generated DEMO data so pilot users can explore Sellora without exposing real customer, order, advertising, or spreadsheet data.",
+    "cta": "Review analytics"
+  },
+  "onboarding": {
+    "eyebrow": "Pilot setup",
+    "title": "First-run setup checklist",
+    "description": "Use these steps to prepare Sellora for a real Instagram shop. Completed steps are detected from available workspace data where it is safe to do so."
+  },
+  "setupChecklist": {
+    "progress": "{completed}/{total} completed",
+    "products": {
+      "title": "Add or import products",
+      "description": "Create products manually or import a catalog before creating reliable orders."
+    },
+    "orders": {
+      "title": "Add customers or order history",
+      "description": "Create orders or import safe historical orders so Dashboard and reports become useful."
+    },
+    "advertising": {
+      "title": "Add advertising metrics",
+      "description": "Enter manual Meta Ads metrics to review spend, revenue, ROAS, CPA and CPL."
+    },
+    "integrations": {
+      "title": "Configure Nova Poshta",
+      "description": "Open integration settings before testing shipment workflows with a real carrier."
+    },
+    "analytics": {
+      "title": "Review Dashboard and Analytics",
+      "description": "Check revenue, top products, customers, inventory alerts and business insights."
+    }
+  },
+  "firstRun": {
+    "empty": {
+      "title": "No business data yet",
+      "description": "Add products, orders and advertising metrics or run a dry-run import to turn Sellora into a useful workspace."
+    },
+    "ctas": {
+      "products": "Create product",
+      "import": "Import data",
+      "orders": "Create order",
+      "ads": "Add ad metric",
+      "integrations": "Nova Poshta settings",
+      "analytics": "Open analytics"
+    }
+  },
+  "importHelp": {
+    "title": "How imports work for pilot users",
+    "dryRun": "Dry-run only checks the file and does not save business data.",
+    "warnings": "Warnings mean rows may need attention but the import can often continue.",
+    "errors": "Errors mean affected rows cannot be imported until the file or mapping is fixed.",
+    "duplicates": "Duplicates are detected by safe keys and skipped by default unless a future update mode is added.",
+    "nextAction": "After a successful dry-run, execute the import and then review Dashboard, Analytics and the source module.",
+    "productColumns": "Expected catalog columns include product name/SKU, variant SKU or color/size, price, stock, minimum stock, category and image URL when available.",
+    "successNextTitle": "Next step after dry-run",
+    "successNextDescription": "If the counters look correct, execute the import, then check products, orders, advertising and analytics for the imported records."
+  },
+  "pilotReadiness": {
+    "title": "Pilot readiness",
+    "description": "Sellora is ready for guided pilot testing with synthetic demo data and safe spreadsheet dry-runs."
+  },
+  "pilotDocs": {
+    "title": "Pilot documentation",
+    "description": "Use the pilot onboarding guide, demo script and QA checklist for first-store feedback."
   }
 }

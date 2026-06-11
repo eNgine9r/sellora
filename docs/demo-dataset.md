@@ -36,3 +36,7 @@ After running the demo seed, verify:
 - Customer report shows repeat/customer spend values.
 - Inventory report shows low/out-of-stock examples.
 - Business insights show deterministic inventory or advertising warnings where applicable.
+
+## Sprint 2.7 demo QA
+
+After seeding, the frontend should identify the demo workspace with a localized notice and a setup checklist. Verify that `/dashboard`, `/analytics`, `/orders`, `/products`, `/inventory`, `/customers`, `/leads`, `/shipments`, `/advertising`, and `/settings/import` show meaningful synthetic data or clear next actions.
