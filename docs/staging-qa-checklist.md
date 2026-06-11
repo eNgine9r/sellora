@@ -339,3 +339,14 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Confirm Ukrainian and English analytics report labels, tooltips, empty states, errors, insight text, and table headers are localized.
 - Confirm backend/API enum values remain unchanged and are only localized for display.
 - Confirm no secrets, tokens, workspace IDs, API keys, customer private data, order data, profit data, or advertising data appear in docs, logs, examples, screenshots, or comments.
+
+## Sprint 2.5 — Analytics Backend Hardening QA
+
+- [ ] `/api/v1/analytics/sales-report` returns period-aware revenue, AOV, status breakdowns, and null restricted profit fields for non-authorized roles.
+- [ ] `/api/v1/analytics/products-report` uses captured order-item totals, not current product prices, and respects workspace isolation.
+- [ ] `/api/v1/analytics/advertising-report` returns null for ROAS/CPA/CPL/CTR/CPM when denominators are zero.
+- [ ] `/api/v1/analytics/customers-report` and `/api/v1/analytics/inventory-report` exclude soft-deleted records.
+- [ ] `/api/v1/analytics/business-insights` returns deterministic localization keys and no invented private data.
+- [ ] `/api/v1/analytics/dashboard-summary` keeps Dashboard KPI values consistent with Reports for the same date range.
+- [ ] Frontend `/dashboard` and `/analytics` use backend aggregates where available and show loading, empty, error, and restricted states safely.
+- [ ] `npm --prefix frontend run typecheck` and backend analytics tests pass or any unrelated existing issues are documented.

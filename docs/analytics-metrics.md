@@ -155,3 +155,29 @@ null
 ```
 
 Use `—`, a localized restricted state, or a localized empty state for missing data, zero denominators, empty ranges, products without images/categories, orders without customers/items, campaigns without metrics, and historical imported orders.
+
+## Sprint 2.5 Backend Analytics Hardening
+
+Sprint 2.5 moves critical analytics aggregation closer to the backend for performance, workspace isolation, soft-delete consistency, and RBAC-safe financial visibility. The frontend still formats values and may use lightweight helpers for display-only fallbacks, but canonical report metrics should come from backend aggregate endpoints when available.
+
+### Backend aggregate endpoints
+
+All endpoints are additive under `/api/v1/analytics`, require the `X-Workspace-ID` header, and accept inclusive `date_from` / `date_to` query parameters. When a denominator is zero, ratio fields return `null` and the UI displays `—`.
+
+| Endpoint | Purpose | RBAC / financial behavior |
+| --- | --- | --- |
+| `/api/v1/analytics/sales-report` | Revenue, order count, AOV, return rate, daily rows, order/payment status breakdowns. | Returns `can_view_profit`; `net_profit` and `margin` are `null` when profit visibility is restricted. |
+| `/api/v1/analytics/products-report` | Top products, top categories, low-stock best sellers, slow-moving placeholder. | Uses captured order item prices; product/category profit is `null` when restricted. |
+| `/api/v1/analytics/advertising-report` | Spend, revenue, ROAS, CPA, CPL, CTR, CPM, campaign rows, daily rows. | Advertising net profit is `null` when restricted. |
+| `/api/v1/analytics/customers-report` | New customers, repeat customers, customer spend/order rankings, lead conversion rate. | Uses safe customer fields already shown in the CRM UI. |
+| `/api/v1/analytics/inventory-report` | Low/out-of-stock counts, reserved/incoming totals, best sellers with low stock, no-sales stock. | Cost-derived stock value remains `null` unless backend cost visibility is explicitly supported. |
+| `/api/v1/analytics/business-insights` | Deterministic rule-based insights for inventory, advertising, returns, and healthy fallback states. | Returns localization keys, source metrics, and CTA route keys rather than free-form private data. |
+| `/api/v1/analytics/dashboard-summary` | Bundled dashboard aggregate payload for fewer frontend requests and formula consistency. | Carries the same `can_view_profit` and restricted-field behavior as report endpoints. |
+
+### Query safety rules
+
+- Every report query is scoped by `workspace_id`.
+- Soft-deleted orders, order items, products, variants, inventory rows, campaigns, metrics, leads, and customers are excluded by repository filters.
+- Backend enum values remain English and unchanged; localization happens only in frontend i18n.
+- Revenue includes `NEW`, `CONFIRMED`, `SHIPPED`, `DELIVERED`, and `COMPLETED`, and excludes `CANCELLED` and `RETURNED`.
+- Historical/imported orders are included when their metric date is inside the selected range and they are not soft-deleted.
