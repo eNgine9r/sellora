@@ -3,15 +3,22 @@
 import { useMemo, useState } from "react";
 import { dateRangeForPreset, dateRangePresetKeys, DateRangePreset, DateRangeValue } from "@/lib/date-range-presets";
 import { useI18n } from "@/i18n/provider";
+import { useDateRange } from "@/providers/date-range-provider";
 
 export function DateRangeSelector({ compact = false, onChange }: { compact?: boolean; onChange?: (range: DateRangeValue) => void }) {
   const { t, locale } = useI18n();
-  const [range, setRange] = useState<DateRangeValue>(() => dateRangeForPreset("last30"));
+  const sharedRange = useDateRange();
+  const [localRange, setLocalRange] = useState<DateRangeValue>(() => dateRangeForPreset("last30"));
+  const range = onChange ? localRange : sharedRange.range;
   const dateHelper = useMemo(() => (locale === "uk" ? "дд.мм.рррр" : "yyyy-mm-dd"), [locale]);
 
   function update(next: DateRangeValue) {
-    setRange(next);
-    onChange?.(next);
+    if (onChange) {
+      setLocalRange(next);
+      onChange(next);
+      return;
+    }
+    sharedRange.setRange(next);
   }
 
   return (

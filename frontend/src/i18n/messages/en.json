@@ -179,10 +179,33 @@
     "roas": "ROAS",
     "salesChart": "Sales chart",
     "orderStatus": "Order status",
-    "logistics": "Logistics",
-    "advertising": "Advertising",
-    "recentOrders": "Recent orders",
-    "topProducts": "Top products",
+    "logistics": {
+      "title": "Logistics health",
+      "subtitle": "Current shipment counters; delivered today and returned this month use calendar periods.",
+      "inTransit": "In transit",
+      "arrived": "Arrived",
+      "deliveredToday": "Delivered today",
+      "returnedThisMonth": "Returned this month"
+    },
+    "advertising": {
+      "title": "Advertising performance",
+      "spend": "Spend",
+      "revenue": "Revenue",
+      "messages": "Messages",
+      "leads": "Leads",
+      "orders": "Orders",
+      "cpa": "CPA",
+      "cpl": "CPL"
+    },
+    "recentOrders": {
+      "title": "Recent orders",
+      "subtitle": "Latest customer purchases and fulfillment state."
+    },
+    "topProducts": {
+      "title": "Top products",
+      "subtitle": "Best performers by revenue in the selected period.",
+      "sold": "sold"
+    },
     "notifications": "Notifications",
     "quickActions": "Quick actions",
     "activity": "Activity",
@@ -192,7 +215,78 @@
     "returnedThisMonth": "Returned This Month",
     "spend": "Spend",
     "messages": "Messages",
-    "leads": "Leads"
+    "leads": "Leads",
+    "restricted": "Restricted",
+    "kpis": {
+      "revenue": "Revenue",
+      "netProfit": "Net profit",
+      "orders": "Orders",
+      "newLeads": "New leads",
+      "roas": "ROAS"
+    },
+    "charts": {
+      "salesProfitTitle": "Sales and profit trend",
+      "salesProfitSubtitle": "Revenue and net profit for the selected period.",
+      "orderFunnelTitle": "Order status funnel",
+      "orderFunnelSubtitle": "Real order distribution for the selected period."
+    },
+    "topCategories": {
+      "title": "Top categories",
+      "subtitle": "Category revenue share from real order items.",
+      "sales": "sales"
+    },
+    "inventoryAlerts": {
+      "title": "Inventory alerts",
+      "subtitle": "Low-stock and out-of-stock products that need attention.",
+      "lowStock": "Low stock",
+      "outOfStock": "Out of stock",
+      "stockUnits": "Stock units",
+      "healthy": "Inventory looks healthy"
+    },
+    "tooltips": {
+      "revenue": "Revenue follows the existing analytics service totals for the selected period.",
+      "netProfit": "Net profit = revenue − product cost − ads − shipping − other costs.",
+      "orders": "Orders created in the selected period.",
+      "newLeads": "Leads created in the selected period.",
+      "roas": "ROAS shows how much revenue ads generated for each unit of ad spend."
+    },
+    "emptyStates": {
+      "noSalesTrend": "No sales trend yet",
+      "noSalesTrendDescription": "Create orders or import historical data to see revenue and profit dynamics here.",
+      "noOrdersInPeriod": "No orders in this period",
+      "noOrdersInPeriodDescription": "Change the period or create/import orders to see the funnel.",
+      "noTopProducts": "No product data yet",
+      "noTopProductsDescription": "Product performance will appear after orders are created or imported.",
+      "noCategories": "No category sales yet",
+      "noCategoriesDescription": "Category performance appears after orders with catalog items exist.",
+      "noRecentOrders": "No orders yet",
+      "noRecentOrdersDescription": "Create your first order or import historical data to start tracking revenue and fulfillment.",
+      "noNotifications": "No urgent notifications",
+      "noActivity": "No recent activity in this period"
+    },
+    "errors": {
+      "loadFailed": "Dashboard data could not be loaded. Refresh the page or retry after checking the current workspace connection."
+    },
+    "loading": {
+      "dashboard": "Loading dashboard…",
+      "orders": "Loading orders…",
+      "shipments": "Loading shipments…",
+      "ads": "Loading ads…"
+    },
+    "notificationsItems": {
+      "lowStock": "Low-stock products",
+      "outOfStock": "Out-of-stock products",
+      "unpaidOrders": "Unpaid orders",
+      "returnedShipments": "Returned shipments"
+    },
+    "activityItems": {
+      "orderCreated": "Order {number} created",
+      "leadCreated": "Lead {name} created"
+    },
+    "comparison": {
+      "noData": "No comparison data"
+    },
+    "analytics": "Analytics overview"
   },
   "tables": {
     "name": "Name",

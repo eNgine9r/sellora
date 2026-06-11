@@ -4,6 +4,7 @@ import { QueryProvider } from "@/providers/query-provider";
 import { AuthProvider } from "@/stores/auth.store";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { LocaleProvider } from "@/i18n/provider";
+import { DateRangeProvider } from "@/providers/date-range-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -36,12 +37,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
         <LocaleProvider>
           <ThemeProvider>
-          <QueryProvider>
-            <AuthProvider>
-              <AppShell>{children}</AppShell>
-            </AuthProvider>
-          </QueryProvider>
-        </ThemeProvider>
+            <QueryProvider>
+              <DateRangeProvider>
+                <AuthProvider>
+                  <AppShell>{children}</AppShell>
+                </AuthProvider>
+              </DateRangeProvider>
+            </QueryProvider>
+          </ThemeProvider>
         </LocaleProvider>
       </body>
     </html>

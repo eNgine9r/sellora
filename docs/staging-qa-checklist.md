@@ -266,3 +266,44 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 ### Full Ukrainian localization sweep
 - Review `/dashboard`, `/orders`, `/products`, `/inventory`, `/settings/integrations`, `/shipments`, `/leads`, `/customers`, `/advertising`, topbar, sidebar, modals, badges, empty states and table headers for obvious English copy in Ukrainian mode.
 - Confirm backend/API enum values and route/preset identifiers are not translated in submitted payloads.
+
+## Sprint 2.3 — Analytics & Dashboard Polish on Real Data QA
+
+### Dashboard date range integration
+- Change the global/topbar period selector and the dashboard compact selector between Today, Last 7 days, Last 30 days, This month, All time, and Custom period.
+- Confirm KPI cards, sales/profit chart, order funnel, top products, top categories, advertising summary, and recent orders refresh for the selected period.
+- Confirm Custom period submits ISO-compatible `date_from`/`date_to` values while the UI remains localized.
+
+### Real KPI cards and period comparison
+- Confirm Revenue follows the existing analytics service totals for the selected period, while status-specific blocks clearly show cancelled/returned counts separately.
+- Confirm Net Profit uses backend profit analytics only for roles allowed to see financial data; restricted roles see the localized hidden state.
+- Confirm Orders and New Leads counts use records created in the selected period.
+- Confirm ROAS uses advertising revenue/spend and shows `—` for zero spend instead of NaN or Infinity.
+- Confirm previous-period deltas are calculated from the equivalent previous range or omitted when comparison data is unavailable; no static fake percentages should appear.
+
+### Sales/profit chart and order status funnel
+- Confirm the sales chart displays revenue and net profit over time for the selected period, with loading and empty states.
+- Confirm order status funnel uses real counts for NEW, CONFIRMED, SHIPPED, DELIVERED, COMPLETED, RETURNED, and CANCELLED statuses.
+- Confirm status labels are localized in Ukrainian/English while API enum values remain unchanged.
+- Confirm charts remain readable in dark/light themes and do not overflow on mobile.
+
+### Top products and top categories
+- Confirm Top Products uses real order-item analytics and shows product name, SKU, category, quantity sold, revenue, optional profit, and thumbnail/placeholder.
+- Confirm Top Categories groups sold items by localized product category, shows quantity, revenue, and revenue share, and falls back to Other/Інше when category data is missing.
+- Confirm profit values are hidden for roles that should not see financial metrics.
+
+### Advertising, inventory, and logistics summaries
+- Confirm Advertising shows spend, revenue, ROAS, messages, orders, CPA, and CPL for the selected period with safe zero-denominator handling.
+- Confirm Inventory Alerts show low-stock count, out-of-stock count, total stock units, and top low-stock items, or the healthy-state message when no alert exists.
+- Confirm Logistics counters show in-transit, arrived, delivered-today, and returned-this-month counts from shipment data; note that active-state counters are intentionally current-state metrics.
+
+### Recent orders, notifications, and activity
+- Confirm Recent Orders shows order number, payment status, localized order status, revenue, optional profit, and created date without mobile overflow.
+- Confirm dashboard notifications are actionable counts for low stock, out of stock, unpaid orders, and returned shipments, and show a healthy empty state when there is nothing urgent.
+- Confirm the activity feed uses real recent orders/leads only and does not invent fake events.
+
+### Localization, RBAC, and safety
+- Review dashboard and analytics copy in Ukrainian and English, including metric tooltips/explanations, empty states, loading states, and errors.
+- Confirm backend/API enum values are not translated in payloads or database values.
+- Confirm auth/session/workspace headers still gate all dashboard queries and no cross-workspace data is visible.
+- Confirm no secrets, tokens, workspace IDs, customer/order/profit details, Nova Poshta credentials, or private business data appear in docs, logs, source comments, or screenshots.
