@@ -36,7 +36,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
       <nav className="sidebar-scrollbar grid min-w-0 gap-1 overflow-y-auto px-3 pb-44 lg:pb-5" aria-label={t("navigation.settings")}>
         {items.map(([href, label, Icon]) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`) || (href === "/dashboard" && pathname === "/overview");
+          const active = pathname === href || pathname.startsWith(`${href}/`) || (href === "/dashboard" && pathname === "/overview") || (href === "/reports" && pathname === "/analytics");
           return (
             <Link
               key={href}

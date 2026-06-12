@@ -377,7 +377,15 @@
     "editDescription": "Order items can be edited while the order is NEW or CONFIRMED.",
     "updateError": "Please check the order items and costs.",
     "archiveTitle": "Archive order?",
-    "archiveDescription": "Only NEW or CANCELLED orders can be archived. Reservations are released when needed."
+    "archiveDescription": "Only NEW or CANCELLED orders can be archived. Reservations are released when needed.",
+    "pagination": {
+      "loading": "Loading orders…",
+      "pageSize": "Orders per page",
+      "emptyTitle": "No orders yet.",
+      "emptyDescription": "Create your first order to track payment, shipment and profit in Sellora.",
+      "filteredEmptyTitle": "No orders match these filters.",
+      "filteredEmptyDescription": "Try changing search, status, payment status or sorting to find the order."
+    }
   },
   "products": {
     "title": "Products",
@@ -913,7 +921,11 @@
     "allTime": "All time",
     "custom": "Custom period",
     "dateFrom": "Date from",
-    "dateTo": "Date to"
+    "dateTo": "Date to",
+    "mobile": {
+      "customTitle": "Custom period dates",
+      "applyHint": "Date fields stack on mobile to keep Apply and Cancel visible."
+    }
   },
   "imports": {
     "presets": {
@@ -1108,6 +1120,10 @@
       "emptyTitle": "No feedback yet",
       "emptyDescription": "Pilot feedback submitted from the topbar will appear here for owners and managers.",
       "rating": "Rating {rating}/5"
+    },
+    "modal": {
+      "label": "Feedback",
+      "title": "Feedback"
     }
   },
   "pilotFeedback": {
@@ -1136,5 +1152,24 @@
   "supportProcess": {
     "title": "Support process",
     "description": "Triage feedback by severity, communicate fixes, and keep known limitations updated."
+  },
+  "mobileTopbar": {
+    "openNavigation": "Open navigation",
+    "more": "More actions",
+    "secondaryActions": "Mobile actions"
+  },
+  "mobileSidebar": {
+    "profile": "Workspace profile",
+    "quickControls": "Language and theme controls"
+  },
+  "reports": {
+    "navigation": {
+      "title": "Reports",
+      "alias": "Reports opens the Analytics workspace."
+    },
+    "emptyStates": {
+      "noData": "No report data yet",
+      "noDataDescription": "Add orders, products, inventory and advertising metrics to unlock reports."
+    }
   }
 }

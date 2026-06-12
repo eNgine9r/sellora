@@ -277,3 +277,26 @@ input[type="file"]::file-selector-button {
   background: rgba(148, 163, 184, 0.55);
   border-radius: 999px;
 }
+
+/* Sprint 2.9: keep native date inputs and calendar indicators visible on mobile in light/dark themes. */
+.sellora-date-input,
+input[type="date"] {
+  color-scheme: light;
+}
+
+.dark .sellora-date-input,
+.dark input[type="date"] {
+  color-scheme: dark;
+}
+
+.sellora-date-input::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(32%) sepia(12%) saturate(1085%) hue-rotate(179deg) brightness(88%) contrast(87%);
+}
+
+.dark .sellora-date-input::-webkit-calendar-picker-indicator,
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.45) contrast(1.05);
+}

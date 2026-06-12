@@ -385,3 +385,47 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Empty/loading/error final pass confirms empty states do not appear during loading and submit buttons disable while submitting.
 - [ ] Mobile QA includes feedback modal/form at 375px plus Dashboard, Analytics, Orders, Products, Inventory, Import Center and Advertising.
 - [ ] Safety scans show no secrets, API keys, tokens, workspace IDs, private spreadsheets or real private customer/order data.
+
+## Sprint 2.9 — Mobile UX, Feedback Modal & Orders List Polish
+
+### Mobile sidebar footer
+- [ ] At 375px, the sidebar footer profile row is compact and the user email truncates with ellipsis.
+  Expected result: language switcher and theme toggle align in one compact row; logout is a compact full-width secondary action.
+  Notes:
+  Severity if failed: Major
+
+### Mobile topbar
+- [ ] At 375px / 390px / 430px, topbar stays on one row with menu, logo, primary create action and More menu.
+  Expected result: feedback, language and theme are accessible from More without wrapping the topbar.
+  Notes:
+  Severity if failed: Major
+
+### Custom period and calendar icon visibility
+- [ ] Dashboard custom period date inputs stack without viewport overflow.
+  Expected result: date_from/date_to fields are fully visible and native calendar icons have contrast in light and dark themes.
+  Notes:
+  Severity if failed: Major
+
+### Feedback modal
+- [ ] Feedback opens as a centered modal on desktop and a full-width bottom sheet on mobile.
+  Expected result: overlay appears, the modal is not clipped, fields are fillable, and submit/cancel remain visible.
+  Notes:
+  Severity if failed: Major
+
+### Reports navigation
+- [ ] Sidebar “Звіти” route opens the active Analytics reports experience.
+  Expected result: /reports survives reload via the alias and existing /analytics links still work.
+  Notes:
+  Severity if failed: Major
+
+### Orders pagination
+- [ ] /orders shows 5 orders by default with page size options 5 / 15 / 30.
+  Expected result: pagination works with search, order status, payment status and sorting; filter changes reset to page 1.
+  Notes:
+  Severity if failed: Major
+
+### Responsive breakpoints
+- [ ] Verify /dashboard, /orders, /products, /inventory, /analytics, /settings, feedback modal and sidebar drawer at 375px / 390px / 430px / 768px.
+  Expected result: no body-level horizontal overflow and dark/light contrast remains acceptable.
+  Notes:
+  Severity if failed: Major

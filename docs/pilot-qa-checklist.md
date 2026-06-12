@@ -127,3 +127,35 @@ Severity if failed:
 Expected result: User understands what is manual, what is not automated yet, and how to report problems safely.
 Notes:
 Severity if failed:
+
+## Sprint 2.9 Pilot QA Addendum — Mobile polish and orders pagination
+
+- [ ] Open the mobile sidebar at 375px.
+Expected result: profile, language, theme and logout controls are compact; email is truncated and does not stretch the drawer.
+Notes:
+Severity if failed: Major
+
+- [ ] Open the app topbar at 375px.
+Expected result: topbar stays on one row; feedback/language/theme are available from the More menu.
+Notes:
+Severity if failed: Major
+
+- [ ] Select “Власний період” / “Custom period” on Dashboard.
+Expected result: date fields do not overflow and calendar icons are visible in dark and light themes.
+Notes:
+Severity if failed: Major
+
+- [ ] Open the Feedback form on desktop and mobile.
+Expected result: centered modal on desktop, bottom sheet on mobile, overlay visible, submit/cancel accessible.
+Notes:
+Severity if failed: Major
+
+- [ ] Open “Звіти” from sidebar.
+Expected result: route opens the Analytics reports page without duplicate or blank reports screens.
+Notes:
+Severity if failed: Major
+
+- [ ] Open /orders with more than 5 orders.
+Expected result: first page shows 5 orders, page sizes 5 / 15 / 30 work, search/filter/sort reset pagination to page 1.
+Notes:
+Severity if failed: Major

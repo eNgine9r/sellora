@@ -80,16 +80,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm" aria-label="Close menu" onClick={() => setMobileMenuOpen(false)} />
           <div className="relative h-full w-[88vw] max-w-sm overflow-hidden bg-[#080812] shadow-2xl">
             <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
-            <div className="absolute inset-x-0 bottom-0 border-t border-white/10 bg-[#080812] p-4">
-              <div className="mb-3 grid gap-2 rounded-2xl bg-white/[0.06] p-3 text-sm text-slate-200">
-                <span className="truncate font-black">{currentWorkspace?.workspace_name ?? "Workspace"}</span>
-                <span className="truncate text-xs text-slate-400">{currentUser?.email}</span>
+            <div className="mobile-sidebar-footer-compact absolute inset-x-0 bottom-0 border-t border-white/10 bg-[#080812] p-3">
+              <div className="mb-2 flex min-w-0 items-center gap-3 rounded-2xl bg-white/[0.06] p-3 text-sm text-slate-200">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white/10 text-xs font-black text-white">{(currentWorkspace?.workspace_name ?? "S").slice(0, 1)}</div>
+                <div className="min-w-0 leading-tight" aria-label={t("mobileSidebar.profile")}>
+                  <p className="truncate font-black">{currentWorkspace?.workspace_name ?? "Workspace"}</p>
+                  <p className="truncate text-xs text-slate-400">{currentUser?.email}</p>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <LanguageSwitcher />
-                <ThemeToggle />
-                <button className="min-h-11 rounded-2xl border border-white/10 bg-white/10 px-3 text-sm font-bold text-white" onClick={handleLogout}>{t("actions.logout")}</button>
+              <div className="grid grid-cols-2 gap-2" aria-label={t("mobileSidebar.quickControls")}>
+                <LanguageSwitcher compact />
+                <ThemeToggle compact />
               </div>
+              <button className="mt-2 min-h-10 w-full rounded-2xl border border-white/10 bg-white/[0.07] px-3 text-sm font-bold text-white transition hover:bg-white/10" onClick={handleLogout}>{t("actions.logout")}</button>
             </div>
           </div>
         </div>

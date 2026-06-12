@@ -377,7 +377,15 @@
     "editDescription": "Позиції замовлення можна редагувати, поки статус NEW або CONFIRMED.",
     "updateError": "Перевірте позиції замовлення та витрати.",
     "archiveTitle": "Архівувати замовлення?",
-    "archiveDescription": "Архівувати можна лише замовлення NEW або CANCELLED. Резерви буде знято за потреби."
+    "archiveDescription": "Архівувати можна лише замовлення NEW або CANCELLED. Резерви буде знято за потреби.",
+    "pagination": {
+      "loading": "Завантажуємо замовлення…",
+      "pageSize": "Замовлень на сторінці",
+      "emptyTitle": "Замовлень ще немає.",
+      "emptyDescription": "Створіть перше замовлення, щоб відстежувати оплату, доставку та прибуток у Sellora.",
+      "filteredEmptyTitle": "За цими фільтрами замовлень немає.",
+      "filteredEmptyDescription": "Змініть пошук, статус замовлення, статус оплати або сортування, щоб знайти замовлення."
+    }
   },
   "products": {
     "title": "Товари",
@@ -913,7 +921,11 @@
     "allTime": "Увесь період",
     "custom": "Власний період",
     "dateFrom": "Дата від",
-    "dateTo": "Дата до"
+    "dateTo": "Дата до",
+    "mobile": {
+      "customTitle": "Дати власного періоду",
+      "applyHint": "На мобільному поля дат стають у стовпчик, щоб усе було видно."
+    }
   },
   "imports": {
     "presets": {
@@ -1108,6 +1120,10 @@
       "emptyTitle": "Фідбеку ще немає",
       "emptyDescription": "Фідбек, надісланий із topbar, зʼявиться тут для власників і менеджерів.",
       "rating": "Оцінка {rating}/5"
+    },
+    "modal": {
+      "label": "Фідбек",
+      "title": "Фідбек"
     }
   },
   "pilotFeedback": {
@@ -1136,5 +1152,24 @@
   "supportProcess": {
     "title": "Процес підтримки",
     "description": "Triage фідбек за severity, комунікуйте виправлення і оновлюйте known limitations."
+  },
+  "mobileTopbar": {
+    "openNavigation": "Відкрити навігацію",
+    "more": "Більше дій",
+    "secondaryActions": "Дії на мобільному"
+  },
+  "mobileSidebar": {
+    "profile": "Профіль простору",
+    "quickControls": "Мова та тема"
+  },
+  "reports": {
+    "navigation": {
+      "title": "Звіти",
+      "alias": "Звіти відкривають робочу аналітику."
+    },
+    "emptyStates": {
+      "noData": "Даних для звітів ще немає",
+      "noDataDescription": "Додайте замовлення, товари, склад і рекламні метрики, щоб побачити звіти."
+    }
   }
 }

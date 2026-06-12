@@ -1,10 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
 import { FormDialog } from "@/components/form-dialog";
+import { clampPage, paginateItems, PaginationControls, PAGE_SIZE_OPTIONS } from "@/components/pagination-controls";
+import { EmptyState, LoadingSkeleton } from "@/components/ui/states";
 import { OrderDetails } from "@/features/orders/components/order-details";
 import { OrderForm } from "@/features/orders/components/order-form";
 import { OrderTable } from "@/features/orders/components/order-table";
@@ -30,6 +32,8 @@ export default function OrdersPage() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | "">("");
   const [search, setSearch] = useState("");
   const [orderSort, setOrderSort] = useState("newest");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
@@ -57,7 +61,7 @@ export default function OrdersPage() {
   const updateMutation = useMutation({ mutationFn: (values: Parameters<typeof updateOrder>[2]) => updateOrder(workspaceId, editingOrder?.id ?? "", values), onSuccess: (order) => { setEditingOrder(null); setSelectedOrder(order); invalidateOrderState(); } });
   const archiveMutation = useMutation({ mutationFn: () => deleteOrder(workspaceId, archivingOrder?.id ?? ""), onSuccess: () => { if (selectedOrder?.id === archivingOrder?.id) setSelectedOrder(null); setArchivingOrder(null); invalidateOrderState(); } });
 
-  const visibleOrders = useMemo(() => {
+  const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
     return (ordersQuery.data ?? []).filter((order) => {
       const searchable = [order.order_number, order.customer_id, order.notes, ...order.items.flatMap((item) => [item.product_name, item.sku])].filter(Boolean).join(" ").toLowerCase();
@@ -77,6 +81,17 @@ export default function OrdersPage() {
       return right.created_at.localeCompare(left.created_at);
     });
   }, [ordersQuery.data, paymentStatus, search, orderSort]);
+  const paginatedOrders = useMemo(() => paginateItems(filteredOrders, page, pageSize), [filteredOrders, page, pageSize]);
+  const hasAnyOrders = (ordersQuery.data?.length ?? 0) > 0;
+  const hasActiveFilters = Boolean(search.trim() || status || paymentStatus || orderSort !== "newest");
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, status, paymentStatus, orderSort, pageSize]);
+
+  useEffect(() => {
+    setPage((currentPage) => clampPage(currentPage, pageSize, filteredOrders.length));
+  }, [filteredOrders.length, pageSize]);
 
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-slate-100 p-4 text-slate-950 sm:p-6">
@@ -87,10 +102,23 @@ export default function OrdersPage() {
           <select className="min-h-11 w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10 dark:text-white" value={status} onChange={(event) => setStatus(event.target.value as OrderStatus | "")}>{STATUSES.map((item) => <option key={item || "all"} value={item}>{item ? t(`statuses.order.${item}`) : t("common.allStatuses")}</option>)}</select>
           <select className="min-h-11 w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10 dark:text-white" value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value as PaymentStatus | "")}><option value="">{t("orders.allPaymentStatuses")}</option>{(["PENDING", "PAID", "COD", "REFUNDED"] as PaymentStatus[]).map((item) => <option key={item} value={item}>{t(`statuses.payment.${item}`)}</option>)}</select>
           <SortSelect value={orderSort} onChange={setOrderSort} options={[{ value: "newest", label: t("sort.newest") }, { value: "oldest", label: t("sort.oldest") }, { value: "revenueDesc", label: t("sort.revenueDesc") }, { value: "revenueAsc", label: t("sort.revenueAsc") }, { value: "profitDesc", label: t("sort.profitDesc") }, { value: "profitAsc", label: t("sort.profitAsc") }]} />
-          <ResetFiltersButton onClick={() => { setSearch(""); setStatus(""); setPaymentStatus(""); setOrderSort("newest"); }} />
+          <ResetFiltersButton onClick={() => { setSearch(""); setStatus(""); setPaymentStatus(""); setOrderSort("newest"); setPage(1); }} />
           <div className="text-sm text-slate-600 dark:text-slate-300">{t("orders.todaySummary", { count: dashboardQuery.data?.orders_today ?? 0, revenue: formatMoney(dashboardQuery.data?.revenue_today, currencyCode), profit: formatMoney(dashboardQuery.data?.profit_today, currencyCode) })}</div>
         </FilterBar>
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_360px]"><OrderTable orders={visibleOrders} currencyCode={currencyCode} onSelect={setSelectedOrder} onEdit={canEdit ? setEditingOrder : undefined} onArchive={canEdit ? setArchivingOrder : undefined} />{selectedOrder ? <OrderDetails order={selectedOrder} currencyCode={currencyCode} shipment={shipmentQuery.data} onStatusChange={(nextStatus) => statusMutation.mutate({ orderId: selectedOrder.id, nextStatus })} /> : <div className="rounded-xl border border-slate-200 bg-white p-4 text-slate-500 dark:border-white/10 dark:bg-[#15172A] dark:text-slate-300">{t("orders.selectPrompt")}</div>}</div>
+        {ordersQuery.isLoading ? <LoadingSkeleton rows={5} title={t("orders.pagination.loading")} /> : (
+          <div className="orders-pagination-section grid min-w-0 gap-4">
+            {filteredOrders.length > 0 ? <PaginationControls page={page} pageSize={pageSize} totalItems={filteredOrders.length} onPageChange={setPage} onPageSizeChange={(nextPageSize) => setPageSize(nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number])} /> : null}
+            {filteredOrders.length === 0 ? (
+              <EmptyState
+                title={hasAnyOrders && hasActiveFilters ? t("orders.pagination.filteredEmptyTitle") : t("orders.pagination.emptyTitle")}
+                description={hasAnyOrders && hasActiveFilters ? t("orders.pagination.filteredEmptyDescription") : t("orders.pagination.emptyDescription")}
+                action={!hasAnyOrders ? <button className="min-h-11 rounded-2xl bg-blue-600 px-4 text-sm font-black text-white" type="button" onClick={() => setIsCreateOpen(true)}>{t("orders.create")}</button> : null}
+              />
+            ) : (
+              <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_360px]"><OrderTable orders={paginatedOrders} currencyCode={currencyCode} onSelect={setSelectedOrder} onEdit={canEdit ? setEditingOrder : undefined} onArchive={canEdit ? setArchivingOrder : undefined} />{selectedOrder ? <OrderDetails order={selectedOrder} currencyCode={currencyCode} shipment={shipmentQuery.data} onStatusChange={(nextStatus) => statusMutation.mutate({ orderId: selectedOrder.id, nextStatus })} /> : <div className="rounded-xl border border-slate-200 bg-white p-4 text-slate-500 dark:border-white/10 dark:bg-[#15172A] dark:text-slate-300">{t("orders.selectPrompt")}</div>}</div>
+            )}
+          </div>
+        )}
         {isCreateOpen ? <FormDialog title={t("orders.create")} description={t("orders.createDescription")} size="xl" onClose={() => setIsCreateOpen(false)}><OrderForm variants={variantsQuery.data ?? []} products={productsQuery.data ?? []} inventory={inventoryQuery.data ?? []} currencyCode={currencyCode} showProfit={currentWorkspace?.role === "OWNER"} onSubmit={(values) => createMutation.mutate(values as Parameters<typeof createOrder>[1])} /></FormDialog> : null}
         {editingOrder ? <FormDialog title={t("orders.edit")} description={t("orders.editDescription")} size="xl" onClose={() => setEditingOrder(null)}><OrderForm variants={variantsQuery.data ?? []} products={productsQuery.data ?? []} inventory={inventoryQuery.data ?? []} currencyCode={currencyCode} initialOrder={editingOrder} lockedItems={!ITEM_EDIT_STATUSES.includes(editingOrder.status)} submitLabel={t("actions.save")} showProfit={currentWorkspace?.role === "OWNER"} onSubmit={(values) => updateMutation.mutate(values as Parameters<typeof updateOrder>[2])} />{updateMutation.isError ? <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-100">{safeApiErrorMessage(updateMutation.error, t("orders.updateError"))}</p> : null}</FormDialog> : null}
         {archivingOrder ? <ConfirmActionDialog title={t("orders.archiveTitle")} description={t("orders.archiveDescription")} actionLabel={t("orders.archive")} isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, t("errors.deleteFailed")) : null} onCancel={() => setArchivingOrder(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
