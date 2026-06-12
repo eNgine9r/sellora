@@ -36,7 +36,7 @@ assert.match(source.productTable, /statusBadgeClass/, "Product active/inactive s
 assert.match(source.topbar, /flex-wrap items-center/, "Topbar must be able to reflow at zoom/constrained widths");
 assert.match(source.topbar, /lg:flex-nowrap/, "Topbar should remain single-row on large layouts when possible");
 assert.match(source.topbar, /min-w-\[220px\] flex-1/, "Topbar search must keep a usable flexible width");
-assert.match(source.topbar, /h-12 w-40 shrink-0/, "Topbar date range select must have stable shrink-safe width");
+assert.doesNotMatch(source.topbar, /DateRangeSelector/, "Topbar global period selector should be removed; local page selectors own period changes");
 assert.match(source.topbar, /whitespace-nowrap/, "Create/logout controls must not wrap awkwardly");
 assert.match(source.topbar, /account-topbar-group/, "User/workspace and logout must be visually grouped");
 assert.match(source.themeToggle, /shrink-0/, "Theme button must remain aligned as a fixed-size control");

@@ -9,12 +9,14 @@ const integrations = read("frontend/src/features/integrations/components/nova-po
 const city = read("frontend/src/features/integrations/components/city-search-select.tsx");
 const warehouse = read("frontend/src/features/integrations/components/warehouse-search-select.tsx");
 const topbar = read("frontend/src/components/app-topbar.tsx");
+const dashboard = read("frontend/src/app/dashboard/page.tsx");
+const analytics = read("frontend/src/app/analytics/page.tsx");
 const en = read("frontend/src/i18n/messages/en.json");
 const uk = read("frontend/src/i18n/messages/uk.json");
 
 assert(orderForm.includes("MAX_PRODUCT_SELECTOR_OPTIONS = 30") && orderForm.includes("visibleProductOptions") && !orderForm.includes("slice(0, 8)"), "order product selector uses full filtered data with selector-specific visible subset, not product-page pagination");
 assert(orderForm.includes("product-select-item") && orderForm.includes("product-option-placeholder") && orderForm.includes("orders.productOption.refineSearch"), "compact product selector image/placeholder/refine markers exist");
-assert(existsSync("frontend/src/components/filter-controls.tsx") && existsSync("frontend/src/components/date-range-selector.tsx") && topbar.includes("DateRangeSelector"), "FilterBar/SearchInput/SortSelect/DateRangeSelector markers exist");
+assert(existsSync("frontend/src/components/filter-controls.tsx") && existsSync("frontend/src/components/date-range-selector.tsx") && !topbar.includes("DateRangeSelector") && dashboard.includes("DateRangeSelector compact") && analytics.includes("DateRangeSelector compact"), "FilterBar/SearchInput/SortSelect exist, global topbar period selector is removed, and local DateRangeSelector markers remain");
 assert(inventoryPage.includes("transactionPage") && inventoryPage.includes("transactionPageSize") && inventoryPage.includes("paginatedTransactions") && inventoryPage.includes("historyTypeFilter"), "transaction history has independent pagination and filter state");
 assert(inventoryPage.match(/<PaginationControls[\s\S]*transactionPage/) && transactionHistory.includes("transactionTypeLabel") && transactionHistory.includes("transactionReasonLabel"), "transaction history uses PaginationControls and localized transaction helpers");
 assert(integrations.includes("t(\"novaPoshta.senderSettings\")") && integrations.includes("dark:bg-amber-500/15") && integrations.includes("maskedCredentials"), "settings integrations uses i18n and dark-aware warning styles");

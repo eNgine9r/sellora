@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, ReactNode, useState } from "react";
+import { createPortal } from "react-dom";
 import { MessageSquare, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/i18n/provider";
@@ -44,13 +45,8 @@ export function FeedbackDialog({ workspaceId, buttonClassName, buttonContent, on
     }
   }
 
-  return (
-    <>
-      <button className={buttonClassName ?? "min-h-11 shrink-0 rounded-2xl border border-violet-200 bg-white px-3 text-sm font-black text-violet-700 shadow-sm transition hover:bg-violet-50 dark:border-violet-400/30 dark:bg-white/10 dark:text-violet-100"} onClick={() => setDialogOpen(true)} type="button">
-        {buttonContent ?? t("feedback.button")}
-      </button>
-      {open ? (
-        <div className="feedback-modal fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={t("feedback.form.title")}>
+  const modal = open ? (
+    <div className="feedback-modal fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={t("feedback.form.title")}>
           <section className="max-h-[min(92vh,760px)] w-full overflow-hidden rounded-t-[30px] bg-white shadow-2xl dark:bg-slate-950 sm:max-w-lg sm:rounded-[30px]">
             <div className="max-h-[min(92vh,760px)] overflow-y-auto overscroll-contain p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
@@ -76,8 +72,15 @@ export function FeedbackDialog({ workspaceId, buttonClassName, buttonContent, on
               </form>
             </div>
           </section>
-        </div>
-      ) : null}
+    </div>
+  ) : null;
+
+  return (
+    <>
+      <button className={buttonClassName ?? "topbar-action inline-flex h-12 shrink-0 items-center justify-center rounded-2xl border border-violet-200 bg-white px-3 text-sm font-black text-violet-700 shadow-sm transition hover:bg-violet-50 dark:border-violet-400/30 dark:bg-white/10 dark:text-violet-100"} onClick={() => setDialogOpen(true)} type="button">
+        {buttonContent ?? t("feedback.button")}
+      </button>
+      {modal ? createPortal(modal, document.body) : null}
     </>
   );
 }

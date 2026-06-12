@@ -159,3 +159,13 @@ Severity if failed: Major
 Expected result: first page shows 5 orders, page sizes 5 / 15 / 30 work, search/filter/sort reset pagination to page 1.
 Notes:
 Severity if failed: Major
+
+- [ ] Re-test Analytics detailed table pagination.
+Expected result: /analytics shows 5 detailed rows by default, page sizes 5 / 15 / 30 work, and changing the local period resets pagination to page 1.
+Notes:
+Severity if failed: Major
+
+- [ ] Confirm there is no global period selector in the shared topbar.
+Expected result: Dashboard and Analytics still have local period selectors, but the shared header no longer duplicates this control.
+Notes:
+Severity if failed: Minor

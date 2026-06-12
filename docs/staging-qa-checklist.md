@@ -429,3 +429,24 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
   Expected result: no body-level horizontal overflow and dark/light contrast remains acceptable.
   Notes:
   Severity if failed: Major
+
+### Sprint 2.9 follow-up — Responsive feedback and analytics cleanup
+- [ ] Feedback modal positioning is re-tested on desktop and mobile.
+  Expected result: modal is rendered above topbar/sidebar with overlay, centered desktop behavior, bottom-sheet mobile behavior, internal scroll, and visible close/submit/cancel controls.
+  Notes:
+  Severity if failed: Major
+
+- [ ] Mobile More menu is re-tested at 375px / 390px / 430px.
+  Expected result: menu is viewport-safe, not clipped by topbar overflow, readable in dark/light themes, and closes on outside click or action.
+  Notes:
+  Severity if failed: Major
+
+- [ ] Analytics detailed sales table pagination is re-tested.
+  Expected result: /analytics defaults to 5 rows, supports 5 / 15 / 30, resets page to 1 when the period changes, and does not show a false empty state during loading.
+  Notes:
+  Severity if failed: Major
+
+- [ ] Shared topbar global period selector is removed while local selectors remain.
+  Expected result: Dashboard and Analytics local period selectors still work; shared header is less overloaded and buttons align consistently.
+  Notes:
+  Severity if failed: Major

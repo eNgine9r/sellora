@@ -71,7 +71,10 @@
     "create": "Create",
     "notifications": "Notifications",
     "createOrder": "Create order",
-    "switchWorkspace": "Switch workspace"
+    "switchWorkspace": "Switch workspace",
+    "actions": {
+      "normalized": "Topbar actions share consistent height and alignment."
+    }
   },
   "language": {
     "label": "Language",
@@ -689,6 +692,12 @@
       "incoming": "Incoming",
       "minimum": "Minimum",
       "salesInPeriod": "Sales in period"
+    },
+    "pagination": {
+      "loading": "Loading report rows…",
+      "pageSize": "Rows per page",
+      "emptyTitle": "No report rows for this period",
+      "emptyDescription": "Change the period or add orders to populate detailed analytics."
     }
   },
   "settings": {
@@ -1171,5 +1180,11 @@
       "noData": "No report data yet",
       "noDataDescription": "Add orders, products, inventory and advertising metrics to unlock reports."
     }
+  },
+  "mobileMoreMenu": {
+    "close": "Close more menu"
+  },
+  "calendarInput": {
+    "visibleIcon": "Calendar icon is visible in light and dark themes."
   }
 }

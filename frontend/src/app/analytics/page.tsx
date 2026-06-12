@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { DateRangeSelector } from "@/components/date-range-selector";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
+import { clampPage, paginateItems, PaginationControls, PAGE_SIZE_OPTIONS } from "@/components/pagination-controls";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 import { ANALYTICS_ORDER_STATUSES, ANALYTICS_PAYMENT_STATUSES, buildBusinessInsights, buildDailySalesRows, buildVariantLookups, formatDecimal, formatPercentValue, formatSafeRatio, leadsInRange, ordersInRange, summarizeAdvertising, safeDivide, summarizeCustomers, summarizeInventory, summarizeOrders, toFiniteNumber, UNAVAILABLE } from "@/lib/analytics-formulas";
@@ -39,6 +40,8 @@ export default function AnalyticsPage() {
   const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const startDate = range.date_from || undefined;
   const endDate = range.date_to || undefined;
+  const [analyticsPage, setAnalyticsPage] = useState(1);
+  const [analyticsPageSize, setAnalyticsPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
 
   const salesReport = useQuery({ queryKey: ["analytics-sales-report", workspaceId, startDate, endDate], queryFn: () => fetchSalesReport(workspaceId, undefined, startDate, endDate), enabled });
   const productsReport = useQuery({ queryKey: ["analytics-products-report", workspaceId, startDate, endDate], queryFn: () => fetchProductsReport(workspaceId, undefined, startDate, endDate), enabled });
@@ -66,6 +69,7 @@ export default function AnalyticsPage() {
   const currentLeads = useMemo(() => leadsInRange(leads.data ?? [], range), [leads.data, range.date_from, range.date_to]);
   const orderSummary = useMemo(() => summarizeOrders(currentOrders), [currentOrders]);
   const salesRows = useMemo(() => buildDailySalesRows(currentOrders), [currentOrders]);
+  const paginatedSalesRows = useMemo(() => paginateItems(salesRows, analyticsPage, analyticsPageSize), [analyticsPage, analyticsPageSize, salesRows]);
   const backendAdSummary = advertisingReport.data;
   const adSummary = useMemo(() => summarizeAdvertising(advertising.data), [advertising.data]);
   const customerSummary = useMemo(() => summarizeCustomers(customers.data ?? []), [customers.data]);
@@ -103,6 +107,14 @@ export default function AnalyticsPage() {
   const isLoading = sales.isLoading || advertising.isLoading || orders.isLoading || leads.isLoading || customers.isLoading || inventory.isLoading || products.isLoading || variants.isLoading;
   const hasError = sales.isError || advertising.isError || orders.isError || leads.isError || customers.isError || inventory.isError || products.isError || variants.isError;
 
+  useEffect(() => {
+    setAnalyticsPage(1);
+  }, [startDate, endDate, analyticsPageSize]);
+
+  useEffect(() => {
+    setAnalyticsPage((currentPage) => clampPage(currentPage, analyticsPageSize, salesRows.length));
+  }, [analyticsPageSize, salesRows.length]);
+
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 text-slate-950 dark:bg-slate-950 sm:p-6">
       <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
@@ -129,7 +141,10 @@ export default function AnalyticsPage() {
         <ReportCard title={t("analytics.sales.title")} subtitle={t("analytics.sales.subtitle")}>
           <div className="mb-4 grid gap-3 md:grid-cols-4"><MetricCard label={t("analytics.metrics.revenue")} value={formatMoney(toFiniteNumber(salesReport.data?.revenue ?? orderSummary.revenue), currencyCode)} helper={t("analytics.tooltips.revenue")} /><MetricCard label={t("analytics.metrics.netProfit")} value={(salesReport.data?.can_view_profit ?? canSeeProfit) ? formatMoney(toFiniteNumber(salesReport.data?.net_profit ?? profit.data?.total_net_profit ?? orderSummary.netProfit), currencyCode) : t("analytics.metrics.restricted")} helper={t("analytics.tooltips.netProfit")} /><MetricCard label={t("analytics.metrics.aov")} value={(salesReport.data?.aov ?? orderSummary.aov) == null ? UNAVAILABLE : formatMoney(toFiniteNumber(salesReport.data?.aov ?? orderSummary.aov), currencyCode)} helper={t("analytics.tooltips.aov")} /><MetricCard label={t("analytics.metrics.returnRate")} value={formatPercentValue(toFiniteNumber(salesReport.data?.return_rate ?? orderSummary.returnRate))} helper={t("analytics.tooltips.returnRate")} /></div>
           <div className="mb-4 grid gap-3 md:grid-cols-4"><MetricCard label={t("analytics.metrics.orders")} value={orderSummary.ordersCount} /><MetricCard label={t("analytics.metrics.margin")} value={canSeeProfit ? formatPercentValue(orderSummary.margin) : t("analytics.metrics.restricted")} helper={t("analytics.tooltips.margin")} /><MetricCard label={t("analytics.metrics.cancelledOrders")} value={orderSummary.cancelledOrders} /><MetricCard label={t("analytics.metrics.deliveredOrders")} value={orderSummary.deliveredOrders} /></div>
-          <TableShell><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-white/5 dark:text-slate-400"><tr><th className="px-3 py-2">{t("analytics.tables.date")}</th><th>{t("analytics.tables.orders")}</th><th>{t("analytics.tables.revenue")}</th>{canSeeProfit ? <th>{t("analytics.tables.netProfit")}</th> : null}<th>{t("analytics.tables.aov")}</th><th>{t("analytics.tables.returns")}</th><th>{t("analytics.tables.cancelled")}</th></tr></thead><tbody>{salesRows.map((row) => <tr key={row.date} className="border-t border-slate-100 dark:border-white/10"><td className="px-3 py-2 font-bold">{row.date}</td><td>{row.orders}</td><td>{formatMoney(row.revenue, currencyCode)}</td>{canSeeProfit ? <td>{formatMoney(row.netProfit, currencyCode)}</td> : null}<td>{row.aov == null ? UNAVAILABLE : formatMoney(row.aov, currencyCode)}</td><td>{row.returns}</td><td>{row.cancelled}</td></tr>)}</tbody></table>{!salesRows.length ? <EmptyState title={t("analytics.emptyStates.noSales")} description={t("analytics.emptyStates.noSalesDescription")} /> : null}</TableShell>
+          <div className="analytics-pagination-section grid gap-3">
+            {salesRows.length > 0 ? <PaginationControls page={analyticsPage} pageSize={analyticsPageSize} totalItems={salesRows.length} onPageChange={setAnalyticsPage} onPageSizeChange={(nextPageSize) => setAnalyticsPageSize(nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number])} /> : null}
+            <TableShell><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-white/5 dark:text-slate-400"><tr><th className="px-3 py-2">{t("analytics.tables.date")}</th><th>{t("analytics.tables.orders")}</th><th>{t("analytics.tables.revenue")}</th>{canSeeProfit ? <th>{t("analytics.tables.netProfit")}</th> : null}<th>{t("analytics.tables.aov")}</th><th>{t("analytics.tables.returns")}</th><th>{t("analytics.tables.cancelled")}</th></tr></thead><tbody>{paginatedSalesRows.map((row) => <tr key={row.date} className="border-t border-slate-100 dark:border-white/10"><td className="px-3 py-2 font-bold">{row.date}</td><td>{row.orders}</td><td>{formatMoney(row.revenue, currencyCode)}</td>{canSeeProfit ? <td>{formatMoney(row.netProfit, currencyCode)}</td> : null}<td>{row.aov == null ? UNAVAILABLE : formatMoney(row.aov, currencyCode)}</td><td>{row.returns}</td><td>{row.cancelled}</td></tr>)}</tbody></table>{!salesRows.length ? <EmptyState title={t("analytics.emptyStates.noSales")} description={t("analytics.emptyStates.noSalesDescription")} /> : null}</TableShell>
+          </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2"><div className="rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.05]"><h3 className="font-black dark:text-white">{t("analytics.sales.byStatus")}</h3><div className="mt-3 grid gap-2">{ANALYTICS_ORDER_STATUSES.map((status) => <div key={status} className="flex justify-between text-sm"><span>{formatStatus("order", status)}</span><strong>{orderSummary.statusCounts[status]}</strong></div>)}</div></div><div className="rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.05]"><h3 className="font-black dark:text-white">{t("analytics.sales.byPayment")}</h3><div className="mt-3 grid gap-2">{ANALYTICS_PAYMENT_STATUSES.map((status) => <div key={status} className="flex justify-between text-sm"><span>{formatStatus("payment", status)}</span><strong>{orderSummary.paymentCounts[status]}</strong></div>)}</div></div></div>
         </ReportCard>
 

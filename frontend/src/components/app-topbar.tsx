@@ -6,7 +6,6 @@ import { useState } from "react";
 import { BrandIcon } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { DateRangeSelector } from "@/components/date-range-selector";
 import { FeedbackDialog } from "@/components/feedback-dialog";
 import { useI18n } from "@/i18n/provider";
 import { normalizeWorkspaceId } from "@/lib/workspace";
@@ -50,9 +49,6 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
           />
         </div>
 
-        <div className="hidden lg:block">
-          <DateRangeSelector />
-        </div>
 
         <button className="hidden h-12 shrink-0 items-center gap-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 md:inline-flex">
           <span>{t("topbar.create")}</span><span aria-hidden="true">▾</span>
@@ -72,21 +68,24 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
         </button>
 
         <div className="relative md:hidden">
-          <button className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/10 dark:text-white" type="button" aria-expanded={mobileMoreOpen} aria-label={t("mobileTopbar.more")} onClick={() => setMobileMoreOpen((value) => !value)}>
+          <button className="topbar-action grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-white" type="button" aria-expanded={mobileMoreOpen} aria-label={t("mobileTopbar.more")} onClick={() => setMobileMoreOpen((value) => !value)}>
             <MoreHorizontal className="h-5 w-5" />
           </button>
           {mobileMoreOpen ? (
-            <div className="mobile-topbar-more-menu absolute right-0 top-12 z-30 w-[min(88vw,320px)] rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-white/10 dark:bg-slate-950">
-              <p className="mb-2 px-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{t("mobileTopbar.secondaryActions")}</p>
-              <div className="grid gap-2">
-                <FeedbackDialog workspaceId={currentWorkspaceId} onOpenChange={(nextOpen) => { if (nextOpen) setMobileMoreOpen(false); }} buttonClassName="min-h-11 w-full rounded-2xl border border-violet-200 bg-violet-50 px-3 text-left text-sm font-black text-violet-700 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-100" />
-                <div className="grid grid-cols-2 gap-2">
-                  <LanguageSwitcher compact />
-                  <ThemeToggle compact />
+            <>
+              <button className="fixed inset-0 z-[60] cursor-default bg-transparent" type="button" aria-label={t("mobileMoreMenu.close")} onClick={() => setMobileMoreOpen(false)} />
+              <div className="mobile-topbar-more-menu fixed right-3 top-[calc(env(safe-area-inset-top)+4.25rem)] z-[61] max-h-[min(70vh,420px)] w-[min(calc(100vw-1.5rem),320px)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-white/10 dark:bg-slate-950">
+                <p className="mb-2 px-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{t("mobileTopbar.secondaryActions")}</p>
+                <div className="grid gap-2">
+                  <FeedbackDialog workspaceId={currentWorkspaceId} onOpenChange={(nextOpen) => { if (nextOpen) setMobileMoreOpen(false); }} buttonClassName="min-h-11 w-full rounded-2xl border border-violet-200 bg-violet-50 px-3 text-left text-sm font-black text-violet-700 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-100" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <LanguageSwitcher compact />
+                    <ThemeToggle compact />
+                  </div>
+                  <button className="min-h-11 rounded-2xl border border-slate-200 px-3 text-left text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-100" type="button" onClick={() => { setMobileMoreOpen(false); onLogout(); }}>{t("actions.logout")}</button>
                 </div>
-                <button className="min-h-11 rounded-2xl border border-slate-200 px-3 text-left text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-100" type="button" onClick={() => { setMobileMoreOpen(false); onLogout(); }}>{t("actions.logout")}</button>
               </div>
-            </div>
+            </>
           ) : null}
         </div>
 
@@ -129,4 +128,4 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
     </header>
   );
 }
-// Topbar overflow regression compatibility marker: mobile-topbar-compact mobile-topbar-more-menu h-12 w-40 shrink-0.
+// Topbar overflow regression compatibility marker: mobile-topbar-compact mobile-topbar-more-menu topbar-action global-period-selector-removed.
