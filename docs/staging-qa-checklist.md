@@ -490,3 +490,16 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
   Expected result: status updates safely or shows a localized unavailable message without completing the order automatically.
   Notes:
   Severity if failed: Major
+
+## Sprint 3.1 — Shipment UX, TTN documents and delivery status QA
+
+- [ ] `/shipments` list shows TTN/order/customer/carrier/status/destination/updated context.
+- [ ] Search covers TTN, order number, customer name/phone, city and warehouse.
+- [ ] Carrier, status, TTN state and needs-action filters reset pagination to page 1.
+- [ ] Shipment detail shows grouped Order, Customer, Recipient, Nova Poshta, TTN and Status sections.
+- [ ] Copy TTN works on desktop and mobile, or shows a safe clipboard error.
+- [ ] Create TTN is disabled when a TTN already exists and duplicate attempts show localized messaging.
+- [ ] Sync status is disabled until TTN exists and shows safe unavailable messaging if Nova Poshta cannot be reached.
+- [ ] TTN print/download is documented as unavailable; no fake document is shown.
+- [ ] Creating a TTN does not automatically complete the order.
+- [ ] OWNER/MANAGER mutation actions and ANALYST read-only expectations remain enforced by backend RBAC.

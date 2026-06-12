@@ -9,7 +9,7 @@ from fastapi import HTTPException
 
 from app.dependencies.rbac import require_min_role
 from app.models.customer import Customer
-from app.models.order import Order, OrderStatus
+from app.models.order import Order, OrderStatus, PaymentStatus
 from app.models.role import RoleName
 from app.models.shipment import Shipment, ShipmentCarrier, ShipmentStatus
 from app.schemas.order import OrderStatusUpdate
@@ -119,8 +119,8 @@ class FakeOrderService:
 
 def _service(order_status=OrderStatus.NEW.value):
     workspace_id = uuid4()
-    customer = Customer(id=uuid4(), workspace_id=workspace_id, name="Recipient", phone="0000000000", total_orders=0, total_spent=Decimal("0"))
-    order = Order(id=uuid4(), workspace_id=workspace_id, order_number="ORD-2026-000001", status=order_status, revenue=Decimal("100"), product_cost=Decimal("0"), ad_cost=Decimal("0"), shipping_cost=Decimal("0"), cod_fee=Decimal("0"), other_cost=Decimal("0"), net_profit=Decimal("100"), customer_id=customer.id)
+    customer = Customer(id=uuid4(), workspace_id=workspace_id, name="Recipient", phone="0000000000", instagram_username="recipient_shop", total_orders=0, total_spent=Decimal("0"))
+    order = Order(id=uuid4(), workspace_id=workspace_id, order_number="ORD-2026-000001", status=order_status, payment_status=PaymentStatus.PENDING.value, revenue=Decimal("100"), product_cost=Decimal("0"), ad_cost=Decimal("0"), shipping_cost=Decimal("0"), cod_fee=Decimal("0"), other_cost=Decimal("0"), net_profit=Decimal("100"), customer_id=customer.id)
     order.customer = customer
     order.deleted_at = None
     order.created_at = datetime.now(UTC)
@@ -144,8 +144,23 @@ def test_shipment_creation_and_order_link() -> None:
 
     assert shipment.order_id == order.id
     assert shipment.order_number == "ORD-2026-000001"
+    assert shipment.order_status == OrderStatus.NEW.value
+    assert shipment.order_payment_status is not None
+    assert shipment.order_total == Decimal("100")
+    assert shipment.customer_name == "Recipient"
+    assert shipment.customer_phone == "0000000000"
+    assert shipment.customer_instagram_username == "recipient_shop"
     assert shipment.tracking_number == "TTN-SYNTHETIC-001"
     assert "SHIPMENT_CREATE" in service.audit_logs.actions
+
+
+def test_shipment_search_supports_context_source_markers() -> None:
+    source = Path("app/repositories/shipment_repository.py").read_text()
+
+    assert "Shipment.order.has" in source
+    assert "Shipment.customer.has" in source
+    assert "Customer.phone.ilike" in source
+    assert "Shipment.warehouse.ilike" in source
 
 
 def test_shipment_creation_blocks_order_without_customer() -> None:

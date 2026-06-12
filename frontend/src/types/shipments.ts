@@ -30,7 +30,12 @@ export type Shipment = {
   nova_poshta_raw_status: string | null;
   nova_poshta_synced_at: string | null;
   order_number: string | null;
+  order_status: string | null;
+  order_payment_status: string | null;
+  order_total: string | null;
   customer_name: string | null;
+  customer_phone: string | null;
+  customer_instagram_username: string | null;
   created_at: string;
   updated_at: string;
 };

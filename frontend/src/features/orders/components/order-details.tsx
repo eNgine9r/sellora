@@ -3,6 +3,7 @@ import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
 import { Order, OrderStatus } from "@/types/orders";
 import { Shipment } from "@/types/shipments";
+import { CopyTtnButton } from "@/features/shipments/components/ttn-actions";
 
 const NEXT_STATUSES: OrderStatus[] = [
   "CONFIRMED",
@@ -87,12 +88,15 @@ export function OrderDetails({
             <span>
               {t("shipments.warehouse")}: {shipment.warehouse ?? "—"}
             </span>
-            <Link
-              className="mt-2 inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white"
-              href="/shipments"
-            >
-              {t("shipments.openShipments")}
-            </Link>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <Link
+                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white"
+                href="/shipments"
+              >
+                {t("shipments.openShipments")}
+              </Link>
+              {shipment.tracking_number ? <CopyTtnButton trackingNumber={shipment.tracking_number} /> : <Link className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 py-2 font-bold dark:border-white/10" href={`/shipments?order_id=${order.id}`}>{t("shipments.createTtn")}</Link>}
+            </div>
           </div>
         ) : order.customer_id ? (
           <Link
@@ -167,3 +171,5 @@ export function OrderDetails({
   );
 }
 // Order multi-item regression compatibility markers: Unit price, Line total.
+
+// Order detail shipment section regression markers: tracking number shipment status carrier city warehouse copy TTN open shipment create TTN.

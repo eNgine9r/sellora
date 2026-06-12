@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import UTC, datetime, time
 from uuid import UUID
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.customer import Customer
+from app.models.order import Order
 from app.models.shipment import Shipment, ShipmentStatus
 
 
@@ -18,7 +20,17 @@ class ShipmentRepository:
         if status:
             stmt = stmt.where(Shipment.status == status)
         if search:
-            stmt = stmt.where(Shipment.tracking_number.ilike(f"%{search}%"))
+            pattern = f"%{search}%"
+            stmt = stmt.where(
+                or_(
+                    Shipment.tracking_number.ilike(pattern),
+                    Shipment.nova_poshta_document_number.ilike(pattern),
+                    Shipment.city.ilike(pattern),
+                    Shipment.warehouse.ilike(pattern),
+                    Shipment.order.has(Order.order_number.ilike(pattern)),
+                    Shipment.customer.has(or_(Customer.name.ilike(pattern), Customer.phone.ilike(pattern), Customer.instagram_username.ilike(pattern))),
+                )
+            )
         return list(self.db.execute(stmt.order_by(Shipment.created_at.desc())).scalars())
 
     def get(self, workspace_id: UUID, shipment_id: UUID) -> Shipment | None:

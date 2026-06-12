@@ -66,3 +66,10 @@
 - TTN creation stores tracking information on the shipment and prevents duplicate TTN creation for the same shipment.
 - Safe localized errors are required for connection checks, city/warehouse search, TTN creation, and status sync; raw third-party payloads and secrets must not appear in UI or audit logs.
 - Remaining future work: production validation with a controlled staging credential, background status synchronization, and fully validated TTN cancellation behavior.
+
+## Sprint 3.1 readiness — Shipments and TTN
+
+- Shipment list/detail UX now exposes order, customer, recipient, TTN, status and Nova Poshta context for pilot QA.
+- TTN copy and status sync UX are available where tracking data exists.
+- TTN printing/downloading remains a known limitation and is documented before broader pilot rollout.
+- Order status and shipment status remain separate; TTN creation does not auto-complete orders.

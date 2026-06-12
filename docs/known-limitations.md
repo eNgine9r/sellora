@@ -33,3 +33,9 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - Nova Poshta TTN cancellation is not fully production-validated and should be treated as manual operational follow-up until a dedicated cancellation workflow is added.
 - Sender counterparty and contact person refs may still need to be sourced from the shop’s Nova Poshta account; Sellora validates that they are present before TTN creation but does not yet browse all account sender entities.
 - Production validation must use the staging checklist and a controlled test order because real TTN creation may create real records in the Nova Poshta account.
+
+## Sprint 3.1 — Shipment / TTN limitations
+
+- Printable or downloadable Nova Poshta TTN documents are not implemented yet. Pilot users should copy the TTN number from Sellora and use the Nova Poshta cabinet for printing.
+- Delivery status sync depends on Nova Poshta API availability and requires an existing TTN; when unavailable, Sellora shows a safe localized message instead of raw third-party payloads.
+- TTN creation does not automatically complete an order. Order status and shipment status are intentionally kept separate.

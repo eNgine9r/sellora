@@ -182,3 +182,12 @@ Severity if failed: Minor
 - [ ] Shipment status sync failure shows a safe localized message.
 - [ ] Creating a TTN does not automatically mark the order as completed.
 - [ ] No credential, sender private value, customer private data, or real TTN is included in pilot notes/screenshots.
+
+## Sprint 3.1 pilot QA — Shipment workflow
+
+- [ ] Create shipment from a linked-customer order.
+- [ ] Confirm shipment detail sections are understandable for a store manager.
+- [ ] Copy TTN from shipment list/detail/order detail when a tracking number exists.
+- [ ] Confirm missing customer, recipient, sender settings and duplicate TTN states use localized safe messages.
+- [ ] Confirm Nova Poshta status sync is clear when unavailable.
+- [ ] Confirm mobile shipment list/detail are usable at 375px / 390px / 430px.

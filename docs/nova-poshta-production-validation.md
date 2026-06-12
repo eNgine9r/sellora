@@ -61,3 +61,13 @@ If sender city changes, the selected sender warehouse must be checked again beca
 - TTN cancellation through Nova Poshta is not fully production-validated yet.
 - Real credential validation requires staging access to a controlled shop account.
 - Refs for counterparty and contact person may need to be copied from the shop’s Nova Poshta account until a dedicated account-directory UI is added.
+
+## Sprint 3.1 delivery workflow QA
+
+1. Open `/shipments` and confirm search, filters and pagination work without horizontal overflow.
+2. Open a shipment detail panel and verify Order, Customer, Recipient, Nova Poshta, TTN and Status sections.
+3. Create a TTN only for a controlled synthetic/staging order and confirm duplicate creation is blocked.
+4. Copy the TTN from shipment list, shipment detail and order detail when available.
+5. Run status sync only after TTN exists and confirm errors are safe if Nova Poshta is unavailable.
+6. Confirm printable/downloadable TTN documents are presented as a known limitation, not as a fake document.
+7. Confirm logs and audit metadata do not contain raw API keys or raw third-party payloads.

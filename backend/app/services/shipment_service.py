@@ -185,5 +185,10 @@ class ShipmentService:
     def _response(self, shipment: Shipment) -> ShipmentResponse:
         return ShipmentResponse.model_validate(shipment, from_attributes=True).model_copy(update={
             "order_number": shipment.order.order_number if shipment.order else None,
+            "order_status": shipment.order.status if shipment.order else None,
+            "order_payment_status": shipment.order.payment_status if shipment.order else None,
+            "order_total": shipment.order.revenue if shipment.order else None,
             "customer_name": shipment.customer.name if shipment.customer else None,
+            "customer_phone": shipment.customer.phone if shipment.customer else None,
+            "customer_instagram_username": shipment.customer.instagram_username if shipment.customer else None,
         })

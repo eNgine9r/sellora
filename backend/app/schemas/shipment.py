@@ -84,7 +84,12 @@ class ShipmentResponse(BaseModel):
     nova_poshta_raw_status: str | None
     nova_poshta_synced_at: datetime | None
     order_number: str | None = None
+    order_status: str | None = None
+    order_payment_status: str | None = None
+    order_total: Decimal | None = None
     customer_name: str | None = None
+    customer_phone: str | None = None
+    customer_instagram_username: str | None = None
     created_at: datetime
     updated_at: datetime
 
