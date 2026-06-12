@@ -78,7 +78,7 @@ class FakeShipmentRepo:
         shipment.created_at = shipment.created_at or datetime.now(UTC)
         shipment.updated_at = shipment.updated_at or datetime.now(UTC)
         shipment.order = self.order
-        shipment.customer = None
+        shipment.customer = getattr(self.order, "customer", None)
         self.shipments.append(shipment)
         return shipment
 
@@ -119,12 +119,14 @@ class FakeOrderService:
 
 def _service(order_status=OrderStatus.NEW.value):
     workspace_id = uuid4()
-    order = Order(id=uuid4(), workspace_id=workspace_id, order_number="ORD-2026-000001", status=order_status, revenue=Decimal("100"), product_cost=Decimal("0"), ad_cost=Decimal("0"), shipping_cost=Decimal("0"), cod_fee=Decimal("0"), other_cost=Decimal("0"), net_profit=Decimal("100"))
+    customer = Customer(id=uuid4(), workspace_id=workspace_id, name="Recipient", phone="0000000000", total_orders=0, total_spent=Decimal("0"))
+    order = Order(id=uuid4(), workspace_id=workspace_id, order_number="ORD-2026-000001", status=order_status, revenue=Decimal("100"), product_cost=Decimal("0"), ad_cost=Decimal("0"), shipping_cost=Decimal("0"), cod_fee=Decimal("0"), other_cost=Decimal("0"), net_profit=Decimal("100"), customer_id=customer.id)
+    order.customer = customer
     order.deleted_at = None
     order.created_at = datetime.now(UTC)
     order.updated_at = datetime.now(UTC)
     service = ShipmentService.__new__(ShipmentService)
-    service.db = FakeDb()
+    service.db = FakeDb(customer)
     service.shipments = FakeShipmentRepo(workspace_id, order)
     service.orders = FakeOrderRepo(workspace_id, order)
     service.audit_logs = FakeAuditLogs()
@@ -144,6 +146,24 @@ def test_shipment_creation_and_order_link() -> None:
     assert shipment.order_number == "ORD-2026-000001"
     assert shipment.tracking_number == "TTN-SYNTHETIC-001"
     assert "SHIPMENT_CREATE" in service.audit_logs.actions
+
+
+def test_shipment_creation_blocks_order_without_customer() -> None:
+    service, workspace_id, order = _service()
+    order.customer_id = None
+    order.customer = None
+    service.db.customer = None
+
+    with pytest.raises(ShipmentServiceError, match="order does not have a customer"):
+        service.create(workspace_id, _create_payload(order.id), uuid4())
+
+
+def test_shipment_creation_rejects_customer_from_other_workspace() -> None:
+    service, workspace_id, order = _service()
+    service.db.customer = Customer(id=order.customer_id, workspace_id=uuid4(), name="Other workspace", phone="1111111111", total_orders=0, total_spent=Decimal("0"))
+
+    with pytest.raises(ShipmentServiceError, match="Customer not found in this workspace"):
+        service.create(workspace_id, _create_payload(order.id), uuid4())
 
 
 def test_duplicate_active_shipment_for_order_rejected() -> None:

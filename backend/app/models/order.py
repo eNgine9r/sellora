@@ -48,3 +48,16 @@ class Order(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Timestam
 
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     status_history = relationship("OrderStatusHistory", back_populates="order", cascade="all, delete-orphan")
+    customer = relationship("Customer")
+
+    @property
+    def customer_name(self) -> str | None:
+        return self.customer.name if self.customer else None
+
+    @property
+    def customer_phone(self) -> str | None:
+        return self.customer.phone if self.customer else None
+
+    @property
+    def customer_instagram_username(self) -> str | None:
+        return self.customer.instagram_username if self.customer else None

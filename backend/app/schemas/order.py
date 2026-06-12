@@ -28,6 +28,7 @@ class OrderCreate(BaseModel):
 
 
 class OrderUpdate(BaseModel):
+    customer_id: UUID | None = None
     payment_status: PaymentStatus | None = None
     ad_cost: Decimal | None = Field(default=None, ge=0)
     shipping_cost: Decimal | None = Field(default=None, ge=0)
@@ -76,6 +77,9 @@ class OrderResponse(BaseModel):
     workspace_id: UUID
     order_number: str
     customer_id: UUID | None
+    customer_name: str | None = None
+    customer_phone: str | None = None
+    customer_instagram_username: str | None = None
     status: OrderStatus
     payment_status: PaymentStatus
     is_historical: bool = False

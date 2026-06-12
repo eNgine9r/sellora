@@ -31,6 +31,9 @@ export type Order = {
   workspace_id: string;
   order_number: string;
   customer_id: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  customer_instagram_username: string | null;
   status: OrderStatus;
   payment_status: PaymentStatus;
   revenue: string;

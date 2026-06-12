@@ -9,7 +9,7 @@ from app.models.order import OrderStatus
 from app.models.product import Product
 from app.models.product_variant import ProductVariant
 from app.schemas.order import OrderCreate, OrderItemCreate, OrderStatusUpdate, OrderUpdate
-from app.services.order_service import OrderService
+from app.services.order_service import OrderService, OrderServiceError
 
 
 class FakeDb:
@@ -123,7 +123,7 @@ class FakeInventoryService:
 
 def _service() -> tuple[OrderService, Inventory, Customer]:
     workspace_id = uuid4()
-    customer = Customer(id=uuid4(), workspace_id=workspace_id, name="Customer", total_orders=0, total_spent=Decimal("0"))
+    customer = Customer(id=uuid4(), workspace_id=workspace_id, name="Customer", phone="0000000000", instagram_username="synthetic_shop", total_orders=0, total_spent=Decimal("0"))
     product = Product(id=uuid4(), workspace_id=workspace_id, name="Dress", sku="DR")
     variant = ProductVariant(id=uuid4(), workspace_id=workspace_id, product_id=product.id, sku="DR-RED-S", color="Red", size="S", product=product)
     inventory = Inventory(id=uuid4(), workspace_id=workspace_id, product_variant_id=variant.id, stock_quantity=10, reserved_quantity=0, minimum_quantity=2)
@@ -149,6 +149,66 @@ def _create_order(service: OrderService, inventory: Inventory, customer: Custome
         ),
         actor_user_id=uuid4(),
     )
+
+
+def test_order_creation_requires_customer_for_normal_orders() -> None:
+    service, inventory, _customer = _service()
+
+    try:
+        service.create(
+            inventory.workspace_id,
+            OrderCreate(items=[OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=1, unit_price=Decimal("50"), unit_cost=Decimal("20"))]),
+            actor_user_id=uuid4(),
+        )
+    except OrderServiceError as exc:
+        assert "Customer is required" in str(exc)
+    else:
+        raise AssertionError("Normal order creation should require a customer")
+
+    assert service.orders.order is None
+    assert inventory.reserved_quantity == 0
+    assert service.inventory_service.transactions == []
+
+
+def test_order_creation_rejects_cross_workspace_customer_link() -> None:
+    service, inventory, _customer = _service()
+    other_workspace_customer = Customer(
+        id=uuid4(),
+        workspace_id=uuid4(),
+        name="Other workspace customer",
+        phone="1111111111",
+        total_orders=0,
+        total_spent=Decimal("0"),
+    )
+    service.db.customer = other_workspace_customer
+
+    try:
+        service.create(
+            inventory.workspace_id,
+            OrderCreate(
+                customer_id=other_workspace_customer.id,
+                items=[OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=1, unit_price=Decimal("50"), unit_cost=Decimal("20"))],
+            ),
+            actor_user_id=uuid4(),
+        )
+    except OrderServiceError as exc:
+        assert "Customer not found in this workspace" in str(exc)
+    else:
+        raise AssertionError("Order creation should reject a customer from another workspace")
+
+    assert service.orders.order is None
+    assert inventory.reserved_quantity == 0
+
+
+def test_order_response_exposes_linked_customer_fields() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    order.customer = customer
+
+    assert order.customer_id == customer.id
+    assert order.customer_name == "Customer"
+    assert order.customer_phone == "0000000000"
+    assert order.customer_instagram_username == "synthetic_shop"
 
 
 def test_order_creation_generates_number_reserves_inventory_and_calculates_profit() -> None:
@@ -449,6 +509,35 @@ def test_shipped_order_rejects_item_edit_but_safe_fields_update() -> None:
     updated = service.update(inventory.workspace_id, order.id, OrderUpdate(notes="Safe note", shipping_cost=Decimal("7")), actor_user_id=uuid4())
     assert updated.notes == "Safe note"
     assert updated.shipping_cost == Decimal("7")
+
+
+def test_update_order_can_link_missing_customer_in_workspace() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    order.customer_id = None
+    order.customer = None
+
+    updated = service.update(inventory.workspace_id, order.id, OrderUpdate(customer_id=customer.id), actor_user_id=uuid4())
+
+    assert updated.customer_id == customer.id
+    assert updated.customer is customer
+    assert updated.customer_name == "Customer"
+
+
+def test_update_order_rejects_cross_workspace_customer_link() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    other_workspace_customer = Customer(id=uuid4(), workspace_id=uuid4(), name="Other workspace customer", phone="1111111111", total_orders=0, total_spent=Decimal("0"))
+    service.db.customer = other_workspace_customer
+
+    try:
+        service.update(inventory.workspace_id, order.id, OrderUpdate(customer_id=other_workspace_customer.id), actor_user_id=uuid4())
+    except OrderServiceError as exc:
+        assert "Customer not found in this workspace" in str(exc)
+    else:
+        raise AssertionError("Order update should reject a customer from another workspace")
+
+    assert order.customer_id == customer.id
 
 
 def test_update_order_variant_workspace_isolation() -> None:

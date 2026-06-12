@@ -134,15 +134,16 @@ class ShipmentService:
         in_transit, arrived, delivered_today, returned_this_month = self.shipments.summary_counts(workspace_id)
         return ShipmentSummaryResponse(in_transit_count=in_transit, arrived_count=arrived, delivered_today=delivered_today, returned_this_month=returned_this_month)
 
-    def _validated_customer_id(self, workspace_id: UUID, customer_id: UUID | None, order_customer_id: UUID | None) -> UUID | None:
-        if customer_id is None:
-            return order_customer_id
-        customer = self.db.get(Customer, customer_id)
+    def _validated_customer_id(self, workspace_id: UUID, customer_id: UUID | None, order_customer_id: UUID | None) -> UUID:
+        selected_customer_id = customer_id or order_customer_id
+        if selected_customer_id is None:
+            raise ShipmentServiceError("Cannot create shipment: order does not have a customer. Select a customer on the order and try again.")
+        if order_customer_id is not None and selected_customer_id != order_customer_id:
+            raise ShipmentServiceError("Shipment customer must match the order customer")
+        customer = self.db.get(Customer, selected_customer_id)
         if customer is None or customer.workspace_id != workspace_id or customer.deleted_at is not None:
             raise ShipmentServiceError("Customer not found in this workspace")
-        if order_customer_id and customer_id != order_customer_id:
-            raise ShipmentServiceError("Shipment customer must match the order customer")
-        return customer_id
+        return selected_customer_id
 
     def _validate_tracking(self, workspace_id: UUID, tracking_number: str | None, status: ShipmentStatus, shipment_id: UUID | None = None) -> None:
         if status != ShipmentStatus.DRAFT and not tracking_number:

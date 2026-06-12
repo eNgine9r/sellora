@@ -334,7 +334,15 @@
     "details": "Customer details",
     "empty": "No customers found.",
     "searchPlaceholder": "Search customers by name, phone, Instagram or email",
-    "selectPrompt": "Select a customer to manage CRM details."
+    "selectPrompt": "Select a customer to manage CRM details.",
+    "name": "Name",
+    "phone": "Phone",
+    "instagram": "Instagram username",
+    "quickCreate": "Create new customer",
+    "quickCreateSuccess": "Customer created and selected for the order.",
+    "quickCreateError": "Unable to create customer. Check the details and try again.",
+    "quickCreateNameRequired": "Enter the customer name.",
+    "quickCreatePhoneRequired": "Enter the customer phone for delivery."
   },
   "orders": {
     "title": "Orders",
@@ -394,7 +402,17 @@
     "profit": "Profit",
     "otherCost": "Other costs",
     "statusHistory": "Status history",
-    "changeStatus": "Change status"
+    "changeStatus": "Change status",
+    "customerSelector": "Customer",
+    "customerSelectorHelp": "Select an existing customer or create a new one before creating the order.",
+    "customerRequired": "Select or create a customer before creating the order.",
+    "customerSearchLabel": "Customer search",
+    "customerSearchPlaceholder": "Search customer by name, phone, or Instagram",
+    "createCustomer": "+ Add customer",
+    "customerPreview": "Selected customer",
+    "customerMissing": "Customer is not specified.",
+    "customerSearchEmpty": "No customers found. Try another search or add a new customer.",
+    "customerOrdersCount": "{count} orders"
   },
   "products": {
     "title": "Products",
@@ -513,7 +531,9 @@
     "orderRequired": "Order is required.",
     "trackingRequired": "Tracking number is required for non-draft shipments.",
     "openShipments": "Open shipments",
-    "createFromOrder": "Create shipment from order"
+    "createFromOrder": "Create shipment from order",
+    "orderCustomerMissing": "Cannot create shipment: order does not have a customer. Select a customer on the order and try again.",
+    "customerRequiredForShipment": "Shipment customer"
   },
   "advertising": {
     "title": "Advertising",

@@ -334,7 +334,15 @@
     "details": "Деталі клієнта",
     "empty": "Клієнтів не знайдено.",
     "searchPlaceholder": "Пошук клієнтів за імʼям, телефоном, Instagram або email",
-    "selectPrompt": "Оберіть клієнта, щоб керувати CRM-деталями."
+    "selectPrompt": "Оберіть клієнта, щоб керувати CRM-деталями.",
+    "name": "Ім’я",
+    "phone": "Телефон",
+    "instagram": "Instagram username",
+    "quickCreate": "Створити нового клієнта",
+    "quickCreateSuccess": "Клієнта створено й обрано для замовлення.",
+    "quickCreateError": "Не вдалося створити клієнта. Перевірте дані та спробуйте ще раз.",
+    "quickCreateNameRequired": "Вкажіть ім’я клієнта.",
+    "quickCreatePhoneRequired": "Вкажіть телефон клієнта для доставки."
   },
   "orders": {
     "title": "Замовлення",
@@ -394,7 +402,17 @@
     "profit": "Прибуток",
     "otherCost": "Інші витрати",
     "statusHistory": "Історія статусів",
-    "changeStatus": "Змінити статус"
+    "changeStatus": "Змінити статус",
+    "customerSelector": "Клієнт",
+    "customerSelectorHelp": "Оберіть існуючого клієнта або створіть нового перед оформленням замовлення.",
+    "customerRequired": "Оберіть або створіть клієнта перед створенням замовлення.",
+    "customerSearchLabel": "Пошук клієнта",
+    "customerSearchPlaceholder": "Пошук клієнта за іменем, телефоном або Instagram",
+    "createCustomer": "+ Додати клієнта",
+    "customerPreview": "Обраний клієнт",
+    "customerMissing": "Клієнта не вказано.",
+    "customerSearchEmpty": "Клієнтів не знайдено. Спробуйте інший пошук або додайте нового клієнта.",
+    "customerOrdersCount": "{count} замовлень"
   },
   "products": {
     "title": "Товари",
@@ -513,7 +531,9 @@
     "orderRequired": "Потрібно обрати замовлення.",
     "trackingRequired": "Для нечернеткових відправлень потрібен трек-номер.",
     "openShipments": "Відкрити відправлення",
-    "createFromOrder": "Створити відправлення з замовлення"
+    "createFromOrder": "Створити відправлення з замовлення",
+    "orderCustomerMissing": "Неможливо створити відправлення: у замовленні не вказано клієнта. Оберіть клієнта в замовленні та повторіть спробу.",
+    "customerRequiredForShipment": "Клієнт для відправлення"
   },
   "advertising": {
     "title": "Реклама",

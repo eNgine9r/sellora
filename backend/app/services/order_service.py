@@ -44,6 +44,7 @@ class OrderService:
         return OrderDashboardResponse(orders_today=orders_today, revenue_today=revenue_today, profit_today=profit_today)
 
     def create(self, workspace_id: UUID, payload: OrderCreate, actor_user_id: UUID | None, affect_inventory: bool = True, order_number: str | None = None, created_at: datetime | None = None, completed_at: datetime | None = None) -> Order:
+        customer = self._get_order_customer(workspace_id, payload.customer_id, payload.is_historical)
         prepared_items = []
         requested_by_inventory: dict[UUID, int] = {}
         for item_payload in payload.items:
@@ -62,7 +63,7 @@ class OrderService:
             Order(
                 workspace_id=workspace_id,
                 order_number=order_number or self._generate_order_number(workspace_id),
-                customer_id=payload.customer_id,
+                customer_id=customer.id if customer else None,
                 status=initial_status,
                 payment_status=payload.payment_status.value,
                 is_historical=payload.is_historical,
@@ -113,8 +114,14 @@ class OrderService:
         if order is None:
             return None
         old_value = snapshot(order)
+        if "customer_id" in payload.model_fields_set:
+            if payload.customer_id is None:
+                raise OrderServiceError("Customer is required to update an order")
+            customer = self._get_order_customer(workspace_id, payload.customer_id, is_historical=False)
+            order.customer_id = customer.id
+            order.customer = customer
         item_payloads = payload.items if "items" in payload.model_fields_set else None
-        changes = payload.model_dump(exclude_unset=True, exclude={"items"})
+        changes = payload.model_dump(exclude_unset=True, exclude={"items", "customer_id"})
         for field, value in changes.items():
             setattr(order, field, value.value if hasattr(value, "value") else value)
         if item_payloads is not None:
@@ -256,6 +263,16 @@ class OrderService:
         if variant is None or variant.workspace_id != workspace_id or variant.deleted_at is not None:
             raise OrderServiceError("Product variant does not exist in this workspace")
         return variant
+
+    def _get_order_customer(self, workspace_id: UUID, customer_id: UUID | None, is_historical: bool) -> Customer | None:
+        if customer_id is None:
+            if is_historical:
+                return None
+            raise OrderServiceError("Customer is required to create an order")
+        customer = self.db.get(Customer, customer_id)
+        if customer is None or customer.workspace_id != workspace_id or customer.deleted_at is not None:
+            raise OrderServiceError("Customer not found in this workspace")
+        return customer
 
     def _recalculate_profit(self, order: Order) -> None:
         order.net_profit = order.revenue - order.product_cost - order.ad_cost - order.shipping_cost - order.cod_fee - order.other_cost
