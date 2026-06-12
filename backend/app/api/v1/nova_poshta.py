@@ -24,7 +24,10 @@ def get_settings(workspace_id: UUID = Depends(get_workspace_id), current_user: U
 
 @router.post("/settings", response_model=NovaPoshtaSettingsResponse)
 def save_settings(payload: NovaPoshtaSettingsRequest, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.OWNER)), db: Session = Depends(get_db)) -> NovaPoshtaSettingsResponse:
-    return NovaPoshtaSettingsService(db).save_settings(workspace_id, payload, current_user.id)
+    try:
+        return NovaPoshtaSettingsService(db).save_settings(workspace_id, payload, current_user.id)
+    except NovaPoshtaServiceError as exc:
+        raise _bad_request(exc)
 
 
 @router.post("/test-connection", response_model=NovaPoshtaTestConnectionResponse)

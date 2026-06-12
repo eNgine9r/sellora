@@ -56,6 +56,8 @@ class NovaPoshtaSettingsService:
 
     def save_settings(self, workspace_id: UUID, payload: NovaPoshtaSettingsRequest, actor_user_id: UUID | None) -> NovaPoshtaSettingsResponse:
         connection = self.connections.get_by_provider(workspace_id, IntegrationProvider.NOVA_POSHTA.value)
+        if connection is None and not payload.api_key:
+            raise NovaPoshtaServiceError("Nova Poshta API key is required for the first connection")
         now = datetime.now(UTC)
         settings = payload.model_dump(exclude={"api_key"})
         if connection is None:
@@ -65,12 +67,16 @@ class NovaPoshtaSettingsService:
             connection.connected_at = connection.connected_at or now
             connection.settings = settings
         credential = self.credentials.get_active_for_connection(workspace_id, connection.id)
-        encrypted = encrypt_secret(payload.api_key)
-        if credential is None:
-            self.credentials.create(IntegrationCredential(workspace_id=workspace_id, connection_id=connection.id, encrypted_access_token=encrypted))
-        else:
-            credential.encrypted_access_token = encrypted
-        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="IntegrationConnection", entity_id=connection.id, action="NOVA_POSHTA_CONNECTED", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "status": connection.status})
+        if payload.api_key:
+            encrypted = encrypt_secret(payload.api_key)
+            if credential is None:
+                self.credentials.create(IntegrationCredential(workspace_id=workspace_id, connection_id=connection.id, encrypted_access_token=encrypted))
+            else:
+                credential.encrypted_access_token = encrypted
+        elif credential is None:
+            raise NovaPoshtaServiceError("Nova Poshta API key is required for the first connection")
+        audit_action = "NOVA_POSHTA_CONNECTED" if payload.api_key else "NOVA_POSHTA_SENDER_SETTINGS_UPDATED"
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="IntegrationConnection", entity_id=connection.id, action=audit_action, new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "status": connection.status, "sender_settings_saved": True, "credential_rotated": bool(payload.api_key)})
         self.db.commit()
         return self.get_settings(workspace_id)
 
@@ -142,13 +148,15 @@ class NovaPoshtaShipmentService:
             sender_fields = {"sender_city_ref is required", "sender_warehouse_ref is required", "sender_counterparty_ref is required", "sender_contact_ref is required", "sender_phone is required"}
             message = "Sender settings are incomplete. Please fill sender city, warehouse, counterparty, contact person, and phone." if any(error in sender_fields for error in errors) else "Shipment is missing required Nova Poshta fields."
             return NovaPoshtaTtnResponse(success=False, message=message, errors=errors)
+        if shipment.tracking_number or shipment.nova_poshta_document_number or shipment.nova_poshta_document_ref:
+            return NovaPoshtaTtnResponse(success=False, message="Nova Poshta TTN already exists for this shipment.", tracking_number=shipment.nova_poshta_document_number or shipment.tracking_number, document_ref=shipment.nova_poshta_document_ref, status=shipment.external_status, errors=["ttn already exists"])
         payload = self._document_payload(shipment, connection.settings or {})
         try:
             result = self.settings.client_factory(api_key).create_internet_document(payload)
-        except Exception as exc:
-            self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment_id, action="NOVA_POSHTA_ERROR", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value})
+        except Exception:
+            self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment_id, action="NOVA_POSHTA_ERROR", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": "TTN_CREATE_FAILED"})
             self.db.commit()
-            return NovaPoshtaTtnResponse(success=False, message="Nova Poshta TTN creation failed.", errors=[str(exc)])
+            return NovaPoshtaTtnResponse(success=False, message="Nova Poshta TTN creation failed. Please check the API key and sender settings, then try again.", errors=["NOVA_POSHTA_TTN_FAILED"])
         shipment.external_provider = IntegrationProvider.NOVA_POSHTA.value
         shipment.external_ref = result.document_ref
         shipment.external_status = result.status
@@ -169,7 +177,12 @@ class NovaPoshtaShipmentService:
         tracking_number = shipment.nova_poshta_document_number or shipment.tracking_number
         if not tracking_number:
             raise NovaPoshtaServiceError("Shipment does not have a Nova Poshta tracking number")
-        status = self.settings.client_factory(api_key).get_document_status(tracking_number)
+        try:
+            status = self.settings.client_factory(api_key).get_document_status(tracking_number)
+        except Exception:
+            self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="NOVA_POSHTA_ERROR", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": "STATUS_SYNC_FAILED"})
+            self.db.commit()
+            return NovaPoshtaStatusResponse(success=False, message="Nova Poshta status sync is unavailable. Please try again later.", tracking_number=tracking_number, status=shipment.external_status, synced_at=shipment.nova_poshta_synced_at)
         shipment.nova_poshta_raw_status = status
         shipment.external_status = status
         shipment.nova_poshta_synced_at = datetime.now(UTC)

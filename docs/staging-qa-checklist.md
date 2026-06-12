@@ -450,3 +450,43 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
   Expected result: Dashboard and Analytics local period selectors still work; shared header is less overloaded and buttons align consistently.
   Notes:
   Severity if failed: Major
+
+## Sprint 3.0 — Nova Poshta production validation QA
+
+### Settings and credential safety
+- [ ] Save the Nova Poshta credential through Settings → Integrations only.
+  Expected result: saved state is masked; raw credential is not shown after save and not present in visible logs.
+  Notes:
+  Severity if failed: Critical
+
+- [ ] Test Nova Poshta connection from Settings → Integrations.
+  Expected result: success or failure is localized and safe; no raw third-party payload is shown.
+  Notes:
+  Severity if failed: Major
+
+### Sender settings and directories
+- [ ] Search sender city and select a result.
+  Expected result: sender city ref is filled and stale warehouse ref is cleared if city changes.
+  Notes:
+  Severity if failed: Major
+
+- [ ] Search sender warehouse after city selection.
+  Expected result: warehouse search is disabled before city selection and shows loading, empty, and safe error states.
+  Notes:
+  Severity if failed: Major
+
+### Shipment and order flow
+- [ ] Create shipment from an order.
+  Expected result: the shipment form opens with the order selected, requires recipient and delivery data, and links the shipment back to the order.
+  Notes:
+  Severity if failed: Major
+
+- [ ] Create a Nova Poshta TTN for a prepared shipment.
+  Expected result: tracking/TTN is saved on the shipment, visible on order details, and duplicate TTN creation is blocked or warned.
+  Notes:
+  Severity if failed: Critical
+
+- [ ] Sync Nova Poshta status when supported.
+  Expected result: status updates safely or shows a localized unavailable message without completing the order automatically.
+  Notes:
+  Severity if failed: Major

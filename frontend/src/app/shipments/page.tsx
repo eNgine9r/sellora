@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FormDialog } from "@/components/form-dialog";
@@ -30,6 +30,7 @@ export default function ShipmentsPage() {
   const [search, setSearch] = useState("");
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [initialOrderId, setInitialOrderId] = useState<string | undefined>();
   const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
   const [archivingShipment, setArchivingShipment] = useState<Shipment | null>(null);
 
@@ -41,6 +42,14 @@ export default function ShipmentsPage() {
   const updateMutation = useMutation({ mutationFn: (values: Record<string, string>) => updateShipment(workspaceId, editingShipment?.id ?? "", buildShipmentUpdatePayload(values)), onSuccess: (shipment) => { setEditingShipment(null); setSelectedShipment(shipment); queryClient.invalidateQueries({ queryKey: ["shipments", workspaceId] }); queryClient.invalidateQueries({ queryKey: ["shipments-summary", workspaceId] }); } });
   const archiveMutation = useMutation({ mutationFn: () => deleteShipment(workspaceId, archivingShipment?.id ?? ""), onSuccess: () => { if (selectedShipment?.id === archivingShipment?.id) setSelectedShipment(null); setArchivingShipment(null); queryClient.invalidateQueries({ queryKey: ["shipments", workspaceId] }); queryClient.invalidateQueries({ queryKey: ["shipments-summary", workspaceId] }); queryClient.invalidateQueries({ queryKey: ["order-shipment", workspaceId] }); } });
 
+  useEffect(() => {
+    const orderId = new URLSearchParams(window.location.search).get("order_id") ?? undefined;
+    if (orderId) {
+      setInitialOrderId(orderId);
+      setIsCreateOpen(true);
+    }
+  }, []);
+
   return (
     <main className="min-h-screen bg-slate-100 p-4 text-slate-950 sm:p-6">
       <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
@@ -51,7 +60,7 @@ export default function ShipmentsPage() {
       </div>
       {archivingShipment ? <ConfirmActionDialog title={t("shipments.archiveTitle")} description={archivingShipment.nova_poshta_document_ref ? t("shipments.archiveNpDescription") : t("shipments.archiveDescription")} actionLabel={t("shipments.archive")} isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingShipment(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
       {editingShipment ? <EditRecordDialog title={t("shipments.edit")} fields={[{ name: "tracking_number", label: t("shipments.trackingNumber") }, { name: "carrier", label: t("shipments.carrier"), type: "select", options: ["NOVA_POSHTA", "UKRPOSHTA", "MEEST", "ROZETKA_DELIVERY", "OTHER"].map((value) => ({ value, label: value })) }, { name: "recipient_name", label: t("shipments.recipientName") }, { name: "recipient_phone", label: t("shipments.recipientPhone") }, { name: "city", label: t("shipments.city") }, { name: "warehouse", label: t("shipments.warehouse") }, { name: "shipping_cost", label: t("shipments.shippingCost"), type: "number" }, { name: "cod_amount", label: t("shipments.codAmount"), type: "number" }, { name: "declared_value", label: t("shipments.declaredValue"), type: "number" }, { name: "nova_poshta_city_ref", label: "Nova Poshta city ref" }, { name: "nova_poshta_warehouse_ref", label: "Nova Poshta warehouse ref" }, { name: "notes", label: t("shipments.notes"), type: "textarea" }]} initialValues={editingShipment} isSubmitting={updateMutation.isPending} submitError={updateMutation.isError ? safeApiErrorMessage(updateMutation.error, "Unable to save shipment changes. Please try again.") : null} onClose={() => setEditingShipment(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
-      {isCreateOpen ? <FormDialog title={t("shipments.create")} description={t("shipments.manualDescription")} size="xl" onClose={() => setIsCreateOpen(false)}><ShipmentForm orders={ordersQuery.data ?? []} workspaceId={workspaceId} onSubmit={(payload) => createMutation.mutate(payload)} /></FormDialog> : null}
+      {isCreateOpen ? <FormDialog title={t("shipments.create")} description={t("shipments.manualDescription")} size="xl" onClose={() => setIsCreateOpen(false)}><ShipmentForm orders={ordersQuery.data ?? []} workspaceId={workspaceId} initialOrderId={initialOrderId} onSubmit={(payload) => createMutation.mutate(payload)} /></FormDialog> : null}
     </main>
   );
 }

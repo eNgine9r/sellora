@@ -7,7 +7,7 @@ from app.models.integration_connection import IntegrationStatus
 
 
 class NovaPoshtaSettingsRequest(BaseModel):
-    api_key: str = Field(min_length=8, max_length=255)
+    api_key: str | None = Field(default=None, min_length=8, max_length=255)
     sender_city_ref: str | None = None
     sender_warehouse_ref: str | None = None
     sender_counterparty_ref: str | None = None

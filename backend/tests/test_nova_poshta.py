@@ -47,14 +47,20 @@ class FakeAudit:
 
 
 class FakeClient:
-    def __init__(self, credential, fail=False): self.credential = credential; self.fail = fail; self.create_called = False
+    def __init__(self, credential, fail=False, fail_create=False, fail_status=False):
+        self.credential = credential; self.fail = fail; self.fail_create = fail_create; self.fail_status = fail_status; self.create_called = False
     def test_connection(self):
         if self.fail: raise RuntimeError("failed")
         return True
     def search_cities(self, query, limit=20): return [SimpleNamespace(ref="city-ref", description=f"{query} city")]
     def search_warehouses(self, city_ref, query=None, limit=50): return [SimpleNamespace(ref="warehouse-ref", description="Warehouse", number="1")]
-    def create_internet_document(self, payload): self.create_called = True; return SimpleNamespace(tracking_number="TTN-001", document_ref="doc-ref", status="CREATED")
-    def get_document_status(self, tracking_number): return "Delivered"
+    def create_internet_document(self, payload):
+        self.create_called = True
+        if self.fail_create: raise RuntimeError("raw upstream payload with credential-like value")
+        return SimpleNamespace(tracking_number="TTN-001", document_ref="doc-ref", status="CREATED")
+    def get_document_status(self, tracking_number):
+        if self.fail_status: raise RuntimeError("raw status failure")
+        return "Delivered"
 
 
 def _settings_service(client_factory=None):
@@ -80,6 +86,22 @@ def test_settings_save_encrypts_and_masks_response_without_raw_value() -> None:
     assert "synthetic-credential-value" not in str(response.model_dump())
     assert service.audit_logs.records[-1]["action"] == "NOVA_POSHTA_CONNECTED"
 
+
+
+def test_sender_settings_update_preserves_existing_credential_without_raw_response() -> None:
+    service = _settings_service(); workspace_id = uuid4()
+    service.save_settings(workspace_id, NovaPoshtaSettingsRequest(api_key="synthetic-credential-value"), uuid4())
+    response = service.save_settings(workspace_id, NovaPoshtaSettingsRequest(sender_city_ref="sender-city", sender_warehouse_ref="sender-wh", sender_counterparty_ref="sender", sender_contact_ref="contact", sender_phone="0000000000"), uuid4())
+    assert decrypt_secret(service.credentials.credential.encrypted_access_token) == "synthetic-credential-value"
+    assert response.sender_city_ref == "sender-city"
+    assert "synthetic-credential-value" not in str(response.model_dump())
+    assert service.audit_logs.records[-1]["action"] == "NOVA_POSHTA_SENDER_SETTINGS_UPDATED"
+
+
+def test_first_connection_requires_api_key() -> None:
+    service = _settings_service(); workspace_id = uuid4()
+    with pytest.raises(ValueError):
+        service.save_settings(workspace_id, NovaPoshtaSettingsRequest(sender_city_ref="sender-city"), uuid4())
 
 def test_connection_success_and_failure_use_mocked_client() -> None:
     success = _settings_service(); workspace_id = uuid4()
@@ -150,3 +172,35 @@ def test_create_ttn_updates_shipment_and_does_not_log_credential() -> None:
 def test_manual_shipments_remain_valid_without_nova_poshta_configuration() -> None:
     shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), carrier=ShipmentCarrier.OTHER.value, status=ShipmentStatus.DRAFT.value)
     assert shipment.carrier == ShipmentCarrier.OTHER.value
+
+
+def test_create_ttn_prevents_duplicate_nova_poshta_document() -> None:
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.CREATED.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100, tracking_number="TTN-001", nova_poshta_document_ref="doc-ref", nova_poshta_document_number="TTN-001")
+    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
+    service = _shipment_service(shipment)
+    response = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
+    assert not response.success
+    assert response.tracking_number == "TTN-001"
+    assert "ttn already exists" in response.errors
+
+
+def test_create_ttn_api_failure_uses_safe_error_message_without_raw_payload() -> None:
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
+    service = _shipment_service(shipment)
+    service.settings.client_factory = lambda credential: FakeClient(credential, fail_create=True)
+    response = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
+    assert not response.success
+    assert response.errors == ["NOVA_POSHTA_TTN_FAILED"]
+    assert "raw upstream" not in str(response.model_dump())
+    assert "synthetic-credential-value" not in str(service.audit_logs.records)
+
+
+def test_sync_status_failure_returns_safe_message() -> None:
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.CREATED.value, tracking_number="TTN-001", nova_poshta_document_number="TTN-001")
+    service = _shipment_service(shipment)
+    service.settings.client_factory = lambda credential: FakeClient(credential, fail_status=True)
+    response = service.sync_status(shipment.workspace_id, shipment.id, uuid4())
+    assert not response.success
+    assert response.message == "Nova Poshta status sync is unavailable. Please try again later."
+    assert "raw status failure" not in str(response.model_dump())

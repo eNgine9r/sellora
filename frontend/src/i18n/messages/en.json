@@ -17,7 +17,9 @@
     "customer": "Customer",
     "order": "Order",
     "created": "Created",
-    "draft": "Draft"
+    "draft": "Draft",
+    "saving": "Saving…",
+    "loading": "Loading…"
   },
   "actions": {
     "create": "Create",
@@ -341,7 +343,7 @@
     "edit": "Edit order",
     "archive": "Archive order",
     "details": "Order details",
-    "items": "Order items",
+    "items": "Items",
     "empty": "No orders found.",
     "archiveUnavailable": "Archive unavailable",
     "selectCategory": "Select category",
@@ -388,7 +390,11 @@
       "emptyDescription": "Create your first order to track payment, shipment and profit in Sellora.",
       "filteredEmptyTitle": "No orders match these filters.",
       "filteredEmptyDescription": "Try changing search, status, payment status or sorting to find the order."
-    }
+    },
+    "profit": "Profit",
+    "otherCost": "Other costs",
+    "statusHistory": "Status history",
+    "changeStatus": "Change status"
   },
   "products": {
     "title": "Products",
@@ -415,7 +421,8 @@
     "active": "Active",
     "inactive": "Inactive",
     "createProductVariantFirst": "Create a product first before adding variants.",
-    "allStatuses": "All statuses"
+    "allStatuses": "All statuses",
+    "sku": "SKU"
   },
   "inventory": {
     "title": "Inventory",
@@ -504,7 +511,9 @@
     "phone": "Phone",
     "selectOrder": "Select order",
     "orderRequired": "Order is required.",
-    "trackingRequired": "Tracking number is required for non-draft shipments."
+    "trackingRequired": "Tracking number is required for non-draft shipments.",
+    "openShipments": "Open shipments",
+    "createFromOrder": "Create shipment from order"
   },
   "advertising": {
     "title": "Advertising",
@@ -802,7 +811,31 @@
       "CONNECTED": "Connected",
       "DISCONNECTED": "Disconnected",
       "ERROR": "Error"
-    }
+    },
+    "keyRequired": "Add a Nova Poshta API key to enable city search, warehouse search, and TTN creation.",
+    "keepExistingCredential": "Keep saved credential or enter a new one",
+    "missingSenderFields": "Missing",
+    "senderReady": "Sender settings are complete. Prepared shipments can create TTNs.",
+    "testingConnection": "Testing connection…",
+    "testSuccess": "Nova Poshta is connected. The credential works correctly.",
+    "minCityQuery": "Enter at least 2 characters to search cities.",
+    "cityRef": "City ref",
+    "warehouseRef": "Warehouse ref",
+    "documentRef": "Document ref",
+    "documentNumber": "TTN number",
+    "rawStatus": "Nova Poshta status",
+    "statusSyncUnavailableShort": "Awaiting sync",
+    "statusSyncNote": "Automatic delivery status updates are not fully connected yet; use manual sync when it is available for the TTN.",
+    "ttnCreated": "Nova Poshta TTN was created and saved on the shipment.",
+    "duplicateTtn": "This shipment already has a TTN. Duplicate creation is blocked.",
+    "ttnFailed": "Unable to create TTN. Check sender settings and the Nova Poshta API key.",
+    "senderSettingsIncomplete": "Sender settings are incomplete. Fill city, warehouse, counterparty, contact person, and phone in Settings → Integrations.",
+    "notConfigured": "Nova Poshta is not configured. Add a credential and sender settings in Settings → Integrations.",
+    "statusSynced": "Delivery status synced from Nova Poshta.",
+    "statusSyncUnavailable": "Unable to sync Nova Poshta status. The service may be temporarily unavailable.",
+    "creatingTtn": "Creating TTN…",
+    "ttnExists": "TTN already created",
+    "syncingStatus": "Syncing status…"
   },
   "statuses": {
     "lead": {

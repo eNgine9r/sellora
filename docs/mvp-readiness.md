@@ -56,3 +56,13 @@
 - **Analytics pagination:** detailed sales rows on `/analytics` use the shared 5 / 15 / 30 pagination controls and reset when the local period changes.
 - **Global period selector removal:** shared topbar no longer shows the duplicated period selector; local selectors remain on Dashboard and Analytics.
 - **Topbar alignment:** visible topbar actions keep consistent height/alignment while avoiding unnecessary width changes.
+
+## Sprint 3.0 readiness update — Nova Poshta production validation
+
+- Nova Poshta credentials remain stored through the existing integration credential mechanism, are encrypted at rest, and are returned to the UI only as masked state.
+- OWNER users manage Nova Poshta settings; MANAGER users can create and update shipments; ANALYST users remain read-only under the existing RBAC model.
+- Sender settings now support saving/reloading without re-entering the credential, city/warehouse lookup, stale warehouse clearing after city change, and required-field validation before TTN creation.
+- Shipment creation can be launched from order details and keeps order status independent from TTN creation.
+- TTN creation stores tracking information on the shipment and prevents duplicate TTN creation for the same shipment.
+- Safe localized errors are required for connection checks, city/warehouse search, TTN creation, and status sync; raw third-party payloads and secrets must not appear in UI or audit logs.
+- Remaining future work: production validation with a controlled staging credential, background status synchronization, and fully validated TTN cancellation behavior.

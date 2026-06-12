@@ -169,3 +169,16 @@ Severity if failed: Major
 Expected result: Dashboard and Analytics still have local period selectors, but the shared header no longer duplicates this control.
 Notes:
 Severity if failed: Minor
+
+## Sprint 3.0 — Nova Poshta pilot QA
+
+- [ ] OWNER can save and validate Nova Poshta settings while the saved credential remains masked.
+- [ ] MANAGER can create shipments and TTNs only when sender settings and shipment fields are complete.
+- [ ] ANALYST cannot mutate Nova Poshta settings or shipments.
+- [ ] City and warehouse searches show loading, empty, and safe error states without raw Nova Poshta payloads.
+- [ ] Creating a shipment from order opens `/shipments?order_id=...` with the order selected.
+- [ ] TTN/tracking number appears on shipment and order details after successful creation.
+- [ ] Duplicate TTN creation is prevented or clearly warned.
+- [ ] Shipment status sync failure shows a safe localized message.
+- [ ] Creating a TTN does not automatically mark the order as completed.
+- [ ] No credential, sender private value, customer private data, or real TTN is included in pilot notes/screenshots.

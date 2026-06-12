@@ -15,7 +15,7 @@ export type NovaPoshtaSettings = {
 };
 
 export type NovaPoshtaSettingsPayload = {
-  api_key: string;
+  api_key?: string | null;
   sender_city_ref?: string | null;
   sender_warehouse_ref?: string | null;
   sender_counterparty_ref?: string | null;
