@@ -97,3 +97,22 @@ Audit/log checks must confirm that raw Nova Poshta credentials, raw third-party 
 ## Mobile QA
 
 Verify `/settings/integrations`, `/orders`, order detail, `/shipments`, shipment create modal, shipment detail panel, Nova Poshta panel, TTN actions and status sync action at 375px, 390px, 430px, 768px and desktop. There should be no body-level horizontal overflow, action buttons must remain reachable, modal content must scroll internally when needed, and dark/light contrast must remain readable.
+
+## Sprint 3.2.1 environment validation result
+
+Automated backend and frontend validation was recovered in the current workspace after dependencies became available locally. The previous blocker was environmental: Python and Node dependencies were missing locally, and package installation had been blocked by registry/proxy `403 Forbidden` responses rather than by Sellora source code.
+
+Current validation status:
+
+- Backend `compileall`, full `pytest`, and FastAPI app import pass locally.
+- Frontend TypeScript typecheck and production build pass locally using the restored `frontend/node_modules` state.
+- `npm run lint` still reaches the existing interactive Next.js ESLint setup prompt; treat this as a known tooling setup task rather than a Sprint 3.2 delivery blocker.
+- Regression scripts pass, including Nova Poshta production, order/customer linking, shipment TTN/status, and staging edge-case checks.
+- Real Nova Poshta staging validation remains blocked until a controlled shop-owned API key is provided. No real TTN creation was executed and no real key, sender ref, tracking number, customer data, or screenshot was committed.
+
+Recommended CI follow-up:
+
+1. Ensure backend CI installs `backend/requirements.txt` from an allowed Python package index or cache.
+2. Ensure frontend CI restores dependencies from an approved npm registry/cache before running typecheck/build.
+3. Add a frontend lockfile in a dedicated dependency-hygiene change if the team wants stricter reproducible npm installs.
+4. Execute this checklist with a controlled real key only in staging and keep raw credentials outside code, docs, logs and PR text.

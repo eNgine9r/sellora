@@ -75,3 +75,7 @@ If sender city changes, the selected sender warehouse must be checked again beca
 ## Sprint 3.2 staging prerequisite
 
 Before production-like validation, complete `docs/nova-poshta-staging-validation.md` with a controlled staging account. Confirm credential masking, sender settings reload, order → shipment consistency, TTN duplicate prevention, status sync safe-unavailable behavior, mobile usability, and audit/logging safety. Do not proceed with a real TTN unless the shop owner approves a controlled test shipment.
+
+## Sprint 3.2.1 environment prerequisite
+
+Backend tests, frontend typecheck/build, and regression scripts now pass in the recovered local environment. Production-like Nova Poshta validation must still wait for a controlled staging credential and must not include real keys, real TTNs, sender refs, customer data or screenshots in source control or PR text.

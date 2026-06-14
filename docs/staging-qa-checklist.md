@@ -515,3 +515,12 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Confirm OWNER/MANAGER/ANALYST expectations and cross-workspace access blocking.
 - [ ] Confirm audit/logs contain no raw API key or raw Nova Poshta payload.
 - [ ] Confirm `/settings/integrations`, `/orders`, `/shipments`, shipment modal and shipment detail are usable at 375px.
+
+## Sprint 3.2.1 — Environment and CI recovery
+
+- [x] Backend dependency environment diagnosed: previous failures were caused by missing local dependencies plus external registry/proxy install failures, not by Nova Poshta code.
+- [x] Backend `compileall`, full `pytest`, and app import checks pass in the recovered environment.
+- [x] Frontend typecheck and production build pass in the recovered environment.
+- [ ] Frontend lint remains an interactive Next.js ESLint setup prompt until ESLint config is added/migrated.
+- [x] Full regression script suite passes, including Sprint 3.x Nova Poshta checks.
+- [ ] Real Nova Poshta staging validation remains blocked until a controlled real API key is provided.

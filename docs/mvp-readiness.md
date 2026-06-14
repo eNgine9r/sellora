@@ -79,3 +79,10 @@
 - A dedicated staging validation checklist now covers credential, sender, recipient, TTN, status sync, RBAC, workspace, audit and mobile edge cases.
 - Incomplete TTN responses and unavailable status sync are treated as safe failure states rather than confirmed shipment updates.
 - Pilot readiness still requires manual staging validation with a controlled real credential before relying on Nova Poshta for daily operations.
+
+## Sprint 3.2.1 readiness — Environment validation
+
+- Backend test execution recovered locally: `compileall`, full `pytest`, and FastAPI app import pass.
+- Frontend validation recovered locally: TypeScript typecheck and production build pass with available dependencies.
+- Lint remains a known tooling follow-up because `next lint` prompts for initial ESLint configuration.
+- Real Nova Poshta staging validation still requires a controlled API key and shop-approved test shipment; no fake validation is claimed.
