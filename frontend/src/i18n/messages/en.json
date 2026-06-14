@@ -1,0 +1,1292 @@
+{
+  "common": {
+    "brand": "Sellora",
+    "workspace": "Workspace",
+    "loadingSellora": "Loading Sellora…",
+    "redirectingLogin": "Redirecting to login…",
+    "readOnly": "Read-only",
+    "none": "none",
+    "live": "Live",
+    "allStatuses": "All statuses",
+    "searchByTrackingNumber": "Search by tracking number",
+    "chooseFile": "Choose file",
+    "noFileSelected": "No file selected",
+    "show": "Show",
+    "items": "items",
+    "details": "Details",
+    "customer": "Customer",
+    "order": "Order",
+    "created": "Created",
+    "draft": "Draft",
+    "saving": "Saving…",
+    "loading": "Loading…"
+  },
+  "actions": {
+    "create": "Create",
+    "edit": "Edit",
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "archive": "Archive",
+    "confirm": "Confirm",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "upload": "Upload",
+    "preview": "Preview",
+    "execute": "Execute",
+    "import": "Import",
+    "export": "Export",
+    "addItem": "Add item",
+    "removeItem": "Remove item",
+    "retry": "Try again",
+    "logout": "Log out",
+    "open": "Open",
+    "configure": "Configure"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "leads": "Leads",
+    "customers": "Customers",
+    "orders": "Orders",
+    "products": "Products",
+    "inventory": "Inventory",
+    "shipments": "Shipments",
+    "advertising": "Advertising",
+    "finance": "Finance",
+    "reports": "Reports",
+    "calendar": "Calendar",
+    "notes": "Notes",
+    "insights": "Insights",
+    "settings": "Settings",
+    "importCenter": "Import Center",
+    "integrations": "Integrations",
+    "analytics": "Analytics"
+  },
+  "topbar": {
+    "searchPlaceholder": "Search customers, orders, products…",
+    "dateLast30": "Last 30 days",
+    "dateThisMonth": "This month",
+    "dateToday": "Today",
+    "create": "Create",
+    "notifications": "Notifications",
+    "createOrder": "Create order",
+    "switchWorkspace": "Switch workspace",
+    "actions": {
+      "normalized": "Topbar actions share consistent height and alignment."
+    }
+  },
+  "language": {
+    "label": "Language",
+    "uk": "Українська",
+    "en": "English",
+    "shortUk": "UA",
+    "shortEn": "EN",
+    "helper": "Interface language is saved on this device.",
+    "title": "Interface language",
+    "description": "Choose the Sellora interface language. API values and database statuses are not changed."
+  },
+  "theme": {
+    "system": "System theme",
+    "light": "Light theme",
+    "dark": "Dark theme",
+    "switchTo": "Switch to",
+    "lightShort": "Light",
+    "darkShort": "Dark",
+    "label": "Theme"
+  },
+  "auth": {
+    "loginTitle": "Log in to Sellora",
+    "email": "Email",
+    "password": "Password",
+    "login": "Log in",
+    "loading": "Signing in…",
+    "helper": "Use the staging credentials provided by the workspace owner.",
+    "error": "Unable to sign in. Check your email and password.",
+    "sessionExpired": "Session expired. Please log in again."
+  },
+  "landing": {
+    "eyebrow": "CRM for Instagram stores",
+    "headline": "Manage sales, stock, and advertising without chaos",
+    "subtitle": "Sellora brings leads, customers, orders, inventory, shipments, and ad metrics into one mobile SaaS workspace.",
+    "primaryCta": "Log in to Sellora",
+    "secondaryCta": "Explore features",
+    "featuresEyebrow": "Features",
+    "featuresTitle": "Built for Instagram sales",
+    "featuresSubtitle": "No overload: only the workflows your team uses every day.",
+    "workflowEyebrow": "Workflow clarity",
+    "workflowTitle": "Your store operations in one clean workspace",
+    "workflowSubtitle": "Historical imports, manual sales, stock reservations, and ad metrics work together without breaking mobile layouts.",
+    "ctaTitle": "Ready to organize sales?",
+    "ctaSubtitle": "Start with the Sellora workspace and validate key staging scenarios without changing deployment architecture.",
+    "footer": "© 2026 Sellora. CRM for Instagram stores.",
+    "previewTitle": "Sellora dashboard",
+    "previewSubtitle": "Today’s operating view",
+    "workflow": [
+      "Lead",
+      "Customer",
+      "Order",
+      "Stock",
+      "Shipment",
+      "Profit"
+    ],
+    "features": [
+      [
+        "CRM without noise",
+        "Leads, customers, notes, tags, and order history in one place."
+      ],
+      [
+        "Inventory and variants",
+        "SKU, cost, reservations, low stock, and stock movements without spreadsheets."
+      ],
+      [
+        "Orders and profit",
+        "See revenue, costs, advertising, shipping, and estimated net profit."
+      ],
+      [
+        "Historical imports",
+        "Upload catalogs, orders, and ad reports through a safe Import Center."
+      ],
+      [
+        "Shipments",
+        "TTN, cities, warehouses, COD, and delivery statuses are ready for Nova Poshta."
+      ],
+      [
+        "Mobile SaaS",
+        "The interface is tuned for phone, tablet, and desktop work."
+      ]
+    ],
+    "benefits": [
+      [
+        "Less manual work",
+        "The team sees one source of truth for sales."
+      ],
+      [
+        "Faster control",
+        "Critical statuses and stock levels stand out immediately."
+      ],
+      [
+        "Ready to grow",
+        "A modular foundation for upcoming sprints."
+      ]
+    ]
+  },
+  "dashboard": {
+    "eyebrow": "Sellora Dashboard",
+    "title": "CRM for Instagram stores",
+    "subtitle": "Leads, customers, orders, inventory, shipments, advertising, finance, and analytics in one modern SaaS interface.",
+    "revenue": "Revenue",
+    "netProfit": "Net Profit",
+    "orders": "Orders",
+    "newLeads": "New Leads",
+    "roas": "ROAS",
+    "salesChart": "Sales chart",
+    "orderStatus": "Order status",
+    "logistics": {
+      "title": "Logistics health",
+      "subtitle": "Current shipment counters; delivered today and returned this month use calendar periods.",
+      "inTransit": "In transit",
+      "arrived": "Arrived",
+      "deliveredToday": "Delivered today",
+      "returnedThisMonth": "Returned this month"
+    },
+    "advertising": {
+      "title": "Advertising performance",
+      "spend": "Spend",
+      "revenue": "Revenue",
+      "messages": "Messages",
+      "leads": "Leads",
+      "orders": "Orders",
+      "cpa": "CPA",
+      "cpl": "CPL"
+    },
+    "recentOrders": {
+      "title": "Recent orders",
+      "subtitle": "Latest customer purchases and fulfillment state."
+    },
+    "topProducts": {
+      "title": "Top products",
+      "subtitle": "Best performers by revenue in the selected period.",
+      "sold": "sold"
+    },
+    "notifications": "Notifications",
+    "quickActions": "Quick actions",
+    "activity": "Activity",
+    "inTransit": "In Transit",
+    "arrived": "Arrived",
+    "deliveredToday": "Delivered Today",
+    "returnedThisMonth": "Returned This Month",
+    "spend": "Spend",
+    "messages": "Messages",
+    "leads": "Leads",
+    "restricted": "Restricted",
+    "kpis": {
+      "revenue": "Revenue",
+      "netProfit": "Net profit",
+      "orders": "Orders",
+      "newLeads": "New leads",
+      "roas": "ROAS"
+    },
+    "charts": {
+      "salesProfitTitle": "Sales and profit trend",
+      "salesProfitSubtitle": "Revenue and net profit for the selected period.",
+      "orderFunnelTitle": "Order status funnel",
+      "orderFunnelSubtitle": "Real order distribution for the selected period."
+    },
+    "topCategories": {
+      "title": "Top categories",
+      "subtitle": "Category revenue share from real order items.",
+      "sales": "sales"
+    },
+    "inventoryAlerts": {
+      "title": "Inventory alerts",
+      "subtitle": "Low-stock and out-of-stock products that need attention.",
+      "lowStock": "Low stock",
+      "outOfStock": "Out of stock",
+      "stockUnits": "Stock units",
+      "healthy": "Inventory looks healthy"
+    },
+    "tooltips": {
+      "revenue": "Revenue follows the existing analytics service totals for the selected period.",
+      "netProfit": "Net profit = revenue − product cost − ads − shipping − other costs.",
+      "orders": "Orders created in the selected period.",
+      "newLeads": "Leads created in the selected period.",
+      "roas": "ROAS shows how much revenue ads generated for each unit of ad spend."
+    },
+    "emptyStates": {
+      "noSalesTrend": "No sales trend yet",
+      "noSalesTrendDescription": "Create orders or import historical data to see revenue and profit dynamics here.",
+      "noOrdersInPeriod": "No orders in this period",
+      "noOrdersInPeriodDescription": "Change the period or create/import orders to see the funnel.",
+      "noTopProducts": "No product data yet",
+      "noTopProductsDescription": "Product performance will appear after orders are created or imported.",
+      "noCategories": "No category sales yet",
+      "noCategoriesDescription": "Category performance appears after orders with catalog items exist.",
+      "noRecentOrders": "No orders yet",
+      "noRecentOrdersDescription": "Create your first order or import historical data to start tracking revenue and fulfillment.",
+      "noNotifications": "No urgent notifications",
+      "noActivity": "No recent activity in this period"
+    },
+    "errors": {
+      "loadFailed": "Dashboard data could not be loaded. Refresh the page or retry after checking the current workspace connection."
+    },
+    "loading": {
+      "dashboard": "Loading dashboard…",
+      "orders": "Loading orders…",
+      "shipments": "Loading shipments…",
+      "ads": "Loading ads…"
+    },
+    "notificationsItems": {
+      "lowStock": "Low-stock products",
+      "outOfStock": "Out-of-stock products",
+      "unpaidOrders": "Unpaid orders",
+      "returnedShipments": "Returned shipments"
+    },
+    "activityItems": {
+      "orderCreated": "Order {number} created",
+      "leadCreated": "Lead {name} created"
+    },
+    "comparison": {
+      "noData": "No comparison data"
+    },
+    "analytics": "Analytics overview"
+  },
+  "tables": {
+    "name": "Name",
+    "phone": "Phone",
+    "instagram": "Instagram",
+    "orders": "Orders",
+    "spent": "Spent",
+    "lastOrder": "Last order",
+    "actions": "Actions",
+    "order": "Order",
+    "status": "Status",
+    "payment": "Payment",
+    "revenue": "Revenue",
+    "profit": "Profit",
+    "created": "Created",
+    "variantSku": "Variant SKU",
+    "stock": "Stock",
+    "reserved": "Reserved",
+    "incoming": "Incoming",
+    "minimum": "Minimum",
+    "row": "Row",
+    "message": "Message"
+  },
+  "leads": {
+    "title": "Leads",
+    "subtitle": "Manage requests, statuses, and customer conversion.",
+    "create": "Create lead",
+    "edit": "Edit lead",
+    "archive": "Archive lead",
+    "empty": "No leads found.",
+    "searchPlaceholder": "Search leads by name, phone, Instagram or notes",
+    "allSources": "All sources"
+  },
+  "customers": {
+    "title": "Customers",
+    "subtitle": "A single customer base with notes, tags, addresses, and order history.",
+    "create": "Create customer",
+    "edit": "Edit customer",
+    "archive": "Archive customer",
+    "details": "Customer details",
+    "empty": "No customers found.",
+    "searchPlaceholder": "Search customers by name, phone, Instagram or email",
+    "selectPrompt": "Select a customer to manage CRM details.",
+    "name": "Name",
+    "phone": "Phone",
+    "instagram": "Instagram username",
+    "quickCreate": "Create new customer",
+    "quickCreateSuccess": "Customer created and selected for the order.",
+    "quickCreateError": "Unable to create customer. Check the details and try again.",
+    "quickCreateNameRequired": "Enter the customer name.",
+    "quickCreatePhoneRequired": "Enter the customer phone for delivery."
+  },
+  "orders": {
+    "title": "Orders",
+    "subtitle": "Create orders and track payment, profit, and delivery statuses.",
+    "create": "Create order",
+    "edit": "Edit order",
+    "archive": "Archive order",
+    "details": "Order details",
+    "items": "Items",
+    "empty": "No orders found.",
+    "archiveUnavailable": "Archive unavailable",
+    "selectCategory": "Select category",
+    "selectProduct": "Select product",
+    "searchProduct": "Search product",
+    "selectVariant": "Select variant",
+    "available": "Available",
+    "noVariantsForProduct": "No variants for this product.",
+    "noProductsInCategory": "No products in this category.",
+    "lineTotal": "Line total",
+    "item": "Item",
+    "unitPrice": "Unit price",
+    "unitCost": "Unit cost",
+    "quantity": "Quantity",
+    "productOption": {
+      "available": "Available",
+      "price": "Price",
+      "noImage": "No image",
+      "noProducts": "No products match this category and search.",
+      "refineSearch": "Refine search to narrow results."
+    },
+    "adCost": "Ad cost",
+    "shipping": "Shipping",
+    "codFee": "COD fee",
+    "other": "Other",
+    "notes": "Notes",
+    "itemsSubtotal": "Items subtotal",
+    "productCost": "Product cost",
+    "shippingCodOther": "Shipping / COD / Other",
+    "estimatedProfit": "Estimated profit",
+    "searchPlaceholder": "Search by order, customer, item, SKU or notes",
+    "allPaymentStatuses": "All payment statuses",
+    "todaySummary": "Today: {count} orders · {revenue} revenue · {profit} profit",
+    "selectPrompt": "Select an order to view details, status history, and profit.",
+    "createDescription": "Reserve inventory, add costs, and keep profit totals in the same mobile-safe modal style.",
+    "editDescription": "Order items can be edited while the order is NEW or CONFIRMED.",
+    "updateError": "Please check the order items and costs.",
+    "archiveTitle": "Archive order?",
+    "archiveDescription": "Only NEW or CANCELLED orders can be archived. Reservations are released when needed.",
+    "pagination": {
+      "loading": "Loading orders…",
+      "pageSize": "Orders per page",
+      "emptyTitle": "No orders yet.",
+      "emptyDescription": "Create your first order to track payment, shipment and profit in Sellora.",
+      "filteredEmptyTitle": "No orders match these filters.",
+      "filteredEmptyDescription": "Try changing search, status, payment status or sorting to find the order."
+    },
+    "profit": "Profit",
+    "otherCost": "Other costs",
+    "statusHistory": "Status history",
+    "changeStatus": "Change status",
+    "customerSelector": "Customer",
+    "customerSelectorHelp": "Select an existing customer or create a new one before creating the order.",
+    "customerRequired": "Select or create a customer before creating the order.",
+    "customerSearchLabel": "Customer search",
+    "customerSearchPlaceholder": "Search customer by name, phone, or Instagram",
+    "createCustomer": "+ Add customer",
+    "customerPreview": "Selected customer",
+    "customerMissing": "Customer is not specified.",
+    "customerSearchEmpty": "No customers found. Try another search or add a new customer.",
+    "customerOrdersCount": "{count} orders"
+  },
+  "products": {
+    "title": "Products",
+    "subtitle": "Product catalog, variants, SKU, prices, and unit costs.",
+    "create": "Create product",
+    "edit": "Edit product",
+    "archive": "Archive product",
+    "createVariant": "Create variant",
+    "editVariant": "Edit variant",
+    "manageVariants": "Manage variants",
+    "empty": "No products found.",
+    "catalogLabel": "Sellora Catalog",
+    "category": "Category",
+    "productCategory": "Product category",
+    "filterByCategory": "Filter by category",
+    "searchInCategory": "Search in category",
+    "searchProducts": "Search products",
+    "noProductsInCategory": "No products in this category.",
+    "createDescription": "Add the base catalog record first, then attach variants with SKU, price, and stock.",
+    "variantsDescription": "Use each row action to edit variant SKU, color, size, price, barcode, and status.",
+    "primaryImageUrl": "Primary image URL",
+    "description": "Description",
+    "brand": "Brand",
+    "active": "Active",
+    "inactive": "Inactive",
+    "createProductVariantFirst": "Create a product first before adding variants.",
+    "allStatuses": "All statuses",
+    "sku": "SKU"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "subtitle": "Control stock, reservations, minimum levels, and transaction history.",
+    "lowStockOnly": "Low stock only",
+    "allHistory": "All inventory history",
+    "healthy": "Healthy",
+    "lowStock": "Low stock",
+    "adjustStock": "Adjust stock",
+    "editThresholds": "Edit thresholds",
+    "transactionHistory": "Transaction history",
+    "empty": "No inventory records found.",
+    "product": "Product",
+    "productImage": "Product image",
+    "category": "Category",
+    "allCategories": "All categories",
+    "filterByCategory": "Filter by category",
+    "selectInventory": "Select inventory",
+    "reason": "Reason",
+    "updateThresholds": "Update inventory thresholds",
+    "incomingQuantity": "Incoming quantity",
+    "minimumQuantity": "Minimum quantity",
+    "searchPlaceholder": "Search product, SKU or variant SKU",
+    "allTransactionTypes": "All transaction types",
+    "qty": "Qty",
+    "stockLabel": "stock",
+    "reservedLabel": "reserved",
+    "noTransactionsYet": "No transactions yet",
+    "transactionTypes": {
+      "STOCK_IN": "Stock in",
+      "STOCK_OUT": "Stock out",
+      "RESERVE": "Reserve",
+      "UNRESERVE": "Unreserve",
+      "RETURN": "Return",
+      "ADJUSTMENT": "Adjustment"
+    },
+    "transactionReasons": {
+      "order_reservation": "Order reservation",
+      "order_shipped_release_reservation": "Order shipped release reservation",
+      "order_shipped_stock_out": "Order shipped stock out"
+    }
+  },
+  "shipments": {
+    "title": "Shipments",
+    "subtitle": "Manage TTNs, cities, warehouses, COD, and delivery statuses.",
+    "create": "Create shipment",
+    "edit": "Edit shipment",
+    "archive": "Archive shipment",
+    "details": "Shipment details",
+    "trackingNumber": "Tracking number",
+    "carrier": "Carrier",
+    "city": "City",
+    "warehouse": "Warehouse",
+    "shipping": "Shipping",
+    "cod": "COD",
+    "createTtn": "Create Nova Poshta TTN",
+    "syncStatus": "Sync status",
+    "empty": "No shipments found.",
+    "logisticsLabel": "Sellora Logistics",
+    "heroSubtitle": "Create TTN records manually, track delivery lifecycle, and keep order statuses in sync.",
+    "inTransit": "In Transit",
+    "arrived": "Arrived",
+    "deliveredToday": "Delivered Today",
+    "returnedThisMonth": "Returned This Month",
+    "selectPrompt": "Select a shipment to view details and status actions.",
+    "draftShipment": "Draft shipment",
+    "tracking": "Tracking",
+    "order": "Order",
+    "customer": "Customer",
+    "recipientName": "Recipient name",
+    "recipientPhone": "Recipient phone",
+    "shippingCost": "Shipping cost",
+    "codAmount": "COD amount",
+    "declaredValue": "Declared value",
+    "manualDescription": "Manual shipment entry remains available; Nova Poshta fields are optional until TTN creation.",
+    "archiveTitle": "Archive shipment?",
+    "archiveNpDescription": "This only archives the Sellora shipment record. It does not cancel the Nova Poshta TTN.",
+    "archiveDescription": "This shipment will be hidden from active logistics lists. The related order remains unchanged.",
+    "noNextActions": "No next shipment actions available.",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "returned": "Returned",
+    "notes": "Notes",
+    "trackingTtn": "Tracking / TTN",
+    "recipient": "Recipient",
+    "phone": "Phone",
+    "selectOrder": "Select order",
+    "orderRequired": "Order is required.",
+    "trackingRequired": "Tracking number is required for non-draft shipments.",
+    "openShipments": "Open shipments",
+    "createFromOrder": "Create shipment from order",
+    "orderCustomerMissing": "Cannot create shipment: order does not have a customer. Select a customer on the order and try again.",
+    "customerRequiredForShipment": "Shipment customer",
+    "destination": "Destination",
+    "updated": "Updated",
+    "lastSynced": "Last synced",
+    "needsAction": "Needs action",
+    "openOrder": "Open order",
+    "copyTtn": "Copy TTN",
+    "ttnCopied": "TTN number copied.",
+    "ttnCopyFailed": "Unable to copy TTN. Copy the number manually.",
+    "ttnPrintUnavailable": "TTN printing is not connected yet.",
+    "ttnPrintWorkaround": "Copy the TTN number and use it in the Nova Poshta account.",
+    "orderSection": "Order",
+    "customerSection": "Customer",
+    "recipientSection": "Recipient",
+    "novaPoshtaSection": "Nova Poshta",
+    "trackingSection": "TTN / tracking",
+    "statusSection": "Delivery status",
+    "externalStatus": "External status",
+    "novaPoshtaStatus": "Nova Poshta status",
+    "orderCustomerMissingUpdate": "Cannot create or update shipment: order does not have a customer.",
+    "ttnMissing": "TTN missing",
+    "recipientAddressRequired": "Fill recipient city and warehouse.",
+    "createTtnReadinessHint": "Before creating a TTN, check customer, recipient, city, warehouse, and sender settings.",
+    "allCarriers": "All carriers",
+    "allTtnStates": "All TTN states",
+    "hasTtn": "Has TTN",
+    "missingTtn": "Missing TTN",
+    "updatedRecently": "Updated recently",
+    "searchPlaceholder": "Search by TTN, order, customer, phone, city, or warehouse",
+    "updateError": "Unable to save shipment changes. Please try again.",
+    "createTtnFailed": "Unable to create TTN.",
+    "duplicateTtnWarning": "TTN is already created for this shipment.",
+    "senderSettingsRequired": "Fill Nova Poshta sender settings.",
+    "statusSyncFailed": "Unable to update delivery status.",
+    "statusUnavailable": "Delivery status is temporarily unavailable.",
+    "pagination": {
+      "loading": "Loading shipments…",
+      "emptyTitle": "No shipments yet.",
+      "emptyDescription": "Create the first shipment from an order to track TTN and delivery.",
+      "filteredEmptyTitle": "No shipments match these filters.",
+      "filteredEmptyDescription": "Try changing search, status, carrier, or TTN state."
+    },
+    "recipientPhoneRequired": "Enter the recipient phone number.",
+    "recipientCityRequired": "Select the recipient city.",
+    "recipientWarehouseRequired": "Select the recipient warehouse.",
+    "createTtnIncomplete": "Nova Poshta returned an incomplete response. Check the Nova Poshta account before trying again."
+  },
+  "advertising": {
+    "title": "Advertising",
+    "manualDashboard": "Manual Advertising Dashboard",
+    "subtitle": "Track spend, messages, campaigns, and ROAS without connecting ad accounts.",
+    "spend": "Spend",
+    "revenue": "Revenue",
+    "roas": "ROAS",
+    "cpa": "CPA",
+    "cpl": "CPL",
+    "cpc": "CPC",
+    "cpm": "CPM",
+    "ctr": "CTR",
+    "messages": "Messages",
+    "leads": "Leads",
+    "orders": "Orders",
+    "campaigns": "Campaigns",
+    "createCampaign": "Create campaign",
+    "editCampaign": "Edit campaign",
+    "addDailyMetric": "Add daily metric",
+    "editMetric": "Edit metric",
+    "campaignName": "Campaign name",
+    "platform": "Platform",
+    "objective": "Objective",
+    "budgetType": "Budget type",
+    "dailyBudget": "Daily budget",
+    "totalBudget": "Total budget",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "metricDate": "Metric date",
+    "notes": "Notes",
+    "emptyCampaigns": "No campaigns found."
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Financial, advertising, and operational Sellora metrics.",
+    "comingSoon": "Detailed analytics will arrive in the next sprint.",
+    "reports": {
+      "eyebrow": "Sellora reports",
+      "title": "Analytics & reports",
+      "subtitle": "Formula-backed reports for sales, products, advertising, customers, inventory and deterministic business insights.",
+      "loading": "Loading report data…"
+    },
+    "sales": {
+      "title": "Sales report",
+      "subtitle": "Revenue, orders, AOV, margin, returns and status/payment breakdowns for the selected period.",
+      "byStatus": "By order status",
+      "byPayment": "By payment status"
+    },
+    "products": {
+      "title": "Product & category report",
+      "subtitle": "Top products, category share, current stock and low-stock best sellers from the same formulas used on the dashboard.",
+      "topByRevenue": "Top by revenue",
+      "lowStockBestSellers": "Low-stock best sellers",
+      "categoriesTracked": "Categories tracked",
+      "unitsSold": "units sold"
+    },
+    "advertising": {
+      "title": "Advertising report",
+      "subtitle": "Manual/imported ad spend, revenue, ROAS, CPA and CPL with safe unavailable states.",
+      "trendNote": "Advertising trend points in range: {days}"
+    },
+    "customers": {
+      "title": "Customer report",
+      "subtitle": "Repeat customer health, average spend and recent high-value customers."
+    },
+    "inventory": {
+      "title": "Inventory report",
+      "subtitle": "Stock risks, reserved/incoming quantities and sales context for low-stock items.",
+      "lowStockStatus": "Low stock",
+      "healthyStatus": "Healthy"
+    },
+    "insights": {
+      "title": "Business insights",
+      "subtitle": "Deterministic rules from existing orders, ads, leads and inventory data — no AI or fake events.",
+      "types": {
+        "positive": "Positive",
+        "warning": "Warning",
+        "critical": "Critical",
+        "info": "Info"
+      },
+      "lowStockTitle": "Low stock needs attention",
+      "lowStockDescription": "{count} product variants are at or below the minimum stock threshold.",
+      "adSpendNoOrdersTitle": "Ad spend has no orders",
+      "adSpendNoOrdersDescription": "Advertising spend exists for this period, but no orders were recorded from ads.",
+      "lowRoasTitle": "ROAS is below 1",
+      "lowRoasDescription": "Advertising revenue is lower than spend, so the campaign mix may not be paying back.",
+      "returnsTitle": "Returns or cancellations need review",
+      "returnsDescription": "Returns: {returns}. Cancelled orders: {cancelled}.",
+      "leadsNoOrdersTitle": "Leads have not converted",
+      "leadsNoOrdersDescription": "Leads exist in the period, but no orders were created in the same period.",
+      "healthyTitle": "No urgent issues detected",
+      "healthyDescription": "Core sales, advertising and inventory checks do not show urgent warnings for this period.",
+      "ctaInventory": "Open inventory",
+      "ctaAdvertising": "Open advertising",
+      "ctaOrders": "Open orders",
+      "ctaLeads": "Open leads"
+    },
+    "metrics": {
+      "revenue": "Revenue",
+      "netProfit": "Net profit",
+      "orders": "Orders",
+      "aov": "AOV",
+      "margin": "Margin",
+      "returnRate": "Return rate",
+      "cancelledOrders": "Cancelled orders",
+      "deliveredOrders": "Delivered orders",
+      "spend": "Spend",
+      "roas": "ROAS",
+      "cpa": "CPA",
+      "cpl": "CPL",
+      "newCustomers": "New customers",
+      "repeatCustomerRate": "Repeat customer rate",
+      "averageSpend": "Average spend",
+      "customersWithOrders": "Customers with orders",
+      "lowStock": "Low stock",
+      "outOfStock": "Out of stock",
+      "reservedStock": "Reserved stock",
+      "incomingStock": "Incoming",
+      "restricted": "Restricted",
+      "leadConversionRate": "Lead conversion rate"
+    },
+    "tooltips": {
+      "revenue": "Revenue includes NEW, CONFIRMED, SHIPPED, DELIVERED and COMPLETED orders; CANCELLED and RETURNED are excluded.",
+      "netProfit": "Net profit = revenue − product cost − ads − shipping − COD fees − other costs.",
+      "aov": "AOV = revenue / included orders. It is unavailable when there are no included orders.",
+      "roas": "ROAS = ad revenue / ad spend. It is unavailable when spend is zero.",
+      "cpa": "CPA = ad spend / ad orders. It is unavailable when orders are zero.",
+      "cpl": "CPL = ad spend / ad leads. It is unavailable when leads are zero.",
+      "margin": "Margin = net profit / revenue.",
+      "returnRate": "Return rate = returned orders / shipped, delivered, completed or returned orders.",
+      "repeatCustomerRate": "Repeat customer rate = customers with 2+ orders / customers with orders.",
+      "lowStock": "Low stock means stock quantity is less than or equal to minimum quantity.",
+      "reservedStock": "Reserved stock is quantity held for open orders.",
+      "conversionRate": "Lead conversion = converted leads / total leads in the selected period."
+    },
+    "emptyStates": {
+      "noSales": "No sales rows in this period",
+      "noSalesDescription": "Create or import orders to populate the sales report.",
+      "noProducts": "No product performance yet",
+      "noProductsDescription": "Product and category reports appear after order items exist in the selected period.",
+      "noAdvertising": "No advertising metrics in this period",
+      "noAdvertisingDescription": "Add manual campaign metrics or import advertising history.",
+      "noCustomers": "No customers yet",
+      "noCustomersDescription": "Customer analytics appears after customers and orders are created or imported.",
+      "noInventoryAlerts": "Inventory looks healthy",
+      "noInventoryAlertsDescription": "No low-stock rows require action right now."
+    },
+    "errors": {
+      "loadFailed": "Analytics reports could not be loaded. Check workspace access and retry."
+    },
+    "filters": {
+      "period": "Report period",
+      "periodHelp": "Dashboard and reports share this period so metrics stay consistent."
+    },
+    "sorting": {
+      "revenueDesc": "Revenue high to low",
+      "quantityDesc": "Quantity high to low",
+      "profitDesc": "Profit high to low"
+    },
+    "tables": {
+      "date": "Date",
+      "orders": "Orders",
+      "revenue": "Revenue",
+      "netProfit": "Net profit",
+      "aov": "AOV",
+      "returns": "Returns",
+      "cancelled": "Cancelled",
+      "product": "Product",
+      "sku": "SKU",
+      "category": "Category",
+      "quantitySold": "Quantity sold",
+      "stock": "Stock",
+      "reserved": "Reserved",
+      "status": "Status",
+      "campaign": "Campaign",
+      "platform": "Platform",
+      "spend": "Spend",
+      "leads": "Leads",
+      "roas": "ROAS",
+      "customer": "Customer",
+      "contact": "Contact",
+      "totalSpent": "Total spent",
+      "lastOrder": "Last order",
+      "incoming": "Incoming",
+      "minimum": "Minimum",
+      "salesInPeriod": "Sales in period"
+    },
+    "pagination": {
+      "loading": "Loading report rows…",
+      "pageSize": "Rows per page",
+      "emptyTitle": "No report rows for this period",
+      "emptyDescription": "Change the period or add orders to populate detailed analytics."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage workspace tools, import workflows, and external service integrations from one place.",
+    "workspace": "Workspace",
+    "workspaceSettings": "Workspace settings",
+    "currency": "Currency",
+    "currencyHelp": "Currency controls how financial values are displayed across Sellora. It does not convert historical amounts.",
+    "saved": "Workspace settings saved.",
+    "unableSave": "Unable to save workspace settings.",
+    "ownerOnly": "Only the owner can change settings",
+    "tools": "Tools",
+    "cards": {
+      "importTitle": "Import Center",
+      "importDescription": "Upload Excel or CSV files, preview rows, validate mappings, and import historical data.",
+      "importAction": "Open Import Center",
+      "integrationsTitle": "Integrations",
+      "integrationsDescription": "Connect delivery and external services such as Nova Poshta.",
+      "integrationsAction": "Open Integrations",
+      "novaTitle": "Nova Poshta",
+      "novaDescription": "Configure Nova Poshta credentials, sender settings, cities, warehouses, and TTN creation.",
+      "novaAction": "Configure Nova Poshta",
+      "feedbackTitle": "Pilot feedback",
+      "feedbackDescription": "Review issue reports, ideas and confusion signals from pilot users.",
+      "feedbackAction": "Open feedback"
+    },
+    "label": "Sellora Settings",
+    "integrationsTitle": "Integrations",
+    "integrationsSubtitle": "Configure delivery integrations for this workspace."
+  },
+  "importCenter": {
+    "title": "Import Center",
+    "settingsEyebrow": "Sellora Settings",
+    "subtitle": "Upload, preview, validate, and import historical Excel data safely.",
+    "preset": "Import preset",
+    "uploadExcel": "Upload Excel file",
+    "chooseFile": "Choose file",
+    "noFile": "No file selected",
+    "selectSheet": "Select sheet",
+    "suggestMapping": "Suggest mapping",
+    "validate": "Validate",
+    "dryRun": "Dry run",
+    "executeImport": "Execute import",
+    "validationIssues": "Validation issues",
+    "importReport": "Import report",
+    "logs": "Logs",
+    "importJob": "Import Job",
+    "suggestedMapping": "Suggested mapping",
+    "fieldsMapped": "fields mapped",
+    "missingRequired": "Missing required",
+    "productCatalog": "Your Jewelry product catalog",
+    "ordersHistory": "Your Jewelry orders history",
+    "advertisingHistory": "Your Jewelry advertising history",
+    "productCatalogHelp": "This import creates Products, Variants, Inventory and Images from the product catalog template. It does not overwrite existing records.",
+    "ordersHistoryHelp": "This import creates historical orders, order items, customers if needed, and optional shipments. It does not affect current inventory by default.",
+    "advertisingHistoryHelp": "This import creates advertising campaigns and daily metrics from historical ad reports. It does not connect to Meta Ads API.",
+    "affectInventory": "affect inventory",
+    "affectInventoryWarning": "This may change current stock/reserved quantities. Use only if importing active operational orders."
+  },
+  "novaPoshta": {
+    "title": "Nova Poshta",
+    "apiKey": "API key",
+    "senderSettings": "Sender settings",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "testConnection": "Test connection",
+    "disconnect": "Disconnect",
+    "subtitle": "Connect delivery directory search and TTN creation.",
+    "savedKey": "Saved key",
+    "connection": "Connection",
+    "credentialHelp": "Enter a new credential only when connecting or rotating access. Saved credentials remain masked.",
+    "credential": "Nova Poshta credential",
+    "enterCredential": "Enter credential",
+    "saveApiKey": "Save API key",
+    "senderHelp": "Nova Poshta TTN creation requires sender references. City and warehouse refs can be searched here; counterparty and contact person refs may require account setup.",
+    "searchSenderCity": "Search sender city",
+    "searchSenderWarehouse": "Search sender warehouse",
+    "cityHelper": "Selecting a city fills Sender city ref.",
+    "warehouseHelper": "Selecting a warehouse fills Sender warehouse ref.",
+    "senderCityRef": "Sender city ref",
+    "senderWarehouseRef": "Sender warehouse ref",
+    "senderCounterpartyRef": "Sender counterparty ref",
+    "senderContactRef": "Sender contact person ref",
+    "senderPhone": "Sender phone",
+    "senderWarning": "Counterparty and contact person refs are required before TTN creation. Keep these values in Settings → Integrations and rotate the credential if account access changes.",
+    "maskedCredentials": "Saved credentials are masked and never displayed raw.",
+    "searchCityPlaceholder": "Search Nova Poshta city",
+    "searchWarehousePlaceholder": "Search Nova Poshta warehouse",
+    "citySearchFailed": "Unable to search Nova Poshta cities. Please try again.",
+    "warehouseSearchFailed": "Unable to load warehouses for the selected city.",
+    "searchingCities": "Searching cities…",
+    "loadingWarehouses": "Loading warehouses…",
+    "selectCityFirst": "Select or enter a sender city ref before loading warehouses.",
+    "noCitiesFound": "No cities found.",
+    "noWarehousesFound": "No warehouses found.",
+    "saveSuccess": "Nova Poshta settings saved.",
+    "saveFailed": "Unable to save Nova Poshta settings.",
+    "testFailed": "Unable to test Nova Poshta connection.",
+    "disconnectSuccess": "Nova Poshta disconnected.",
+    "status": {
+      "CONNECTED": "Connected",
+      "DISCONNECTED": "Disconnected",
+      "ERROR": "Error"
+    },
+    "keyRequired": "Add a Nova Poshta API key to enable city search, warehouse search, and TTN creation.",
+    "keepExistingCredential": "Keep saved credential or enter a new one",
+    "missingSenderFields": "Missing",
+    "senderReady": "Sender settings are complete. Prepared shipments can create TTNs.",
+    "testingConnection": "Testing connection…",
+    "testSuccess": "Nova Poshta is connected. The credential works correctly.",
+    "minCityQuery": "Enter at least 2 characters to search cities.",
+    "cityRef": "City ref",
+    "warehouseRef": "Warehouse ref",
+    "documentRef": "Document ref",
+    "documentNumber": "TTN number",
+    "rawStatus": "Nova Poshta status",
+    "statusSyncUnavailableShort": "Awaiting sync",
+    "statusSyncNote": "Automatic delivery status updates are not fully connected yet; use manual sync when it is available for the TTN.",
+    "ttnCreated": "Nova Poshta TTN was created and saved on the shipment.",
+    "duplicateTtn": "This shipment already has a TTN. Duplicate creation is blocked.",
+    "ttnFailed": "Unable to create TTN. Check sender settings and the Nova Poshta API key.",
+    "senderSettingsIncomplete": "Sender settings are incomplete. Fill city, warehouse, counterparty, contact person, and phone in Settings → Integrations.",
+    "notConfigured": "Nova Poshta is not configured. Add a credential and sender settings in Settings → Integrations.",
+    "statusSynced": "Delivery status synced from Nova Poshta.",
+    "statusSyncUnavailable": "Unable to sync Nova Poshta status. The service may be temporarily unavailable.",
+    "creatingTtn": "Creating TTN…",
+    "ttnExists": "TTN already created",
+    "syncingStatus": "Syncing status…",
+    "keySavedMasked": "The key is saved and hidden for security.",
+    "apiKeyMissing": "Nova Poshta key is not saved.",
+    "apiKeyInvalid": "Unable to verify the Nova Poshta API key.",
+    "senderSettingsRequiredBeforeTtn": "Fill sender settings before creating a TTN."
+  },
+  "statuses": {
+    "lead": {
+      "NEW": "New",
+      "IN_PROGRESS": "In progress",
+      "QUALIFIED": "Qualified",
+      "CONVERTED": "Converted",
+      "LOST": "Lost"
+    },
+    "order": {
+      "NEW": "New",
+      "CONFIRMED": "Confirmed",
+      "SHIPPED": "Shipped",
+      "DELIVERED": "Delivered",
+      "COMPLETED": "Completed",
+      "RETURNED": "Returned",
+      "CANCELLED": "Cancelled"
+    },
+    "payment": {
+      "PENDING": "Pending",
+      "PAID": "Paid",
+      "COD": "COD",
+      "REFUNDED": "Refunded",
+      "PARTIALLY_PAID": "Partially paid",
+      "FAILED": "Failed"
+    },
+    "shipment": {
+      "DRAFT": "Draft",
+      "CREATED": "Created",
+      "IN_TRANSIT": "In transit",
+      "ARRIVED": "Arrived",
+      "DELIVERED": "Delivered",
+      "RETURNED": "Returned",
+      "CANCELLED": "Cancelled"
+    },
+    "product": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive"
+    },
+    "inventory": {
+      "HEALTHY": "Healthy",
+      "LOW_STOCK": "Low stock"
+    },
+    "campaign": {
+      "ACTIVE": "Active",
+      "PAUSED": "Paused",
+      "COMPLETED": "Completed",
+      "ARCHIVED": "Archived"
+    },
+    "import": {
+      "UPLOADED": "Uploaded",
+      "PREVIEWED": "Previewed",
+      "MAPPED": "Mapped",
+      "VALIDATED": "Validated",
+      "DRY_RUN": "Dry run",
+      "COMPLETED": "Completed",
+      "FAILED": "Failed"
+    }
+  },
+  "errors": {
+    "somethingWrong": "Something went wrong",
+    "unableLoad": "Unable to load data",
+    "noPermission": "You do not have permission.",
+    "required": "Please complete required fields.",
+    "deleteFailed": "This record cannot be deleted in its current state."
+  },
+  "emptyStates": {
+    "products": "Add products manually or import a catalog to start selling and reporting.",
+    "orders": "Create an order or import historical orders to see revenue and profit.",
+    "customers": "Add customers or import order history to build customer profiles.",
+    "leads": "Create leads from Instagram conversations before converting them to customers.",
+    "inventory": "Inventory appears after products and variants have stock rows.",
+    "advertising": "Add manual advertising metrics to understand ROAS and customer acquisition costs.",
+    "analytics": "Analytics becomes useful after orders, products, customers and advertising data exist."
+  },
+  "categories": {
+    "all": "All",
+    "allProducts": "All products",
+    "allCategories": "All categories",
+    "rings": "Rings",
+    "earrings": "Earrings",
+    "pendants": "Pendants",
+    "bracelets": "Bracelets",
+    "chains": "Chains",
+    "sets": "Sets",
+    "watches": "Watches",
+    "other": "Other"
+  },
+  "pagination": {
+    "show": "Show",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "of": "of",
+    "itemsPerPage": "Items per page",
+    "showing": "Showing",
+    "results": "results",
+    "emptyPage": "No results on this page."
+  },
+  "filters": {
+    "sort": "Sort",
+    "reset": "Reset filters",
+    "search": "Search"
+  },
+  "sort": {
+    "newest": "Newest first",
+    "oldest": "Oldest first",
+    "nameAsc": "Name A → Z",
+    "nameDesc": "Name Z → A",
+    "revenueDesc": "Revenue high → low",
+    "revenueAsc": "Revenue low → high",
+    "profitDesc": "Profit high → low",
+    "profitAsc": "Profit low → high",
+    "stockDesc": "Stock high → low",
+    "stockAsc": "Stock low → high",
+    "reservedDesc": "Reserved high → low",
+    "minimumDesc": "Minimum threshold high → low"
+  },
+  "dateRange": {
+    "label": "Date range",
+    "today": "Today",
+    "last7": "Last 7 days",
+    "last30": "Last 30 days",
+    "thisMonth": "This month",
+    "allTime": "All time",
+    "custom": "Custom period",
+    "dateFrom": "Date from",
+    "dateTo": "Date to",
+    "mobile": {
+      "customTitle": "Custom period dates",
+      "applyHint": "Date fields stack on mobile to keep Apply and Cancel visible."
+    }
+  },
+  "imports": {
+    "presets": {
+      "productCatalog": "Product catalog import",
+      "ordersHistory": "Historical orders import",
+      "advertisingHistory": "Advertising history import"
+    },
+    "dryRun": {
+      "reportTitle": "Dry-run result summary",
+      "success": "Dry-run success",
+      "withWarnings": "Dry-run completed with warnings",
+      "failed": "Dry-run failed"
+    },
+    "validation": {
+      "row": "Row {row}",
+      "recognizedColumns": "Recognized columns",
+      "missingRequiredColumns": "Missing required columns",
+      "optionalColumns": "Optional columns"
+    },
+    "errors": {
+      "sampleErrors": "Sample errors",
+      "rowLevel": "Row-level errors"
+    },
+    "warnings": {
+      "sampleWarnings": "Sample warnings",
+      "duplicates": "Duplicate warnings"
+    },
+    "duplicates": {
+      "products": "Duplicate products",
+      "variants": "Duplicate variants",
+      "orders": "Duplicate orders",
+      "metrics": "Duplicate metrics"
+    },
+    "results": {
+      "totalRows": "Total rows",
+      "validRows": "Valid rows",
+      "invalidRows": "Invalid rows",
+      "readyRows": "Ready rows",
+      "warnings": "Warnings",
+      "errors": "Errors",
+      "duplicates": "Duplicates",
+      "skipped": "Skipped",
+      "created": "Created",
+      "updated": "Updated",
+      "products": "Products",
+      "variants": "Variants",
+      "inventoryRows": "Inventory rows",
+      "images": "Images",
+      "ordersDetected": "Orders detected",
+      "orderItemsDetected": "Order items detected",
+      "customersMatched": "Customers matched",
+      "customersToCreate": "Customers to create",
+      "variantsMatched": "Variants matched",
+      "variantsMissing": "Variants missing",
+      "shipmentsDetected": "Shipments detected",
+      "readyOrders": "Ready orders",
+      "readyItems": "Ready items",
+      "estimatedRevenue": "Estimated revenue",
+      "estimatedAdCost": "Estimated ad cost",
+      "estimatedProfit": "Estimated profit",
+      "campaignsDetected": "Campaigns detected",
+      "campaignsToCreate": "Campaigns to create",
+      "campaignsReused": "Campaigns reused",
+      "metricsDetected": "Metrics detected",
+      "estimatedSpend": "Estimated spend",
+      "estimatedNetProfit": "Estimated net profit",
+      "estimatedRoas": "Estimated ROAS"
+    },
+    "demoData": {
+      "title": "Synthetic demo dataset",
+      "description": "Use only generated DEMO records for staging and sales demos."
+    },
+    "migration": {
+      "title": "Migration safety",
+      "description": "Imports are workspace-scoped, dry-run first, and duplicate-aware."
+    },
+    "analyticsVerification": {
+      "title": "Analytics verification",
+      "description": "After import, verify Dashboard, Sales, Products, Advertising, Customers, Inventory and Insights."
+    }
+  },
+  "demoWorkspace": {
+    "badge": "Demo workspace",
+    "title": "Synthetic demo data",
+    "description": "This workspace uses generated DEMO data so pilot users can explore Sellora without exposing real customer, order, advertising, or spreadsheet data.",
+    "cta": "Review analytics"
+  },
+  "onboarding": {
+    "eyebrow": "Pilot setup",
+    "title": "First-run setup checklist",
+    "description": "Use these steps to prepare Sellora for a real Instagram shop. Completed steps are detected from available workspace data where it is safe to do so."
+  },
+  "setupChecklist": {
+    "progress": "{completed}/{total} completed",
+    "products": {
+      "title": "Add or import products",
+      "description": "Create products manually or import a catalog before creating reliable orders."
+    },
+    "orders": {
+      "title": "Add customers or order history",
+      "description": "Create orders or import safe historical orders so Dashboard and reports become useful."
+    },
+    "advertising": {
+      "title": "Add advertising metrics",
+      "description": "Enter manual Meta Ads metrics to review spend, revenue, ROAS, CPA and CPL."
+    },
+    "integrations": {
+      "title": "Configure Nova Poshta",
+      "description": "Open integration settings before testing shipment workflows with a real carrier."
+    },
+    "analytics": {
+      "title": "Review Dashboard and Analytics",
+      "description": "Check revenue, top products, customers, inventory alerts and business insights."
+    }
+  },
+  "firstRun": {
+    "empty": {
+      "title": "No business data yet",
+      "description": "Add products, orders and advertising metrics or run a dry-run import to turn Sellora into a useful workspace."
+    },
+    "ctas": {
+      "products": "Create product",
+      "import": "Import data",
+      "orders": "Create order",
+      "ads": "Add ad metric",
+      "integrations": "Nova Poshta settings",
+      "analytics": "Open analytics"
+    }
+  },
+  "importHelp": {
+    "title": "How imports work for pilot users",
+    "dryRun": "Dry-run only checks the file and does not save business data.",
+    "warnings": "Warnings mean rows may need attention but the import can often continue.",
+    "errors": "Errors mean affected rows cannot be imported until the file or mapping is fixed.",
+    "duplicates": "Duplicates are detected by safe keys and skipped by default unless a future update mode is added.",
+    "nextAction": "After a successful dry-run, execute the import and then review Dashboard, Analytics and the source module.",
+    "productColumns": "Expected catalog columns include product name/SKU, variant SKU or color/size, price, stock, minimum stock, category and image URL when available.",
+    "successNextTitle": "Next step after dry-run",
+    "successNextDescription": "If the counters look correct, execute the import, then check products, orders, advertising and analytics for the imported records."
+  },
+  "pilotReadiness": {
+    "title": "Pilot readiness",
+    "description": "Sellora is ready for guided pilot testing with synthetic demo data and safe spreadsheet dry-runs."
+  },
+  "pilotDocs": {
+    "title": "Pilot documentation",
+    "description": "Use the pilot onboarding guide, demo script and QA checklist for first-store feedback."
+  },
+  "feedback": {
+    "button": "Feedback",
+    "categories": {
+      "ISSUE": "Issue",
+      "IDEA": "Idea",
+      "CONFUSION": "Confusing",
+      "PRAISE": "Praise",
+      "OTHER": "Other"
+    },
+    "statuses": {
+      "NEW": "New",
+      "REVIEWED": "Reviewed",
+      "PLANNED": "Planned",
+      "FIXED": "Fixed",
+      "WONT_FIX": "Won’t fix"
+    },
+    "form": {
+      "title": "Report an issue or share feedback",
+      "description": "Tell us what blocked you, what was confusing, or what would make Sellora more useful for your shop.",
+      "category": "Category",
+      "rating": "Rating",
+      "ratingOptional": "Optional rating",
+      "message": "Message",
+      "messagePlaceholder": "Describe what happened or what you expected.",
+      "privacyHint": "Do not include passwords, API keys, tokens, or private customer data in your message.",
+      "currentPage": "Current page: {page}",
+      "submit": "Send feedback",
+      "submitting": "Sending…"
+    },
+    "success": {
+      "submitted": "Thanks — your feedback was submitted for review."
+    },
+    "errors": {
+      "submitFailed": "Unable to submit feedback. Please try again or tell the pilot contact.",
+      "loadFailed": "Unable to load feedback. Please try again.",
+      "restrictedTitle": "Feedback management is restricted",
+      "restrictedDescription": "Only workspace owners and managers can review pilot feedback."
+    },
+    "management": {
+      "eyebrow": "Pilot feedback",
+      "title": "Feedback management",
+      "description": "Review workspace-scoped pilot feedback without exposing internal IDs or secrets. Owners can update status for triage.",
+      "loading": "Loading feedback",
+      "emptyTitle": "No feedback yet",
+      "emptyDescription": "Pilot feedback submitted from the topbar will appear here for owners and managers.",
+      "rating": "Rating {rating}/5"
+    },
+    "modal": {
+      "label": "Feedback",
+      "title": "Feedback"
+    }
+  },
+  "pilotFeedback": {
+    "title": "Pilot feedback loop",
+    "description": "Feedback is collected in-app with category, optional rating, message and current page."
+  },
+  "preMvpRelease": {
+    "title": "Pre-MVP release checklist",
+    "description": "Use the release checklist before inviting external pilot stores."
+  },
+  "knownLimitations": {
+    "title": "Known limitations",
+    "description": "Pilot users should understand what is manual or not automated yet."
+  },
+  "pilotReleaseNotes": {
+    "title": "Pilot release notes",
+    "description": "Share what is ready, what to test, and what data to avoid during pilot."
+  },
+  "qaSeverity": {
+    "critical": "Critical",
+    "major": "Major",
+    "minor": "Minor",
+    "improvement": "Improvement",
+    "question": "Question"
+  },
+  "supportProcess": {
+    "title": "Support process",
+    "description": "Triage feedback by severity, communicate fixes, and keep known limitations updated."
+  },
+  "mobileTopbar": {
+    "openNavigation": "Open navigation",
+    "more": "More actions",
+    "secondaryActions": "Mobile actions"
+  },
+  "mobileSidebar": {
+    "profile": "Workspace profile",
+    "quickControls": "Language and theme controls"
+  },
+  "reports": {
+    "navigation": {
+      "title": "Reports",
+      "alias": "Reports opens the Analytics workspace."
+    },
+    "emptyStates": {
+      "noData": "No report data yet",
+      "noDataDescription": "Add orders, products, inventory and advertising metrics to unlock reports."
+    }
+  },
+  "mobileMoreMenu": {
+    "close": "Close more menu"
+  },
+  "calendarInput": {
+    "visibleIcon": "Calendar icon is visible in light and dark themes."
+  }
+}
