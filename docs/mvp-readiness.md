@@ -73,3 +73,9 @@
 - TTN copy and status sync UX are available where tracking data exists.
 - TTN printing/downloading remains a known limitation and is documented before broader pilot rollout.
 - Order status and shipment status remain separate; TTN creation does not auto-complete orders.
+
+## Sprint 3.2 readiness — Nova Poshta staging QA
+
+- A dedicated staging validation checklist now covers credential, sender, recipient, TTN, status sync, RBAC, workspace, audit and mobile edge cases.
+- Incomplete TTN responses and unavailable status sync are treated as safe failure states rather than confirmed shipment updates.
+- Pilot readiness still requires manual staging validation with a controlled real credential before relying on Nova Poshta for daily operations.

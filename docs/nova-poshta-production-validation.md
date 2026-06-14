@@ -71,3 +71,7 @@ If sender city changes, the selected sender warehouse must be checked again beca
 5. Run status sync only after TTN exists and confirm errors are safe if Nova Poshta is unavailable.
 6. Confirm printable/downloadable TTN documents are presented as a known limitation, not as a fake document.
 7. Confirm logs and audit metadata do not contain raw API keys or raw third-party payloads.
+
+## Sprint 3.2 staging prerequisite
+
+Before production-like validation, complete `docs/nova-poshta-staging-validation.md` with a controlled staging account. Confirm credential masking, sender settings reload, order → shipment consistency, TTN duplicate prevention, status sync safe-unavailable behavior, mobile usability, and audit/logging safety. Do not proceed with a real TTN unless the shop owner approves a controlled test shipment.

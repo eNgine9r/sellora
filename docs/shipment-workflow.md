@@ -34,3 +34,10 @@ Sellora keeps order status and shipment status related but separate. Creating a 
 - `ANALYST` can view shipments but cannot mutate them.
 - Shipment, order, customer and Nova Poshta credential operations are workspace-scoped.
 - Audit logs store safe action metadata and must not contain raw API keys or raw Nova Poshta payloads.
+
+## Sprint 3.2 staging edge-case stabilization
+
+- Staging validation must use a controlled account and synthetic order/customer data only.
+- TTN creation now treats incomplete Nova Poshta responses as unsafe: tracking is not saved until both tracking number and document ref are present.
+- Status sync without a TTN is blocked; empty or unavailable external statuses show a safe unavailable message and keep the internal shipment status badge as the source of truth.
+- Recipient phone, city and warehouse missing states have dedicated localized guidance before retrying TTN creation.

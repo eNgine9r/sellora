@@ -157,17 +157,24 @@ class NovaPoshtaShipmentService:
             self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment_id, action="NOVA_POSHTA_ERROR", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": "TTN_CREATE_FAILED"})
             self.db.commit()
             return NovaPoshtaTtnResponse(success=False, message="Nova Poshta TTN creation failed. Please check the API key and sender settings, then try again.", errors=["NOVA_POSHTA_TTN_FAILED"])
+        tracking_number = getattr(result, "tracking_number", None)
+        document_ref = getattr(result, "document_ref", None)
+        external_status = getattr(result, "status", None)
+        if not tracking_number or not document_ref:
+            self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment_id, action="NOVA_POSHTA_ERROR", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": "TTN_CREATE_INCOMPLETE"})
+            self.db.commit()
+            return NovaPoshtaTtnResponse(success=False, message="Nova Poshta TTN creation returned an incomplete response. Please try again or check Nova Poshta cabinet before retrying.", errors=["NOVA_POSHTA_TTN_INCOMPLETE"])
         shipment.external_provider = IntegrationProvider.NOVA_POSHTA.value
-        shipment.external_ref = result.document_ref
-        shipment.external_status = result.status
-        shipment.nova_poshta_document_ref = result.document_ref
-        shipment.nova_poshta_document_number = result.tracking_number
-        shipment.tracking_number = result.tracking_number
+        shipment.external_ref = document_ref
+        shipment.external_status = external_status
+        shipment.nova_poshta_document_ref = document_ref
+        shipment.nova_poshta_document_number = tracking_number
+        shipment.tracking_number = tracking_number
         shipment.status = ShipmentStatus.CREATED.value
         connection.last_sync_at = datetime.now(UTC)
-        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="NOVA_POSHTA_TTN_CREATED", new_value={"tracking_number": result.tracking_number, "document_ref": result.document_ref})
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="NOVA_POSHTA_TTN_CREATED", new_value={"tracking_number": tracking_number, "document_ref": document_ref})
         self.db.commit()
-        return NovaPoshtaTtnResponse(success=True, message="Nova Poshta TTN created.", tracking_number=result.tracking_number, document_ref=result.document_ref, status=result.status)
+        return NovaPoshtaTtnResponse(success=True, message="Nova Poshta TTN created.", tracking_number=tracking_number, document_ref=document_ref, status=external_status)
 
     def sync_status(self, workspace_id: UUID, shipment_id: UUID, actor_user_id: UUID | None) -> NovaPoshtaStatusResponse:
         _connection, api_key = self.settings._require_connection(workspace_id)
@@ -181,6 +188,10 @@ class NovaPoshtaShipmentService:
             status = self.settings.client_factory(api_key).get_document_status(tracking_number)
         except Exception:
             self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="NOVA_POSHTA_ERROR", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": "STATUS_SYNC_FAILED"})
+            self.db.commit()
+            return NovaPoshtaStatusResponse(success=False, message="Nova Poshta status sync is unavailable. Please try again later.", tracking_number=tracking_number, status=shipment.external_status, synced_at=shipment.nova_poshta_synced_at)
+        if not status:
+            self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="NOVA_POSHTA_STATUS_UNAVAILABLE", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value})
             self.db.commit()
             return NovaPoshtaStatusResponse(success=False, message="Nova Poshta status sync is unavailable. Please try again later.", tracking_number=tracking_number, status=shipment.external_status, synced_at=shipment.nova_poshta_synced_at)
         shipment.nova_poshta_raw_status = status

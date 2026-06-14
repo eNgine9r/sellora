@@ -574,7 +574,11 @@
       "emptyDescription": "Create the first shipment from an order to track TTN and delivery.",
       "filteredEmptyTitle": "No shipments match these filters.",
       "filteredEmptyDescription": "Try changing search, status, carrier, or TTN state."
-    }
+    },
+    "recipientPhoneRequired": "Enter the recipient phone number.",
+    "recipientCityRequired": "Select the recipient city.",
+    "recipientWarehouseRequired": "Select the recipient warehouse.",
+    "createTtnIncomplete": "Nova Poshta returned an incomplete response. Check the Nova Poshta account before trying again."
   },
   "advertising": {
     "title": "Advertising",
@@ -896,7 +900,11 @@
     "statusSyncUnavailable": "Unable to sync Nova Poshta status. The service may be temporarily unavailable.",
     "creatingTtn": "Creating TTN…",
     "ttnExists": "TTN already created",
-    "syncingStatus": "Syncing status…"
+    "syncingStatus": "Syncing status…",
+    "keySavedMasked": "The key is saved and hidden for security.",
+    "apiKeyMissing": "Nova Poshta key is not saved.",
+    "apiKeyInvalid": "Unable to verify the Nova Poshta API key.",
+    "senderSettingsRequiredBeforeTtn": "Fill sender settings before creating a TTN."
   },
   "statuses": {
     "lead": {

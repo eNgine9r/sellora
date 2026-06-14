@@ -12,8 +12,12 @@ function useFriendlyTtnMessage() {
     if (result.success) return t("novaPoshta.ttnCreated");
     if (result.errors?.includes("ttn already exists")) return t("shipments.duplicateTtnWarning");
     if (result.errors?.includes("NOVA_POSHTA_TTN_FAILED")) return t("shipments.createTtnFailed");
+    if (result.errors?.includes("NOVA_POSHTA_TTN_INCOMPLETE")) return t("shipments.createTtnIncomplete");
     const senderMissing = result.errors?.some((error) => error.startsWith("sender_"));
     if (senderMissing) return t("shipments.senderSettingsRequired");
+    if (result.errors?.includes("recipient_phone is required")) return t("shipments.recipientPhoneRequired");
+    if (result.errors?.includes("city is required")) return t("shipments.recipientCityRequired");
+    if (result.errors?.includes("warehouse is required")) return t("shipments.recipientWarehouseRequired");
     const recipientMissing = result.errors?.some((error) => ["recipient_name is required", "recipient_phone is required", "city is required", "warehouse is required"].includes(error));
     if (recipientMissing) return t("shipments.recipientAddressRequired");
     const customerMissing = result.errors?.includes("customer is required");

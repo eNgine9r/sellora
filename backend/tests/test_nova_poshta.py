@@ -204,3 +204,48 @@ def test_sync_status_failure_returns_safe_message() -> None:
     assert not response.success
     assert response.message == "Nova Poshta status sync is unavailable. Please try again later."
     assert "raw status failure" not in str(response.model_dump())
+
+
+def test_create_ttn_incomplete_response_is_safe_and_does_not_store_tracking() -> None:
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
+    service = _shipment_service(shipment)
+    service.settings.client_factory = lambda credential: SimpleNamespace(create_internet_document=lambda payload: SimpleNamespace(tracking_number=None, document_ref=None, status="CREATED"))
+
+    response = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
+
+    assert not response.success
+    assert response.errors == ["NOVA_POSHTA_TTN_INCOMPLETE"]
+    assert shipment.tracking_number is None
+    assert "synthetic-credential-value" not in str(service.audit_logs.records)
+    assert "TTN_CREATE_INCOMPLETE" in str(service.audit_logs.records)
+
+
+def test_sync_status_without_tracking_is_blocked_before_api_call() -> None:
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.CREATED.value)
+    service = _shipment_service(shipment)
+
+    with pytest.raises(ValueError, match="does not have a Nova Poshta tracking number"):
+        service.sync_status(shipment.workspace_id, shipment.id, uuid4())
+
+
+def test_sync_status_empty_response_returns_safe_unavailable_message() -> None:
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.CREATED.value, tracking_number="TTN-001", nova_poshta_document_number="TTN-001", external_status="Previous status")
+    service = _shipment_service(shipment)
+    service.settings.client_factory = lambda credential: SimpleNamespace(get_document_status=lambda tracking_number: None)
+
+    response = service.sync_status(shipment.workspace_id, shipment.id, uuid4())
+
+    assert not response.success
+    assert response.status == "Previous status"
+    assert response.message == "Nova Poshta status sync is unavailable. Please try again later."
+    assert "synthetic-credential-value" not in str(service.audit_logs.records)
+
+
+def test_cross_workspace_ttn_access_uses_workspace_scoped_connection_and_shipment() -> None:
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
+    service = _shipment_service(shipment)
+
+    with pytest.raises(ValueError, match="Nova Poshta is not configured"):
+        service.create_ttn(uuid4(), shipment.id, uuid4())

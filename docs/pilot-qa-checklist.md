@@ -191,3 +191,12 @@ Severity if failed: Minor
 - [ ] Confirm missing customer, recipient, sender settings and duplicate TTN states use localized safe messages.
 - [ ] Confirm Nova Poshta status sync is clear when unavailable.
 - [ ] Confirm mobile shipment list/detail are usable at 375px / 390px / 430px.
+
+## Sprint 3.2 pilot QA — Nova Poshta staging stabilization
+
+- [ ] Pilot store understands that TTN creation may create real Nova Poshta-side records and must use a controlled test shipment.
+- [ ] Credential and sender settings edge cases show localized safe messages.
+- [ ] Missing customer, phone, city and warehouse states block TTN creation with clear next steps.
+- [ ] Duplicate TTN and incomplete TTN response behavior is safe.
+- [ ] Status sync unavailable state is understandable and does not expose raw Nova Poshta payloads.
+- [ ] Audit/log review confirms no raw credentials or private shipment data are stored.

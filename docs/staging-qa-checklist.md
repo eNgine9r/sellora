@@ -503,3 +503,15 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] TTN print/download is documented as unavailable; no fake document is shown.
 - [ ] Creating a TTN does not automatically complete the order.
 - [ ] OWNER/MANAGER mutation actions and ANALYST read-only expectations remain enforced by backend RBAC.
+
+## Sprint 3.2 — Nova Poshta staging edge cases
+
+- [ ] Complete `docs/nova-poshta-staging-validation.md` using a controlled staging account and synthetic customer/order data.
+- [ ] Validate no-key, invalid-key, revoked-key and missing-sender-settings states with localized safe messages.
+- [ ] Confirm sender warehouse is disabled before city selection and clears when sender city changes.
+- [ ] Confirm recipient phone/city/warehouse missing states are user-friendly before TTN creation.
+- [ ] Confirm incomplete TTN responses do not save tracking data.
+- [ ] Confirm status sync without TTN is blocked and unavailable status sync does not show raw payloads.
+- [ ] Confirm OWNER/MANAGER/ANALYST expectations and cross-workspace access blocking.
+- [ ] Confirm audit/logs contain no raw API key or raw Nova Poshta payload.
+- [ ] Confirm `/settings/integrations`, `/orders`, `/shipments`, shipment modal and shipment detail are usable at 375px.
