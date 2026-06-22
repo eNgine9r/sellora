@@ -58,3 +58,9 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - Campaign/adset/ad external ID mapping is documented for future additive schema work; current MVP campaign rows remain manual/import oriented.
 - Manual advertising import is the supported pilot path and must not be mixed with fake Meta API data.
 - Nova Poshta real-key staging validation remains a release blocker for enabling delivery workflow, but it does not block Sprint 4.0 advertising foundation work.
+
+## Sprint 4.0.1 — Remaining advertising validation blockers
+
+- Manual browser-based staging QA for `/advertising`, `/settings/integrations`, Dashboard, Analytics and Import Center still requires staging access and synthetic advertising data.
+- `next lint` still uses the deprecated interactive Next.js setup flow; migrate to ESLint CLI configuration in a dedicated tooling task.
+- npm still reports environment proxy config warnings; CI should keep using approved dependency caches or registry access to avoid another dependency-restore outage.

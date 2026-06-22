@@ -25,3 +25,7 @@ Sellora must treat advertising integration data as sensitive. Sprint 4.0 only ad
 ## MVP-safe path
 
 Manual advertising import remains the safest MVP path for pilot shops. It allows teams to validate ROAS, CPA, CPL, cost per message, and campaign performance without storing Meta credentials or relying on API availability.
+
+## Sprint 4.0.1 safety validation
+
+Safety scans were rerun after Sprint 4.0 and found only safe source, documentation, and synthetic test references. No real Meta access token, app secret, ad account ID, business ID, campaign export, workspace ID, or private customer/order data was added.

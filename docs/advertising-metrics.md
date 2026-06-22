@@ -46,3 +46,7 @@ The UI must never render `NaN`, `Infinity`, `undefined`, or raw `null`; it shoul
 - Duplicate imported daily metrics should be skipped, blocked, or updated predictably according to the import flow summary; they must not silently create duplicate rows.
 - Imported spend, leads, messages, orders, revenue, and net profit feed the same advertising module and analytics formulas as manually entered values.
 - No fake Meta API data should be mixed into manual/imported data.
+
+## Sprint 4.0.1 validation result
+
+Local validation recovered after the Sprint 4.0 dependency outage. Backend `compileall`, full `pytest`, and app import pass; frontend typecheck/build pass; advertising regression markers pass. Manual staging verification still requires staging credentials and synthetic advertising data before Sprint 4.0 can be fully approved for pilot operations.

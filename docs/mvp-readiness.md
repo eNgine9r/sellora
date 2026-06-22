@@ -93,3 +93,10 @@
 - Meta Ads is presented as a preparation placeholder in integrations; automatic sync is future work and must not be represented as active.
 - Advertising formulas and zero-denominator behavior are documented so `/advertising`, Dashboard and Analytics do not drift or render unsafe values.
 - Future Meta Ads credential handling must be workspace-scoped, encrypted/masked, OWNER-managed and tested only with fake clients in automation.
+
+## Sprint 4.0.1 readiness — Advertising validation recovery
+
+- Backend validation is recovered locally: `compileall`, full `pytest` including advertising tests, and FastAPI app import pass.
+- Frontend validation is recovered locally: TypeScript typecheck and production build pass for the Sprint 4.0 advertising placeholder and campaign-source UI.
+- Regression coverage passes for the dedicated advertising foundation script and the full relevant frontend regression suite.
+- Manual staging QA remains required before full Sprint 4.0 approval because no staging URL/credentials were available in this environment; do not claim fake Meta Ads or manual import validation.

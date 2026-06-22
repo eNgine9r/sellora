@@ -208,3 +208,10 @@ Severity if failed: Minor
 - [ ] Confirm campaign rows are understandable to a shop manager and show source/platform context without exposing technical IDs as primary UI.
 - [ ] Confirm empty advertising states guide users to manual import rather than implying Meta Ads is connected.
 - [ ] Confirm no real Meta access token, app secret, ad account ID, business ID, private customer data or real campaign export is used in QA artifacts.
+
+## Sprint 4.0.1 — Advertising staging follow-up
+
+- [ ] With staging credentials, open `/advertising` and verify manual/import source messaging, campaign source badges and zero-denominator display.
+- [ ] Open `/settings/integrations` and verify Meta Ads is clearly marked as preparation/future sync only.
+- [ ] Use synthetic advertising metrics only; do not import real ad account exports or real campaign/customer data into QA artifacts.
+- [ ] Confirm Dashboard and Analytics advertising cards remain consistent with `/advertising` for the selected period.

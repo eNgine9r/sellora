@@ -534,3 +534,12 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] `/settings/integrations` shows Meta Ads as a preparation/placeholder state and does not imply automatic sync is active.
 - [ ] OWNER-only credential-management expectation is documented; no raw Meta token, app secret, ad account ID or business ID appears in UI/logs/docs.
 - [ ] Cross-workspace advertising campaigns, metrics and future integration settings remain isolated by `workspace_id`.
+
+## Sprint 4.0.1 — Advertising foundation validation recovery
+
+- [x] Backend environment recovered: dependencies are available locally and `compileall`, full `pytest`, and FastAPI app import pass.
+- [x] Frontend validation recovered: TypeScript typecheck and production build pass with local `frontend/node_modules`.
+- [ ] Frontend lint remains an interactive/deprecated `next lint` setup prompt until ESLint CLI config is migrated.
+- [x] Sprint 4.0 advertising regression script and the full relevant frontend regression suite pass.
+- [ ] Manual staging browser QA for `/advertising`, `/settings/integrations`, Dashboard, Analytics and Import Center remains pending until staging URL/credentials are provided.
+- [ ] Manual synthetic advertising import verification remains pending until staging access is available; use only synthetic campaign data.

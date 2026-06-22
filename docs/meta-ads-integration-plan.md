@@ -55,3 +55,7 @@ Sprint 4.0 does not add destructive schema changes. Future fields such as `exter
 ## Manual fallback
 
 If Meta Ads API sync is unavailable, revoked, rate-limited or not approved yet, Sellora must continue to support manual fallback through spreadsheet import and manual daily metric entry.
+
+## Sprint 4.0.1 validation status
+
+The Meta Ads readiness UI remains a placeholder only. Automated validation confirms the placeholder and documentation markers are present, but no real Meta OAuth, token exchange, ad account connection, or API sync was executed. Manual staging QA must verify that users are not misled into thinking Meta Ads automation is active.
