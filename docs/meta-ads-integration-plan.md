@@ -59,3 +59,7 @@ If Meta Ads API sync is unavailable, revoked, rate-limited or not approved yet, 
 ## Sprint 4.0.1 validation status
 
 The Meta Ads readiness UI remains a placeholder only. Automated validation confirms the placeholder and documentation markers are present, but no real Meta OAuth, token exchange, ad account connection, or API sync was executed. Manual staging QA must verify that users are not misled into thinking Meta Ads automation is active.
+
+## Sprint 4.1 Attribution Preparation
+
+Manual import remains the active MVP source. Future Meta Ads API work should map external campaign/ad identifiers to workspace-scoped Sellora campaigns, then optionally connect leads or orders to those campaigns. Campaign selection must remain optional, and no future sync may assume every lead or order has a campaign ID.

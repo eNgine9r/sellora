@@ -618,7 +618,13 @@
     "source": "Source",
     "manualSource": "Manual/import",
     "metaReadySource": "Meta-ready mapping",
-    "mappingHint": "External campaign/adset/ad IDs will appear in details after safe Meta Ads sync is added."
+    "mappingHint": "External campaign/adset/ad IDs will appear in details after safe Meta Ads sync is added.",
+    "importMetricsFirst": "Import advertising metrics first to see ROAS, CPA, and CPL.",
+    "roasExplanation": "ROAS shows how much revenue 1 UAH of ad spend brings.",
+    "cpaExplanation": "CPA shows the average cost of one advertising-driven order.",
+    "cplExplanation": "CPL shows the average cost of one lead.",
+    "attributionOptional": "Campaign attribution for leads and orders remains optional; manual import is the primary MVP source.",
+    "filteredEmpty": "If the selected period has no data, adjust the dates or import synthetic advertising metrics."
   },
   "analytics": {
     "title": "Analytics",

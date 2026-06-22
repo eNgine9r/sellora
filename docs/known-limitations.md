@@ -64,3 +64,10 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - Manual browser-based staging QA for `/advertising`, `/settings/integrations`, Dashboard, Analytics and Import Center still requires staging access and synthetic advertising data.
 - `next lint` still uses the deprecated interactive Next.js setup flow; migrate to ESLint CLI configuration in a dedicated tooling task.
 - npm still reports environment proxy config warnings; CI should keep using approved dependency caches or registry access to avoid another dependency-restore outage.
+
+## Sprint 4.1 Advertising Limitations
+
+- Manual browser-based staging QA still needs to be completed with synthetic advertising data before pilot approval.
+- Real Meta Ads API sync is not active; the integration card is a readiness placeholder only.
+- Campaign attribution is optional and not yet a full lead/order-to-campaign relation.
+- Gross profit is documented as a business metric, but the current advertising import path focuses on spend, messages, leads, orders, revenue, and net profit unless a future schema explicitly adds gross-profit advertising fields.

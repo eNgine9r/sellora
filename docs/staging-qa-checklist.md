@@ -543,3 +543,16 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [x] Sprint 4.0 advertising regression script and the full relevant frontend regression suite pass.
 - [ ] Manual staging browser QA for `/advertising`, `/settings/integrations`, Dashboard, Analytics and Import Center remains pending until staging URL/credentials are provided.
 - [ ] Manual synthetic advertising import verification remains pending until staging access is available; use only synthetic campaign data.
+
+## Sprint 4.1 Advertising Import QA
+
+- [ ] Open `/settings/import` and choose the advertising import preset.
+- [ ] Upload synthetic advertising data only: `DEMO Meta Campaign`, `META`, spend `1000`, messages `50`, leads `20`, orders `5`, revenue `5000`, net profit `1500`.
+- [ ] Run dry-run and confirm Ukrainian/English aliases map correctly.
+- [ ] Confirm row-level warnings/errors show row number and understandable reason.
+- [ ] Execute import and confirm created/updated/skipped summary is clear.
+- [ ] Open `/advertising` and confirm spend, messages, leads, orders, revenue, ROAS `5.0`, CPA `200 UAH`, CPL `50 UAH`, ROI `1.5`, cost per message `20 UAH`, and conversion rate `25%` for the selected period.
+- [ ] Confirm dashboard and analytics match the same selected period or document any period limitation.
+- [ ] Confirm no `NaN`, `Infinity`, `undefined`, or raw `null` appears.
+- [ ] Confirm campaign attribution remains optional and no raw UUID-only attribution UX is primary.
+- [ ] Confirm no real Meta token, ad account ID, business ID, real campaign export, or private customer/order data is used.

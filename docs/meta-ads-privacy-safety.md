@@ -29,3 +29,7 @@ Manual advertising import remains the safest MVP path for pilot shops. It allows
 ## Sprint 4.0.1 safety validation
 
 Safety scans were rerun after Sprint 4.0 and found only safe source, documentation, and synthetic test references. No real Meta access token, app secret, ad account ID, business ID, campaign export, workspace ID, or private customer/order data was added.
+
+## Sprint 4.1 Synthetic QA Rule
+
+Advertising import QA must use synthetic rows such as `DEMO Meta Campaign`, `DEMO Instagram Campaign`, or `DEMO Ads Import`. Do not commit real campaign exports, real ad account IDs, real business IDs, real campaign IDs, Meta tokens, customer private data, screenshots with sensitive campaign data, or raw API secrets.

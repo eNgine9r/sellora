@@ -215,3 +215,12 @@ Severity if failed: Minor
 - [ ] Open `/settings/integrations` and verify Meta Ads is clearly marked as preparation/future sync only.
 - [ ] Use synthetic advertising metrics only; do not import real ad account exports or real campaign/customer data into QA artifacts.
 - [ ] Confirm Dashboard and Analytics advertising cards remain consistent with `/advertising` for the selected period.
+
+## Sprint 4.1 Pilot Advertising QA
+
+- [ ] Manual advertising import remains the first-class MVP path.
+- [ ] Pilot stores can test with synthetic data before any real business export is considered.
+- [ ] `/advertising` explains manual/import source and Meta Ads future work.
+- [ ] ROAS, CPA, CPL, ROI, conversion rate, and cost per message follow `docs/advertising-metrics.md`.
+- [ ] Campaign attribution is optional for leads/orders; missing campaign data must not block order creation.
+- [ ] Workspace/RBAC expectations are preserved: frontend hiding is not treated as the only security control.

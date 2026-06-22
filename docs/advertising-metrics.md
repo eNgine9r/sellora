@@ -50,3 +50,42 @@ The UI must never render `NaN`, `Infinity`, `undefined`, or raw `null`; it shoul
 ## Sprint 4.0.1 validation result
 
 Local validation recovered after the Sprint 4.0 dependency outage. Backend `compileall`, full `pytest`, and app import pass; frontend typecheck/build pass; advertising regression markers pass. Manual staging verification still requires staging credentials and synthetic advertising data before Sprint 4.0 can be fully approved for pilot operations.
+
+## Sprint 4.1 Manual Advertising Import QA Scenario
+
+Use synthetic data only for QA. Do not upload real Meta exports, real campaign identifiers, customer data, private order data, tokens, app secrets, business IDs, or ad account IDs.
+
+Recommended synthetic row:
+
+| Field | Value |
+| --- | --- |
+| Campaign | DEMO Meta Campaign |
+| Platform | META |
+| Date | Current safe test date |
+| Spend | 1000 UAH |
+| Messages | 50 |
+| Leads | 20 |
+| Orders | 5 |
+| Revenue | 5000 UAH |
+| Net Profit | 1500 UAH |
+
+Expected values for the same selected period:
+
+| Metric | Formula | Expected value |
+| --- | --- | --- |
+| ROAS | revenue / spend | 5.0 |
+| CPA | spend / orders | 200 UAH |
+| CPL | spend / leads | 50 UAH |
+| ROI | net_profit / spend | 1.5 |
+| Cost per Message | spend / messages | 20 UAH |
+| Conversion Rate | orders / leads | 25% |
+
+Advertising import dry-run should explain which rows will create, update, or skip daily metrics. Duplicate campaign/date rows are expected to update predictably or produce a clear duplicate warning, depending on the import path used. Row-level errors must include the row number and a non-technical reason that a shop owner can fix in the spreadsheet.
+
+Column aliases supported for advertising QA include common English and Ukrainian names such as `campaign`, `campaign_name`, `кампанія`, `назва кампанії`, `platform`, `платформа`, `date`, `дата`, `spend`, `витрати`, `рекламний бюджет`, `messages`, `повідомлення`, `leads`, `ліди`, `orders`, `замовлення`, `revenue`, `дохід`, `виручка`, `net_profit`, `чистий прибуток`, `impressions`, `покази`, `clicks`, and `кліки`.
+
+Dashboard, Analytics, and `/advertising` must use the same period boundaries and the same daily ad metrics source. Zero denominators are displayed as `—`, never `NaN`, `Infinity`, `undefined`, or raw `null`.
+
+## Campaign Attribution Current Behavior
+
+Campaign attribution remains intentionally optional for MVP. Leads currently use lead source, orders can store ad cost, and advertising campaign metrics remain workspace-scoped manual/import records. Existing leads and orders without a campaign remain valid. Future Meta Ads attribution will map campaign/ad identifiers after official Meta API integration is designed and approved.

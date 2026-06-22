@@ -618,7 +618,13 @@
     "source": "Джерело",
     "manualSource": "Manual/import",
     "metaReadySource": "Meta-ready mapping",
-    "mappingHint": "External campaign/adset/ad IDs будуть показані в деталях після додавання безпечної Meta Ads синхронізації."
+    "mappingHint": "External campaign/adset/ad IDs будуть показані в деталях після додавання безпечної Meta Ads синхронізації.",
+    "importMetricsFirst": "Імпортуйте рекламні метрики, щоб побачити ROAS, CPA та CPL.",
+    "roasExplanation": "ROAS показує, скільки доходу приносить 1 грн рекламних витрат.",
+    "cpaExplanation": "CPA показує середню вартість одного замовлення з реклами.",
+    "cplExplanation": "CPL показує середню вартість одного ліда.",
+    "attributionOptional": "Атрибуція кампанії для лідів і замовлень залишається опційною; ручний імпорт є основним MVP-джерелом.",
+    "filteredEmpty": "Якщо за вибраний період немає даних, змініть дати або імпортуйте синтетичні рекламні метрики."
   },
   "analytics": {
     "title": "Аналітика",
