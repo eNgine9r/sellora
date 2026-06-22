@@ -200,3 +200,11 @@ Severity if failed: Minor
 - [ ] Duplicate TTN and incomplete TTN response behavior is safe.
 - [ ] Status sync unavailable state is understandable and does not expose raw Nova Poshta payloads.
 - [ ] Audit/log review confirms no raw credentials or private shipment data are stored.
+
+## Sprint 4.0 — Advertising and Meta Ads readiness
+
+- [ ] Explain to pilot users that advertising currently supports manual entry/import and that Meta Ads automatic sync is future work.
+- [ ] Import or enter a synthetic daily advertising metric and confirm it appears in `/advertising`, Dashboard and Analytics for the same period.
+- [ ] Confirm campaign rows are understandable to a shop manager and show source/platform context without exposing technical IDs as primary UI.
+- [ ] Confirm empty advertising states guide users to manual import rather than implying Meta Ads is connected.
+- [ ] Confirm no real Meta access token, app secret, ad account ID, business ID, private customer data or real campaign export is used in QA artifacts.

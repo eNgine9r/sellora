@@ -524,3 +524,13 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Frontend lint remains an interactive Next.js ESLint setup prompt until ESLint config is added/migrated.
 - [x] Full regression script suite passes, including Sprint 3.x Nova Poshta checks.
 - [ ] Real Nova Poshta staging validation remains blocked until a controlled real API key is provided.
+
+## Sprint 4.0 — Advertising integration foundation
+
+- [ ] `/advertising` loads and explains that manual/imported metrics are the active MVP source.
+- [ ] Campaign list shows campaign name, platform, data source, status, budgets and actions without exposing technical token fields.
+- [ ] Imported/manual spend, leads, messages, orders and revenue feed advertising summaries consistently.
+- [ ] ROAS, CPA, CPL, ROI, conversion rate and cost-per-message cases with zero denominators show `—`, not `NaN` or `Infinity`.
+- [ ] `/settings/integrations` shows Meta Ads as a preparation/placeholder state and does not imply automatic sync is active.
+- [ ] OWNER-only credential-management expectation is documented; no raw Meta token, app secret, ad account ID or business ID appears in UI/logs/docs.
+- [ ] Cross-workspace advertising campaigns, metrics and future integration settings remain isolated by `workspace_id`.

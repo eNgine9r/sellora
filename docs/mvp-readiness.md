@@ -86,3 +86,10 @@
 - Frontend validation recovered locally: TypeScript typecheck and production build pass with available dependencies.
 - Lint remains a known tooling follow-up because `next lint` prompts for initial ESLint configuration.
 - Real Nova Poshta staging validation still requires a controlled API key and shop-approved test shipment; no fake validation is claimed.
+
+## Sprint 4.0 readiness — Advertising integration foundation
+
+- Manual advertising entry/import remains the active MVP path for spend, messages, leads, orders, revenue, ROAS, CPA and CPL.
+- Meta Ads is presented as a preparation placeholder in integrations; automatic sync is future work and must not be represented as active.
+- Advertising formulas and zero-denominator behavior are documented so `/advertising`, Dashboard and Analytics do not drift or render unsafe values.
+- Future Meta Ads credential handling must be workspace-scoped, encrypted/masked, OWNER-managed and tested only with fake clients in automation.

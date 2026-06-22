@@ -610,7 +610,15 @@
     "endDate": "Дата завершення",
     "metricDate": "Дата метрики",
     "notes": "Нотатки",
-    "emptyCampaigns": "Кампаній не знайдено."
+    "emptyCampaigns": "Кампаній не знайдено.",
+    "dataSourceTitle": "Джерело рекламних даних",
+    "manualImportFirst": "MVP використовує ручний імпорт або ручне додавання денних метрик. Meta Ads API ще не активний.",
+    "futureMetaSync": "Майбутня синхронізація Meta Ads буде мапити campaign/adset/ad identifiers без змішування з manual/import даними.",
+    "formulaSafety": "ROAS, CPA, CPL, ROI та конверсії використовують безпечні формули: якщо знаменник дорівнює нулю, UI показує «—», а не NaN чи Infinity.",
+    "source": "Джерело",
+    "manualSource": "Manual/import",
+    "metaReadySource": "Meta-ready mapping",
+    "mappingHint": "External campaign/adset/ad IDs будуть показані в деталях після додавання безпечної Meta Ads синхронізації."
   },
   "analytics": {
     "title": "Аналітика",
@@ -1288,5 +1296,16 @@
   },
   "calendarInput": {
     "visibleIcon": "Іконка календаря видима у світлій і темній темах."
+  },
+  "metaAds": {
+    "title": "Фундамент інтеграції Meta Ads",
+    "subtitle": "Sellora готує безпечне підключення Meta Ads без поспішного запуску API. Поточний MVP працює через ручний імпорт рекламних метрик.",
+    "status": "Підготовка",
+    "preparing": "Інтеграція Meta Ads готується.",
+    "manualImportSupported": "Зараз доступний ручний імпорт рекламних метрик.",
+    "automaticLater": "Автоматична синхронізація з Meta Ads буде додана пізніше.",
+    "safeTokenRule": "Сирі access token, app secret, ad account ID і business ID не показуються та не зберігаються у фронтенді.",
+    "workspaceRule": "Майбутні налаштування Meta Ads мають бути привʼязані до поточного workspace.",
+    "ownerRule": "Керування майбутніми Meta credentials має бути доступне лише OWNER."
   }
 }

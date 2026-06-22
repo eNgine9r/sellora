@@ -610,7 +610,15 @@
     "endDate": "End date",
     "metricDate": "Metric date",
     "notes": "Notes",
-    "emptyCampaigns": "No campaigns found."
+    "emptyCampaigns": "No campaigns found.",
+    "dataSourceTitle": "Advertising data source",
+    "manualImportFirst": "The MVP uses manual import or manual daily metrics entry. Meta Ads API is not active yet.",
+    "futureMetaSync": "Future Meta Ads sync will map campaign/adset/ad identifiers without mixing fake API data into manual/import data.",
+    "formulaSafety": "ROAS, CPA, CPL, ROI, and conversion metrics use safe formulas: when a denominator is zero, the UI shows “—”, not NaN or Infinity.",
+    "source": "Source",
+    "manualSource": "Manual/import",
+    "metaReadySource": "Meta-ready mapping",
+    "mappingHint": "External campaign/adset/ad IDs will appear in details after safe Meta Ads sync is added."
   },
   "analytics": {
     "title": "Analytics",
@@ -1288,5 +1296,16 @@
   },
   "calendarInput": {
     "visibleIcon": "Calendar icon is visible in light and dark themes."
+  },
+  "metaAds": {
+    "title": "Meta Ads integration foundation",
+    "subtitle": "Sellora is preparing a safe Meta Ads connection without rushing API automation. The current MVP remains powered by manual advertising metrics import.",
+    "status": "Preparing",
+    "preparing": "Meta Ads integration is being prepared.",
+    "manualImportSupported": "Manual advertising metrics import is currently supported.",
+    "automaticLater": "Automatic Meta Ads sync will be added later.",
+    "safeTokenRule": "Raw access tokens, app secrets, ad account IDs, and business IDs are not shown or stored in the frontend.",
+    "workspaceRule": "Future Meta Ads settings must be scoped to the current workspace.",
+    "ownerRule": "Future Meta credential management must remain OWNER-only."
   }
 }
