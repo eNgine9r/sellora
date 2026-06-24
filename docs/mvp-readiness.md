@@ -110,3 +110,10 @@ Current attribution readiness: lead source and order ad cost support manual attr
 ## Sprint 4.2 Advertising Pilot Readiness
 
 Sellora now has a synthetic advertising import template, a bilingual import guide, a staging QA guide, and a pilot advertising guide. Manual advertising import remains the MVP path, while Meta Ads API automation remains future work. `/advertising` and `/settings/import` now point users toward the template/download path and explain how to continue after dry-run/import.
+
+## Sprint 4.2.1 Advertising CSV Template Validation
+
+- The GitHub binary-file blocker is considered resolved when tracked template files are CSV-only and no UI/docs link points to `advertising-import-template.xlsx`.
+- CI validation for Sprint 4.2.1 covers CSV template headers, synthetic rows, Import Center CSV upload/preview tests, full backend pytest, FastAPI app import, frontend typecheck/build, and advertising/import regression scripts.
+- `next lint` remains a tooling follow-up until the project migrates from deprecated interactive `next lint` setup to an explicit ESLint CLI configuration.
+- Manual browser staging QA with the CSV template remains required before declaring real staging approval; all QA data must stay synthetic.

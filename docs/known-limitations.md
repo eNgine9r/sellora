@@ -77,3 +77,9 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - The committed advertising templates are synthetic and safe for QA, but they do not prove a real store export will be clean; pilot stores must sanitize real business files before import.
 - Browser-based staging QA with the CSV template still needs to be executed in the actual staging environment.
 - Automatic Meta Ads sync, token refresh, ad account selection, and real campaign/ad attribution remain future work.
+
+## Sprint 4.2.1 Validation Limitations
+
+- The CSV template CI/build validation can pass locally, but browser-based staging import still requires deployed staging access and a synthetic QA workspace.
+- The project still uses deprecated interactive `next lint`; lint should be migrated to an explicit ESLint CLI setup in a separate tooling task.
+- Committed advertising templates must remain CSV-only; do not reintroduce binary `.xlsx` template files into tracked docs or public assets.

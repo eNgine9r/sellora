@@ -43,3 +43,12 @@ Use only synthetic advertising data. The preferred test file is `docs/templates/
 - No real campaign export is used.
 - No private customer/order data is used.
 - No screenshots with real ad data are attached to QA artifacts.
+
+## Sprint 4.2.1 CSV Template Validation Status
+
+- Binary `.xlsx` advertising templates are not committed; the pilot template is CSV-only in tracked files.
+- Validate the blocker fix with `git ls-files '*.xlsx' 'docs/templates/*' 'frontend/public/templates/*'` and confirm only the two CSV template paths are returned.
+- Validate stale links with `rg -n "advertising-import-template\.xlsx|Двійкові|binary files|binary file" docs frontend backend --glob '!node_modules' --glob '!.next' || true`; no user-facing XLSX template link should remain.
+- Backend validation for Sprint 4.2.1 must include `compileall`, full `pytest`, and FastAPI app import because Import Center CSV parsing now runs through the backend parser/upload path.
+- Frontend validation must include `typecheck`, production build, advertising/import regression scripts, and CSV template link checks for `/advertising` and `/settings/import`.
+- Browser-based staging CSV import QA is still required in the deployed staging environment; do not claim manual staging approval until the 21-step flow above is completed with synthetic data.

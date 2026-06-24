@@ -559,7 +559,7 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 
 ## Sprint 4.2 Advertising Template and Pilot QA
 
-- [ ] Confirm `docs/templates/advertising-import-template.csv` and `docs/templates/advertising-import-template.csv` exist and contain synthetic data only.
+- [ ] Confirm `docs/templates/advertising-import-template.csv` and `frontend/public/templates/advertising-import-template.csv` exist and contain synthetic data only.
 - [ ] Confirm `/advertising` offers a template download and Import Center path.
 - [ ] Confirm `/settings/import` advertising preset explains required columns, optional columns, dry-run, duplicate behavior, and next action to `/advertising`.
 - [ ] Run `docs/advertising-staging-qa.md` with the synthetic CSV template.
