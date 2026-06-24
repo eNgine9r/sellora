@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 from collections import defaultdict
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
@@ -332,6 +333,8 @@ class ExcelParserService:
         self.normalizer = ExcelValueNormalizer()
 
     def list_sheets(self, file_path: str) -> list[str]:
+        if file_path.lower().endswith(".csv"):
+            return ["CSV"]
         from openpyxl import load_workbook
         workbook = load_workbook(file_path, read_only=True, data_only=True)
         try:
@@ -343,6 +346,8 @@ class ExcelParserService:
         return self.read_rows(file_path, sheet_name, limit)
 
     def read_rows(self, file_path: str, sheet_name: str, limit: int | None = None) -> tuple[list[str], list[dict]]:
+        if file_path.lower().endswith(".csv"):
+            return self._read_csv_rows(file_path, limit)
         from openpyxl import load_workbook
         workbook = load_workbook(file_path, read_only=True, data_only=True)
         try:
@@ -364,6 +369,20 @@ class ExcelParserService:
             return columns, rows
         finally:
             workbook.close()
+
+    def _read_csv_rows(self, file_path: str, limit: int | None = None) -> tuple[list[str], list[dict]]:
+        with open(file_path, encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            columns = [column or f"column_{index + 1}" for index, column in enumerate(reader.fieldnames or [])]
+            rows: list[dict] = []
+            for row in reader:
+                if limit is not None and len(rows) >= limit:
+                    break
+                cleaned = {column: self._clean_cell(row.get(column)) for column in columns}
+                if all(self.normalizer.text(value) is None for value in cleaned.values()):
+                    continue
+                rows.append(cleaned)
+            return columns, rows
 
     def _clean_cell(self, value):
         if isinstance(value, datetime):
@@ -1123,12 +1142,13 @@ class ImportService:
 
     async def upload(self, workspace_id: UUID, file: UploadFile, actor_user_id: UUID | None) -> ImportJob:
         safe_name = self._safe_filename(file.filename or "import.xlsx")
-        if not safe_name.lower().endswith(".xlsx"):
-            raise ImportServiceError("Only .xlsx files are supported")
+        suffix = Path(safe_name).suffix.lower()
+        if suffix not in {".xlsx", ".csv"}:
+            raise ImportServiceError("Only .xlsx and .csv files are supported")
         content = await file.read()
         if len(content) > get_settings().import_max_file_size_mb * 1024 * 1024:
             raise ImportServiceError("Import file exceeds size limit")
-        job = self.jobs.create(ImportJob(workspace_id=workspace_id, file_name=safe_name, file_type="xlsx", file_path="pending", status=ImportJobStatus.UPLOADED.value, created_by=actor_user_id))
+        job = self.jobs.create(ImportJob(workspace_id=workspace_id, file_name=safe_name, file_type=suffix.removeprefix("."), file_path="pending", status=ImportJobStatus.UPLOADED.value, created_by=actor_user_id))
         directory = Path(get_settings().import_storage_path) / str(workspace_id) / str(job.id)
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / safe_name

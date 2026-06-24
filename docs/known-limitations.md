@@ -71,3 +71,9 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - Real Meta Ads API sync is not active; the integration card is a readiness placeholder only.
 - Campaign attribution is optional and not yet a full lead/order-to-campaign relation.
 - Gross profit is documented as a business metric, but the current advertising import path focuses on spend, messages, leads, orders, revenue, and net profit unless a future schema explicitly adds gross-profit advertising fields.
+
+## Sprint 4.2 Advertising Pilot Limitations
+
+- The committed advertising templates are synthetic and safe for QA, but they do not prove a real store export will be clean; pilot stores must sanitize real business files before import.
+- Browser-based staging QA with the CSV template still needs to be executed in the actual staging environment.
+- Automatic Meta Ads sync, token refresh, ad account selection, and real campaign/ad attribution remain future work.

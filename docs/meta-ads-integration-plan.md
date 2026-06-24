@@ -63,3 +63,7 @@ The Meta Ads readiness UI remains a placeholder only. Automated validation confi
 ## Sprint 4.1 Attribution Preparation
 
 Manual import remains the active MVP source. Future Meta Ads API work should map external campaign/ad identifiers to workspace-scoped Sellora campaigns, then optionally connect leads or orders to those campaigns. Campaign selection must remain optional, and no future sync may assume every lead or order has a campaign ID.
+
+## Sprint 4.2 Pilot Readiness Note
+
+Pilot advertising import uses committed synthetic templates and manual daily metrics only. The template and guides do not activate OAuth, token exchange, ad account selection, campaign sync, or insights sync. Future Meta Ads integration must preserve the manual fallback path and the same workspace-scoped data flow.

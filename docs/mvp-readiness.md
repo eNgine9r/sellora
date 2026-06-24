@@ -106,3 +106,7 @@
 Manual/imported advertising metrics are the approved MVP data source. The synthetic import scenario in `docs/advertising-metrics.md` is the required pilot-safe validation path for ROAS/CPA/CPL reporting. Real Meta Ads API integration remains future work and must not be represented as active sync.
 
 Current attribution readiness: lead source and order ad cost support manual attribution signals, while campaign attribution remains optional and documented as future enhancement. Dashboard, Analytics, and `/advertising` should use the same daily ad metrics and selected period boundaries.
+
+## Sprint 4.2 Advertising Pilot Readiness
+
+Sellora now has a synthetic advertising import template, a bilingual import guide, a staging QA guide, and a pilot advertising guide. Manual advertising import remains the MVP path, while Meta Ads API automation remains future work. `/advertising` and `/settings/import` now point users toward the template/download path and explain how to continue after dry-run/import.

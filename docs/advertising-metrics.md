@@ -89,3 +89,18 @@ Dashboard, Analytics, and `/advertising` must use the same period boundaries and
 ## Campaign Attribution Current Behavior
 
 Campaign attribution remains intentionally optional for MVP. Leads currently use lead source, orders can store ad cost, and advertising campaign metrics remain workspace-scoped manual/import records. Existing leads and orders without a campaign remain valid. Future Meta Ads attribution will map campaign/ad identifiers after official Meta API integration is designed and approved.
+
+## Sprint 4.2 Pilot Template Dataset
+
+Sprint 4.2 adds a pilot-safe CSV import template in `docs/templates/advertising-import-template.csv`. The same CSV file is available in the frontend at `/templates/advertising-import-template.csv` for pilot download and direct staging upload.
+
+The synthetic demo rows are:
+
+| Campaign | Platform | Spend | Messages | Leads | Orders | Revenue | Net Profit | Impressions | Clicks | Notes |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| DEMO Meta Campaign — Watches | META | 1000 | 50 | 20 | 5 | 5000 | 1500 | 10000 | 300 | Non-zero ROAS/CPA/CPL |
+| DEMO Instagram Campaign — Rings | INSTAGRAM | 750 | 35 | 15 | 3 | 2700 | 800 | 7000 | 180 | Non-zero ROAS/CPA/CPL |
+| DEMO Retargeting Campaign | META | 500 | 20 | 8 | 2 | 1800 | 450 | 4000 | 90 | Non-zero ROAS/CPA/CPL |
+| DEMO Zero Leads Campaign | INSTAGRAM | 250 | 12 | 0 | 0 | 0 | 0 | 2500 | 60 | Zero-denominator QA row |
+
+The zero-denominator row must show `—` for CPA/CPL/conversion rate and must never show `NaN`, `Infinity`, `undefined`, or raw `null`.

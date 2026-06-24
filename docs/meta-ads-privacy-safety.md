@@ -33,3 +33,7 @@ Safety scans were rerun after Sprint 4.0 and found only safe source, documentati
 ## Sprint 4.1 Synthetic QA Rule
 
 Advertising import QA must use synthetic rows such as `DEMO Meta Campaign`, `DEMO Instagram Campaign`, or `DEMO Ads Import`. Do not commit real campaign exports, real ad account IDs, real business IDs, real campaign IDs, Meta tokens, customer private data, screenshots with sensitive campaign data, or raw API secrets.
+
+## Sprint 4.2 Template Safety
+
+The advertising import template contains only synthetic campaign names and synthetic metrics. It must not be replaced with a real ad account export in docs, tests, screenshots, PR text, logs, or demo fixtures. Pilot stores should sanitize any future business export before import and should never upload tokens, app secrets, business IDs, ad account IDs, campaign IDs, private customer data, or `.env` files.

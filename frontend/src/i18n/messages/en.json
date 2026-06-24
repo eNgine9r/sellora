@@ -624,7 +624,9 @@
     "cpaExplanation": "CPA shows the average cost of one advertising-driven order.",
     "cplExplanation": "CPL shows the average cost of one lead.",
     "attributionOptional": "Campaign attribution for leads and orders remains optional; manual import is the primary MVP source.",
-    "filteredEmpty": "If the selected period has no data, adjust the dates or import synthetic advertising metrics."
+    "filteredEmpty": "If the selected period has no data, adjust the dates or import synthetic advertising metrics.",
+    "templateCta": "Download CSV template",
+    "openImportCenter": "Open Import Center"
   },
   "analytics": {
     "title": "Analytics",
@@ -822,7 +824,7 @@
     "settingsEyebrow": "Sellora Settings",
     "subtitle": "Upload, preview, validate, and import historical Excel data safely.",
     "preset": "Import preset",
-    "uploadExcel": "Upload Excel file",
+    "uploadExcel": "Upload Excel or CSV file",
     "chooseFile": "Choose file",
     "noFile": "No file selected",
     "selectSheet": "Select sheet",
@@ -844,7 +846,15 @@
     "ordersHistoryHelp": "This import creates historical orders, order items, customers if needed, and optional shipments. It does not affect current inventory by default.",
     "advertisingHistoryHelp": "This import creates advertising campaigns and daily metrics from historical ad reports. It does not connect to Meta Ads API.",
     "affectInventory": "affect inventory",
-    "affectInventoryWarning": "This may change current stock/reserved quantities. Use only if importing active operational orders."
+    "affectInventoryWarning": "This may change current stock/reserved quantities. Use only if importing active operational orders.",
+    "templateTitle": "Advertising import template",
+    "templateHelp": "Download the synthetic CSV template, run dry-run, then open Advertising after a successful import.",
+    "downloadTemplate": "Download CSV template",
+    "openImportCenter": "Open Import Center",
+    "requiredColumns": "Required columns: Date, Campaign.",
+    "optionalColumns": "Recommended columns: Platform, Spend, Messages, Leads, Orders, Revenue, Net Profit, Impressions, Clicks.",
+    "duplicateHint": "Duplicate rows with the same campaign and date must be explained in dry-run: create, update, skip, or warning.",
+    "afterImport": "After a successful import, open Advertising, Dashboard, and Analytics with the same period."
   },
   "novaPoshta": {
     "title": "Nova Poshta",

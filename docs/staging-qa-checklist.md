@@ -556,3 +556,12 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Confirm no `NaN`, `Infinity`, `undefined`, or raw `null` appears.
 - [ ] Confirm campaign attribution remains optional and no raw UUID-only attribution UX is primary.
 - [ ] Confirm no real Meta token, ad account ID, business ID, real campaign export, or private customer/order data is used.
+
+## Sprint 4.2 Advertising Template and Pilot QA
+
+- [ ] Confirm `docs/templates/advertising-import-template.csv` and `docs/templates/advertising-import-template.csv` exist and contain synthetic data only.
+- [ ] Confirm `/advertising` offers a template download and Import Center path.
+- [ ] Confirm `/settings/import` advertising preset explains required columns, optional columns, dry-run, duplicate behavior, and next action to `/advertising`.
+- [ ] Run `docs/advertising-staging-qa.md` with the synthetic CSV template.
+- [ ] Confirm Dashboard and Analytics match `/advertising` for the selected period or document any aggregation difference.
+- [ ] Confirm pilot-facing wording in `docs/pilot-advertising-guide.md` is understandable for a shop owner and clearly says Meta Ads API is future work.

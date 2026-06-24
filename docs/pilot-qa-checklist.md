@@ -224,3 +224,11 @@ Severity if failed: Minor
 - [ ] ROAS, CPA, CPL, ROI, conversion rate, and cost per message follow `docs/advertising-metrics.md`.
 - [ ] Campaign attribution is optional for leads/orders; missing campaign data must not block order creation.
 - [ ] Workspace/RBAC expectations are preserved: frontend hiding is not treated as the only security control.
+
+## Sprint 4.2 Advertising Pilot Readiness
+
+- [ ] Pilot can find or receive the advertising import template.
+- [ ] Pilot understands that the template starts with synthetic rows and should not contain tokens, account IDs, customer personal data, or real campaign exports in QA artifacts.
+- [ ] Pilot can follow `docs/advertising-import-guide.md` to prepare the spreadsheet, run dry-run, fix row errors, and execute import.
+- [ ] Pilot can use `docs/pilot-advertising-guide.md` to understand ROAS, CPA, CPL, ROI, and campaign comparison.
+- [ ] Campaign attribution limitation is clear: leads/orders do not require campaign attribution, and Meta attribution remains future work.

@@ -124,6 +124,24 @@ def test_import_job_creation(tmp_path, monkeypatch) -> None:
     assert Path(job.file_path).name == "safe.xlsx"
 
 
+def test_csv_import_job_creation_and_parser_preview(tmp_path, monkeypatch) -> None:
+    service = _import_service(tmp_path)
+    service.jobs = FakeJobs()
+    monkeypatch.setattr("app.services.import_center_service.get_settings", lambda: SimpleNamespace(import_max_file_size_mb=1, import_storage_path=str(tmp_path)))
+
+    content = "Дата,Кампанія,Витрати\n2026-06-15,DEMO Meta Campaign,1000\n".encode()
+    job = asyncio.run(service.upload(uuid4(), FakeUploadFile("advertising-template.csv", content), actor_user_id=uuid4()))
+
+    assert job.file_type == "csv"
+    assert Path(job.file_path).name == "advertising-template.csv"
+
+    parser = ExcelParserService()
+    assert parser.list_sheets(job.file_path) == ["CSV"]
+    columns, rows = parser.preview(job.file_path, "CSV", 5)
+    assert columns == ["Дата", "Кампанія", "Витрати"]
+    assert rows == [{"Дата": "2026-06-15", "Кампанія": "DEMO Meta Campaign", "Витрати": "1000"}]
+
+
 def test_owner_only_access_and_manager_forbidden() -> None:
     workspace_id = uuid4()
     owner = SimpleNamespace(workspaces=[SimpleNamespace(workspace_id=workspace_id, workspace=SimpleNamespace(is_active=True), role=SimpleNamespace(name=RoleName.OWNER.value))])
