@@ -565,3 +565,13 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Run `docs/advertising-staging-qa.md` with the synthetic CSV template.
 - [ ] Confirm Dashboard and Analytics match `/advertising` for the selected period or document any aggregation difference.
 - [ ] Confirm pilot-facing wording in `docs/pilot-advertising-guide.md` is understandable for a shop owner and clearly says Meta Ads API is future work.
+
+## Sprint 4.2.2 Advertising Manual Staging Gate
+
+- [ ] Confirm staging frontend URL, backend health, login credentials, and a controlled synthetic QA workspace are available.
+- [ ] Download `/templates/advertising-import-template.csv` from `/advertising` and `/settings/import` and confirm no primary `.xlsx` template is shown.
+- [ ] Upload the CSV template, run preview/dry-run, execute import, repeat import once, and document created/updated/skipped behavior.
+- [ ] Verify imported synthetic campaigns in `/advertising`, Dashboard, and Analytics for the same date period.
+- [ ] Confirm zero-denominator rows show `—` or another approved safe empty state, never `NaN`, `Infinity`, `undefined`, or raw `null`.
+- [ ] Confirm mobile widths, dark/light themes, and privacy rules before marking advertising import pilot-ready.
+- [ ] If staging access is unavailable, keep advertising import marked not pilot-ready and document the blocker.

@@ -117,3 +117,9 @@ Sellora now has a synthetic advertising import template, a bilingual import guid
 - CI validation for Sprint 4.2.1 covers CSV template headers, synthetic rows, Import Center CSV upload/preview tests, full backend pytest, FastAPI app import, frontend typecheck/build, and advertising/import regression scripts.
 - `next lint` remains a tooling follow-up until the project migrates from deprecated interactive `next lint` setup to an explicit ESLint CLI configuration.
 - Manual browser staging QA with the CSV template remains required before declaring real staging approval; all QA data must stay synthetic.
+
+## Sprint 4.2.2 Advertising Manual Staging Decision
+
+- Local validation is recovered for the CSV advertising import flow, but deployed browser staging QA was not executable without staging URL, credentials, and a controlled QA workspace.
+- Advertising import remains **not pilot-ready yet** until `/settings/import`, `/advertising`, Dashboard, and Analytics are verified on deployed staging with the synthetic CSV template.
+- Do not mark Sprint 4.2.2 as manually approved, and do not use real ad account exports, tokens, account IDs, customer data, screenshots with secrets, or private order data for the remaining QA.
