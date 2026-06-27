@@ -575,3 +575,12 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Confirm zero-denominator rows show `—` or another approved safe empty state, never `NaN`, `Infinity`, `undefined`, or raw `null`.
 - [ ] Confirm mobile widths, dark/light themes, and privacy rules before marking advertising import pilot-ready.
 - [ ] If staging access is unavailable, keep advertising import marked not pilot-ready and document the blocker.
+
+## Sprint 4.2.3 Advertising Staging Access Gate
+
+- [ ] Provide staging frontend URL and confirm it loads.
+- [ ] Provide staging backend URL and confirm API health responds.
+- [ ] Provide secure test credentials without committing or logging them.
+- [ ] Confirm a controlled synthetic QA workspace and role with Import Center, Advertising, Dashboard, and Analytics access.
+- [ ] If any required input is missing, mark Advertising import staging QA blocked and do not claim pilot readiness.
+- [ ] Once access is available, execute CSV template download, dry-run, import, duplicate import, reporting, mobile/theme, and privacy checks with synthetic data only.

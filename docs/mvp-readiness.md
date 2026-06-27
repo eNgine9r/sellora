@@ -123,3 +123,9 @@ Sellora now has a synthetic advertising import template, a bilingual import guid
 - Local validation is recovered for the CSV advertising import flow, but deployed browser staging QA was not executable without staging URL, credentials, and a controlled QA workspace.
 - Advertising import remains **not pilot-ready yet** until `/settings/import`, `/advertising`, Dashboard, and Analytics are verified on deployed staging with the synthetic CSV template.
 - Do not mark Sprint 4.2.2 as manually approved, and do not use real ad account exports, tokens, account IDs, customer data, screenshots with secrets, or private order data for the remaining QA.
+
+## Sprint 4.2.3 Advertising Staging Access Decision
+
+- Required staging inputs were still unavailable: staging frontend URL, staging backend URL, secure credentials, controlled QA workspace, and role/permission confirmation.
+- Advertising CSV import cannot be marked pilot-ready from local validation alone; deployed `/settings/import`, `/advertising`, Dashboard, and Analytics checks are still required.
+- Final Sprint 4.2.3 decision: **Advertising import staging QA blocked** until staging access is provided and the synthetic CSV import flow is executed end-to-end.

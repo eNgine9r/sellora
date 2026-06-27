@@ -89,3 +89,9 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - Manual browser staging QA for the advertising CSV import flow is still blocked until staging frontend/backend access, credentials, and a controlled QA workspace are provided.
 - CSV dry-run, execute import, duplicate behavior, `/advertising`, Dashboard, Analytics, mobile, and theme checks are not approved from local validation alone.
 - Advertising import should remain marked not pilot-ready until the deployed staging flow is completed with synthetic data.
+
+## Sprint 4.2.3 Staging Access Limitation
+
+- Staging QA remains blocked because the required staging frontend/backend URLs, secure credentials, controlled QA workspace, and role/permission confirmation were not provided.
+- CSV template download, dry-run, execute import, duplicate import behavior, `/advertising`, Dashboard, Analytics, zero-denominator display, mobile, and theme checks remain unverified on deployed staging.
+- Pilot readiness remains blocked until the deployed staging flow is completed with synthetic data only.
