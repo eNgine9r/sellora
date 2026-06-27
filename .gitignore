@@ -1,0 +1,11 @@
+backend/storage/imports/
+backend/storage/test-files/
+backend/storage/private-imports/
+*.xlsx
+*.xls
+*.csv
+frontend/node_modules/
+frontend/.next/
+backend/.pytest_cache/
+__pycache__/
+*.tsbuildinfo
