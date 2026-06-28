@@ -1,0 +1,5 @@
+"use client";
+
+import { useI18n } from "@/i18n/provider";
+import { ImportPreview } from "@/types/import-center";
+export function ImportPreviewTable({ preview }: { preview?: ImportPreview }) { const { t } = useI18n(); if (!preview) return null; return <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl bg-white p-4 shadow-sm"><h2 className="mb-3 font-semibold">{t("actions.preview")}</h2><div className="sellora-scrollbar max-w-full overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr>{preview.columns.map((column) => <th className="border-b p-2" key={column}>{column}</th>)}</tr></thead><tbody>{preview.rows.map((row, index) => <tr key={index}>{preview.columns.map((column) => <td className="border-b p-2" key={column}>{String(row[column] ?? "")}</td>)}</tr>)}</tbody></table></div></div>; }
