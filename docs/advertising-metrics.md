@@ -104,3 +104,18 @@ The synthetic demo rows are:
 | DEMO Zero Leads Campaign | INSTAGRAM | 250 | 12 | 0 | 0 | 0 | 0 | 2500 | 60 | Zero-denominator QA row |
 
 The zero-denominator row must show `—` for CPA/CPL/conversion rate and must never show `NaN`, `Infinity`, `undefined`, or raw `null`.
+
+## Sprint 4.3 Campaign Decision Support
+
+Sprint 4.3 adds frontend-computed campaign insights on `/advertising` without changing backend/API enum values or persistence. The comparison uses existing workspace-scoped campaign performance aggregates for the selected period and keeps manual entry / CSV import as the active MVP data source.
+
+Decision statuses are deterministic UI labels:
+
+| Status | Ukrainian label | Rule summary | Owner action |
+| --- | --- | --- | --- |
+| `GOOD` | Добре працює | Spend exists and ROAS is at least `4.0`. | Consider scaling after checking stock and order capacity. |
+| `WATCH` | Потрібно спостерігати | Leads exist without orders, CPA is materially above average, or data is mixed but not clearly profitable. | Review targeting, offer, creative, and lead follow-up. |
+| `PROBLEM` | Потребує уваги | Spend exists but orders are `0`. | Pause or investigate before adding more budget. |
+| `NO_DATA` | Недостатньо даних | Spend is missing or `0`, so a recommendation would be misleading. | Add manual/CSV metrics for the period first. |
+
+Top Campaigns sort by ROAS, then revenue, then orders. Campaigns Needing Attention prioritize `PROBLEM` before `WATCH`, then higher spend/CPA. Unsafe divisions still render as `—`, never `NaN`, `Infinity`, `undefined`, or raw `null`.

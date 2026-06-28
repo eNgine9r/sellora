@@ -129,3 +129,9 @@ Sellora now has a synthetic advertising import template, a bilingual import guid
 - Required staging inputs were still unavailable: staging frontend URL, staging backend URL, secure credentials, controlled QA workspace, and role/permission confirmation.
 - Advertising CSV import cannot be marked pilot-ready from local validation alone; deployed `/settings/import`, `/advertising`, Dashboard, and Analytics checks are still required.
 - Final Sprint 4.2.3 decision: **Advertising import staging QA blocked** until staging access is provided and the synthetic CSV import flow is executed end-to-end.
+
+## Sprint 4.3 Advertising Insights Readiness
+
+- `/advertising` now includes frontend-computed campaign comparison, decision statuses, Top Campaigns, and Campaigns Needing Attention based on existing manual/imported campaign performance metrics.
+- Decision support is explanatory and deterministic; it does not use AI generation, Meta Ads API data, or new backend enum values.
+- Advertising import remains blocked for pilot readiness until deployed staging access, credentials, controlled workspace, and synthetic CSV import QA are completed.

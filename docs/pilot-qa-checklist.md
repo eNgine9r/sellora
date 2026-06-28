@@ -232,3 +232,10 @@ Severity if failed: Minor
 - [ ] Pilot can follow `docs/advertising-import-guide.md` to prepare the spreadsheet, run dry-run, fix row errors, and execute import.
 - [ ] Pilot can use `docs/pilot-advertising-guide.md` to understand ROAS, CPA, CPL, ROI, and campaign comparison.
 - [ ] Campaign attribution limitation is clear: leads/orders do not require campaign attribution, and Meta attribution remains future work.
+
+## Sprint 4.3 Advertising Decision-Support Checks
+
+- On `/advertising`, compare the same selected period across campaign comparison, Top Campaigns, and Campaigns Needing Attention.
+- Confirm statuses map to understandable Ukrainian labels: Добре працює, Потрібно спостерігати, Потребує уваги, Недостатньо даних.
+- Confirm insights do not recommend scaling when spend is missing or when campaign data is incomplete.
+- Keep advertising import marked not pilot-ready until deployed staging QA is completed with synthetic CSV data.

@@ -584,3 +584,10 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Confirm a controlled synthetic QA workspace and role with Import Center, Advertising, Dashboard, and Analytics access.
 - [ ] If any required input is missing, mark Advertising import staging QA blocked and do not claim pilot readiness.
 - [ ] Once access is available, execute CSV template download, dry-run, import, duplicate import, reporting, mobile/theme, and privacy checks with synthetic data only.
+
+## Sprint 4.3 Advertising Insights QA Addendum
+
+- Verify `/advertising` shows campaign comparison, decision status, Top Campaigns, and Campaigns Needing Attention using only manual/CSV-imported metrics.
+- Confirm decision labels are localized and explainable: `GOOD`, `WATCH`, `PROBLEM`, and `NO_DATA` remain non-persisted UI statuses.
+- Confirm zero-denominator campaign rows show `—` and never `NaN`, `Infinity`, `undefined`, or raw `null`.
+- Confirm the UI still states Meta Ads API sync is future work and does not claim advertising import is pilot-ready while staging import QA is blocked.

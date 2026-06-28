@@ -69,3 +69,9 @@ Imported spend, messages, leads, orders, revenue, and net profit appear in `/adv
 Не завантажуйте реальні експорти рекламного кабінету з токенами, ID акаунтів, персональними даними клієнтів або конфіденційними нотатками.
 
 Do not upload real ad account exports with tokens, account IDs, customer personal data, private order details, or confidential notes. Do not upload real Meta access tokens, app secrets, business IDs, real campaign IDs, screenshots with real ad data, workspace IDs, or `.env` files.
+
+## Sprint 4.3 — Import data and campaign insights
+
+Imported advertising metrics now feed the `/advertising` campaign comparison and decision-support blocks. After import, owners should select the same period and review Top Campaigns, Campaigns Needing Attention, ROAS, CPA, CPL, Cost per Message, and Conversion Rate.
+
+The insight rules use only manual/imported data. Meta Ads API sync remains future work, and advertising import must not be called pilot-ready until deployed staging dry-run, execute import, duplicate handling, Dashboard, and Analytics checks pass with synthetic data.

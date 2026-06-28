@@ -95,3 +95,10 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - Staging QA remains blocked because the required staging frontend/backend URLs, secure credentials, controlled QA workspace, and role/permission confirmation were not provided.
 - CSV template download, dry-run, execute import, duplicate import behavior, `/advertising`, Dashboard, Analytics, zero-denominator display, mobile, and theme checks remain unverified on deployed staging.
 - Pilot readiness remains blocked until the deployed staging flow is completed with synthetic data only.
+
+## Sprint 4.3 Advertising Insights Limitations
+
+- Campaign insights are MVP decision support based on manual/CSV-imported aggregates for the selected period; they are not automated Meta recommendations.
+- Decision statuses are frontend-computed and are not persisted backend enums.
+- Top/weak campaign ranking depends on the quality and completeness of imported/manual metrics.
+- Advertising import remains not pilot-ready while deployed staging QA is blocked.
