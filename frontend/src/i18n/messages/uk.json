@@ -642,7 +642,7 @@
     "decisionWatchLeadsNoOrders": "Ліди є, але замовлення не з’явились.",
     "decisionProblemSpendNoOrders": "Є витрати, але немає замовлень.",
     "decisionWatchHighCpa": "Вартість замовлення вища за середню.",
-    "decisionNoDataMessage": "Недостатньо даних для висновку.",
+    "decisionNoDataMessage": "Недостатньо рекламних даних для висновку.",
     "decisionDefaultWatch": "Показники є, але кампанію варто перевірити перед масштабуванням.",
     "roasShortExplanation": "Скільки доходу принесла 1 грн рекламних витрат.",
     "cpaShortExplanation": "Середня вартість одного замовлення.",
@@ -653,7 +653,10 @@
     "metaFutureWorkInsight": "Meta Ads API синхронізація залишається майбутньою роботою, не активною інтеграцією.",
     "noMisleadingInsight": "Якщо немає витрат або достатніх подій, Sellora показує безпечний статус без поради масштабувати.",
     "stagingBlockedInsight": "Advertising import не позначено pilot-ready, доки ручна staging QA залишається заблокованою.",
-    "noCampaignInsights": "Ще немає достатніх рекламних даних для порівняння кампаній."
+    "noCampaignInsights": "Ще немає достатніх рекламних даних для порівняння кампаній.",
+    "decisionProblemLeadsNoOrders": "Ліди є, але замовлень немає — перевірте обробку Direct або пропозицію.",
+    "decisionWatchWeakConversion": "Ліди та замовлення є, але конверсія нижча за очікувану.",
+    "noDataVisibilityHint": "Кампанії без метрик показуються у порівнянні зі статусом “Недостатньо даних”, але не потрапляють у найкращі кампанії."
   },
   "analytics": {
     "title": "Аналітика",

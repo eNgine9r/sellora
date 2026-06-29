@@ -102,3 +102,10 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - Decision statuses are frontend-computed and are not persisted backend enums.
 - Top/weak campaign ranking depends on the quality and completeness of imported/manual metrics.
 - Advertising import remains not pilot-ready while deployed staging QA is blocked.
+
+## Sprint 4.3.1 Advertising Insights Validation Notes
+
+- Decision statuses remain frontend-computed and non-persisted.
+- NO_DATA campaigns are intended to appear in comparison only; they are not eligible for Top Campaigns because they lack enough advertising data.
+- If frontend dependency installation is blocked by registry/proxy access, typecheck/build validation must be repeated in an approved dependency-cache environment.
+- Advertising import remains not pilot-ready while deployed manual import staging QA is blocked.

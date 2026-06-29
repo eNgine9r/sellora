@@ -119,3 +119,16 @@ Decision statuses are deterministic UI labels:
 | `NO_DATA` | Недостатньо даних | Spend is missing or `0`, so a recommendation would be misleading. | Add manual/CSV metrics for the period first. |
 
 Top Campaigns sort by ROAS, then revenue, then orders. Campaigns Needing Attention prioritize `PROBLEM` before `WATCH`, then higher spend/CPA. Unsafe divisions still render as `—`, never `NaN`, `Infinity`, `undefined`, or raw `null`.
+
+## Sprint 4.3.1 Decision Rule Priority and NO_DATA Visibility
+
+Sprint 4.3.1 keeps decision statuses as frontend-computed UI labels, not backend/API enums. The approved rule priority is `NO_DATA → PROBLEM → GOOD → WATCH`.
+
+Detailed priority:
+
+1. `NO_DATA`: campaign has no metric rows, spend is missing, or spend is `0`. Campaigns without metrics are still visible in the comparison table with `Недостатньо даних` / `Not enough data`; unavailable values render as `—`.
+2. `PROBLEM`: spend exists and orders are `0`. If `spend > 0, leads > 0, orders = 0`, the precise message is: `Ліди є, але замовлень немає — перевірте обробку Direct або пропозицію.`
+3. `GOOD`: ROAS is at least `4.0` and the campaign has positive orders and revenue.
+4. `WATCH`: CPA is more than 25% above average, conversion is weak after leads and orders exist, or metrics need review before scaling.
+
+`NO_DATA` rows are excluded from Top Campaigns and Campaigns Needing Attention, but they remain visible in the comparison table so newly created campaigns do not disappear silently. Top Campaigns still sort by ROAS, revenue, and orders. Campaigns Needing Attention still prioritize `PROBLEM` before `WATCH`, then higher spend and CPA. Zero-denominator values must continue to render as `—`, never `NaN`, `Infinity`, `undefined`, or raw `null`.

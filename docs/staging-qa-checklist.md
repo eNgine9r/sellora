@@ -591,3 +591,12 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Confirm decision labels are localized and explainable: `GOOD`, `WATCH`, `PROBLEM`, and `NO_DATA` remain non-persisted UI statuses.
 - Confirm zero-denominator campaign rows show `—` and never `NaN`, `Infinity`, `undefined`, or raw `null`.
 - Confirm the UI still states Meta Ads API sync is future work and does not claim advertising import is pilot-ready while staging import QA is blocked.
+
+## Sprint 4.3.1 Advertising Insights Validation
+
+- Verify `QA NO DATA Campaign` appears in campaign comparison with `NO_DATA` / `Недостатньо даних` and safe `—` values.
+- Verify `QA NO DATA Campaign` is excluded from Top Campaigns and Campaigns Needing Attention.
+- Verify `QA WATCH Campaign` test data with spend, leads, and zero orders is classified as `PROBLEM` with the Direct/offer review message.
+- Verify rule priority is visible in behavior: `NO_DATA → PROBLEM → GOOD → WATCH`.
+- Verify `/advertising` at 375px, 390px, 768px, desktop, light mode, and dark mode remains readable with horizontal table scroll where needed.
+- Do not include staging credentials, passwords, cookies, workspace IDs, tokens, screenshots with secrets, or real ad account data in QA artifacts.

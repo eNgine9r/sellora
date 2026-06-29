@@ -135,3 +135,10 @@ Sellora now has a synthetic advertising import template, a bilingual import guid
 - `/advertising` now includes frontend-computed campaign comparison, decision statuses, Top Campaigns, and Campaigns Needing Attention based on existing manual/imported campaign performance metrics.
 - Decision support is explanatory and deterministic; it does not use AI generation, Meta Ads API data, or new backend enum values.
 - Advertising import remains blocked for pilot readiness until deployed staging access, credentials, controlled workspace, and synthetic CSV import QA are completed.
+
+## Sprint 4.3.1 Advertising Insights Validation Status
+
+- NO_DATA campaign visibility is expected in `/advertising` comparison by merging campaign records with performance rows on the frontend.
+- Decision priority is documented as `NO_DATA → PROBLEM → GOOD → WATCH`; spend with leads and zero orders remains PROBLEM with a Direct/offer review message.
+- Frontend typecheck/build, browser staging, mobile, and dark/light validation must be recorded for Sprint 4.3.1 before fully approving Sprint 4.3.
+- Advertising import remains blocked for pilot readiness until deployed manual import staging QA passes with synthetic data.

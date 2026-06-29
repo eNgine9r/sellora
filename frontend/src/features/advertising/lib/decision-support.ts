@@ -1,4 +1,4 @@
-import type { CampaignPerformance } from "@/types/advertising";
+import type { AdCampaign, CampaignPerformance } from "@/types/advertising";
 
 export type DecisionStatus = "GOOD" | "WATCH" | "PROBLEM" | "NO_DATA";
 
@@ -17,6 +17,7 @@ export type EnrichedCampaignPerformance = CampaignPerformance & {
   costPerMessageValue: number | null;
   conversionRateValue: number | null;
   decision: CampaignDecision;
+  hasMetricData: boolean;
 };
 
 export type CampaignInsightSummary = {
@@ -25,6 +26,8 @@ export type CampaignInsightSummary = {
   campaignsNeedingAttention: EnrichedCampaignPerformance[];
   averageCpa: number | null;
 };
+
+const WEAK_CONVERSION_RATE = 0.2;
 
 const toNumber = (value: string | number | null | undefined): number => {
   if (value == null || value === "") return 0;
@@ -43,8 +46,42 @@ const parseOptionalMetric = (value: string | number | null | undefined): number 
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const emptyPerformanceRow = (campaign: AdCampaign): CampaignPerformance => ({
+  campaign_id: campaign.id,
+  campaign_name: campaign.name,
+  platform: campaign.platform,
+  status: campaign.status,
+  spend: "0",
+  revenue: "0",
+  net_profit: null,
+  orders: 0,
+  leads: 0,
+  messages: 0,
+  cpa: null,
+  cpl: null,
+  roas: null,
+  roi: null,
+});
+
+export const mergeCampaignsWithPerformance = (
+  campaigns: AdCampaign[],
+  performanceRows: CampaignPerformance[],
+): Array<CampaignPerformance & { hasMetricData?: boolean }> => {
+  const rowsByCampaign = new Map(performanceRows.map((row) => [row.campaign_id, row]));
+  const merged = campaigns.map((campaign) => {
+    const existing = rowsByCampaign.get(campaign.id);
+    if (existing) return { ...existing, hasMetricData: true };
+    return { ...emptyPerformanceRow(campaign), hasMetricData: false };
+  });
+  const campaignIds = new Set(campaigns.map((campaign) => campaign.id));
+  const orphanPerformanceRows = performanceRows
+    .filter((row) => !campaignIds.has(row.campaign_id))
+    .map((row) => ({ ...row, hasMetricData: true }));
+  return [...merged, ...orphanPerformanceRows];
+};
+
 export const getCampaignDecision = (
-  row: CampaignPerformance,
+  row: CampaignPerformance & { hasMetricData?: boolean },
   averageCpa: number | null,
 ): CampaignDecision => {
   const spend = toNumber(row.spend);
@@ -53,24 +90,34 @@ export const getCampaignDecision = (
   const leads = Number.isFinite(row.leads) ? row.leads : 0;
   const roas = parseOptionalMetric(row.roas) ?? safeDivide(revenue, spend);
   const cpa = parseOptionalMetric(row.cpa) ?? safeDivide(spend, orders);
+  const conversionRate = safeDivide(orders, leads);
 
-  if (spend <= 0) return { status: "NO_DATA", reasonKey: "advertising.decisionNoDataMessage" };
+  // Priority order: 1. NO_DATA, 2. PROBLEM, 3. GOOD, 4. WATCH.
+  if (row.hasMetricData === false || spend <= 0) return { status: "NO_DATA", reasonKey: "advertising.decisionNoDataMessage" };
+  if (spend > 0 && leads > 0 && orders === 0) return { status: "PROBLEM", reasonKey: "advertising.decisionProblemLeadsNoOrders" };
   if (spend > 0 && orders === 0) return { status: "PROBLEM", reasonKey: "advertising.decisionProblemSpendNoOrders" };
-  if (leads > 0 && orders === 0) return { status: "WATCH", reasonKey: "advertising.decisionWatchLeadsNoOrders" };
-  if (roas != null && roas >= 4) return { status: "GOOD", reasonKey: "advertising.decisionGoodMessage" };
+  if (roas != null && roas >= 4 && orders > 0 && revenue > 0) return { status: "GOOD", reasonKey: "advertising.decisionGoodMessage" };
   if (averageCpa != null && cpa != null && cpa > averageCpa * 1.25) {
     return { status: "WATCH", reasonKey: "advertising.decisionWatchHighCpa" };
+  }
+  if (conversionRate != null && leads > 0 && orders > 0 && conversionRate < WEAK_CONVERSION_RATE) {
+    return { status: "WATCH", reasonKey: "advertising.decisionWatchWeakConversion" };
   }
   return { status: "WATCH", reasonKey: "advertising.decisionDefaultWatch" };
 };
 
-export const buildCampaignInsightSummary = (rows: CampaignPerformance[]): CampaignInsightSummary => {
-  const cpaValues = rows
+export const buildCampaignInsightSummary = (
+  rows: CampaignPerformance[],
+  campaigns: AdCampaign[] = [],
+): CampaignInsightSummary => {
+  const mergedRows = campaigns.length > 0 ? mergeCampaignsWithPerformance(campaigns, rows) : rows.map((row) => ({ ...row, hasMetricData: true }));
+  const cpaValues = mergedRows
+    .filter((row) => row.hasMetricData !== false && toNumber(row.spend) > 0 && row.orders > 0)
     .map((row) => parseOptionalMetric(row.cpa) ?? safeDivide(toNumber(row.spend), row.orders))
     .filter((value): value is number => value != null && Number.isFinite(value));
   const averageCpa = cpaValues.length > 0 ? cpaValues.reduce((sum, value) => sum + value, 0) / cpaValues.length : null;
 
-  const enriched = rows.map((row) => {
+  const enriched = mergedRows.map((row) => {
     const spendValue = toNumber(row.spend);
     const revenueValue = toNumber(row.revenue);
     const netProfitValue = parseOptionalMetric(row.net_profit);
@@ -89,6 +136,7 @@ export const buildCampaignInsightSummary = (rows: CampaignPerformance[]): Campai
       cplValue,
       costPerMessageValue,
       conversionRateValue,
+      hasMetricData: row.hasMetricData !== false,
       decision: getCampaignDecision(row, averageCpa),
     };
   });

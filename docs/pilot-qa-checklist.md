@@ -239,3 +239,11 @@ Severity if failed: Minor
 - Confirm statuses map to understandable Ukrainian labels: Добре працює, Потрібно спостерігати, Потребує уваги, Недостатньо даних.
 - Confirm insights do not recommend scaling when spend is missing or when campaign data is incomplete.
 - Keep advertising import marked not pilot-ready until deployed staging QA is completed with synthetic CSV data.
+
+## Sprint 4.3.1 Advertising Insights Pilot Checks
+
+- Confirm campaigns without metrics remain visible as **Недостатньо даних** instead of disappearing from comparison.
+- Confirm spend + leads + zero orders is **Потребує уваги**, not **Добре працює**.
+- Confirm Top Campaigns excludes NO_DATA rows and Campaigns Needing Attention uses PROBLEM before WATCH.
+- Confirm unavailable values use `—` and never `NaN`, `Infinity`, `undefined`, or raw `null`.
+- Keep advertising import not pilot-ready until manual staging import QA passes with synthetic data.

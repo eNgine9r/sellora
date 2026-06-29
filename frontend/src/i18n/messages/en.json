@@ -642,7 +642,7 @@
     "decisionWatchLeadsNoOrders": "Leads exist, but orders have not appeared yet.",
     "decisionProblemSpendNoOrders": "There is spend, but no orders.",
     "decisionWatchHighCpa": "Cost per order is above the average.",
-    "decisionNoDataMessage": "Not enough data to make a decision.",
+    "decisionNoDataMessage": "Not enough advertising data to make a decision.",
     "decisionDefaultWatch": "Metrics exist, but review the campaign before scaling.",
     "roasShortExplanation": "How much revenue 1 UAH of ad spend generated.",
     "cpaShortExplanation": "Average cost of one order.",
@@ -653,7 +653,10 @@
     "metaFutureWorkInsight": "Meta Ads API sync remains future work, not an active integration.",
     "noMisleadingInsight": "When spend or enough events are missing, Sellora shows a safe status instead of a scaling recommendation.",
     "stagingBlockedInsight": "Advertising import is not marked pilot-ready while manual staging QA remains blocked.",
-    "noCampaignInsights": "There is not enough advertising data to compare campaigns yet."
+    "noCampaignInsights": "There is not enough advertising data to compare campaigns yet.",
+    "decisionProblemLeadsNoOrders": "Leads exist, but there are no orders — check Direct follow-up or the offer.",
+    "decisionWatchWeakConversion": "Leads and orders exist, but conversion is below the expected level.",
+    "noDataVisibilityHint": "Campaigns without metrics appear in comparison as “Not enough data”, but are excluded from Top Campaigns."
   },
   "analytics": {
     "title": "Analytics",

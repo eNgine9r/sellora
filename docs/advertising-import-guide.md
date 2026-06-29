@@ -75,3 +75,9 @@ Do not upload real ad account exports with tokens, account IDs, customer persona
 Imported advertising metrics now feed the `/advertising` campaign comparison and decision-support blocks. After import, owners should select the same period and review Top Campaigns, Campaigns Needing Attention, ROAS, CPA, CPL, Cost per Message, and Conversion Rate.
 
 The insight rules use only manual/imported data. Meta Ads API sync remains future work, and advertising import must not be called pilot-ready until deployed staging dry-run, execute import, duplicate handling, Dashboard, and Analytics checks pass with synthetic data.
+
+## Sprint 4.3.1 — Insights after partial imports
+
+If a campaign exists but the selected period has no imported/manual metrics, the `/advertising` comparison should still show it as `NO_DATA` with safe `—` values. `NO_DATA` campaigns are excluded from Top Campaigns so incomplete imports do not create misleading scale recommendations.
+
+Rule priority is `NO_DATA → PROBLEM → GOOD → WATCH`. Spend with leads but zero orders remains `PROBLEM` and should prompt a Direct follow-up or offer review.
