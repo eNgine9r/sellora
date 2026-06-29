@@ -109,3 +109,10 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - NO_DATA campaigns are intended to appear in comparison only; they are not eligible for Top Campaigns because they lack enough advertising data.
 - If frontend dependency installation is blocked by registry/proxy access, typecheck/build validation must be repeated in an approved dependency-cache environment.
 - Advertising import remains not pilot-ready while deployed manual import staging QA is blocked.
+
+## Sprint 4.3.2 Advertising Insights Validation Blockers
+
+- The Sprint 4.3/4.3.1 advertising insights code still requires frontend build validation in an environment with approved npm dependency access; this environment cannot restore dependencies because the registry/proxy denies `@tanstack/react-query` and no lockfile is available for `npm ci`.
+- `/advertising` browser QA, mobile widths, and dark/light theme verification remain pending until either dependencies are restored for a local browser run or secure staging access is provided outside the report.
+- Backend runtime validation is limited to `compileall` here; `pytest` and FastAPI app import require backend dependencies that the Python package proxy currently blocks.
+- This is an environment validation blocker, not a new advertising feature blocker: no backend/API enum values, deployment architecture, Meta Ads behavior, or persisted decision-status enums should be changed to work around it.

@@ -600,3 +600,12 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - Verify rule priority is visible in behavior: `NO_DATA → PROBLEM → GOOD → WATCH`.
 - Verify `/advertising` at 375px, 390px, 768px, desktop, light mode, and dark mode remains readable with horizontal table scroll where needed.
 - Do not include staging credentials, passwords, cookies, workspace IDs, tokens, screenshots with secrets, or real ad account data in QA artifacts.
+
+## Sprint 4.3.2 Advertising Insights Build and Browser QA Recovery
+
+- [ ] Restore frontend dependencies from an approved registry/cache, then rerun `npm --prefix frontend run typecheck` and `npm --prefix frontend run build`.
+- [ ] Open `/advertising` with synthetic campaigns and verify insights panel, Top Campaigns, Campaigns Needing Attention, comparison table, decision badges, metric explanations, manual/import source messaging, and Meta Ads future-work messaging.
+- [ ] Verify decision statuses with synthetic data: GOOD, PROBLEM, PROBLEM for spend + leads + zero orders, WATCH where high-CPA/weak-conversion data supports it, and NO_DATA for a campaign without metrics.
+- [ ] Verify zero-denominator values render as `—` rather than `NaN`, `Infinity`, `undefined`, or raw `null`.
+- [ ] Complete 375px, 390px, 768px, desktop, light-mode, and dark-mode checks before moving Sprint 4.3 from conditional approval to full approval.
+- [ ] Keep advertising import not pilot-ready until the separate deployed manual import staging QA passes with synthetic CSV data.

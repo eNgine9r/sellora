@@ -247,3 +247,10 @@ Severity if failed: Minor
 - Confirm Top Campaigns excludes NO_DATA rows and Campaigns Needing Attention uses PROBLEM before WATCH.
 - Confirm unavailable values use `—` and never `NaN`, `Infinity`, `undefined`, or raw `null`.
 - Keep advertising import not pilot-ready until manual staging import QA passes with synthetic data.
+
+## Sprint 4.3.2 Advertising Insights Pilot Validation Follow-up
+
+- [ ] Confirm frontend typecheck and production build have passed in an approved dependency environment before pilot-facing Sprint 4.3 approval.
+- [ ] Confirm `/advertising` browser QA with synthetic GOOD, PROBLEM, WATCH/high-CPA, and NO_DATA campaign scenarios has been completed without runtime, hydration, or missing-translation errors.
+- [ ] Confirm mobile widths and dark/light themes remain readable for the insights panel, campaign cards, comparison table, decision badges, and metric explanations.
+- [ ] Confirm advertising import remains not pilot-ready until deployed manual import staging QA is completed with synthetic CSV data.

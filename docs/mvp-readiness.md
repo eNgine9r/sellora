@@ -142,3 +142,12 @@ Sellora now has a synthetic advertising import template, a bilingual import guid
 - Decision priority is documented as `NO_DATA → PROBLEM → GOOD → WATCH`; spend with leads and zero orders remains PROBLEM with a Direct/offer review message.
 - Frontend typecheck/build, browser staging, mobile, and dark/light validation must be recorded for Sprint 4.3.1 before fully approving Sprint 4.3.
 - Advertising import remains blocked for pilot readiness until deployed manual import staging QA passes with synthetic data.
+
+## Sprint 4.3.2 Advertising Insights Build and Browser QA Recovery
+
+- Dependency recovery is still blocked in this environment: `npm ci` cannot run because no frontend lockfile is committed, `npm install` is denied by the registry/proxy for `@tanstack/react-query`, and `pip install -r backend/requirements.txt` is denied by the Python package proxy for FastAPI.
+- Frontend typecheck and production build remain externally blocked because dependencies such as Next.js, React, and TanStack Query cannot be restored here; rerun both checks in an approved dependency-cache or registry environment before final Sprint 4.3 approval.
+- Backend `compileall` passes for `backend/app` and `backend/tests`, but full `pytest` and FastAPI app import remain blocked until backend dependencies are available.
+- Browser, mobile-width, and dark/light theme QA for `/advertising` could not be completed locally without restored frontend dependencies or a provided staging URL; the Sprint 4.3 decision therefore remains **conditionally approved** rather than fully approved.
+- Full repository regression scripts for the advertising insights, import, analytics, responsive, Nova Poshta, order, localization, and pilot-readiness markers pass without code changes.
+- Advertising import remains not pilot-ready until deployed manual import staging QA passes with synthetic CSV data.
