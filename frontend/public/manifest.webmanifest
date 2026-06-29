@@ -1,0 +1,13 @@
+{
+  "name": "Sellora CRM",
+  "short_name": "Sellora",
+  "description": "CRM for Instagram stores",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#080812",
+  "theme_color": "#6D28D9",
+  "icons": [
+    { "src": "/brand/sellora-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
