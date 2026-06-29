@@ -225,3 +225,9 @@ The frontend also includes mobile-friendly app navigation and Sellora branding m
 ## Sprint 1.9.1 Staging QA & MVP Polish
 
 The frontend now opens with a public Sellora landing page at `/`, uses `/dashboard` as the primary authenticated dashboard, and includes polished SaaS navigation, dashboard cards, charts, responsive private routes, and Sellora PNG brand assets under `frontend/public/brand/`. Backend contracts and deployment architecture are unchanged.
+
+## Frontend dependency strategy
+
+The frontend package manager strategy is npm. CI should use a committed `frontend/package-lock.json` as the authoritative lockfile and install dependencies with `npm --prefix frontend ci` before running `npm --prefix frontend run typecheck` and `npm --prefix frontend run build`.
+
+Sprint 4.3.3 confirmed that no frontend lockfile is currently committed and that `npm install --package-lock-only` is blocked in this environment by a registry/proxy `403 Forbidden` for `@tanstack/react-query`. Generate the lockfile only from an approved npm registry/cache; do not hand-write it, do not commit private `.npmrc` credentials, and do not introduce `yarn.lock` or `pnpm-lock.yaml` unless the package manager strategy is explicitly changed.

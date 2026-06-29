@@ -116,3 +116,10 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - `/advertising` browser QA, mobile widths, and dark/light theme verification remain pending until either dependencies are restored for a local browser run or secure staging access is provided outside the report.
 - Backend runtime validation is limited to `compileall` here; `pytest` and FastAPI app import require backend dependencies that the Python package proxy currently blocks.
 - This is an environment validation blocker, not a new advertising feature blocker: no backend/API enum values, deployment architecture, Meta Ads behavior, or persisted decision-status enums should be changed to work around it.
+
+## Sprint 4.3.3 Frontend Dependency Reproducibility Blocker
+
+- `frontend/package.json` is npm-based, but no authoritative `frontend/package-lock.json` exists yet; this prevents deterministic `npm ci` in CI and local validation environments.
+- `npm install --package-lock-only` is blocked here by a registry/proxy `403 Forbidden` response for `@tanstack/react-query`; the lockfile must be generated from an approved npm registry/cache rather than hand-written.
+- Until the lockfile exists and dependencies can be restored, frontend typecheck/build and local `/advertising` browser/mobile/theme QA remain environment-blocked.
+- CI should treat `frontend/package-lock.json` as the future authoritative lockfile and should fail if it drifts from `frontend/package.json` once it is committed.

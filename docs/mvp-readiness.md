@@ -151,3 +151,12 @@ Sellora now has a synthetic advertising import template, a bilingual import guid
 - Browser, mobile-width, and dark/light theme QA for `/advertising` could not be completed locally without restored frontend dependencies or a provided staging URL; the Sprint 4.3 decision therefore remains **conditionally approved** rather than fully approved.
 - Full repository regression scripts for the advertising insights, import, analytics, responsive, Nova Poshta, order, localization, and pilot-readiness markers pass without code changes.
 - Advertising import remains not pilot-ready until deployed manual import staging QA passes with synthetic CSV data.
+
+## Sprint 4.3.3 Frontend Lockfile and CI Recovery
+
+- Dependency strategy audit result: the frontend currently uses npm via `frontend/package.json`; no `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock`, or `pnpm-lock.yaml` is committed, so npm is the intended package manager but reproducible `npm ci` is not available yet.
+- Lockfile creation was attempted with `npm install --package-lock-only`, but the current registry/proxy denied `@tanstack/react-query` with `403 Forbidden`; no lockfile was generated or faked.
+- Recommended CI strategy remains npm with a committed `frontend/package-lock.json`, generated in an approved npm registry/cache environment, followed by `npm --prefix frontend ci`, `npm --prefix frontend run typecheck`, and `npm --prefix frontend run build`.
+- Frontend typecheck/build remain blocked in this environment because dependencies cannot be restored; backend `compileall` still passes, while backend `pytest` and FastAPI app import remain blocked by missing FastAPI.
+- Advertising insights regression scripts and the full relevant frontend marker suite pass; browser/mobile/theme QA remains blocked until dependencies or staging access are available.
+- Final Sprint 4.3 recommendation remains **blocked** for full approval until the frontend lockfile is committed and build/browser validation can run reproducibly.

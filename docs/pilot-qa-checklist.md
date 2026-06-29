@@ -254,3 +254,9 @@ Severity if failed: Minor
 - [ ] Confirm `/advertising` browser QA with synthetic GOOD, PROBLEM, WATCH/high-CPA, and NO_DATA campaign scenarios has been completed without runtime, hydration, or missing-translation errors.
 - [ ] Confirm mobile widths and dark/light themes remain readable for the insights panel, campaign cards, comparison table, decision badges, and metric explanations.
 - [ ] Confirm advertising import remains not pilot-ready until deployed manual import staging QA is completed with synthetic CSV data.
+
+## Sprint 4.3.3 Frontend Dependency Reproducibility Follow-up
+
+- [ ] Confirm `frontend/package-lock.json` is committed and generated from the approved npm registry/cache before claiming reproducible frontend CI.
+- [ ] Confirm `npm --prefix frontend ci`, frontend typecheck, and frontend production build pass before pilot-facing Sprint 4.3 approval.
+- [ ] Confirm `/advertising` browser/mobile/theme QA is repeated after dependency recovery with synthetic campaign data only.

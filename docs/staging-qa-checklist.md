@@ -609,3 +609,11 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Verify zero-denominator values render as `—` rather than `NaN`, `Infinity`, `undefined`, or raw `null`.
 - [ ] Complete 375px, 390px, 768px, desktop, light-mode, and dark-mode checks before moving Sprint 4.3 from conditional approval to full approval.
 - [ ] Keep advertising import not pilot-ready until the separate deployed manual import staging QA passes with synthetic CSV data.
+
+## Sprint 4.3.3 Frontend Lockfile and CI Recovery
+
+- [ ] Generate `frontend/package-lock.json` with npm from an approved registry/cache; do not hand-write or fake the lockfile.
+- [ ] Confirm no `yarn.lock`, `pnpm-lock.yaml`, or private `.npmrc` token is introduced unless the package manager strategy is explicitly changed.
+- [ ] Run `npm --prefix frontend ci` and confirm it uses the committed lockfile without package drift.
+- [ ] Run `npm --prefix frontend run typecheck` and `npm --prefix frontend run build` after dependency restoration.
+- [ ] Re-run `/advertising` browser, mobile, and theme QA after build recovery, using synthetic campaigns only.
