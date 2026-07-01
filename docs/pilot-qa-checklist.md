@@ -260,3 +260,18 @@ Severity if failed: Minor
 - [ ] Confirm `frontend/package-lock.json` is committed and generated from the approved npm registry/cache before claiming reproducible frontend CI.
 - [ ] Confirm `npm --prefix frontend ci`, frontend typecheck, and frontend production build pass before pilot-facing Sprint 4.3 approval.
 - [ ] Confirm `/advertising` browser/mobile/theme QA is repeated after dependency recovery with synthetic campaign data only.
+<<<<<<< HEAD
+=======
+
+## Sprint 4.4 manual attribution QA
+
+- [ ] Lead campaign selection is optional.
+- [ ] Order campaign selection is optional.
+- [ ] Campaign selectors show campaign names, not raw UUID-only labels.
+- [ ] Lead/order details or tables show the linked campaign or a friendly “campaign not set” empty state.
+- [ ] Unattributed orders are displayed as normal orders, not errors.
+- [ ] `/advertising` attribution uses only manually linked orders and synthetic QA data.
+- [ ] Workspace/cross-workspace validation is covered by backend tests.
+- [ ] Future Meta attribution remains future work.
+- [ ] Advertising import remains not pilot-ready until staging import QA passes.
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure

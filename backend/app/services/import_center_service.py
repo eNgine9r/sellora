@@ -913,7 +913,12 @@ class HistoricalImportService:
                 unit_cost = data.get("unit_cost") if data.get("unit_cost") is not None else Decimal(str(getattr(variant, "purchase_price", 0) or 0))
                 item_payloads.append(OrderItemCreate(product_variant_id=variant.id, quantity=qty, unit_price=unit_price, unit_cost=unit_cost))
             created_at = first.get("order_date")
+<<<<<<< HEAD
             payload = OrderCreate(customer_id=customer.id if customer else None, status=order_status, payment_status=payment_status, is_historical=True, items=item_payloads, ad_cost=first.get("ad_cost") or Decimal("0"), shipping_cost=first.get("shipping_cost") or Decimal("0"), cod_fee=first.get("cod_fee") or Decimal("0"), other_cost=first.get("other_cost") or Decimal("0"), notes=first.get("notes"))
+=======
+            campaign = self.lookup.find_ad_campaign_by_id(workspace_id, first.get("campaign_id")) or self.lookup.find_ad_campaign_by_name(workspace_id, first.get("campaign_name"))
+            payload = OrderCreate(customer_id=customer.id if customer else None, campaign_id=campaign.id if campaign else None, status=order_status, payment_status=payment_status, is_historical=True, items=item_payloads, ad_cost=first.get("ad_cost") or Decimal("0"), shipping_cost=first.get("shipping_cost") or Decimal("0"), cod_fee=first.get("cod_fee") or Decimal("0"), other_cost=first.get("other_cost") or Decimal("0"), notes=first.get("notes"))
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
             try:
                 order = order_service.create(workspace_id, payload, actor_user_id, affect_inventory=affect_inventory, order_number=order_key, created_at=created_at, completed_at=created_at if order_status in {OrderStatus.COMPLETED, OrderStatus.DELIVERED} else None)
             except OrderServiceError as exc:
@@ -1080,7 +1085,12 @@ class EntityImportService:
         created_at = data.get("created_at") or data.get("order_date")
         if revenue is None or created_at is None:
             return ImportJobLogStatus.FAILED, "Order requires revenue/order_total and created_at/order_date"
+<<<<<<< HEAD
         order = Order(workspace_id=workspace_id, order_number=f"IMP-{datetime.now(UTC).strftime('%Y%m%d%H%M%S%f')}", customer_id=customer.id if customer else None, status=OrderStatus.COMPLETED.value, payment_status=PaymentStatus.PAID.value, revenue=revenue, product_cost=Decimal("0"), ad_cost=data.get("ad_cost") or Decimal("0"), shipping_cost=data.get("shipping_cost") or Decimal("0"), cod_fee=data.get("cod_fee") or Decimal("0"), other_cost=data.get("other_cost") or Decimal("0"), net_profit=data.get("net_profit") or revenue, created_at=created_at, completed_at=created_at)
+=======
+        campaign = self.lookup.find_ad_campaign_by_id(workspace_id, data.get("campaign_id")) or self.lookup.find_ad_campaign_by_name(workspace_id, data.get("campaign_name"))
+        order = Order(workspace_id=workspace_id, order_number=f"IMP-{datetime.now(UTC).strftime('%Y%m%d%H%M%S%f')}", customer_id=customer.id if customer else None, campaign_id=campaign.id if campaign else None, status=OrderStatus.COMPLETED.value, payment_status=PaymentStatus.PAID.value, revenue=revenue, product_cost=Decimal("0"), ad_cost=data.get("ad_cost") or Decimal("0"), shipping_cost=data.get("shipping_cost") or Decimal("0"), cod_fee=data.get("cod_fee") or Decimal("0"), other_cost=data.get("other_cost") or Decimal("0"), net_profit=data.get("net_profit") or revenue, created_at=created_at, completed_at=created_at)
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         self.db.add(order); self.db.flush()
         return ImportJobLogStatus.WARNING if customer is None else ImportJobLogStatus.SUCCESS, "Order created" if customer else "Order created without matched customer"
 

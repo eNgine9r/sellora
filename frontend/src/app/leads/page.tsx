@@ -7,6 +7,10 @@ import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
 import { FormDialog } from "@/components/form-dialog";
 import { LeadForm } from "@/features/leads/components/lead-form";
+<<<<<<< HEAD
+=======
+import { fetchAdCampaigns } from "@/services/advertising";
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 import { LeadTable } from "@/features/leads/components/lead-table";
 import { ApiError, safeApiErrorMessage } from "@/services/api";
 import { createLead, deleteLead, fetchLeads, fetchLeadSources, LeadCreatePayload, updateLead } from "@/services/crm";
@@ -48,6 +52,10 @@ export default function LeadsPage() {
   const filters = useMemo(() => ({ search, status, leadSourceId }), [search, status, leadSourceId]);
   const leadsQuery = useQuery({ queryKey: ["leads", workspaceId, filters], queryFn: () => fetchLeads(workspaceId, filters, undefined), enabled });
   const sourcesQuery = useQuery({ queryKey: ["lead-sources", workspaceId], queryFn: () => fetchLeadSources(workspaceId, undefined), enabled });
+<<<<<<< HEAD
+=======
+  const campaignsQuery = useQuery({ queryKey: ["ad-campaigns", workspaceId, "lead-attribution"], queryFn: () => fetchAdCampaigns(workspaceId, undefined), enabled });
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   const createMutation = useMutation({
     mutationFn: (payload: LeadCreatePayload) => createLead(workspaceId, payload, undefined),
     onSuccess: async () => {
@@ -120,13 +128,21 @@ export default function LeadsPage() {
             action={<button className="min-h-11 rounded-2xl bg-blue-600 px-4 text-sm font-black text-white" onClick={() => setIsCreateOpen(true)}>{t("leads.create")}</button>}
           />
         ) : null}
+<<<<<<< HEAD
         {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={visibleLeads} leadSources={sourcesQuery.data ?? []} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} /> : null}
+=======
+        {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={visibleLeads} leadSources={sourcesQuery.data ?? []} campaigns={campaignsQuery.data ?? []} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} /> : null}
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 
         {isCreateOpen ? (
           <FormDialog title={t("leads.create")} description="Only the name is required. Empty optional fields are safely omitted." size="md" onClose={() => setIsCreateOpen(false)}>
             <LeadForm
               isSubmitting={createMutation.isPending}
               leadSources={sourcesQuery.data ?? []}
+<<<<<<< HEAD
+=======
+              campaigns={campaignsQuery.data ?? []}
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
               submitError={createError}
               onSubmit={async (payload) => {
                 await createMutation.mutateAsync(payload);
@@ -135,7 +151,11 @@ export default function LeadsPage() {
           </FormDialog>
         ) : null}
         {archivingLead ? <ConfirmActionDialog title="Archive lead?" description={archivingLead.status === "CONVERTED" ? "This lead is converted. Archiving it will not delete the customer." : "This lead will be hidden from active lead lists. Historical audit records remain available."} actionLabel={t("leads.archive")} isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingLead(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
+<<<<<<< HEAD
         {editingLead ? <EditRecordDialog title={t("leads.edit")} fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "instagram_profile_url", label: "Instagram profile URL" }, { name: "lead_source_id", label: "Lead source ID" }, { name: "status", label: "Status", type: "select", options: STATUSES.filter(Boolean).map((item) => ({ value: item, label: item })) }, { name: "expected_revenue", label: "Expected revenue", type: "number" }, { name: "loss_reason", label: "Loss reason", type: "textarea" }, { name: "notes", label: "Notes", type: "textarea" }]} initialValues={editingLead} isSubmitting={updateMutation.isPending} submitError={updateError} onClose={() => setEditingLead(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
+=======
+        {editingLead ? <EditRecordDialog title={t("leads.edit")} fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "instagram_profile_url", label: "Instagram profile URL" }, { name: "lead_source_id", label: "Lead source", type: "select", options: [{ value: "", label: "No source / Manual" }, ...(sourcesQuery.data ?? []).map((source) => ({ value: source.id, label: source.name }))] }, { name: "campaign_id", label: "Кампанія реклами", type: "select", options: [{ value: "", label: "Кампанію не вказано" }, ...(campaignsQuery.data ?? []).map((campaign) => ({ value: campaign.id, label: `${campaign.name} · ${campaign.platform}` }))] }, { name: "status", label: "Status", type: "select", options: STATUSES.filter(Boolean).map((item) => ({ value: item, label: item })) }, { name: "expected_revenue", label: "Expected revenue", type: "number" }, { name: "loss_reason", label: "Loss reason", type: "textarea" }, { name: "notes", label: "Notes", type: "textarea" }]} initialValues={editingLead} isSubmitting={updateMutation.isPending} submitError={updateError} onClose={() => setEditingLead(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
       </div>
     </main>
   );

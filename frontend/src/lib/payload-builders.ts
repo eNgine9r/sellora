@@ -42,6 +42,10 @@ export function buildLeadCreatePayload(values: RawLeadValues): LeadCreatePayload
     name: cleanRequiredString(values.name),
     phone: cleanOptionalString(values.phone),
     lead_source_id: cleanOptionalUuid(values.lead_source_id),
+<<<<<<< HEAD
+=======
+    campaign_id: cleanOptionalUuid(values.campaign_id),
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     notes: cleanOptionalString(values.notes),
     assigned_user_id: cleanOptionalUuid(values.assigned_user_id),
     expected_revenue: cleanOptionalNumber(values.expected_revenue),
@@ -101,6 +105,10 @@ export function buildCustomerCreatePayload(values: RawCustomerValues) {
 
 type RawOrderValues = {
   customer_id?: string | null;
+<<<<<<< HEAD
+=======
+  campaign_id?: string | null;
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   payment_status?: string;
   items?: { product_variant_id?: string; quantity?: string | number; unit_price?: string | number; unit_cost?: string | number }[];
   ad_cost?: string | number;
@@ -120,6 +128,10 @@ export function buildOrderCreatePayload(values: RawOrderValues): OrderCreatePayl
 
   return {
     customer_id: cleanOptionalUuid(values.customer_id),
+<<<<<<< HEAD
+=======
+    campaign_id: cleanOptionalUuid(values.campaign_id),
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     payment_status: cleanOptionalEnum(values.payment_status, PAYMENT_STATUSES) ?? "PENDING",
     items,
     ad_cost: Math.max(0, cleanRequiredNumber(values.ad_cost)),

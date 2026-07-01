@@ -34,6 +34,20 @@ class FakeLeadSources:
         return None
 
 
+<<<<<<< HEAD
+=======
+class FakeCampaigns:
+    def __init__(self, campaigns=None) -> None:
+        self.campaigns = {campaign.id: campaign for campaign in campaigns or []}
+
+    def get(self, workspace_id, campaign_id):
+        campaign = self.campaigns.get(campaign_id)
+        if campaign and campaign.workspace_id == workspace_id and getattr(campaign, "deleted_at", None) is None:
+            return campaign
+        return None
+
+
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 class FakeLeadRepository:
     def __init__(self, leads: list[Lead] | None = None) -> None:
         self.leads = {lead.id: lead for lead in leads or []}
@@ -75,11 +89,19 @@ class FakeCustomerServiceRepository(FakeCustomerRepository):
         return None
 
 
+<<<<<<< HEAD
 def _lead_service(leads: list[Lead] | None = None) -> LeadService:
+=======
+def _lead_service(leads: list[Lead] | None = None, campaigns=None) -> LeadService:
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     service = LeadService.__new__(LeadService)
     service.db = FakeDb()
     service.leads = FakeLeadRepository(leads)
     service.lead_sources = FakeLeadSources()
+<<<<<<< HEAD
+=======
+    service.campaigns = FakeCampaigns(campaigns)
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     service.customers = FakeCustomerRepository()
     service.audit_logs = FakeAuditLogs()
     return service
@@ -96,6 +118,42 @@ def test_lead_creation_defaults_to_new_and_writes_audit_log() -> None:
     assert service.audit_logs.records[-1]["action"] == "CREATE"
 
 
+<<<<<<< HEAD
+=======
+
+def test_lead_creation_accepts_workspace_campaign_link() -> None:
+    workspace_id = uuid4()
+    campaign = SimpleNamespace(id=uuid4(), workspace_id=workspace_id, deleted_at=None, name="QA GOOD Campaign")
+    service = _lead_service(campaigns=[campaign])
+
+    lead = service.create(
+        workspace_id,
+        LeadCreate(name="Campaign lead", phone="555", campaign_id=campaign.id),
+        actor_user_id=uuid4(),
+    )
+
+    assert lead.campaign_id == campaign.id
+    assert service.audit_logs.records[-1]["action"] == "CREATE"
+
+
+def test_lead_creation_rejects_cross_workspace_campaign_link() -> None:
+    workspace_id = uuid4()
+    campaign = SimpleNamespace(id=uuid4(), workspace_id=uuid4(), deleted_at=None, name="Other campaign")
+    service = _lead_service(campaigns=[campaign])
+
+    try:
+        service.create(
+            workspace_id,
+            LeadCreate(name="Cross workspace campaign lead", campaign_id=campaign.id),
+            actor_user_id=uuid4(),
+        )
+    except ValueError as exc:
+        assert "Advertising campaign does not exist in this workspace" in str(exc)
+    else:
+        raise AssertionError("Lead creation should reject campaign links from another workspace")
+
+
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 def test_lead_assignment_sets_assigned_user_and_writes_audit_log() -> None:
     workspace_id = uuid4()
     assignee_id = uuid4()

@@ -39,6 +39,11 @@ export function OrderDetails({
         <strong>{formatMoney(order.revenue, currencyCode)}</strong>
         <span>{t("orders.productCost")}</span>
         <strong>{formatMoney(order.product_cost, currencyCode)}</strong>
+<<<<<<< HEAD
+=======
+        <span>{t("orders.attributionCampaign")}</span>
+        <strong>{order.campaign_name ?? t("orders.campaignNotSet")}</strong>
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         <span>{t("orders.adCost")}</span>
         <strong>{formatMoney(order.ad_cost, currencyCode)}</strong>
         <span>{t("shipments.shipping")}</span>

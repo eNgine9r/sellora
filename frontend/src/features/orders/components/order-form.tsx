@@ -15,11 +15,19 @@ import { formatMoney } from "@/lib/currency";
 import { CustomerCreatePayload } from "@/services/crm";
 import { OrderCreatePayload } from "@/services/orders";
 import { Customer } from "@/types/crm";
+<<<<<<< HEAD
+=======
+import { AdCampaign } from "@/types/advertising";
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 import { Order } from "@/types/orders";
 import { Inventory, Product, ProductVariant } from "@/types/products";
 
 export type OrderFormValues = {
   customer_id?: string;
+<<<<<<< HEAD
+=======
+  campaign_id?: string;
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   payment_status: "PENDING" | "PAID" | "COD" | "REFUNDED";
   items: {
     product_variant_id: string;
@@ -61,6 +69,10 @@ const numberValue = (value?: string | number | null) => {
 function initialOrderValues(order?: Order | null): OrderFormValues {
   return {
     customer_id: order?.customer_id ?? undefined,
+<<<<<<< HEAD
+=======
+    campaign_id: order?.campaign_id ?? undefined,
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     payment_status: order?.payment_status ?? "PENDING",
     items: order?.items.length
       ? order.items.map((item) => ({
@@ -83,6 +95,10 @@ export function OrderForm({
   products = [],
   inventory = [],
   customers = [],
+<<<<<<< HEAD
+=======
+  campaigns = [],
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   showProfit = false,
   currencyCode = "UAH",
   initialOrder,
@@ -96,6 +112,10 @@ export function OrderForm({
   products?: Product[];
   inventory?: Inventory[];
   customers?: Customer[];
+<<<<<<< HEAD
+=======
+  campaigns?: AdCampaign[];
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   showProfit?: boolean;
   currencyCode?: string;
   initialOrder?: Order | null;
@@ -785,6 +805,18 @@ export function OrderForm({
         })}
       </section>
 
+<<<<<<< HEAD
+=======
+      <label className="grid min-w-0 gap-1 rounded-2xl border border-blue-100 bg-blue-50 p-3 text-sm font-medium text-blue-950 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
+        {t("orders.campaignField")}
+        <span className="text-xs font-normal">{t("orders.campaignHelp")}</span>
+        <select className="min-h-11 min-w-0 rounded-md border border-blue-200 bg-white px-3 py-2 text-slate-900" value={values.campaign_id ?? ""} onChange={(event) => setValues({ ...values, campaign_id: event.target.value })}>
+          <option value="">{t("orders.campaignNotSet")}</option>
+          {campaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name} · {campaign.platform}</option>)}
+        </select>
+      </label>
+
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
       <div className="grid gap-3 sm:grid-cols-4">
         <input
           className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2"

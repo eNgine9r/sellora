@@ -40,6 +40,24 @@ class FakeAuditLogs:
         return SimpleNamespace(**kwargs)
 
 
+<<<<<<< HEAD
+=======
+class FakeCampaigns:
+    def __init__(self) -> None:
+        self.campaigns = {}
+
+    def add(self, campaign):
+        self.campaigns[campaign.id] = campaign
+        return campaign
+
+    def get(self, workspace_id, campaign_id):
+        campaign = self.campaigns.get(campaign_id)
+        if campaign and campaign.workspace_id == workspace_id and getattr(campaign, "deleted_at", None) is None:
+            return campaign
+        return None
+
+
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 class FakeOrders:
     def __init__(self) -> None:
         self.order = None
@@ -133,6 +151,10 @@ def _service() -> tuple[OrderService, Inventory, Customer]:
     service.inventory = FakeInventoryRepo(inventory)
     service.inventory_service = FakeInventoryService(inventory)
     service.audit_logs = FakeAuditLogs()
+<<<<<<< HEAD
+=======
+    service.campaigns = FakeCampaigns()
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     return service, inventory, customer
 
 
@@ -200,6 +222,82 @@ def test_order_creation_rejects_cross_workspace_customer_link() -> None:
     assert inventory.reserved_quantity == 0
 
 
+<<<<<<< HEAD
+=======
+
+def test_order_creation_accepts_workspace_campaign_link() -> None:
+    service, inventory, customer = _service()
+    campaign = service.campaigns.add(SimpleNamespace(id=uuid4(), workspace_id=inventory.workspace_id, deleted_at=None, name="QA GOOD Campaign"))
+
+    order = service.create(
+        inventory.workspace_id,
+        OrderCreate(
+            customer_id=customer.id,
+            campaign_id=campaign.id,
+            items=[OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=1, unit_price=Decimal("50"), unit_cost=Decimal("20"))],
+        ),
+        actor_user_id=uuid4(),
+    )
+
+    assert order.campaign_id == campaign.id
+    assert order.revenue == Decimal("50")
+
+
+def test_order_creation_rejects_cross_workspace_campaign_link() -> None:
+    service, inventory, customer = _service()
+    campaign = service.campaigns.add(SimpleNamespace(id=uuid4(), workspace_id=uuid4(), deleted_at=None, name="Other campaign"))
+
+    try:
+        service.create(
+            inventory.workspace_id,
+            OrderCreate(
+                customer_id=customer.id,
+                campaign_id=campaign.id,
+                items=[OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=1, unit_price=Decimal("50"), unit_cost=Decimal("20"))],
+            ),
+            actor_user_id=uuid4(),
+        )
+    except OrderServiceError as exc:
+        assert "Advertising campaign does not exist in this workspace" in str(exc)
+    else:
+        raise AssertionError("Order creation should reject campaign links from another workspace")
+
+    assert service.orders.order is None
+    assert inventory.reserved_quantity == 0
+
+
+def test_update_order_can_add_change_and_remove_campaign_link() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    first_campaign = service.campaigns.add(SimpleNamespace(id=uuid4(), workspace_id=inventory.workspace_id, deleted_at=None, name="First campaign"))
+    second_campaign = service.campaigns.add(SimpleNamespace(id=uuid4(), workspace_id=inventory.workspace_id, deleted_at=None, name="Second campaign"))
+
+    updated = service.update(inventory.workspace_id, order.id, OrderUpdate(campaign_id=first_campaign.id), actor_user_id=uuid4())
+    assert updated.campaign_id == first_campaign.id
+
+    updated = service.update(inventory.workspace_id, order.id, OrderUpdate(campaign_id=second_campaign.id), actor_user_id=uuid4())
+    assert updated.campaign_id == second_campaign.id
+
+    updated = service.update(inventory.workspace_id, order.id, OrderUpdate(campaign_id=None), actor_user_id=uuid4())
+    assert updated.campaign_id is None
+
+
+def test_update_order_rejects_cross_workspace_campaign_link() -> None:
+    service, inventory, customer = _service()
+    order = _create_order(service, inventory, customer)
+    campaign = service.campaigns.add(SimpleNamespace(id=uuid4(), workspace_id=uuid4(), deleted_at=None, name="Other campaign"))
+
+    try:
+        service.update(inventory.workspace_id, order.id, OrderUpdate(campaign_id=campaign.id), actor_user_id=uuid4())
+    except OrderServiceError as exc:
+        assert "Advertising campaign does not exist in this workspace" in str(exc)
+    else:
+        raise AssertionError("Order update should reject campaign links from another workspace")
+
+    assert order.campaign_id is None
+
+
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 def test_order_response_exposes_linked_customer_fields() -> None:
     service, inventory, customer = _service()
     order = _create_order(service, inventory, customer)

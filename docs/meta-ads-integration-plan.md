@@ -67,3 +67,12 @@ Manual import remains the active MVP source. Future Meta Ads API work should map
 ## Sprint 4.2 Pilot Readiness Note
 
 Pilot advertising import uses committed synthetic templates and manual daily metrics only. The template and guides do not activate OAuth, token exchange, ad account selection, campaign sync, or insights sync. Future Meta Ads integration must preserve the manual fallback path and the same workspace-scoped data flow.
+<<<<<<< HEAD
+=======
+
+## Manual attribution bridge before Meta API
+
+Sprint 4.4 adds a manual attribution bridge: leads and orders can be linked to a workspace campaign by a human user. This prepares reporting for future Meta attribution without implementing OAuth, automatic sync, click ID tracking, or automatic matching.
+
+Future Meta work may map external campaign/ad identifiers to Sellora campaigns, but current attribution remains manual, optional, workspace-scoped, and safe for synthetic pilot data.
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure

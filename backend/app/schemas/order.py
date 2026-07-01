@@ -16,6 +16,10 @@ class OrderItemCreate(BaseModel):
 
 class OrderCreate(BaseModel):
     customer_id: UUID | None = None
+<<<<<<< HEAD
+=======
+    campaign_id: UUID | None = None
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     status: OrderStatus = OrderStatus.NEW
     payment_status: PaymentStatus = PaymentStatus.PENDING
     is_historical: bool = False
@@ -29,6 +33,10 @@ class OrderCreate(BaseModel):
 
 class OrderUpdate(BaseModel):
     customer_id: UUID | None = None
+<<<<<<< HEAD
+=======
+    campaign_id: UUID | None = None
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     payment_status: PaymentStatus | None = None
     ad_cost: Decimal | None = Field(default=None, ge=0)
     shipping_cost: Decimal | None = Field(default=None, ge=0)
@@ -77,6 +85,11 @@ class OrderResponse(BaseModel):
     workspace_id: UUID
     order_number: str
     customer_id: UUID | None
+<<<<<<< HEAD
+=======
+    campaign_id: UUID | None
+    campaign_name: str | None = None
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     customer_name: str | None = None
     customer_phone: str | None = None
     customer_instagram_username: str | None = None

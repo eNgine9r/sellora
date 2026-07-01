@@ -12,6 +12,10 @@ from app.models.order import Order, OrderStatus
 from app.models.order_item import OrderItem
 from app.models.order_status_history import OrderStatusHistory
 from app.models.product_variant import ProductVariant
+<<<<<<< HEAD
+=======
+from app.repositories.advertising_repository import AdCampaignRepository
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.inventory_repository import InventoryRepository
 from app.repositories.order_repository import OrderRepository
@@ -30,6 +34,10 @@ class OrderService:
         self.db = db
         self.orders = OrderRepository(db)
         self.inventory = InventoryRepository(db)
+<<<<<<< HEAD
+=======
+        self.campaigns = AdCampaignRepository(db)
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         self.inventory_service = InventoryService(db)
         self.audit_logs = AuditLogRepository(db)
 
@@ -45,6 +53,10 @@ class OrderService:
 
     def create(self, workspace_id: UUID, payload: OrderCreate, actor_user_id: UUID | None, affect_inventory: bool = True, order_number: str | None = None, created_at: datetime | None = None, completed_at: datetime | None = None) -> Order:
         customer = self._get_order_customer(workspace_id, payload.customer_id, payload.is_historical)
+<<<<<<< HEAD
+=======
+        self._validate_campaign(workspace_id, payload.campaign_id)
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         prepared_items = []
         requested_by_inventory: dict[UUID, int] = {}
         for item_payload in payload.items:
@@ -64,6 +76,10 @@ class OrderService:
                 workspace_id=workspace_id,
                 order_number=order_number or self._generate_order_number(workspace_id),
                 customer_id=customer.id if customer else None,
+<<<<<<< HEAD
+=======
+                campaign_id=payload.campaign_id,
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
                 status=initial_status,
                 payment_status=payload.payment_status.value,
                 is_historical=payload.is_historical,
@@ -120,8 +136,16 @@ class OrderService:
             customer = self._get_order_customer(workspace_id, payload.customer_id, is_historical=False)
             order.customer_id = customer.id
             order.customer = customer
+<<<<<<< HEAD
         item_payloads = payload.items if "items" in payload.model_fields_set else None
         changes = payload.model_dump(exclude_unset=True, exclude={"items", "customer_id"})
+=======
+        if "campaign_id" in payload.model_fields_set:
+            self._validate_campaign(workspace_id, payload.campaign_id)
+            order.campaign_id = payload.campaign_id
+        item_payloads = payload.items if "items" in payload.model_fields_set else None
+        changes = payload.model_dump(exclude_unset=True, exclude={"items", "customer_id", "campaign_id"})
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         for field, value in changes.items():
             setattr(order, field, value.value if hasattr(value, "value") else value)
         if item_payloads is not None:
@@ -258,6 +282,13 @@ class OrderService:
         sequence = self.orders.next_sequence_for_year(workspace_id, year)
         return f"ORD-{year}-{sequence:06d}"
 
+<<<<<<< HEAD
+=======
+    def _validate_campaign(self, workspace_id: UUID, campaign_id: UUID | None) -> None:
+        if campaign_id and self.campaigns.get(workspace_id, campaign_id) is None:
+            raise OrderServiceError("Advertising campaign does not exist in this workspace")
+
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     def _get_variant(self, workspace_id: UUID, variant_id: UUID) -> ProductVariant:
         variant = self.db.get(ProductVariant, variant_id)
         if variant is None or variant.workspace_id != workspace_id or variant.deleted_at is not None:

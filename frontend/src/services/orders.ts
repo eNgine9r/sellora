@@ -7,6 +7,10 @@ function workspaceHeaders(workspaceId?: string): HeadersInit {
 
 export type OrderCreatePayload = {
   customer_id: string | null;
+<<<<<<< HEAD
+=======
+  campaign_id: string | null;
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   payment_status: PaymentStatus;
   items: { product_variant_id: string; quantity: number; unit_price: number; unit_cost: number }[];
   ad_cost: number;

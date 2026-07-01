@@ -323,7 +323,13 @@
     "archive": "Архівувати лід",
     "empty": "Лідів не знайдено.",
     "searchPlaceholder": "Пошук лідів за імʼям, телефоном, Instagram або нотатками",
+<<<<<<< HEAD
     "allSources": "Усі джерела"
+=======
+    "allSources": "Усі джерела",
+    "campaignField": "Кампанія реклами",
+    "campaignHelp": "Необов’язково. Вкажіть кампанію, якщо цей лід прийшов з конкретної реклами."
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   },
   "customers": {
     "title": "Клієнти",
@@ -412,7 +418,15 @@
     "customerPreview": "Обраний клієнт",
     "customerMissing": "Клієнта не вказано.",
     "customerSearchEmpty": "Клієнтів не знайдено. Спробуйте інший пошук або додайте нового клієнта.",
+<<<<<<< HEAD
     "customerOrdersCount": "{count} замовлень"
+=======
+    "customerOrdersCount": "{count} замовлень",
+    "attributionCampaign": "Рекламна кампанія",
+    "campaignNotSet": "Кампанію не вказано",
+    "campaignField": "Рекламна кампанія",
+    "campaignHelp": "Необов’язково. Допомагає зрозуміти, яка реклама привела замовлення."
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   },
   "products": {
     "title": "Товари",

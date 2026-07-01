@@ -13,6 +13,10 @@ class LeadCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
     lead_source_id: UUID | None = None
+<<<<<<< HEAD
+=======
+    campaign_id: UUID | None = None
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     notes: str | None = None
     assigned_user_id: UUID | None = None
     expected_revenue: Decimal | None = Field(default=None, ge=0)
@@ -26,6 +30,10 @@ class LeadUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
     lead_source_id: UUID | None = None
+<<<<<<< HEAD
+=======
+    campaign_id: UUID | None = None
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     status: LeadStatus | None = None
     notes: str | None = None
     assigned_user_id: UUID | None = None
@@ -57,6 +65,11 @@ class LeadResponse(BaseModel):
     name: str
     phone: str | None
     lead_source_id: UUID | None
+<<<<<<< HEAD
+=======
+    campaign_id: UUID | None
+    campaign_name: str | None = None
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     status: LeadStatus
     notes: str | None
     assigned_user_id: UUID | None

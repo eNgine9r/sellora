@@ -7,6 +7,10 @@ from sqlalchemy.orm import Session
 from app.models.customer import Customer
 from app.models.lead import Lead, LeadStatus
 from app.models.user import User
+<<<<<<< HEAD
+=======
+from app.repositories.advertising_repository import AdCampaignRepository
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.lead_repository import LeadRepository
@@ -24,6 +28,10 @@ class LeadService:
         self.db = db
         self.leads = LeadRepository(db)
         self.lead_sources = LeadSourceRepository(db)
+<<<<<<< HEAD
+=======
+        self.campaigns = AdCampaignRepository(db)
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         self.customers = CustomerRepository(db)
         self.audit_logs = AuditLogRepository(db)
 
@@ -35,6 +43,10 @@ class LeadService:
 
     def create(self, workspace_id: UUID, payload: LeadCreate, actor_user_id: UUID | None) -> Lead:
         self._validate_lead_source(workspace_id, payload.lead_source_id)
+<<<<<<< HEAD
+=======
+        self._validate_campaign(workspace_id, payload.campaign_id)
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         self._validate_assigned_user(workspace_id, payload.assigned_user_id)
         lead = self.leads.create(Lead(workspace_id=workspace_id, status=LeadStatus.NEW.value, **payload.model_dump()))
         self.audit_logs.create(
@@ -56,6 +68,11 @@ class LeadService:
         update_values = payload.model_dump(exclude_unset=True)
         if "lead_source_id" in update_values:
             self._validate_lead_source(workspace_id, update_values["lead_source_id"])
+<<<<<<< HEAD
+=======
+        if "campaign_id" in update_values:
+            self._validate_campaign(workspace_id, update_values["campaign_id"])
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         if "assigned_user_id" in update_values:
             self._validate_assigned_user(workspace_id, update_values["assigned_user_id"])
         if update_values.get("status") == LeadStatus.LOST and not update_values.get("loss_reason") and not lead.loss_reason:
@@ -175,6 +192,13 @@ class LeadService:
         if lead_source_id and self.lead_sources.get(workspace_id, lead_source_id) is None:
             raise LeadServiceError("Lead source does not exist in this workspace")
 
+<<<<<<< HEAD
+=======
+    def _validate_campaign(self, workspace_id: UUID, campaign_id: UUID | None) -> None:
+        if campaign_id and self.campaigns.get(workspace_id, campaign_id) is None:
+            raise LeadServiceError("Advertising campaign does not exist in this workspace")
+
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     def _validate_assigned_user(self, workspace_id: UUID, assigned_user_id: UUID | None) -> None:
         if assigned_user_id is None:
             return

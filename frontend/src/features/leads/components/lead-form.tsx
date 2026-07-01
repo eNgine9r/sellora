@@ -1,9 +1,17 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+<<<<<<< HEAD
 import { buildLeadCreatePayload } from "@/lib/payload-builders";
 import { LeadCreatePayload } from "@/services/crm";
 import { LeadSource } from "@/types/crm";
+=======
+import { useI18n } from "@/i18n/provider";
+import { buildLeadCreatePayload } from "@/lib/payload-builders";
+import { LeadCreatePayload } from "@/services/crm";
+import { LeadSource } from "@/types/crm";
+import { AdCampaign } from "@/types/advertising";
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 
 export type LeadFormValues = {
   name: string;
@@ -11,6 +19,10 @@ export type LeadFormValues = {
   instagram_username?: string;
   instagram_profile_url?: string;
   lead_source_id?: string;
+<<<<<<< HEAD
+=======
+  campaign_id?: string;
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   notes?: string;
   assigned_user_id?: string;
   expected_revenue?: string;
@@ -18,15 +30,27 @@ export type LeadFormValues = {
 
 export function LeadForm({
   leadSources,
+<<<<<<< HEAD
+=======
+  campaigns = [],
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   onSubmit,
   isSubmitting = false,
   submitError,
 }: {
   leadSources: LeadSource[];
+<<<<<<< HEAD
+=======
+  campaigns?: AdCampaign[];
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   onSubmit: (payload: LeadCreatePayload) => Promise<void> | void;
   isSubmitting?: boolean;
   submitError?: string | null;
 }) {
+<<<<<<< HEAD
+=======
+  const { t } = useI18n();
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   const [values, setValues] = useState<LeadFormValues>({ name: "" });
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -68,6 +92,17 @@ export function LeadForm({
         </select>
       </label>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
+<<<<<<< HEAD
+=======
+        {t("leads.campaignField")}
+        <span className="text-xs font-normal text-slate-500">{t("leads.campaignHelp")}</span>
+        <select className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.campaign_id ?? ""} onChange={(event) => setValues({ ...values, campaign_id: event.target.value })}>
+          <option value="">{t("orders.campaignNotSet")}</option>
+          {campaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name} · {campaign.platform}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm font-medium text-slate-700">
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         Expected revenue
         <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode="decimal" min="0" step="0.01" type="number" value={values.expected_revenue ?? ""} onChange={(event) => setValues({ ...values, expected_revenue: event.target.value })} />
       </label>

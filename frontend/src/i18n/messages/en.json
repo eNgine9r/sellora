@@ -323,7 +323,13 @@
     "archive": "Archive lead",
     "empty": "No leads found.",
     "searchPlaceholder": "Search leads by name, phone, Instagram or notes",
+<<<<<<< HEAD
     "allSources": "All sources"
+=======
+    "allSources": "All sources",
+    "campaignField": "Advertising campaign",
+    "campaignHelp": "Optional. Select a campaign if this lead came from a specific ad."
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   },
   "customers": {
     "title": "Customers",
@@ -412,7 +418,15 @@
     "customerPreview": "Selected customer",
     "customerMissing": "Customer is not specified.",
     "customerSearchEmpty": "No customers found. Try another search or add a new customer.",
+<<<<<<< HEAD
     "customerOrdersCount": "{count} orders"
+=======
+    "customerOrdersCount": "{count} orders",
+    "attributionCampaign": "Advertising campaign",
+    "campaignNotSet": "No campaign selected",
+    "campaignField": "Advertising campaign",
+    "campaignHelp": "Optional. Helps understand which ad generated the order."
+>>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   },
   "products": {
     "title": "Products",
