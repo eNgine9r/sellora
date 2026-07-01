@@ -260,3 +260,22 @@ Severity if failed: Minor
 - [ ] Confirm `frontend/package-lock.json` is committed and generated from the approved npm registry/cache before claiming reproducible frontend CI.
 - [ ] Confirm `npm --prefix frontend ci`, frontend typecheck, and frontend production build pass before pilot-facing Sprint 4.3 approval.
 - [ ] Confirm `/advertising` browser/mobile/theme QA is repeated after dependency recovery with synthetic campaign data only.
+
+## Sprint 4.6 — Meta Ads API readiness contract
+
+- [ ] Explain to pilot reviewers that Meta Ads API is planned / architecture-ready / not active.
+- [ ] Confirm manual entry and CSV import remain available and are the current MVP source.
+- [ ] Confirm future OAuth is documented as OWNER-only and workspace-scoped.
+- [ ] Confirm docs state tokens must be encrypted and never returned to the frontend.
+- [ ] Confirm read-only Meta sync would import delivery metrics only; Sellora orders/profit remain internal data.
+- [ ] Confirm Conversions API is a separate future phase that requires legal/privacy review.
+- [ ] Confirm no pilot-ready claim is made for advertising import before staging import QA passes.
+
+## Sprint 4.7 — Meta Ads fake-client readiness contract
+
+- [ ] Explain that Meta Ads API is fake-client / simulation-ready / not active.
+- [ ] Confirm synthetic fake IDs only: `fake_act_001`, `fake_campaign_001`, `fake_campaign_002`, and `fake_campaign_003`.
+- [ ] Confirm dry-run sync does not write to the database.
+- [ ] Confirm no token storage, live OAuth, live Meta API call, production sync job, or migration is present.
+- [ ] Confirm orders, revenue, and profit remain Sellora-side business metrics.
+- [ ] Confirm no pilot-ready claim is made for advertising import before staging import QA passes.

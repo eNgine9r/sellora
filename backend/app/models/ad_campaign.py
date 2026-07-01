@@ -56,3 +56,5 @@ class AdCampaign(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Tim
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     metrics = relationship("AdMetric", back_populates="campaign", cascade="all, delete-orphan")
+    leads = relationship("Lead", back_populates="campaign")
+    orders = relationship("Order", back_populates="campaign")

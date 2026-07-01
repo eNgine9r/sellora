@@ -81,3 +81,17 @@ The insight rules use only manual/imported data. Meta Ads API sync remains futur
 If a campaign exists but the selected period has no imported/manual metrics, the `/advertising` comparison should still show it as `NO_DATA` with safe `—` values. `NO_DATA` campaigns are excluded from Top Campaigns so incomplete imports do not create misleading scale recommendations.
 
 Rule priority is `NO_DATA → PROBLEM → GOOD → WATCH`. Spend with leads but zero orders remains `PROBLEM` and should prompt a Direct follow-up or offer review.
+
+## Sprint 4.6 — Meta Ads sync boundary
+
+Advertising import remains the current MVP path. Meta Ads API sync is planned but not active, and the import flow must not imply that Sellora is connected to a live Meta ad account.
+
+Future Meta read-only sync should not replace this import flow. Manual and CSV-imported rows must remain available as a fallback, and future Meta-sourced rows must be marked by source so they do not silently overwrite manual/import data.
+
+Do not upload real Meta exports with tokens, account IDs, business IDs, customer personal data, private order data, or real campaign IDs into QA artifacts. Use synthetic templates only.
+
+## Sprint 4.7 — Manual import remains active while fake sync exists
+
+The fake Meta client is only a backend simulation boundary. It does not replace manual entry or CSV import, does not connect to Meta, and does not make advertising import pilot-ready.
+
+Manual and CSV-imported rows remain the active MVP advertising data source. Future Meta-sourced rows must be source-marked and must not silently overwrite manual/import rows.

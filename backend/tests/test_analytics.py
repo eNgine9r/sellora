@@ -21,9 +21,9 @@ from app.services.analytics_service import AnalyticsService
 
 
 class FakeAnalyticsRepository:
-    def __init__(self, workspace_id):
+    def __init__(self, workspace_id, today: datetime | None = None):
         self.workspace_id = workspace_id
-        today = datetime.now(UTC)
+        today = today or datetime.now(UTC)
         yesterday = today - timedelta(days=1)
         self.product = Product(id=uuid4(), workspace_id=workspace_id, name="Dress", sku="DR")
         self.variant = ProductVariant(id=uuid4(), workspace_id=workspace_id, product_id=self.product.id, sku="DR-RED-S", color="Red", size="S")
@@ -80,9 +80,9 @@ class FakeAnalyticsRepository:
         return []
 
 
-def _service() -> tuple[AnalyticsService, FakeAnalyticsRepository]:
+def _service(today: datetime | None = None) -> tuple[AnalyticsService, FakeAnalyticsRepository]:
     workspace_id = uuid4()
-    repo = FakeAnalyticsRepository(workspace_id)
+    repo = FakeAnalyticsRepository(workspace_id, today=today)
     service = AnalyticsService.__new__(AnalyticsService)
     service.repository = repo
     return service, repo
@@ -150,8 +150,16 @@ def test_inventory_summary() -> None:
     assert summary.total_stock_units == 2
 
 
-def test_dashboard_endpoint_payload() -> None:
-    service, repo = _service()
+def test_dashboard_endpoint_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    dashboard_today = datetime(2026, 7, 15, tzinfo=UTC)
+    service, repo = _service(today=dashboard_today)
+
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return dashboard_today if tz else dashboard_today.replace(tzinfo=None)
+
+    monkeypatch.setattr("app.services.analytics_service.datetime", FixedDateTime)
     dashboard = service.dashboard(repo.workspace_id)
 
     assert dashboard.today_orders >= 2
