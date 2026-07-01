@@ -33,6 +33,7 @@ class Order(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Timestam
 
     order_number: Mapped[str] = mapped_column(String(30), unique=True, index=True, nullable=False)
     customer_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True)
+    campaign_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("ad_campaigns.id", ondelete="SET NULL"), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(30), default=OrderStatus.NEW.value, nullable=False)
     payment_status: Mapped[str] = mapped_column(String(30), default=PaymentStatus.PENDING.value, nullable=False)
     is_historical: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -49,6 +50,7 @@ class Order(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Timestam
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     status_history = relationship("OrderStatusHistory", back_populates="order", cascade="all, delete-orphan")
     customer = relationship("Customer")
+    campaign = relationship("AdCampaign", back_populates="orders")
 
     @property
     def customer_name(self) -> str | None:
@@ -61,3 +63,7 @@ class Order(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Timestam
     @property
     def customer_instagram_username(self) -> str | None:
         return self.customer.instagram_username if self.customer else None
+
+    @property
+    def campaign_name(self) -> str | None:
+        return self.campaign.name if self.campaign else None
