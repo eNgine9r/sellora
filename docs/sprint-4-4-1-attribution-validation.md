@@ -53,3 +53,49 @@ Browser QA was not executed in this environment because no running frontend/back
 - Real/test DB Alembic upgrade/downgrade validation remains blocked until a reachable local PostgreSQL test database is available.
 - Browser/mobile/theme QA remains blocked until a runnable environment with synthetic data is available.
 - Advertising import remains not pilot-ready until manual staging import QA passes.
+
+---
+
+# Sprint 4.4.2 — PostgreSQL Migration Runtime QA, Browser Attribution QA & Analytics Test Fix
+
+Date: 2026-07-01
+
+## Result
+
+Sprint 4.4 remains **CONDITIONALLY APPROVED ⚠️**.
+
+Sprint 4.4.2 fixed the remaining July 1 backend analytics test fragility and recovered the full backend test suite. PostgreSQL runtime migration validation and browser/mobile/theme QA are still environment-blocked in this container because Docker/PostgreSQL/browser QA tooling is unavailable. No production or staging database was touched.
+
+## PostgreSQL test DB result
+
+- Existing project pattern is `docker-compose.yml` with PostgreSQL 16.
+- `docker` / `docker compose` are not installed in this container.
+- `psql`, `pg_isready`, and a local PostgreSQL server on `localhost:5432` are unavailable.
+- Therefore, `alembic upgrade head && alembic downgrade -1 && alembic upgrade head` could not be run against PostgreSQL here.
+- Required follow-up: run the Alembic sequence against a safe local/CI PostgreSQL test database before final Sprint 4.4 approval.
+
+## Alembic migration runtime result
+
+Runtime validation remains blocked by missing PostgreSQL runtime tooling in this environment. Static migration review remains valid: the migration is additive, nullable, indexed, uses `ON DELETE SET NULL`, and downgrade removes only the Sprint 4.4 attribution artifacts.
+
+## Full backend pytest result
+
+- The previous July 1 failure was isolated to a test-data assumption in `test_dashboard_endpoint_payload`, not a production analytics formula bug.
+- The test now uses a deterministic in-month dashboard date fixture so month-to-date assertions do not depend on the actual system date being the first day of a month.
+- Full backend pytest now passes: `154 passed, 1 warning`.
+
+## Frontend and attribution QA result
+
+- `npm --prefix frontend ci` passed.
+- `npm --prefix frontend run typecheck` passed.
+- `npm --prefix frontend run build` passed.
+- Lead edit attribution no longer requires raw campaign UUID entry; the edit dialog uses workspace campaign options with campaign name and platform labels.
+- Browser/mobile/theme QA remains blocked because no runnable browser/staging session with synthetic credentials is available in this environment.
+
+## Workspace/RBAC validation
+
+Server-side cross-workspace protection remains enforced by backend services through workspace-scoped campaign lookup. Browser two-workspace QA was not possible here and should be completed in staging with synthetic data.
+
+## Advertising import status
+
+Advertising import remains **not pilot-ready** until manual staging import QA passes with synthetic data only.

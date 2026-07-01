@@ -326,7 +326,9 @@
     "allSources": "All sources",
     "campaignLabel": "Advertising campaign",
     "campaignHelp": "Optional. Choose a campaign if this lead came from a specific ad.",
-    "noCampaign": "No campaign"
+    "noCampaign": "No campaign",
+    "source": "Lead source",
+    "noSource": "No source / Manual"
   },
   "customers": {
     "title": "Customers",
