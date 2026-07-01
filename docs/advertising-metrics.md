@@ -132,3 +132,65 @@ Detailed priority:
 4. `WATCH`: CPA is more than 25% above average, conversion is weak after leads and orders exist, or metrics need review before scaling.
 
 `NO_DATA` rows are excluded from Top Campaigns and Campaigns Needing Attention, but they remain visible in the comparison table so newly created campaigns do not disappear silently. Top Campaigns still sort by ROAS, revenue, and orders. Campaigns Needing Attention still prioritize `PROBLEM` before `WATCH`, then higher spend and CPA. Zero-denominator values must continue to render as `—`, never `NaN`, `Infinity`, `undefined`, or raw `null`.
+
+## Sprint 4.5 Reporting Consolidation Formula Gate
+
+Sprint 4.5 keeps `/advertising` as an owner-facing report built from manual entry and CSV-imported advertising metrics. The page is ordered around source/status, summary KPIs, campaign decision support, manual attribution clarity, campaign comparison, daily metrics, trend details, import help, and the pilot readiness gate.
+
+### Final MVP formula definitions
+
+| Metric | Source | Formula | Safe empty value |
+| --- | --- | --- | --- |
+| ROAS | Imported/manual ad metrics | `total_revenue / total_spend` | `—` when spend is `0` |
+| ROI | Imported/manual ad metrics | `total_net_profit / total_spend` as a percent where profit is visible | `—` when spend is `0` or profit is restricted |
+| CPA | Imported/manual ad metrics | `total_spend / total_orders` | `—` when orders are `0` |
+| CPL | Imported/manual ad metrics | `total_spend / total_leads` | `—` when leads are `0` |
+| Cost per Message | Imported/manual ad metrics | `total_spend / total_messages` | `—` when messages are `0` |
+| Conversion Rate | Imported/manual ad metrics | `total_orders / total_leads` | `—` when leads are `0` |
+| Attributed Revenue | Manual lead/order campaign attribution | Sum of revenue for orders where `campaign_id` was manually selected and the selected period includes the order | `—` when no linked orders exist or runtime QA is unavailable |
+| Attributed Net Profit | Manual lead/order campaign attribution | Sum of net profit for orders where `campaign_id` was manually selected and profit is visible to the role | `—` when no linked orders exist, profit is restricted, or runtime QA is unavailable |
+| Attributed Orders | Manual lead/order campaign attribution | Count of orders where `campaign_id` is set | `0` when no linked orders exist |
+| Unattributed Orders | Manual lead/order campaign attribution | Count of valid orders in the selected period where `campaign_id` is empty | `0` when all orders are attributed |
+| Linked Campaigns | Manual lead/order campaign attribution | Count of distinct workspace campaigns linked to at least one lead/order in the selected period | `0` when no campaigns are linked |
+
+Manual attribution metrics are separate from imported/manual ad metric totals. Imported advertising rows answer how campaigns performed according to uploaded or manually entered ad reports; lead/order attribution answers which CRM orders were manually linked to campaigns. Orders without a campaign remain valid and must not be shown as errors.
+
+The UI and docs use the same zero-denominator rule: `null` values render as `—`, and Sellora must not render `NaN`, `Infinity`, `undefined`, or raw `null` in advertising reporting.
+
+### Pilot readiness gate
+
+The `/advertising` page now includes a visible but non-alarming status block. It lists manual metric entry, CSV template import, ROAS/CPA/CPL, campaign guidance, and manual order-to-campaign attribution as available MVP capabilities. It also keeps staging import QA, PostgreSQL runtime migration validation, and browser/mobile QA as pending validation items. Meta Ads API remains future work and is not active.
+
+Advertising import is still not pilot-ready until deployed staging import QA passes with synthetic data. Sprint 4.4 attribution is still not fully approved until PostgreSQL runtime migration QA and browser/mobile attribution QA are completed.
+
+## Sprint 4.6 — Meta Ads readiness boundary
+
+Meta Ads API remains future work and is not active. Manual entry and CSV import remain the current MVP advertising data source.
+
+Future Meta read-only sync may import campaign delivery metrics such as spend, impressions, reach and clicks. Orders, revenue and net profit remain Sellora-side business metrics unless a separate Conversions API sprint is implemented after legal/privacy review.
+
+Manual/import rows and future Meta-sourced rows must not silently overwrite each other. Future sync source and external ID fields should be additive, workspace-scoped, and clearly displayed in UI before any automated merge behavior exists.
+
+Advertising import remains not pilot-ready until staging CSV import QA passes. Sprint 4.4 attribution remains conditional until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.
+
+## Sprint 4.7 — Fake Meta sync simulation metrics
+
+The fake Meta sync simulation is backend-only and dry-run only. It can produce candidate delivery metrics: spend, impressions, clicks, messages, and leads. It intentionally does not provide Sellora orders, revenue, or net profit from Meta.
+
+Future Meta-sourced daily metrics must use an idempotent identity equivalent to `workspace_id + external_source + external_campaign_id + metric_date`. Manual/import rows and future Meta rows must not silently overwrite each other. Zero spend, zero clicks, missing leads, and no-data campaigns must continue to render safely as `—` or structured no-data states rather than `NaN`, `Infinity`, `undefined`, or raw `null`.
+
+## Sprint 4.8 — Sync preview conflict policy
+
+Meta sync preview is read-only. It compares fake Meta delivery candidates against current Sellora campaigns/metrics and returns `WOULD_CREATE`, `WOULD_UPDATE`, `WOULD_SKIP`, `POTENTIAL_CONFLICT`, `NEEDS_EXTERNAL_ID_SUPPORT`, or `INVALID` preview classifications without persisting them as backend/API enums.
+
+Manual/CSV data is protected by default. If a future Meta row overlaps an existing manual/CSV row, preview must flag `POTENTIAL_CONFLICT` and must not overwrite spend, impressions, clicks, messages, leads, orders, revenue, or net profit. Orders, revenue, and net profit remain Sellora-side metrics and are not imported from Meta Ads Insights.
+
+Because exact external IDs are not persisted yet, preview includes an external ID limitation note. Future schema work still needs additive `external_source` / `external_campaign_id` support before live sync can write rows safely.
+
+## Sprint 4.9 — External identity and source separation design
+
+Sprint 4.9 designs future source separation without changing the database. Future `ad_campaigns` should receive nullable external identity fields such as `external_source`, `external_account_id`, `external_campaign_id`, `external_status`, `external_objective`, `last_synced_at`, and `sync_source`. Future `ad_metrics` should receive nullable source fields such as `source_type`, `external_source`, `external_account_id`, `external_campaign_id`, `last_synced_at`, and `sync_run_id`.
+
+Future Meta metric idempotency should use `workspace_id + external_source + external_account_id + external_campaign_id + metric_date`. Manual/CSV data is protected by default: Meta-owned rows can update only Meta-owned rows with the same external identity, while overlapping manual or CSV rows are conflicts.
+
+Orders, revenue, and net profit remain Sellora-side business metrics. Meta Ads Insights may provide spend, impressions, clicks, and messages/leads where available, but it must not overwrite manual/CSV business outcomes or import Sellora profit. Conversions API remains a separate future sprint that requires legal/privacy review.
