@@ -132,3 +132,33 @@ Detailed priority:
 4. `WATCH`: CPA is more than 25% above average, conversion is weak after leads and orders exist, or metrics need review before scaling.
 
 `NO_DATA` rows are excluded from Top Campaigns and Campaigns Needing Attention, but they remain visible in the comparison table so newly created campaigns do not disappear silently. Top Campaigns still sort by ROAS, revenue, and orders. Campaigns Needing Attention still prioritize `PROBLEM` before `WATCH`, then higher spend and CPA. Zero-denominator values must continue to render as `—`, never `NaN`, `Infinity`, `undefined`, or raw `null`.
+
+## Sprint 4.5 Reporting Consolidation Formula Gate
+
+Sprint 4.5 keeps `/advertising` as an owner-facing report built from manual entry and CSV-imported advertising metrics. The page is ordered around source/status, summary KPIs, campaign decision support, manual attribution clarity, campaign comparison, daily metrics, trend details, import help, and the pilot readiness gate.
+
+### Final MVP formula definitions
+
+| Metric | Source | Formula | Safe empty value |
+| --- | --- | --- | --- |
+| ROAS | Imported/manual ad metrics | `total_revenue / total_spend` | `—` when spend is `0` |
+| ROI | Imported/manual ad metrics | `total_net_profit / total_spend` as a percent where profit is visible | `—` when spend is `0` or profit is restricted |
+| CPA | Imported/manual ad metrics | `total_spend / total_orders` | `—` when orders are `0` |
+| CPL | Imported/manual ad metrics | `total_spend / total_leads` | `—` when leads are `0` |
+| Cost per Message | Imported/manual ad metrics | `total_spend / total_messages` | `—` when messages are `0` |
+| Conversion Rate | Imported/manual ad metrics | `total_orders / total_leads` | `—` when leads are `0` |
+| Attributed Revenue | Manual lead/order campaign attribution | Sum of revenue for orders where `campaign_id` was manually selected and the selected period includes the order | `—` when no linked orders exist or runtime QA is unavailable |
+| Attributed Net Profit | Manual lead/order campaign attribution | Sum of net profit for orders where `campaign_id` was manually selected and profit is visible to the role | `—` when no linked orders exist, profit is restricted, or runtime QA is unavailable |
+| Attributed Orders | Manual lead/order campaign attribution | Count of orders where `campaign_id` is set | `0` when no linked orders exist |
+| Unattributed Orders | Manual lead/order campaign attribution | Count of valid orders in the selected period where `campaign_id` is empty | `0` when all orders are attributed |
+| Linked Campaigns | Manual lead/order campaign attribution | Count of distinct workspace campaigns linked to at least one lead/order in the selected period | `0` when no campaigns are linked |
+
+Manual attribution metrics are separate from imported/manual ad metric totals. Imported advertising rows answer how campaigns performed according to uploaded or manually entered ad reports; lead/order attribution answers which CRM orders were manually linked to campaigns. Orders without a campaign remain valid and must not be shown as errors.
+
+The UI and docs use the same zero-denominator rule: `null` values render as `—`, and Sellora must not render `NaN`, `Infinity`, `undefined`, or raw `null` in advertising reporting.
+
+### Pilot readiness gate
+
+The `/advertising` page now includes a visible but non-alarming status block. It lists manual metric entry, CSV template import, ROAS/CPA/CPL, campaign guidance, and manual order-to-campaign attribution as available MVP capabilities. It also keeps staging import QA, PostgreSQL runtime migration validation, and browser/mobile QA as pending validation items. Meta Ads API remains future work and is not active.
+
+Advertising import is still not pilot-ready until deployed staging import QA passes with synthetic data. Sprint 4.4 attribution is still not fully approved until PostgreSQL runtime migration QA and browser/mobile attribution QA are completed.

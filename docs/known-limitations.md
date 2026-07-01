@@ -123,3 +123,11 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - `npm install --package-lock-only` is blocked here by a registry/proxy `403 Forbidden` response for `@tanstack/react-query`; the lockfile must be generated from an approved npm registry/cache rather than hand-written.
 - Until the lockfile exists and dependencies can be restored, frontend typecheck/build and local `/advertising` browser/mobile/theme QA remain environment-blocked.
 - CI should treat `frontend/package-lock.json` as the future authoritative lockfile and should fail if it drifts from `frontend/package.json` once it is committed.
+
+## Sprint 4.5 — Advertising reporting readiness limits
+
+- `/advertising` is consolidated as an owner-facing MVP report for manual/CSV-imported ad metrics, campaign insights, manual attribution clarity, and pilot readiness status.
+- The readiness block is informational and does not mark the advertising module production-ready.
+- Advertising import remains not pilot-ready until deployed staging import QA passes with synthetic data.
+- Sprint 4.4 manual attribution remains conditionally approved until PostgreSQL runtime migration QA and browser/mobile attribution QA are completed.
+- Meta Ads API OAuth, automatic sync, and automatic attribution remain future work and are not active.

@@ -17,6 +17,8 @@ export type Lead = {
   name: string;
   phone: string | null;
   lead_source_id: string | null;
+  campaign_id: string | null;
+  campaign_name: string | null;
   status: LeadStatus;
   notes: string | null;
   assigned_user_id: string | null;
