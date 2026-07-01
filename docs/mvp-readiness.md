@@ -160,3 +160,15 @@ Sellora now has a synthetic advertising import template, a bilingual import guid
 - Frontend typecheck/build remain blocked in this environment because dependencies cannot be restored; backend `compileall` still passes, while backend `pytest` and FastAPI app import remain blocked by missing FastAPI.
 - Advertising insights regression scripts and the full relevant frontend marker suite pass; browser/mobile/theme QA remains blocked until dependencies or staging access are available.
 - Final Sprint 4.3 recommendation remains **blocked** for full approval until the frontend lockfile is committed and build/browser validation can run reproducibly.
+
+## Sprint 4.5 — Advertising reporting consolidation
+
+Sprint 4.5 improves `/advertising` as an owner-facing MVP report. The page now clarifies the active data source, shows KPI cards, campaign decision support, manual attribution behavior, campaign/daily metric tables, trend details, import help, and a pilot readiness gate without adding Meta Ads API automation or backend enum changes.
+
+Current advertising readiness remains conditional:
+
+- manual metric entry, CSV template import, ROAS/CPA/CPL, deterministic campaign guidance, and manual order-to-campaign attribution are available MVP capabilities;
+- PostgreSQL runtime migration validation for Sprint 4.4 attribution is still pending;
+- staging/browser/mobile QA for lead/order attribution and `/advertising` is still pending;
+- advertising import is not pilot-ready until manual staging import QA passes with synthetic data;
+- Sprint 4.4 must not be marked fully approved until runtime and browser/staging QA are completed.

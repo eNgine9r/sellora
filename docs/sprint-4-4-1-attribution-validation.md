@@ -182,3 +182,9 @@ Pending checks remain:
 Sprint 4.4 remains **CONDITIONALLY APPROVED ⚠️** until PostgreSQL runtime migration QA and staging/browser/mobile attribution QA are completed with synthetic data only.
 
 Advertising import remains **not pilot-ready** until manual staging import QA passes with synthetic data only.
+
+## Sprint 4.5 follow-up note
+
+Sprint 4.5 consolidates `/advertising` reporting clarity but does not close the Sprint 4.4 runtime validation blockers. PostgreSQL Alembic upgrade/downgrade/upgrade for `202607010015_manual_ad_attribution.py`, browser QA for `/leads`, `/orders`, order detail and `/advertising`, and mobile/theme QA still require a reachable runtime/staging environment with secure credentials provided outside the report.
+
+The advertising import path remains not pilot-ready until manual staging import QA passes with synthetic data. Sprint 4.4 must remain conditionally approved until those runtime and browser QA items are completed.
