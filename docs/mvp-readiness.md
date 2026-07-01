@@ -105,11 +105,7 @@
 
 Manual/imported advertising metrics are the approved MVP data source. The synthetic import scenario in `docs/advertising-metrics.md` is the required pilot-safe validation path for ROAS/CPA/CPL reporting. Real Meta Ads API integration remains future work and must not be represented as active sync.
 
-<<<<<<< HEAD
 Current attribution readiness: lead source and order ad cost support manual attribution signals, while campaign attribution remains optional and documented as future enhancement. Dashboard, Analytics, and `/advertising` should use the same daily ad metrics and selected period boundaries.
-=======
-Current attribution readiness: lead source, order ad cost, and optional manual campaign links now support attribution signals. `/advertising` shows manual campaign-linked orders, revenue, profit, and unattributed orders, while Dashboard, Analytics, and `/advertising` continue to share daily advertising metrics and selected period boundaries unless a future attribution expansion is planned.
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 
 ## Sprint 4.2 Advertising Pilot Readiness
 
@@ -164,12 +160,3 @@ Sellora now has a synthetic advertising import template, a bilingual import guid
 - Frontend typecheck/build remain blocked in this environment because dependencies cannot be restored; backend `compileall` still passes, while backend `pytest` and FastAPI app import remain blocked by missing FastAPI.
 - Advertising insights regression scripts and the full relevant frontend marker suite pass; browser/mobile/theme QA remains blocked until dependencies or staging access are available.
 - Final Sprint 4.3 recommendation remains **blocked** for full approval until the frontend lockfile is committed and build/browser validation can run reproducibly.
-<<<<<<< HEAD
-=======
-
-## Sprint 4.4 readiness — Manual attribution MVP
-
-Manual campaign attribution is now part of MVP readiness with limits. Leads and orders can optionally link to a workspace advertising campaign, and `/advertising` can summarize campaign-linked orders, attributed revenue, attributed net profit, and unattributed orders. The feature is manual-only and does not alter revenue, profit, inventory, shipment, or payment calculations.
-
-Readiness status: conditionally ready for code review and synthetic QA. Full technical approval remains blocked in environments where `frontend/package-lock.json` is missing, `npm ci` cannot run, or frontend typecheck/build cannot be reproduced. Advertising import also remains not pilot-ready until deployed manual staging QA passes.
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure

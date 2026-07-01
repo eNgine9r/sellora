@@ -20,10 +20,6 @@ export type LeadCreatePayload = {
   name: string;
   phone: string | null;
   lead_source_id: string | null;
-<<<<<<< HEAD
-=======
-  campaign_id: string | null;
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   notes: string | null;
   assigned_user_id: string | null;
   expected_revenue: number | null;

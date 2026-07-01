@@ -132,21 +132,3 @@ Detailed priority:
 4. `WATCH`: CPA is more than 25% above average, conversion is weak after leads and orders exist, or metrics need review before scaling.
 
 `NO_DATA` rows are excluded from Top Campaigns and Campaigns Needing Attention, but they remain visible in the comparison table so newly created campaigns do not disappear silently. Top Campaigns still sort by ROAS, revenue, and orders. Campaigns Needing Attention still prioritize `PROBLEM` before `WATCH`, then higher spend and CPA. Zero-denominator values must continue to render as `—`, never `NaN`, `Infinity`, `undefined`, or raw `null`.
-<<<<<<< HEAD
-=======
-
-## Manual attribution MVP — Sprint 4.4
-
-Sellora now supports manual campaign attribution for leads and orders. Store owners can optionally select an advertising campaign when a lead or order is created or edited; the link is used only to answer the MVP question: which manually linked campaign led to orders, revenue, and profit.
-
-Rules:
-
-1. Attribution is manual and optional.
-2. Leads and orders without a campaign remain valid and are not treated as errors.
-3. Campaign links are workspace-scoped; cross-workspace campaign links must be rejected by backend validation.
-4. Attribution does not change order revenue, profit, inventory reservation, payment, shipment, or status behavior.
-5. The `/advertising` attribution panel counts only orders where a campaign was manually selected.
-6. Unattributed orders are shown separately so owners can see what still needs manual attribution.
-7. Future Meta attribution may use external campaign/ad identifiers, but Meta API attribution remains future work.
-8. Advertising import remains not pilot-ready until deployed manual staging QA passes.
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure

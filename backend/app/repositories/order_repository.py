@@ -16,21 +16,13 @@ class OrderRepository:
         self.db = db
 
     def list_for_workspace(self, workspace_id: UUID, status: str | None = None) -> list[Order]:
-<<<<<<< HEAD
         stmt: Select[tuple[Order]] = select(Order).where(Order.workspace_id == workspace_id, Order.deleted_at.is_(None)).options(selectinload(Order.items), selectinload(Order.status_history), selectinload(Order.customer))
-=======
-        stmt: Select[tuple[Order]] = select(Order).where(Order.workspace_id == workspace_id, Order.deleted_at.is_(None)).options(selectinload(Order.items), selectinload(Order.status_history), selectinload(Order.customer), selectinload(Order.campaign))
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         if status:
             stmt = stmt.where(Order.status == status)
         return list(self.db.execute(stmt.order_by(Order.created_at.desc())).scalars())
 
     def get(self, workspace_id: UUID, order_id: UUID) -> Order | None:
-<<<<<<< HEAD
         stmt = select(Order).where(Order.workspace_id == workspace_id, Order.id == order_id, Order.deleted_at.is_(None)).options(selectinload(Order.items), selectinload(Order.status_history), selectinload(Order.customer))
-=======
-        stmt = select(Order).where(Order.workspace_id == workspace_id, Order.id == order_id, Order.deleted_at.is_(None)).options(selectinload(Order.items), selectinload(Order.status_history), selectinload(Order.customer), selectinload(Order.campaign))
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
         return self.db.execute(stmt).scalar_one_or_none()
 
     def create(self, order: Order) -> Order:

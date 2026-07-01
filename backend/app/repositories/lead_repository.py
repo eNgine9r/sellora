@@ -16,10 +16,6 @@ class LeadRepository:
     def list_for_workspace(self, workspace_id: UUID, search: str | None = None, status: str | None = None, lead_source_id: UUID | None = None) -> list[Lead]:
         stmt: Select[tuple[Lead]] = select(Lead).where(Lead.workspace_id == workspace_id, Lead.deleted_at.is_(None)).options(
             selectinload(Lead.lead_source),
-<<<<<<< HEAD
-=======
-            selectinload(Lead.campaign),
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
             selectinload(Lead.assigned_user),
         )
         if search:
@@ -34,10 +30,6 @@ class LeadRepository:
     def get(self, workspace_id: UUID, lead_id: UUID) -> Lead | None:
         stmt = select(Lead).where(Lead.workspace_id == workspace_id, Lead.id == lead_id, Lead.deleted_at.is_(None)).options(
             selectinload(Lead.lead_source),
-<<<<<<< HEAD
-=======
-            selectinload(Lead.campaign),
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
             selectinload(Lead.assigned_user),
         )
         return self.db.execute(stmt).scalar_one_or_none()

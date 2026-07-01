@@ -22,10 +22,6 @@ import { OrderForm } from "@/features/orders/components/order-form";
 import { OrderTable } from "@/features/orders/components/order-table";
 import { formatMoney } from "@/lib/currency";
 import { createCustomer, fetchCustomers } from "@/services/crm";
-<<<<<<< HEAD
-=======
-import { fetchAdCampaigns } from "@/services/advertising";
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
 import {
   changeOrderStatus,
   createOrder,
@@ -117,14 +113,6 @@ export default function OrdersPage() {
     queryFn: () => fetchCustomers(workspaceId),
     enabled,
   });
-<<<<<<< HEAD
-=======
-  const campaignsQuery = useQuery({
-    queryKey: ["ad-campaigns", workspaceId, "order-attribution"],
-    queryFn: () => fetchAdCampaigns(workspaceId),
-    enabled,
-  });
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   const shipmentQuery = useQuery({
     queryKey: ["order-shipment", workspaceId, selectedOrder?.id],
     queryFn: () => fetchOrderShipment(workspaceId, selectedOrder!.id),
@@ -422,10 +410,6 @@ export default function OrdersPage() {
               products={productsQuery.data ?? []}
               inventory={inventoryQuery.data ?? []}
               customers={customersQuery.data ?? []}
-<<<<<<< HEAD
-=======
-              campaigns={campaignsQuery.data ?? []}
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
               currencyCode={currencyCode}
               showProfit={currentWorkspace?.role === "OWNER"}
               isCreatingCustomer={createCustomerMutation.isPending}
@@ -452,10 +436,6 @@ export default function OrdersPage() {
               products={productsQuery.data ?? []}
               inventory={inventoryQuery.data ?? []}
               customers={customersQuery.data ?? []}
-<<<<<<< HEAD
-=======
-              campaigns={campaignsQuery.data ?? []}
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
               currencyCode={currencyCode}
               initialOrder={editingOrder}
               lockedItems={!ITEM_EDIT_STATUSES.includes(editingOrder.status)}

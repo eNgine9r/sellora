@@ -81,12 +81,3 @@ The insight rules use only manual/imported data. Meta Ads API sync remains futur
 If a campaign exists but the selected period has no imported/manual metrics, the `/advertising` comparison should still show it as `NO_DATA` with safe `—` values. `NO_DATA` campaigns are excluded from Top Campaigns so incomplete imports do not create misleading scale recommendations.
 
 Rule priority is `NO_DATA → PROBLEM → GOOD → WATCH`. Spend with leads but zero orders remains `PROBLEM` and should prompt a Direct follow-up or offer review.
-<<<<<<< HEAD
-=======
-
-## Manual campaign attribution and imports
-
-Historical orders may include an optional campaign reference only when a campaign is already known for the current workspace. Missing campaign information is valid and leaves the order unattributed. Cross-workspace campaign links are not allowed.
-
-Manual attribution is separate from advertising metric import. Importing daily ad spend/click/leads metrics does not automatically attribute orders to campaigns. Future Meta API attribution remains future work, and advertising import remains not pilot-ready until deployed manual staging QA passes.
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure

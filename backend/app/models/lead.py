@@ -27,10 +27,6 @@ class Lead(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Timestamp
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     lead_source_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("lead_sources.id", ondelete="SET NULL"), nullable=True)
-<<<<<<< HEAD
-=======
-    campaign_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("ad_campaigns.id", ondelete="SET NULL"), nullable=True, index=True)
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     status: Mapped[str] = mapped_column(String(30), default=LeadStatus.NEW.value, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     assigned_user_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -40,12 +36,4 @@ class Lead(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Timestamp
     last_contact_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     lead_source = relationship("LeadSource", back_populates="leads")
-<<<<<<< HEAD
-=======
-    campaign = relationship("AdCampaign")
-
-    @property
-    def campaign_name(self) -> str | None:
-        return self.campaign.name if self.campaign else None
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
     assigned_user = relationship("User", foreign_keys=[assigned_user_id])

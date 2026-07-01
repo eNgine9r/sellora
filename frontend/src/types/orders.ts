@@ -31,11 +31,6 @@ export type Order = {
   workspace_id: string;
   order_number: string;
   customer_id: string | null;
-<<<<<<< HEAD
-=======
-  campaign_id: string | null;
-  campaign_name: string | null;
->>>>>>> origin/codex/2026-07-01-create-initial-sellora-repository-structure
   customer_name: string | null;
   customer_phone: string | null;
   customer_instagram_username: string | null;
