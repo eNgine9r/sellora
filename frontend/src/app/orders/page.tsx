@@ -31,6 +31,7 @@ import {
   updateOrder,
 } from "@/services/orders";
 import { fetchOrderShipment } from "@/services/shipments";
+import { fetchAdCampaigns } from "@/services/advertising";
 import {
   fetchInventory,
   fetchProducts,
@@ -111,6 +112,11 @@ export default function OrdersPage() {
   const customersQuery = useQuery({
     queryKey: ["customers", workspaceId, "order-selector"],
     queryFn: () => fetchCustomers(workspaceId),
+    enabled,
+  });
+  const campaignsQuery = useQuery({
+    queryKey: ["ad-campaigns", workspaceId],
+    queryFn: () => fetchAdCampaigns(workspaceId, undefined),
     enabled,
   });
   const shipmentQuery = useQuery({
@@ -410,6 +416,7 @@ export default function OrdersPage() {
               products={productsQuery.data ?? []}
               inventory={inventoryQuery.data ?? []}
               customers={customersQuery.data ?? []}
+              campaigns={campaignsQuery.data ?? []}
               currencyCode={currencyCode}
               showProfit={currentWorkspace?.role === "OWNER"}
               isCreatingCustomer={createCustomerMutation.isPending}
@@ -436,6 +443,7 @@ export default function OrdersPage() {
               products={productsQuery.data ?? []}
               inventory={inventoryQuery.data ?? []}
               customers={customersQuery.data ?? []}
+              campaigns={campaignsQuery.data ?? []}
               currencyCode={currencyCode}
               initialOrder={editingOrder}
               lockedItems={!ITEM_EDIT_STATUSES.includes(editingOrder.status)}
