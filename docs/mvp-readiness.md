@@ -190,3 +190,15 @@ Current status remains conditional:
 - advertising import is not pilot-ready until staging import QA passes;
 - Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass;
 - no real tokens, API keys, ad account data, business IDs, customer data, or workspace IDs should appear in docs, tests, screenshots, logs, or PR text.
+
+## Sprint 4.7 — Meta Ads fake-client simulation readiness
+
+Sprint 4.7 adds a backend fake-client boundary, DTO contracts, mapper, and dry-run sync simulation for future Meta Ads work. This is **fake-client / simulation-ready / not active** and does not connect to Meta.
+
+Current status remains conditional:
+
+- manual entry and CSV import remain the MVP advertising source;
+- no live Meta OAuth, live API calls, token storage, production sync jobs, database migrations, automatic attribution, or Conversions API are active;
+- orders, revenue, and profit remain Sellora-side business data;
+- advertising import is not pilot-ready until staging import QA passes;
+- Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass.

@@ -626,3 +626,12 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Confirm future Meta connection copy states OWNER-only connection, encrypted token storage, workspace isolation, and read-only delivery metrics sync.
 - [ ] Confirm advertising import remains not pilot-ready until manual staging CSV import QA passes.
 - [ ] Confirm Sprint 4.4 attribution remains conditionally approved until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.
+
+## Sprint 4.7 — Meta Ads fake sync simulation QA notes
+
+- [ ] Confirm backend fake Meta client tests pass with synthetic `fake_act_001` / `fake_campaign_*` data only.
+- [ ] Confirm no live Meta OAuth, API call, token storage, production route, scheduled job, or database migration is introduced.
+- [ ] Confirm dry-run simulation returns create/update/skip counts and user-safe issues without DB writes.
+- [ ] Confirm manual entry and CSV import remain the active MVP source.
+- [ ] Confirm advertising import remains not pilot-ready until manual staging CSV import QA passes.
+- [ ] Confirm Sprint 4.4 attribution remains conditionally approved until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.

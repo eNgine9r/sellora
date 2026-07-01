@@ -270,3 +270,12 @@ Severity if failed: Minor
 - [ ] Confirm read-only Meta sync would import delivery metrics only; Sellora orders/profit remain internal data.
 - [ ] Confirm Conversions API is a separate future phase that requires legal/privacy review.
 - [ ] Confirm no pilot-ready claim is made for advertising import before staging import QA passes.
+
+## Sprint 4.7 — Meta Ads fake-client readiness contract
+
+- [ ] Explain that Meta Ads API is fake-client / simulation-ready / not active.
+- [ ] Confirm synthetic fake IDs only: `fake_act_001`, `fake_campaign_001`, `fake_campaign_002`, and `fake_campaign_003`.
+- [ ] Confirm dry-run sync does not write to the database.
+- [ ] Confirm no token storage, live OAuth, live Meta API call, production sync job, or migration is present.
+- [ ] Confirm orders, revenue, and profit remain Sellora-side business metrics.
+- [ ] Confirm no pilot-ready claim is made for advertising import before staging import QA passes.

@@ -172,3 +172,9 @@ Future Meta read-only sync may import campaign delivery metrics such as spend, i
 Manual/import rows and future Meta-sourced rows must not silently overwrite each other. Future sync source and external ID fields should be additive, workspace-scoped, and clearly displayed in UI before any automated merge behavior exists.
 
 Advertising import remains not pilot-ready until staging CSV import QA passes. Sprint 4.4 attribution remains conditional until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.
+
+## Sprint 4.7 — Fake Meta sync simulation metrics
+
+The fake Meta sync simulation is backend-only and dry-run only. It can produce candidate delivery metrics: spend, impressions, clicks, messages, and leads. It intentionally does not provide Sellora orders, revenue, or net profit from Meta.
+
+Future Meta-sourced daily metrics must use an idempotent identity equivalent to `workspace_id + external_source + external_campaign_id + metric_date`. Manual/import rows and future Meta rows must not silently overwrite each other. Zero spend, zero clicks, missing leads, and no-data campaigns must continue to render safely as `—` or structured no-data states rather than `NaN`, `Infinity`, `undefined`, or raw `null`.

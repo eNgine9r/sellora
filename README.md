@@ -235,3 +235,7 @@ Sprint 4.4.1 recovered the npm lockfile using `npm install --package-lock-only` 
 ### Sprint 4.6 — Meta Ads API readiness
 
 Sellora documents a future Meta Ads API path for OWNER-only OAuth, encrypted token storage, workspace-scoped read-only campaign metrics sync, idempotent daily metric upserts, and manual/CSV fallback. This is architecture-ready only: live Meta OAuth, live API calls, token storage implementation, automatic sync, automatic attribution, and Conversions API are not active. Manual entry and CSV import remain the current MVP advertising data source, and advertising import remains not pilot-ready until staging QA passes.
+
+### Sprint 4.7 — Meta Ads fake-client simulation
+
+Sellora now includes a backend-only fake Meta Ads boundary for future sync work: typed DTOs, a client protocol, deterministic fake client, mapper, and dry-run simulation service. Meta Ads API remains fake-client / simulation-ready / not active: no live OAuth, live API calls, token storage, production sync jobs, database migrations, automatic attribution, or Conversions API are active. Manual entry and CSV import remain the current MVP advertising data source, and advertising import remains not pilot-ready until staging QA passes.

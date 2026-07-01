@@ -176,3 +176,13 @@ Sprint 4.6 intentionally adds no Meta database migration.
 Campaign selection must remain optional. Future Meta Ads sync may map external campaign identifiers to Sellora campaigns, but it must not require every lead or order to have `campaign_id`, and it must not treat unattributed orders as errors.
 
 Sprint 4.6 readiness docs do not activate OAuth, token exchange, ad account selection, campaign sync, or insights sync.
+
+## Sprint 4.7 — Fake-client sync simulation boundary
+
+Sprint 4.7 adds a backend-only fake-client boundary under `backend/app/integrations/meta_ads/` for safe simulation. Meta Ads API status is now **fake-client / simulation-ready / not active**. Manual entry and CSV import remain the active MVP advertising source.
+
+The fake boundary includes typed DTO contracts, a client protocol, deterministic synthetic fake client, mapping layer, and dry-run sync service. It does not add live OAuth, live Meta API calls, token storage, production routes, scheduled jobs, database migrations, automatic attribution, click tracking, or Conversions API.
+
+Current reusable models remain `AdCampaign` and `AdMetric`. Future live sync still needs additive external source/account/campaign identifiers and sync-run persistence before any database write can happen. Those fields are not persisted in Sprint 4.7.
+
+Dry-run idempotency contract: the future write path should treat `workspace_id + external_source + external_campaign_id + metric_date` as the Meta-sourced daily metric identity. Manual/import rows and Meta-sourced rows must not silently overwrite each other. Orders, revenue, and net profit remain Sellora-side business metrics unless a separate Conversions API sprint is legally/privacy reviewed and explicitly approved.

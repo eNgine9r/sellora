@@ -89,3 +89,9 @@ Advertising import remains the current MVP path. Meta Ads API sync is planned bu
 Future Meta read-only sync should not replace this import flow. Manual and CSV-imported rows must remain available as a fallback, and future Meta-sourced rows must be marked by source so they do not silently overwrite manual/import data.
 
 Do not upload real Meta exports with tokens, account IDs, business IDs, customer personal data, private order data, or real campaign IDs into QA artifacts. Use synthetic templates only.
+
+## Sprint 4.7 — Manual import remains active while fake sync exists
+
+The fake Meta client is only a backend simulation boundary. It does not replace manual entry or CSV import, does not connect to Meta, and does not make advertising import pilot-ready.
+
+Manual and CSV-imported rows remain the active MVP advertising data source. Future Meta-sourced rows must be source-marked and must not silently overwrite manual/import rows.

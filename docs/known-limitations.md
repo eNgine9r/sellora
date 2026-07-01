@@ -146,3 +146,11 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - Future Meta read-only sync must import delivery metrics only; Sellora orders, revenue, and profit remain internal business data unless a separate Conversions API sprint is legally/privacy reviewed.
 - Future Meta OAuth must be OWNER-only, workspace-scoped, protected by state/CSRF validation, and store encrypted tokens without returning raw tokens to the frontend.
 - Advertising import remains not pilot-ready and Sprint 4.4 remains conditionally approved until the existing runtime/staging blockers are closed.
+
+## Sprint 4.7 — Fake Meta sync simulation limitation
+
+- Meta Ads API is fake-client / simulation-ready / not active.
+- The backend fake client, DTOs, mapper, and dry-run service use synthetic data only and do not perform live Meta API calls.
+- No live OAuth, real token storage, production sync jobs, database migrations, automatic attribution, click tracking, or Conversions API were added.
+- Manual entry and CSV import remain the current MVP advertising data source.
+- Advertising import remains not pilot-ready and Sprint 4.4 remains conditionally approved until runtime/staging blockers are closed.

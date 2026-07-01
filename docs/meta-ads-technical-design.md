@@ -141,3 +141,38 @@ Before claiming Meta sync readiness in a future sprint:
 - Confirm workspace isolation with two test workspaces.
 - Confirm manual/CSV import fallback still works after connection failure.
 - Confirm advertising import remains not pilot-ready unless staging import QA has passed separately.
+
+## Sprint 4.7 implemented fake boundary
+
+Implemented backend skeleton:
+
+```text
+backend/app/integrations/meta_ads/
+  __init__.py
+  schemas.py
+  client.py
+  fake_client.py
+  mapper.py
+  sync_service.py
+```
+
+Scope:
+
+- `schemas.py` defines typed DTOs and sync candidates for synthetic Meta-like accounts, campaigns, insights rows, issues, and dry-run results.
+- `client.py` defines the `MetaAdsClientProtocol` interface: `list_ad_accounts()`, `list_campaigns(account_id)`, and `get_campaign_insights(account_id, date_from, date_to)`.
+- `fake_client.py` returns deterministic synthetic accounts, campaigns, zero-denominator rows, and partial/no-data scenarios using fake IDs such as `fake_act_001` and `fake_campaign_001`.
+- `mapper.py` maps Meta campaign/insights DTOs into internal sync candidates without writing to the database and without adding orders, revenue, or net profit from Meta.
+- `sync_service.py` performs pure dry-run simulation, returns user-safe issues, and never writes to the database.
+
+Still not implemented:
+
+- live OAuth;
+- live Meta API calls;
+- real token storage;
+- production routes;
+- scheduled production sync jobs;
+- database migrations;
+- automatic attribution;
+- Conversions API.
+
+Future persistence still requires additive external-source fields and conflict policy before a live sync can write rows. Manual/CSV import remains the active MVP path and must stay available as a fallback.
