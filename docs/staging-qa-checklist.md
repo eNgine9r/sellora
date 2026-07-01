@@ -617,3 +617,12 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Run `npm --prefix frontend ci` and confirm it uses the committed lockfile without package drift.
 - [ ] Run `npm --prefix frontend run typecheck` and `npm --prefix frontend run build` after dependency restoration.
 - [ ] Re-run `/advertising` browser, mobile, and theme QA after build recovery, using synthetic campaigns only.
+
+## Sprint 4.6 — Future Meta Ads readiness QA notes
+
+- [ ] Confirm `/advertising` and `/settings/integrations` still communicate that Meta Ads API is future work and not active.
+- [ ] Confirm manual entry and CSV import remain the current MVP advertising data source.
+- [ ] Confirm no UI copy claims live Meta OAuth, automatic sync, or automatic attribution is available.
+- [ ] Confirm future Meta connection copy states OWNER-only connection, encrypted token storage, workspace isolation, and read-only delivery metrics sync.
+- [ ] Confirm advertising import remains not pilot-ready until manual staging CSV import QA passes.
+- [ ] Confirm Sprint 4.4 attribution remains conditionally approved until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.
