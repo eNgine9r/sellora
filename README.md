@@ -230,4 +230,24 @@ The frontend now opens with a public Sellora landing page at `/`, uses `/dashboa
 
 The frontend package manager strategy is npm. CI should use a committed `frontend/package-lock.json` as the authoritative lockfile and install dependencies with `npm --prefix frontend ci` before running `npm --prefix frontend run typecheck` and `npm --prefix frontend run build`.
 
-Sprint 4.3.3 confirmed that no frontend lockfile is currently committed and that `npm install --package-lock-only` is blocked in this environment by a registry/proxy `403 Forbidden` for `@tanstack/react-query`. Generate the lockfile only from an approved npm registry/cache; do not hand-write it, do not commit private `.npmrc` credentials, and do not introduce `yarn.lock` or `pnpm-lock.yaml` unless the package manager strategy is explicitly changed.
+Sprint 4.4.1 recovered the npm lockfile using `npm install --package-lock-only` with registry access. Keep `frontend/package-lock.json` committed, use `npm --prefix frontend ci` for reproducible installs, do not hand-write lockfiles, do not commit private `.npmrc` credentials, and do not introduce `yarn.lock` or `pnpm-lock.yaml` unless the package manager strategy is explicitly changed.
+
+### Sprint 4.6 — Meta Ads API readiness
+
+Sellora documents a future Meta Ads API path for OWNER-only OAuth, encrypted token storage, workspace-scoped read-only campaign metrics sync, idempotent daily metric upserts, and manual/CSV fallback. This is architecture-ready only: live Meta OAuth, live API calls, token storage implementation, automatic sync, automatic attribution, and Conversions API are not active. Manual entry and CSV import remain the current MVP advertising data source, and advertising import remains not pilot-ready until staging QA passes.
+
+### Sprint 4.7 — Meta Ads fake-client simulation
+
+Sellora now includes a backend-only fake Meta Ads boundary for future sync work: typed DTOs, a client protocol, deterministic fake client, mapper, and dry-run simulation service. Meta Ads API remains fake-client / simulation-ready / not active: no live OAuth, live API calls, token storage, production sync jobs, database migrations, automatic attribution, or Conversions API are active. Manual entry and CSV import remain the current MVP advertising data source, and advertising import remains not pilot-ready until staging QA passes.
+
+### Sprint 4.8 — Meta Ads sync preview
+
+Sellora now includes a backend-only read-only sync preview for the fake Meta Ads boundary. It compares fake Meta candidates against existing advertising snapshots and reports `WOULD_CREATE`, `WOULD_UPDATE`, `WOULD_SKIP`, `POTENTIAL_CONFLICT`, and external-ID support notes with `dry_run = true` and `db_writes = false`. Meta Ads API remains not active: no live OAuth, live API calls, token storage, database migrations, sync-run persistence, production sync jobs, automatic attribution, or Conversions API are active. Manual entry and CSV import remain the current MVP advertising data source, and advertising import remains not pilot-ready until staging QA passes.
+
+### Sprint 4.9 — Meta Ads external identity contract
+
+Sellora now documents the future Meta Ads external identity and sync persistence contract: workspace-scoped `external_source`, `external_account_id`, `external_campaign_id`, source separation (`manual`, `csv_import`, `meta_sync`), `meta_sync_runs`, and `meta_ad_connections` are designed for a future migration but are not applied. Meta Ads API remains schema design and sync persistence contract ready / not active: no live OAuth, live Meta API calls, token storage, database migrations, DB writes, production sync jobs, automatic attribution, or Conversions API are active. Manual entry and CSV import remain the current MVP advertising data source, advertising import remains not pilot-ready until staging QA passes, and Sprint 4.4 PostgreSQL runtime/browser QA blockers remain open.
+
+### Sprint 4.10 — Meta Ads external identity migration draft
+
+Sellora now has a nullable-first Alembic migration draft and SQLAlchemy model fields for future Meta Ads external identity/source separation on `ad_campaigns` and `ad_metrics`, plus read-only preview compatibility that prefers exact external identity when safely available. Meta Ads API remains external identity schema draft prepared / runtime-gated / not active: no live OAuth, live Meta API calls, token storage, `meta_ad_connections`, production sync jobs, apply-sync, or DB writes from Meta sync are active. Manual entry and CSV import remain the current MVP advertising source, and PostgreSQL runtime migration QA must pass on a safe non-production database before full approval.

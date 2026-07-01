@@ -260,3 +260,51 @@ Severity if failed: Minor
 - [ ] Confirm `frontend/package-lock.json` is committed and generated from the approved npm registry/cache before claiming reproducible frontend CI.
 - [ ] Confirm `npm --prefix frontend ci`, frontend typecheck, and frontend production build pass before pilot-facing Sprint 4.3 approval.
 - [ ] Confirm `/advertising` browser/mobile/theme QA is repeated after dependency recovery with synthetic campaign data only.
+
+## Sprint 4.6 — Meta Ads API readiness contract
+
+- [ ] Explain to pilot reviewers that Meta Ads API is planned / architecture-ready / not active.
+- [ ] Confirm manual entry and CSV import remain available and are the current MVP source.
+- [ ] Confirm future OAuth is documented as OWNER-only and workspace-scoped.
+- [ ] Confirm docs state tokens must be encrypted and never returned to the frontend.
+- [ ] Confirm read-only Meta sync would import delivery metrics only; Sellora orders/profit remain internal data.
+- [ ] Confirm Conversions API is a separate future phase that requires legal/privacy review.
+- [ ] Confirm no pilot-ready claim is made for advertising import before staging import QA passes.
+
+## Sprint 4.7 — Meta Ads fake-client readiness contract
+
+- [ ] Explain that Meta Ads API is fake-client / simulation-ready / not active.
+- [ ] Confirm synthetic fake IDs only: `fake_act_001`, `fake_campaign_001`, `fake_campaign_002`, and `fake_campaign_003`.
+- [ ] Confirm dry-run sync does not write to the database.
+- [ ] Confirm no token storage, live OAuth, live Meta API call, production sync job, or migration is present.
+- [ ] Confirm orders, revenue, and profit remain Sellora-side business metrics.
+- [ ] Confirm no pilot-ready claim is made for advertising import before staging import QA passes.
+
+## Sprint 4.8 — Meta Ads sync preview contract
+
+- [ ] Explain that Meta Ads API is fake-client + read-only DB comparison + sync preview ready / not active.
+- [ ] Confirm sync preview is dry-run only and `db_writes = false`.
+- [ ] Confirm ambiguous campaign matches and manual/CSV metric overlaps are conflicts, not automatic updates.
+- [ ] Confirm exact external Meta ID matching remains future schema work.
+- [ ] Confirm orders, revenue, and profit remain Sellora-side business metrics.
+- [ ] Confirm no pilot-ready claim is made for advertising import before staging import QA passes.
+
+## Sprint 4.9 — External identity contract checks
+
+- [ ] Confirm reviewers understand Meta Ads API is schema design and sync persistence contract ready / not active.
+- [ ] Confirm no migration, token storage, live Meta OAuth, live Meta API call, production sync job, or DB write was added.
+- [ ] Confirm future source values remain English backend values: `manual`, `csv_import`, and `meta_sync`.
+- [ ] Confirm future exact matching uses `workspace_id + external_source + external_account_id + external_campaign_id` and never external IDs alone.
+- [ ] Confirm manual/CSV data is protected and conflicts are not overwritten automatically.
+- [ ] Confirm orders, revenue, and net profit remain Sellora-side business metrics.
+- [ ] Confirm advertising import remains not pilot-ready until staging import QA passes.
+- [ ] Confirm Sprint 4.4 remains conditional until PostgreSQL runtime and browser/mobile QA pass.
+
+## Sprint 4.10 — Migration draft pilot checks
+
+- [ ] Confirm Meta Ads API is external identity schema draft prepared / runtime-gated / not active.
+- [ ] Confirm new fields are nullable and do not require backfill before existing rows remain valid.
+- [ ] Confirm no live OAuth/API, token storage, `meta_ad_connections`, production sync job, apply-sync, or Meta sync DB write was added.
+- [ ] Confirm preview prefers exact external identity when available and falls back safely when missing.
+- [ ] Confirm manual/CSV data remains protected and advertising import is not pilot-ready until staging QA passes.
+- [ ] Confirm Sprint 4.4 remains conditional until PostgreSQL runtime and browser/mobile QA pass.

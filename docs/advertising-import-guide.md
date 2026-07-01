@@ -81,3 +81,37 @@ The insight rules use only manual/imported data. Meta Ads API sync remains futur
 If a campaign exists but the selected period has no imported/manual metrics, the `/advertising` comparison should still show it as `NO_DATA` with safe `—` values. `NO_DATA` campaigns are excluded from Top Campaigns so incomplete imports do not create misleading scale recommendations.
 
 Rule priority is `NO_DATA → PROBLEM → GOOD → WATCH`. Spend with leads but zero orders remains `PROBLEM` and should prompt a Direct follow-up or offer review.
+
+## Sprint 4.6 — Meta Ads sync boundary
+
+Advertising import remains the current MVP path. Meta Ads API sync is planned but not active, and the import flow must not imply that Sellora is connected to a live Meta ad account.
+
+Future Meta read-only sync should not replace this import flow. Manual and CSV-imported rows must remain available as a fallback, and future Meta-sourced rows must be marked by source so they do not silently overwrite manual/import data.
+
+Do not upload real Meta exports with tokens, account IDs, business IDs, customer personal data, private order data, or real campaign IDs into QA artifacts. Use synthetic templates only.
+
+## Sprint 4.7 — Manual import remains active while fake sync exists
+
+The fake Meta client is only a backend simulation boundary. It does not replace manual entry or CSV import, does not connect to Meta, and does not make advertising import pilot-ready.
+
+Manual and CSV-imported rows remain the active MVP advertising data source. Future Meta-sourced rows must be source-marked and must not silently overwrite manual/import rows.
+
+## Sprint 4.8 — Import protection during Meta preview
+
+Meta sync preview does not replace the manual/CSV import workflow. Existing manual and CSV-imported metrics are treated as protected data. If fake Meta delivery metrics overlap a current campaign/date row, preview flags a conflict instead of updating it.
+
+Advertising import remains not pilot-ready until staging CSV import QA passes with synthetic data.
+
+## Sprint 4.9 — Import rows remain protected during future Meta schema work
+
+Manual and CSV import remain the current MVP advertising data source. Future external identity fields (`external_source`, `external_account_id`, `external_campaign_id`) and future source markers (`source_type`, `sync_source`) are design-only in Sprint 4.9 and are not active import columns yet.
+
+When the future migration is approved, existing imported rows should be backfilled as `csv_import` or `manual` without changing spend, impressions, clicks, messages, leads, orders, revenue, or net profit. Meta-owned rows may update only Meta-owned rows with the same external identity. Any overlap with manual/CSV rows must be flagged as a conflict rather than overwritten.
+
+Advertising import remains not pilot-ready until staging CSV import QA passes with synthetic data. Sprint 4.4 remains conditional until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.
+
+## Sprint 4.10 — Import behavior unchanged by schema draft
+
+The external identity migration draft does not change advertising import behavior. Existing manual and CSV-imported rows remain valid because all new fields are nullable and no guessed backfill runs in Sprint 4.10.
+
+Future backfill should mark rows as `manual` or `csv_import` only when the source can be safely determined. Unknown historical rows should keep null source fields until reviewed. Advertising import remains not pilot-ready until staging CSV import QA passes with synthetic data.
