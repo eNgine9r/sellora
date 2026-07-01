@@ -172,3 +172,9 @@ Current advertising readiness remains conditional:
 - staging/browser/mobile QA for lead/order attribution and `/advertising` is still pending;
 - advertising import is not pilot-ready until manual staging import QA passes with synthetic data;
 - Sprint 4.4 must not be marked fully approved until runtime and browser/staging QA are completed.
+
+## Sprint 4.5.1 — Pilot readiness check result
+
+Sprint 4.5.1 local validation passed, but staging/runtime validation did not proceed because required inputs were missing. Advertising remains blocked for pilot readiness until a safe staging/runtime environment is provided and the PostgreSQL migration, CSV import, browser attribution, workspace isolation, mobile, and theme QA checklists pass with synthetic data only.
+
+Do not mark advertising import pilot-ready and do not mark Sprint 4.4 fully approved until those runtime checks are completed.

@@ -131,3 +131,10 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - Advertising import remains not pilot-ready until deployed staging import QA passes with synthetic data.
 - Sprint 4.4 manual attribution remains conditionally approved until PostgreSQL runtime migration QA and browser/mobile attribution QA are completed.
 - Meta Ads API OAuth, automatic sync, and automatic attribution remain future work and are not active.
+
+## Sprint 4.5.1 — Staging/runtime QA blocked
+
+- Advertising pilot readiness cannot be claimed because staging frontend/backend URLs, secure test credentials, a controlled QA workspace, safe PostgreSQL test/staging DB access, migration window approval, and rollback/backup confirmation were not available in this environment.
+- PostgreSQL runtime validation for `202607010015_manual_ad_attribution.py` remains blocked; do not run the Alembic upgrade/downgrade/upgrade sequence against production.
+- Advertising CSV import, `/advertising`, `/leads`, `/orders`, order detail, workspace/cross-workspace, mobile, and theme QA remain blocked until staging/runtime inputs are provided.
+- Advertising import remains not pilot-ready, and Sprint 4.4 remains conditionally approved until runtime and browser QA pass with synthetic data.
