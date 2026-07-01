@@ -163,3 +163,12 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - Manual/CSV data is protected by default; overlap is flagged as `POTENTIAL_CONFLICT`.
 - No live OAuth, live API calls, token storage, database migrations, sync-run persistence, production sync jobs, automatic attribution, click tracking, or Conversions API were added.
 - Advertising import remains not pilot-ready and Sprint 4.4 remains conditionally approved until runtime/staging blockers are closed.
+
+## Sprint 4.9 — External identity schema limitation
+
+- Meta Ads API is schema design and sync persistence contract ready / not active.
+- Exact Meta identity is still not persisted because Sprint 4.9 intentionally adds no database migration.
+- Future safe writes require nullable external identity/source fields, manual/CSV backfill, workspace-scoped indexes, sync-run persistence, and PostgreSQL runtime QA.
+- Manual/CSV data is protected by default; Meta-owned rows can update only Meta-owned rows with the same external identity.
+- No live OAuth, live Meta API calls, token storage, DB writes for Meta sync, production sync jobs, automatic attribution, click tracking, or Conversions API were added.
+- Advertising import remains not pilot-ready and Sprint 4.4 remains conditionally approved until runtime/staging blockers are closed.

@@ -646,3 +646,17 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Confirm no live Meta OAuth, API call, token storage, DB migration, sync-run persistence, production job, or DB write is introduced.
 - [ ] Confirm advertising import remains not pilot-ready until manual staging CSV import QA passes.
 - [ ] Confirm Sprint 4.4 attribution remains conditionally approved until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.
+
+## Sprint 4.9 — Future Meta external identity migration QA plan
+
+Sprint 4.9 does not create or apply an Alembic migration. Before a future migration is approved, staging QA must validate this staged plan:
+
+- Phase A — design only: confirm schema contract, conflict policy, and manual/CSV protection are reviewed.
+- Phase B — add nullable external identity fields to `ad_campaigns` and `ad_metrics`.
+- Phase C — backfill existing rows as `manual` or `csv_import` without changing business values.
+- Phase D — add workspace-scoped indexes and uniqueness protections for `workspace_id + external_source + external_account_id + external_campaign_id`.
+- Phase E — add `meta_sync_runs` and optional item-level records only after apply-sync is approved.
+- Phase F — validate Alembic upgrade/downgrade/upgrade on a safe PostgreSQL database.
+- Phase G — complete staging QA with synthetic data, manual/CSV fallback, workspace isolation, and rollback confirmation.
+
+Do not run this future migration in production without a backup/rollback window. Advertising import remains not pilot-ready and Sprint 4.4 PostgreSQL runtime migration QA remains pending until explicitly completed.

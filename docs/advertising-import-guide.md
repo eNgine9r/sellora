@@ -101,3 +101,11 @@ Manual and CSV-imported rows remain the active MVP advertising data source. Futu
 Meta sync preview does not replace the manual/CSV import workflow. Existing manual and CSV-imported metrics are treated as protected data. If fake Meta delivery metrics overlap a current campaign/date row, preview flags a conflict instead of updating it.
 
 Advertising import remains not pilot-ready until staging CSV import QA passes with synthetic data.
+
+## Sprint 4.9 — Import rows remain protected during future Meta schema work
+
+Manual and CSV import remain the current MVP advertising data source. Future external identity fields (`external_source`, `external_account_id`, `external_campaign_id`) and future source markers (`source_type`, `sync_source`) are design-only in Sprint 4.9 and are not active import columns yet.
+
+When the future migration is approved, existing imported rows should be backfilled as `csv_import` or `manual` without changing spend, impressions, clicks, messages, leads, orders, revenue, or net profit. Meta-owned rows may update only Meta-owned rows with the same external identity. Any overlap with manual/CSV rows must be flagged as a conflict rather than overwritten.
+
+Advertising import remains not pilot-ready until staging CSV import QA passes with synthetic data. Sprint 4.4 remains conditional until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.

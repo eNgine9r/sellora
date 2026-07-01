@@ -215,3 +215,166 @@ Conflict copy:
 - UK: `Ця кампанія може вже існувати за назвою/платформою, але Sellora ще не зберігає зовнішні Meta ID. Перевірте перед увімкненням live-синхронізації.`
 
 Still not implemented: live OAuth, live Meta API calls, token storage, database migrations, sync-run persistence, production sync jobs, DB writes from preview, automatic attribution, click ID tracking, and Conversions API.
+
+## Sprint 4.9 — External identity schema, migration plan, and persistence contract
+
+Sprint 4.9 is a design/contract sprint only. Meta Ads API status is **schema design and sync persistence contract ready / not active**. Manual entry and CSV import remain the active MVP source. No live Meta OAuth, no live Meta API calls, no token storage, no database migration, no sync-run persistence implementation, no production sync job, and no DB writes are added for Meta sync.
+
+### Current limitation audit
+
+Current Sprint 4.8 preview can compare by existing fields only: workspace, normalized campaign name/platform, matched campaign, and metric date. Exact Meta identity is missing because campaigns and metrics do not persist `external_source`, `external_account_id`, or `external_campaign_id`. Name/platform matching is useful for dry-run review, but it is not safe for automatic writes because it can be ambiguous and can overlap with owner-maintained manual/CSV data.
+
+Manual/CSV rows must not be overwritten because they may include owner-entered corrections, imported historical spreadsheet rows, manually attributed orders, revenue, and net profit. Future exact idempotency requires `workspace_id` plus external source/account/campaign identifiers and, for metrics, `metric_date`. Future sync-run records are required to audit who triggered a run, which date range/account was used, what changed, what conflicted, and whether the run was dry-run or apply-run. Every future schema change requires PostgreSQL runtime QA before staging or production approval.
+
+### Future `ad_campaigns` external identity fields
+
+Proposed additive campaign fields, nullable first:
+
+| Field | Design value / purpose |
+| --- | --- |
+| `external_source` | Provider value such as `meta_ads`. |
+| `external_account_id` | Provider account identifier; never used without `workspace_id`. |
+| `external_campaign_id` | Provider campaign identifier; never used without `workspace_id`. |
+| `external_status` | Provider status for diagnostics and reporting. |
+| `external_objective` | Provider objective for diagnostics and reporting. |
+| `last_synced_at` | Timestamp of last successful provider sync for the campaign. |
+| `sync_source` | Source/owner marker: `manual`, `csv_import`, or `meta_sync`. |
+
+Future campaign uniqueness concept:
+
+```text
+workspace_id + external_source + external_account_id + external_campaign_id
+```
+
+Rules: these are future design values only unless a migration is explicitly approved; backend values remain English; external IDs are always workspace-scoped; external IDs must never be trusted without `workspace_id`; do not add persisted `GOOD`, `WATCH`, `PROBLEM`, or `NO_DATA` enums.
+
+### Future `ad_metrics` source separation fields
+
+Proposed additive metric fields, nullable first:
+
+| Field | Design value / purpose |
+| --- | --- |
+| `source_type` | Row source: `manual`, `csv_import`, or `meta_sync`. |
+| `external_source` | Provider value such as `meta_ads` for synced rows. |
+| `external_account_id` | Provider account identifier for synced rows. |
+| `external_campaign_id` | Provider campaign identifier for synced rows. |
+| `last_synced_at` | Timestamp of last successful provider sync for the metric row. |
+| `sync_run_id` | Optional link to the future `meta_sync_runs` audit/debug row. |
+
+Future Meta metric idempotency concept:
+
+```text
+workspace_id + external_source + external_account_id + external_campaign_id + metric_date
+```
+
+Meta-synced rows must not silently overwrite manual/CSV rows. Meta provides spend, impressions, clicks, and messages/leads where available. Orders, revenue, and net profit remain Sellora-side business metrics and must not be imported from Meta Ads Insights unless a separate Conversions API sprint is legally/privacy reviewed and explicitly approved.
+
+### Future `meta_sync_runs` persistence contract
+
+Future table: `meta_sync_runs`.
+
+Suggested fields:
+
+```text
+id
+workspace_id
+connection_id
+external_account_id
+sync_type
+status
+date_from
+date_to
+started_at
+finished_at
+triggered_by_user_id
+campaigns_seen
+metrics_seen
+campaigns_created
+campaigns_updated
+metrics_created
+metrics_updated
+skipped
+conflicts
+errors_count
+error_summary
+dry_run
+created_at
+updated_at
+```
+
+Suggested status values: `pending`, `running`, `success`, `partial_failed`, `failed`, and `cancelled`.
+
+Contract rules:
+
+- no secrets in sync runs;
+- no raw tokens, authorization headers, OAuth codes, or provider payload dumps in errors;
+- no customer PII or private order details;
+- every sync run is scoped by `workspace_id`;
+- sync runs are audit/debug objects, not business metric sources by themselves;
+- dry-run and apply-run must be distinguishable with `dry_run` and safe counters.
+
+Optional future table: `meta_sync_run_items`, used only if item-level create/update/skip/conflict details are needed for debugging and audit.
+
+### Future `meta_ad_connections` schema contract
+
+Future table: `meta_ad_connections`.
+
+Suggested fields:
+
+```text
+id
+workspace_id
+provider
+status
+connected_by_user_id
+scopes
+token_encrypted_ref
+token_expires_at
+last_successful_sync_at
+last_failed_sync_at
+disconnected_at
+created_at
+updated_at
+deleted_at
+```
+
+Do not implement token storage in Sprint 4.9. This schema is a future contract only. Future token storage must encrypt the token before persistence, never return raw tokens to frontend responses, never write tokens to logs, and allow only OWNER to connect/disconnect. Disconnect should revoke the provider token if supported by the live implementation.
+
+### Staged migration plan — design only
+
+| Phase | Plan |
+| --- | --- |
+| Phase A | Design only: document external identity, source separation, sync-run persistence, connection storage, and conflict rules. |
+| Phase B | Add nullable external identity fields on `ad_campaigns` and `ad_metrics`. |
+| Phase C | Backfill existing campaigns/metrics as `manual` or `csv_import` while preserving all existing values. |
+| Phase D | Add workspace-scoped indexes and uniqueness protections for exact Meta identity. |
+| Phase E | Add `meta_sync_runs` and optional `meta_sync_run_items` after preview/apply requirements are validated. |
+| Phase F | Validate Alembic upgrade/downgrade/upgrade on a safe PostgreSQL database. |
+| Phase G | Run staging QA with synthetic data, manual/CSV fallback checks, workspace isolation, and rollback confirmation. |
+
+Migration rules: all new fields are nullable first; existing data remains valid; manual/CSV rows are protected; downgrade path is documented before merge; PostgreSQL runtime QA is required before approval; no production migration runs without backup and rollback windows. Sprint 4.9 does not create or apply an Alembic migration.
+
+### Conflict resolution contract
+
+Manual/CSV data is protected by default. Meta-synced rows can update only Meta-owned rows with the same external identity. If a Meta row overlaps with manual or CSV data, flag a conflict. If campaign matching is ambiguous by name/platform, flag a conflict. Do not import orders, revenue, or net profit from Meta Ads Insights. Do not auto-link Meta data to Sellora orders unless a separate attribution sprint is approved.
+
+User-safe conflict copy:
+
+- EN: `This row overlaps with existing manual or CSV advertising data. Sellora will not overwrite it automatically.`
+- UK: `Цей рядок перетинається з існуючими ручними або CSV-рекламними даними. Sellora не перезапише його автоматично.`
+
+### Preview-to-apply-sync contract
+
+Future apply-sync should follow this sequence:
+
+1. Fetch Meta data through the client.
+2. Map to sync candidates.
+3. Compare through the read-only repository.
+4. Produce preview.
+5. User/admin reviews conflicts.
+6. Apply only safe Meta-owned create/update operations.
+7. Record `meta_sync_run`.
+8. Record item-level conflicts if enabled.
+9. Keep manual/CSV rows untouched.
+
+Sprint 4.9 does not implement step 6. No DB writes are added for Meta sync, and preview remains the safe boundary until external identity schema support is implemented and validated.

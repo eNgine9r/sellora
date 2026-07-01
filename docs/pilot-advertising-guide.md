@@ -93,3 +93,11 @@ Sellora має backend-only fake client для безпечної симуляц
 Sellora має read-only preview для майбутньої Meta sync. Він показує, що потенційно було б створено, пропущено або позначено як конфлікт, але не записує дані в базу.
 
 Ручні та CSV-метрики захищені: якщо fake Meta row перетинається з існуючим рядком, Sellora показує `POTENTIAL_CONFLICT`, а не оновлює дані автоматично. Live Meta Ads API, токени, production sync jobs і Conversions API все ще не активні.
+
+## Sprint 4.9 — Future Meta identity contract for pilot reviewers
+
+Meta Ads API remains not active. Sprint 4.9 only documents how future Meta-synced campaigns and metrics will be identified separately from manual and CSV rows.
+
+Future Meta sync should use workspace-scoped external identity (`external_source`, `external_account_id`, `external_campaign_id`) and source markers (`manual`, `csv_import`, `meta_sync`). Manual/CSV data is protected by default, and Meta rows must not overwrite owner-entered or imported rows unless they are already Meta-owned rows with the same external identity.
+
+Orders, revenue, and profit remain Sellora-side. Advertising import remains not pilot-ready until staging QA passes, and Sprint 4.4 remains conditional until PostgreSQL runtime and browser/mobile QA pass.

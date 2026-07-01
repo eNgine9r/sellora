@@ -216,3 +216,18 @@ Current status remains conditional:
 - orders, revenue, and profit remain Sellora-side business data;
 - advertising import is not pilot-ready until staging import QA passes;
 - Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass.
+
+## Sprint 4.9 — Meta Ads external identity contract readiness
+
+Sprint 4.9 documents future external identity, ad metric source separation, sync-run persistence, Meta connection storage, migration phases, conflict resolution, and preview-to-apply-sync rules. This is **schema design and sync persistence contract ready / not active**.
+
+Current status remains conditional:
+
+- manual entry and CSV import remain the MVP advertising source;
+- no live Meta OAuth, live API calls, token storage, database migrations, DB writes for Meta sync, sync-run persistence implementation, production sync jobs, automatic attribution, click tracking, or Conversions API are active;
+- future exact identity requires workspace-scoped `external_source`, `external_account_id`, and `external_campaign_id` support;
+- future existing rows must be backfilled as `manual` or `csv_import` before Meta-owned rows can be safely separated;
+- manual/CSV rows are protected, and Meta-owned rows can update only Meta-owned rows with the same external identity;
+- orders, revenue, and profit remain Sellora-side business data;
+- advertising import is not pilot-ready until staging import QA passes;
+- Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass.

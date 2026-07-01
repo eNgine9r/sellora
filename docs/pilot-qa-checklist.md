@@ -288,3 +288,14 @@ Severity if failed: Minor
 - [ ] Confirm exact external Meta ID matching remains future schema work.
 - [ ] Confirm orders, revenue, and profit remain Sellora-side business metrics.
 - [ ] Confirm no pilot-ready claim is made for advertising import before staging import QA passes.
+
+## Sprint 4.9 — External identity contract checks
+
+- [ ] Confirm reviewers understand Meta Ads API is schema design and sync persistence contract ready / not active.
+- [ ] Confirm no migration, token storage, live Meta OAuth, live Meta API call, production sync job, or DB write was added.
+- [ ] Confirm future source values remain English backend values: `manual`, `csv_import`, and `meta_sync`.
+- [ ] Confirm future exact matching uses `workspace_id + external_source + external_account_id + external_campaign_id` and never external IDs alone.
+- [ ] Confirm manual/CSV data is protected and conflicts are not overwritten automatically.
+- [ ] Confirm orders, revenue, and net profit remain Sellora-side business metrics.
+- [ ] Confirm advertising import remains not pilot-ready until staging import QA passes.
+- [ ] Confirm Sprint 4.4 remains conditional until PostgreSQL runtime and browser/mobile QA pass.

@@ -186,3 +186,11 @@ Meta sync preview is read-only. It compares fake Meta delivery candidates agains
 Manual/CSV data is protected by default. If a future Meta row overlaps an existing manual/CSV row, preview must flag `POTENTIAL_CONFLICT` and must not overwrite spend, impressions, clicks, messages, leads, orders, revenue, or net profit. Orders, revenue, and net profit remain Sellora-side metrics and are not imported from Meta Ads Insights.
 
 Because exact external IDs are not persisted yet, preview includes an external ID limitation note. Future schema work still needs additive `external_source` / `external_campaign_id` support before live sync can write rows safely.
+
+## Sprint 4.9 — External identity and source separation design
+
+Sprint 4.9 designs future source separation without changing the database. Future `ad_campaigns` should receive nullable external identity fields such as `external_source`, `external_account_id`, `external_campaign_id`, `external_status`, `external_objective`, `last_synced_at`, and `sync_source`. Future `ad_metrics` should receive nullable source fields such as `source_type`, `external_source`, `external_account_id`, `external_campaign_id`, `last_synced_at`, and `sync_run_id`.
+
+Future Meta metric idempotency should use `workspace_id + external_source + external_account_id + external_campaign_id + metric_date`. Manual/CSV data is protected by default: Meta-owned rows can update only Meta-owned rows with the same external identity, while overlapping manual or CSV rows are conflicts.
+
+Orders, revenue, and net profit remain Sellora-side business metrics. Meta Ads Insights may provide spend, impressions, clicks, and messages/leads where available, but it must not overwrite manual/CSV business outcomes or import Sellora profit. Conversions API remains a separate future sprint that requires legal/privacy review.
