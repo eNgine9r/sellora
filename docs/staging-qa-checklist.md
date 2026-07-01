@@ -635,3 +635,14 @@ Use this checklist for manual staging smoke testing before accepting MVP changes
 - [ ] Confirm manual entry and CSV import remain the active MVP source.
 - [ ] Confirm advertising import remains not pilot-ready until manual staging CSV import QA passes.
 - [ ] Confirm Sprint 4.4 attribution remains conditionally approved until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.
+
+## Sprint 4.8 — Meta Ads sync preview QA notes
+
+- [ ] Confirm read-only repository/preview tests pass with synthetic data only.
+- [ ] Confirm preview returns `dry_run = true` and `db_writes = false`.
+- [ ] Confirm campaign fallback matching uses normalized name/platform and flags ambiguous matches as `POTENTIAL_CONFLICT`.
+- [ ] Confirm existing manual/CSV metric overlap is flagged as `POTENTIAL_CONFLICT`, not updated.
+- [ ] Confirm external ID limitation and future `external_source` / `external_campaign_id` need remain documented.
+- [ ] Confirm no live Meta OAuth, API call, token storage, DB migration, sync-run persistence, production job, or DB write is introduced.
+- [ ] Confirm advertising import remains not pilot-ready until manual staging CSV import QA passes.
+- [ ] Confirm Sprint 4.4 attribution remains conditionally approved until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.

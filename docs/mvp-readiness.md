@@ -202,3 +202,17 @@ Current status remains conditional:
 - orders, revenue, and profit remain Sellora-side business data;
 - advertising import is not pilot-ready until staging import QA passes;
 - Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass.
+
+## Sprint 4.8 — Meta Ads sync preview readiness
+
+Sprint 4.8 adds read-only DB comparison and sync preview on top of the fake Meta client. This is **fake-client + read-only DB comparison + sync preview ready / not active** and does not connect to Meta or write sync results to the database.
+
+Current status remains conditional:
+
+- manual entry and CSV import remain the MVP advertising source;
+- preview uses current `workspace_id + normalized campaign name + platform` fallback matching until future external ID schema support exists;
+- manual/CSV rows are protected and overlapping fake Meta rows are flagged as `POTENTIAL_CONFLICT`;
+- no live Meta OAuth, live API calls, token storage, database migrations, sync-run persistence, production sync jobs, automatic attribution, or Conversions API are active;
+- orders, revenue, and profit remain Sellora-side business data;
+- advertising import is not pilot-ready until staging import QA passes;
+- Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass.

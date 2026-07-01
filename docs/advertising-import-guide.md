@@ -95,3 +95,9 @@ Do not upload real Meta exports with tokens, account IDs, business IDs, customer
 The fake Meta client is only a backend simulation boundary. It does not replace manual entry or CSV import, does not connect to Meta, and does not make advertising import pilot-ready.
 
 Manual and CSV-imported rows remain the active MVP advertising data source. Future Meta-sourced rows must be source-marked and must not silently overwrite manual/import rows.
+
+## Sprint 4.8 — Import protection during Meta preview
+
+Meta sync preview does not replace the manual/CSV import workflow. Existing manual and CSV-imported metrics are treated as protected data. If fake Meta delivery metrics overlap a current campaign/date row, preview flags a conflict instead of updating it.
+
+Advertising import remains not pilot-ready until staging CSV import QA passes with synthetic data.

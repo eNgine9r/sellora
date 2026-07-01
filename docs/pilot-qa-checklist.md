@@ -279,3 +279,12 @@ Severity if failed: Minor
 - [ ] Confirm no token storage, live OAuth, live Meta API call, production sync job, or migration is present.
 - [ ] Confirm orders, revenue, and profit remain Sellora-side business metrics.
 - [ ] Confirm no pilot-ready claim is made for advertising import before staging import QA passes.
+
+## Sprint 4.8 — Meta Ads sync preview contract
+
+- [ ] Explain that Meta Ads API is fake-client + read-only DB comparison + sync preview ready / not active.
+- [ ] Confirm sync preview is dry-run only and `db_writes = false`.
+- [ ] Confirm ambiguous campaign matches and manual/CSV metric overlaps are conflicts, not automatic updates.
+- [ ] Confirm exact external Meta ID matching remains future schema work.
+- [ ] Confirm orders, revenue, and profit remain Sellora-side business metrics.
+- [ ] Confirm no pilot-ready claim is made for advertising import before staging import QA passes.

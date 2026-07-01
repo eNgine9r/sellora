@@ -131,3 +131,76 @@ class MetaSyncResultDTO:
     dry_run: bool = True
     campaign_candidates: list[AdCampaignSyncCandidate] = field(default_factory=list)
     metric_candidates: list[AdMetricSyncCandidate] = field(default_factory=list)
+
+MetaSyncPreviewStatus = str
+WOULD_CREATE = "WOULD_CREATE"
+WOULD_UPDATE = "WOULD_UPDATE"
+WOULD_SKIP = "WOULD_SKIP"
+POTENTIAL_CONFLICT = "POTENTIAL_CONFLICT"
+NEEDS_EXTERNAL_ID_SUPPORT = "NEEDS_EXTERNAL_ID_SUPPORT"
+INVALID = "INVALID"
+
+
+@dataclass(frozen=True)
+class MetaSyncConflictDTO:
+    code: str
+    message: str
+    external_campaign_id: str | None = None
+    existing_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class MetaCampaignPreviewItemDTO:
+    external_campaign_id: str
+    name: str
+    platform: str
+    classification: MetaSyncPreviewStatus
+    matched_campaign_id: UUID | None = None
+    needs_external_id_support: bool = True
+    message: str = ""
+    conflicts: list[MetaSyncConflictDTO] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class MetaMetricPreviewItemDTO:
+    external_campaign_id: str
+    metric_date: date
+    classification: MetaSyncPreviewStatus
+    matched_campaign_id: UUID | None = None
+    matched_metric_id: UUID | None = None
+    spend: Decimal = Decimal("0.00")
+    impressions: int = 0
+    clicks: int = 0
+    messages: int = 0
+    leads: int = 0
+    currency: str = "UAH"
+    needs_external_id_support: bool = True
+    message: str = ""
+    conflicts: list[MetaSyncConflictDTO] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class MetaSyncPreviewSummaryDTO:
+    campaigns_seen: int
+    metrics_seen: int
+    campaigns_would_create: int
+    campaigns_would_update: int
+    campaigns_would_skip: int
+    metrics_would_create: int
+    metrics_would_update: int
+    metrics_would_skip: int
+    potential_conflicts: int
+    needs_external_id_support: int
+    invalid_rows: int
+    dry_run: bool = True
+    db_writes: bool = False
+
+
+@dataclass(frozen=True)
+class MetaSyncPreviewResultDTO:
+    summary: MetaSyncPreviewSummaryDTO
+    campaign_items: list[MetaCampaignPreviewItemDTO] = field(default_factory=list)
+    metric_items: list[MetaMetricPreviewItemDTO] = field(default_factory=list)
+    issues: list[MetaSyncIssueDTO] = field(default_factory=list)
+    dry_run: bool = True
+    db_writes: bool = False

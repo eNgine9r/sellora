@@ -154,3 +154,12 @@ Sellora is ready for guided MVP pilot testing, but the following limitations mus
 - No live OAuth, real token storage, production sync jobs, database migrations, automatic attribution, click tracking, or Conversions API were added.
 - Manual entry and CSV import remain the current MVP advertising data source.
 - Advertising import remains not pilot-ready and Sprint 4.4 remains conditionally approved until runtime/staging blockers are closed.
+
+## Sprint 4.8 — Meta sync preview limitation
+
+- Meta Ads API is fake-client + read-only DB comparison + sync preview ready / not active.
+- Sync preview is dry-run only and performs no DB writes.
+- Exact Meta identity matching remains future work because `external_source` / `external_campaign_id` fields are not persisted yet.
+- Manual/CSV data is protected by default; overlap is flagged as `POTENTIAL_CONFLICT`.
+- No live OAuth, live API calls, token storage, database migrations, sync-run persistence, production sync jobs, automatic attribution, click tracking, or Conversions API were added.
+- Advertising import remains not pilot-ready and Sprint 4.4 remains conditionally approved until runtime/staging blockers are closed.

@@ -6,6 +6,7 @@ calls, no token storage, no database writes, and no production sync jobs.
 
 from app.integrations.meta_ads.client import MetaAdsClientProtocol
 from app.integrations.meta_ads.fake_client import FakeMetaAdsClient
+from app.integrations.meta_ads.preview_service import MetaAdsSyncPreviewService
 from app.integrations.meta_ads.sync_service import MetaAdsDryRunSyncService
 
-__all__ = ["FakeMetaAdsClient", "MetaAdsClientProtocol", "MetaAdsDryRunSyncService"]
+__all__ = ["FakeMetaAdsClient", "MetaAdsClientProtocol", "MetaAdsDryRunSyncService", "MetaAdsSyncPreviewService"]

@@ -186,3 +186,15 @@ The fake boundary includes typed DTO contracts, a client protocol, deterministic
 Current reusable models remain `AdCampaign` and `AdMetric`. Future live sync still needs additive external source/account/campaign identifiers and sync-run persistence before any database write can happen. Those fields are not persisted in Sprint 4.7.
 
 Dry-run idempotency contract: the future write path should treat `workspace_id + external_source + external_campaign_id + metric_date` as the Meta-sourced daily metric identity. Manual/import rows and Meta-sourced rows must not silently overwrite each other. Orders, revenue, and net profit remain Sellora-side business metrics unless a separate Conversions API sprint is legally/privacy reviewed and explicitly approved.
+
+## Sprint 4.8 — Read-only DB comparison and sync preview
+
+Sprint 4.8 extends the fake-client boundary with read-only DB comparison and structured sync preview. Meta Ads API status is now **fake-client + read-only DB comparison + sync preview ready / not active**. Manual entry and CSV import remain the current MVP advertising data source.
+
+Current comparison can safely use existing fields only: `workspace_id + normalized campaign name + platform` for campaign fallback matching and matched campaign + `metric_date` for metric fallback matching. Exact future behavior still requires `workspace_id + external_source + external_campaign_id`; because Sprint 4.8 adds no database migration, exact external Meta identity persistence is still future work.
+
+Manual/CSV data is protected by default. If a fake Meta metric appears to overlap with an existing manual/CSV row, the preview flags it as `POTENTIAL_CONFLICT` instead of updating it. Ambiguous campaign matching also becomes `POTENTIAL_CONFLICT`, not an automatic update. Preview classifications are internal backend DTO values only: `WOULD_CREATE`, `WOULD_UPDATE`, `WOULD_SKIP`, `POTENTIAL_CONFLICT`, `NEEDS_EXTERNAL_ID_SUPPORT`, and `INVALID`.
+
+Preview results are always dry-run: `dry_run = true`, `db_writes = false`. No live OAuth, live Meta API calls, token storage, production sync jobs, sync-run persistence, database migrations, automatic attribution, click tracking, or Conversions API are active. Orders, revenue, and net profit remain Sellora-side business metrics.
+
+Sprint 4.8 external ID limitation shorthand: future exact sync still needs additive `external_source/external_id` support before live writes are safe; external Meta identity persistence is still future work.

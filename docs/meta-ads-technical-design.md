@@ -176,3 +176,42 @@ Still not implemented:
 - Conversions API.
 
 Future persistence still requires additive external-source fields and conflict policy before a live sync can write rows. Manual/CSV import remains the active MVP path and must stay available as a fallback.
+
+## Sprint 4.8 implemented sync preview boundary
+
+Implemented read-only preview additions:
+
+```text
+backend/app/integrations/meta_ads/repository.py
+backend/app/integrations/meta_ads/preview_service.py
+backend/tests/test_meta_ads_sync_preview.py
+```
+
+`repository.py` defines read-only snapshots and the `AdvertisingSyncReadRepository` protocol. It has only `list_campaign_snapshots(workspace_id)` and `list_metric_snapshots(workspace_id, date_from, date_to)` read methods; no create/update/delete methods, no flush, no commit, and no dependency on a live Meta API.
+
+`preview_service.py` compares fake Meta sync candidates against read-only Sellora snapshots and returns `MetaSyncPreviewResultDTO` with campaign items, metric items, issues, summary counters, `dry_run = true`, and `db_writes = false`.
+
+Campaign comparison policy:
+
+- Future exact identity: `workspace_id + external_source + external_campaign_id` once schema support exists.
+- Current Sprint 4.8 fallback: `workspace_id + normalized campaign name + platform`.
+- No match becomes `WOULD_CREATE`.
+- One safe match becomes `WOULD_SKIP` or `WOULD_UPDATE` depending safe field differences.
+- Multiple matches become `POTENTIAL_CONFLICT`.
+- Every fallback preview includes `NEEDS_EXTERNAL_ID_SUPPORT` context because Sellora does not yet persist external Meta IDs.
+
+Metric comparison policy:
+
+- Future exact identity: `workspace_id + external_source + external_campaign_id + metric_date`.
+- Current fallback: matched campaign + `metric_date`.
+- No matching metric becomes `WOULD_CREATE`.
+- Existing manual/CSV metric overlap becomes `POTENTIAL_CONFLICT`, not an update.
+- Ambiguous campaign matching makes related metrics `POTENTIAL_CONFLICT`.
+- Meta delivery/engagement candidates include spend, impressions, clicks, messages, and leads only; orders, revenue, and net profit remain Sellora-side business data.
+
+Conflict copy:
+
+- EN: `This campaign may already exist by name/platform, but Sellora does not yet store Meta external IDs. Review before enabling live sync.`
+- UK: `Ця кампанія може вже існувати за назвою/платформою, але Sellora ще не зберігає зовнішні Meta ID. Перевірте перед увімкненням live-синхронізації.`
+
+Still not implemented: live OAuth, live Meta API calls, token storage, database migrations, sync-run persistence, production sync jobs, DB writes from preview, automatic attribution, click ID tracking, and Conversions API.

@@ -239,3 +239,7 @@ Sellora documents a future Meta Ads API path for OWNER-only OAuth, encrypted tok
 ### Sprint 4.7 — Meta Ads fake-client simulation
 
 Sellora now includes a backend-only fake Meta Ads boundary for future sync work: typed DTOs, a client protocol, deterministic fake client, mapper, and dry-run simulation service. Meta Ads API remains fake-client / simulation-ready / not active: no live OAuth, live API calls, token storage, production sync jobs, database migrations, automatic attribution, or Conversions API are active. Manual entry and CSV import remain the current MVP advertising data source, and advertising import remains not pilot-ready until staging QA passes.
+
+### Sprint 4.8 — Meta Ads sync preview
+
+Sellora now includes a backend-only read-only sync preview for the fake Meta Ads boundary. It compares fake Meta candidates against existing advertising snapshots and reports `WOULD_CREATE`, `WOULD_UPDATE`, `WOULD_SKIP`, `POTENTIAL_CONFLICT`, and external-ID support notes with `dry_run = true` and `db_writes = false`. Meta Ads API remains not active: no live OAuth, live API calls, token storage, database migrations, sync-run persistence, production sync jobs, automatic attribution, or Conversions API are active. Manual entry and CSV import remain the current MVP advertising data source, and advertising import remains not pilot-ready until staging QA passes.

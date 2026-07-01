@@ -178,3 +178,11 @@ Advertising import remains not pilot-ready until staging CSV import QA passes. S
 The fake Meta sync simulation is backend-only and dry-run only. It can produce candidate delivery metrics: spend, impressions, clicks, messages, and leads. It intentionally does not provide Sellora orders, revenue, or net profit from Meta.
 
 Future Meta-sourced daily metrics must use an idempotent identity equivalent to `workspace_id + external_source + external_campaign_id + metric_date`. Manual/import rows and future Meta rows must not silently overwrite each other. Zero spend, zero clicks, missing leads, and no-data campaigns must continue to render safely as `—` or structured no-data states rather than `NaN`, `Infinity`, `undefined`, or raw `null`.
+
+## Sprint 4.8 — Sync preview conflict policy
+
+Meta sync preview is read-only. It compares fake Meta delivery candidates against current Sellora campaigns/metrics and returns `WOULD_CREATE`, `WOULD_UPDATE`, `WOULD_SKIP`, `POTENTIAL_CONFLICT`, `NEEDS_EXTERNAL_ID_SUPPORT`, or `INVALID` preview classifications without persisting them as backend/API enums.
+
+Manual/CSV data is protected by default. If a future Meta row overlaps an existing manual/CSV row, preview must flag `POTENTIAL_CONFLICT` and must not overwrite spend, impressions, clicks, messages, leads, orders, revenue, or net profit. Orders, revenue, and net profit remain Sellora-side metrics and are not imported from Meta Ads Insights.
+
+Because exact external IDs are not persisted yet, preview includes an external ID limitation note. Future schema work still needs additive `external_source` / `external_campaign_id` support before live sync can write rows safely.
