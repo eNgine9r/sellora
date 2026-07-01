@@ -42,6 +42,7 @@ export function buildLeadCreatePayload(values: RawLeadValues): LeadCreatePayload
     name: cleanRequiredString(values.name),
     phone: cleanOptionalString(values.phone),
     lead_source_id: cleanOptionalUuid(values.lead_source_id),
+    campaign_id: cleanOptionalUuid(values.campaign_id),
     notes: cleanOptionalString(values.notes),
     assigned_user_id: cleanOptionalUuid(values.assigned_user_id),
     expected_revenue: cleanOptionalNumber(values.expected_revenue),
@@ -101,6 +102,7 @@ export function buildCustomerCreatePayload(values: RawCustomerValues) {
 
 type RawOrderValues = {
   customer_id?: string | null;
+  campaign_id?: string | null;
   payment_status?: string;
   items?: { product_variant_id?: string; quantity?: string | number; unit_price?: string | number; unit_cost?: string | number }[];
   ad_cost?: string | number;
@@ -120,6 +122,7 @@ export function buildOrderCreatePayload(values: RawOrderValues): OrderCreatePayl
 
   return {
     customer_id: cleanOptionalUuid(values.customer_id),
+    campaign_id: cleanOptionalUuid(values.campaign_id),
     payment_status: cleanOptionalEnum(values.payment_status, PAYMENT_STATUSES) ?? "PENDING",
     items,
     ad_cost: Math.max(0, cleanRequiredNumber(values.ad_cost)),
@@ -212,7 +215,7 @@ export function buildOrderUpdatePayload(values: RawOrderValues) {
     unit_price: Math.max(0, cleanRequiredNumber(item.unit_price)),
     unit_cost: Math.max(0, cleanRequiredNumber(item.unit_cost)),
   }));
-  return stripUndefinedFields({ payment_status: cleanOptionalEnum(values.payment_status, PAYMENT_STATUSES) ?? undefined, ad_cost: cleanOptionalNumber(values.ad_cost) ?? undefined, shipping_cost: cleanOptionalNumber(values.shipping_cost) ?? undefined, cod_fee: cleanOptionalNumber(values.cod_fee) ?? undefined, other_cost: cleanOptionalNumber(values.other_cost) ?? undefined, notes: cleanOptionalString(values.notes), items });
+  return stripUndefinedFields({ campaign_id: cleanOptionalUuid(values.campaign_id), payment_status: cleanOptionalEnum(values.payment_status, PAYMENT_STATUSES) ?? undefined, ad_cost: cleanOptionalNumber(values.ad_cost) ?? undefined, shipping_cost: cleanOptionalNumber(values.shipping_cost) ?? undefined, cod_fee: cleanOptionalNumber(values.cod_fee) ?? undefined, other_cost: cleanOptionalNumber(values.other_cost) ?? undefined, notes: cleanOptionalString(values.notes), items });
 }
 export function buildShipmentUpdatePayload(values: RawShipmentValues) {
   const { order_id: _order_id, ...payload } = buildShipmentCreatePayload({ ...values, order_id: "00000000-0000-0000-0000-000000000000" });

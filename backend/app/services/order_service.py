@@ -12,6 +12,7 @@ from app.models.order import Order, OrderStatus
 from app.models.order_item import OrderItem
 from app.models.order_status_history import OrderStatusHistory
 from app.models.product_variant import ProductVariant
+from app.repositories.advertising_repository import AdCampaignRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.inventory_repository import InventoryRepository
 from app.repositories.order_repository import OrderRepository
@@ -32,6 +33,7 @@ class OrderService:
         self.inventory = InventoryRepository(db)
         self.inventory_service = InventoryService(db)
         self.audit_logs = AuditLogRepository(db)
+        self.campaigns = AdCampaignRepository(db)
 
     def list(self, workspace_id: UUID, status: OrderStatus | None = None) -> list[Order]:
         return self.orders.list_for_workspace(workspace_id, status.value if status else None)
@@ -45,6 +47,7 @@ class OrderService:
 
     def create(self, workspace_id: UUID, payload: OrderCreate, actor_user_id: UUID | None, affect_inventory: bool = True, order_number: str | None = None, created_at: datetime | None = None, completed_at: datetime | None = None) -> Order:
         customer = self._get_order_customer(workspace_id, payload.customer_id, payload.is_historical)
+        self._validate_campaign(workspace_id, payload.campaign_id)
         prepared_items = []
         requested_by_inventory: dict[UUID, int] = {}
         for item_payload in payload.items:
@@ -64,6 +67,7 @@ class OrderService:
                 workspace_id=workspace_id,
                 order_number=order_number or self._generate_order_number(workspace_id),
                 customer_id=customer.id if customer else None,
+                campaign_id=payload.campaign_id,
                 status=initial_status,
                 payment_status=payload.payment_status.value,
                 is_historical=payload.is_historical,
@@ -121,6 +125,8 @@ class OrderService:
             order.customer_id = customer.id
             order.customer = customer
         item_payloads = payload.items if "items" in payload.model_fields_set else None
+        if "campaign_id" in payload.model_fields_set:
+            self._validate_campaign(workspace_id, payload.campaign_id)
         changes = payload.model_dump(exclude_unset=True, exclude={"items", "customer_id"})
         for field, value in changes.items():
             setattr(order, field, value.value if hasattr(value, "value") else value)
@@ -289,3 +295,7 @@ class OrderService:
         customer.total_orders += 1
         customer.total_spent += order.revenue
         customer.last_order_at = datetime.now(UTC)
+
+    def _validate_campaign(self, workspace_id: UUID, campaign_id: UUID | None) -> None:
+        if campaign_id and self.campaigns.get(workspace_id, campaign_id) is None:
+            raise OrderServiceError("Campaign does not exist in this workspace")

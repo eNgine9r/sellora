@@ -323,7 +323,12 @@
     "archive": "Archive lead",
     "empty": "No leads found.",
     "searchPlaceholder": "Search leads by name, phone, Instagram or notes",
-    "allSources": "All sources"
+    "allSources": "All sources",
+    "campaignLabel": "Advertising campaign",
+    "campaignHelp": "Optional. Choose a campaign if this lead came from a specific ad.",
+    "noCampaign": "No campaign",
+    "source": "Lead source",
+    "noSource": "No source / Manual"
   },
   "customers": {
     "title": "Customers",
@@ -412,7 +417,10 @@
     "customerPreview": "Selected customer",
     "customerMissing": "Customer is not specified.",
     "customerSearchEmpty": "No customers found. Try another search or add a new customer.",
-    "customerOrdersCount": "{count} orders"
+    "customerOrdersCount": "{count} orders",
+    "campaignLabel": "Advertising campaign",
+    "campaignHelp": "Optional. Helps understand which ad brought this order.",
+    "noCampaign": "No campaign"
   },
   "products": {
     "title": "Products",
