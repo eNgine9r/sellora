@@ -99,3 +99,86 @@ Server-side cross-workspace protection remains enforced by backend services thro
 ## Advertising import status
 
 Advertising import remains **not pilot-ready** until manual staging import QA passes with synthetic data only.
+
+---
+
+# Sprint 4.4.3 — PostgreSQL Runtime Migration & Staging Attribution QA
+
+Date: 2026-07-01
+
+## Result
+
+Sprint 4.4 remains **CONDITIONALLY APPROVED ⚠️**.
+
+Sprint 4.4.3 reran local dependency, backend, frontend, regression, and safety validation. PostgreSQL runtime migration QA and staging/browser/mobile attribution QA remain blocked because the required runtime/staging inputs are not available inside this container. No production, staging, or external database was touched.
+
+## Preconditions and staging inputs
+
+The required runtime/staging inputs were not available in-repo or in the container:
+
+- No staging frontend URL was provided.
+- No staging backend URL was provided.
+- No staging credentials were provided to this environment. If they are used later, report only: `Secure staging credentials were provided outside the report.`
+- No controlled QA workspace details were provided.
+- No migration window or backup/rollback confirmation was provided for a safe staging DB.
+
+Because these inputs are missing, browser QA and staging migration QA were not executed and are not claimed as passed.
+
+## PostgreSQL runtime DB result
+
+A reachable PostgreSQL runtime was not available:
+
+- `docker` and `docker compose` are not installed.
+- `psql` and `pg_isready` are not installed.
+- Local PostgreSQL connection attempts to `localhost:5432` were refused.
+- Alembic still resolves the default configured host `postgres`, which is not resolvable from this container.
+
+## Alembic migration runtime result
+
+Attempted command from `backend/`:
+
+```bash
+alembic upgrade head && alembic downgrade -1 && alembic upgrade head
+```
+
+Result: blocked before migration execution because SQLAlchemy/psycopg could not connect to the configured PostgreSQL host. The migration remains statically reviewed as additive and reversible, but runtime PostgreSQL upgrade/downgrade is still pending.
+
+Required follow-up in a safe runtime environment:
+
+1. Point `DATABASE_URL` to a safe local/CI/staging PostgreSQL database outside production.
+2. Run `alembic upgrade head && alembic downgrade -1 && alembic upgrade head`.
+3. Inspect `information_schema.columns` for nullable `leads.campaign_id` and `orders.campaign_id`.
+4. Confirm indexes/FKs and `ON DELETE SET NULL` behavior.
+5. Confirm existing leads/orders without `campaign_id` remain valid.
+
+## Local automated validation
+
+Local checks passed:
+
+- `npm --prefix frontend ci`
+- `npm --prefix frontend run typecheck`
+- `npm --prefix frontend run build`
+- `python -m pip install -r backend/requirements.txt`
+- `python -m compileall backend/app backend/tests`
+- `cd backend && python -m pytest` (`154 passed, 1 warning`)
+- `cd backend && python -c "from app.main import app; print('app import ok')"`
+- Required advertising/localization regression scripts
+
+## Browser and staging attribution QA
+
+Browser/staging QA was not executed because the staging URL, backend URL, secure test credentials, controlled QA workspace, and browser session are unavailable in this environment.
+
+Pending checks remain:
+
+- `/leads` create/edit/add/change/remove campaign with synthetic data.
+- `/orders` create/edit/add/change/remove campaign with synthetic data.
+- Order detail attribution display and empty value.
+- `/advertising` Manual Attribution MVP summary behavior.
+- Workspace/cross-workspace browser/API rejection checks.
+- 375px, 390px, 768px, desktop, light/dark readability checks.
+
+## Final recommendation
+
+Sprint 4.4 remains **CONDITIONALLY APPROVED ⚠️** until PostgreSQL runtime migration QA and staging/browser/mobile attribution QA are completed with synthetic data only.
+
+Advertising import remains **not pilot-ready** until manual staging import QA passes with synthetic data only.
