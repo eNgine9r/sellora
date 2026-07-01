@@ -21,6 +21,7 @@ import { AdCampaign, AdCampaignCreate, AdMetric, AdMetricCreate } from "@/types/
 import { useAuth } from "@/hooks/use-auth";
 import { formatMoney } from "@/lib/currency";
 import { useI18n } from "@/i18n/provider";
+import { MetaAdsReadinessCard } from "@/features/integrations/components/meta-ads-readiness-card";
 
 function StatusList({ title, items, tone }: { title: string; items: string[]; tone: "ready" | "pending" | "future" }) {
   const toneClasses = {
@@ -102,6 +103,8 @@ export default function AdvertisingPage() {
         </header>
 
         <AdvertisingDateRangeFilter startDate={startDate} endDate={endDate} onStartDate={setStartDate} onEndDate={setEndDate} />
+
+        <MetaAdsReadinessCard compact />
 
         <section className="grid w-full max-w-full min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label={t("advertising.summaryKpis")}>
           <AdvertisingKpiCard label={t("advertising.spend")} value={formatMoney(summary.data?.total_spend, currencyCode)} />

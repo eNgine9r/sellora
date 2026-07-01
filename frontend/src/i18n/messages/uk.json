@@ -1386,6 +1386,37 @@
     "automaticLater": "Автоматична синхронізація з Meta Ads буде додана пізніше.",
     "safeTokenRule": "Сирі access token, app secret, ad account ID і business ID не показуються та не зберігаються у фронтенді.",
     "workspaceRule": "Майбутні налаштування Meta Ads мають бути привʼязані до поточного workspace.",
-    "ownerRule": "Керування майбутніми Meta credentials має бути доступне лише OWNER."
+    "ownerRule": "Керування майбутніми Meta credentials має бути доступне лише OWNER.",
+    "notActiveTitle": "Meta Ads API ще не активний",
+    "currentSourceCopy": "Зараз Sellora використовує ручне внесення та CSV-імпорт рекламних даних.",
+    "futureSyncCopy": "Майбутня синхронізація з Meta Ads допоможе автоматично отримувати витрати, покази, кліки та повідомлення.",
+    "selloraSideCopy": "Замовлення, дохід і прибуток залишаються даними Sellora.",
+    "notActiveStatus": "Не активний",
+    "statusLabel": "Статус",
+    "currentSourceLabel": "Поточне джерело",
+    "currentSourceValue": "Ручне внесення / CSV-імпорт",
+    "futureLabel": "Майбутній етап",
+    "futureValue": "Read-only sync рекламних delivery-метрик",
+    "connectComingSoon": "Підключити Meta Ads — скоро",
+    "comingSoonHelp": "Підключення Meta Ads буде доступне на наступному етапі.",
+    "manualCsvProtection": "Sellora не перезаписує ручні або CSV-рекламні дані автоматично.",
+    "deliveryMetricsOnly": "Meta Ads надає витрати, покази, кліки та повідомлення, де доступно. Замовлення, дохід і прибуток залишаються бізнес-даними Sellora.",
+    "demoPreviewEyebrow": "Demo / майбутній попередній перегляд",
+    "demoPreviewTitle": "Майбутній sync preview без запису в базу",
+    "demoPreviewDescription": "Цей блок зʼявиться лише після ввімкнення feature gate у майбутньому dev/staging етапі та не запускає live sync.",
+    "reviewFlowStep1": "OWNER підключає Meta Ads у майбутньому етапі.",
+    "reviewFlowStep2": "Sellora завантажує рекламні метрики у preview mode.",
+    "reviewFlowStep3": "OWNER бачить, що буде створено, оновлено, пропущено або потребує перевірки.",
+    "reviewFlowStep4": "Sellora не перезаписує ручні/CSV дані автоматично.",
+    "reviewFlowStep5": "OWNER підтверджує тільки безпечні зміни у майбутньому apply-flow.",
+    "reviewFlowStep6": "Sellora записує sync run після майбутнього підтвердженого запуску.",
+    "previewStatuses": {
+      "WOULD_CREATE": "Буде створено",
+      "WOULD_UPDATE": "Буде оновлено",
+      "WOULD_SKIP": "Без змін",
+      "POTENTIAL_CONFLICT": "Потребує перевірки",
+      "NEEDS_EXTERNAL_ID_SUPPORT": "Потрібна підтримка Meta ID",
+      "INVALID": "Помилка в даних"
+    }
   }
 }

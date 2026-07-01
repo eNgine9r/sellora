@@ -115,3 +115,50 @@ Advertising import remains not pilot-ready until staging CSV import QA passes wi
 The external identity migration draft does not change advertising import behavior. Existing manual and CSV-imported rows remain valid because all new fields are nullable and no guessed backfill runs in Sprint 4.10.
 
 Future backfill should mark rows as `manual` or `csv_import` only when the source can be safely determined. Unknown historical rows should keep null source fields until reviewed. Advertising import remains not pilot-ready until staging CSV import QA passes with synthetic data.
+
+## Sprint 4.11 — Meta Ads sync preview UX, feature gate, and admin review flow
+
+Sprint 4.11 keeps Meta Ads API inactive and adds only UX, documentation, and regression coverage for a future review flow. The current active advertising source remains manual entry / CSV import, and advertising import is not pilot-ready until staging/runtime QA is completed.
+
+### User-facing status and feature gate
+
+- Frontend feature gate: `metaAdsSyncPreviewEnabled = false` by default.
+- Current visible state: `NOT_ACTIVE` / `COMING_SOON` only.
+- Meta Ads API is not active yet; there is no live OAuth route, no token input, no live Meta API call, no apply-sync button, and no production sync trigger.
+- The disabled CTA says Meta Ads connection will be available in a future stage and cannot start OAuth or sync.
+
+### Future sync preview UX labels
+
+Display labels are frontend-only and must not become persisted backend/API enum values:
+
+| Backend preview value | Ukrainian label | English label |
+| --- | --- | --- |
+| `WOULD_CREATE` | Буде створено | Will be created |
+| `WOULD_UPDATE` | Буде оновлено | Will be updated |
+| `WOULD_SKIP` | Без змін | No changes |
+| `POTENTIAL_CONFLICT` | Потребує перевірки | Needs review |
+| `NEEDS_EXTERNAL_ID_SUPPORT` | Потрібна підтримка Meta ID | Meta ID support needed |
+| `INVALID` | Помилка в даних | Data issue |
+
+### Future admin review flow contract
+
+1. OWNER підключає Meta Ads у майбутньому етапі.
+2. Sellora завантажує рекламні метрики у preview mode.
+3. OWNER бачить, що буде створено, оновлено, пропущено або потребує перевірки.
+4. Sellora не перезаписує ручні/CSV дані автоматично.
+5. OWNER підтверджує тільки безпечні зміни у майбутньому apply-flow.
+6. Sellora записує sync run після майбутнього підтвердженого запуску.
+
+Sprint 4.11 does not implement steps 1, 5, or 6. Apply-sync, sync-run persistence execution, production sync jobs, token storage, and live OAuth remain future work.
+
+### Manual/CSV protection
+
+Sellora не перезаписує ручні або CSV-рекламні дані автоматично. Sellora does not automatically overwrite manual or CSV advertising data. Meta Ads provides spend, impressions, clicks, and messages where available; orders, revenue, and profit remain Sellora-side business data.
+
+### Future UX states
+
+Documented future states are `NOT_ACTIVE`, `COMING_SOON`, `PREVIEW_AVAILABLE`, `NEEDS_REVIEW`, `CONFLICTS_FOUND`, `READY_TO_APPLY`, `CONNECTED`, `SYNCING`, `SYNC_SUCCESS`, `SYNC_FAILED`, `TOKEN_EXPIRED`, `PERMISSION_MISSING`, and `DISCONNECTED`. Sprint 4.11 may only show `NOT_ACTIVE`, `COMING_SOON`, and feature-gated demo preview states; `CONNECTED`, `SYNCING`, and `SYNC_SUCCESS` remain future states and must not imply a live connection.
+
+### Runtime-gated blockers remain
+
+Sprint 4.10 runtime PostgreSQL migration QA remains skipped/pending, so Sprint 4.10 is not fully approved. Sprint 4.4 PostgreSQL runtime migration QA, advertising CSV import staging QA, browser/mobile/theme QA, and workspace/cross-workspace runtime QA remain open blockers.
