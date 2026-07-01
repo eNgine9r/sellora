@@ -309,3 +309,119 @@ Future preview-to-apply flow:
 9. Keep manual/CSV rows untouched.
 
 Sprint 4.9 must not implement step 6. No DB writes are added for Meta sync.
+
+## Sprint 4.10 — External identity migration draft and runtime gate
+
+Sprint 4.10 prepares an additive, nullable-first schema draft for future Meta-owned campaign/metric separation. Meta Ads API status is **external identity schema draft prepared / runtime-gated / not active**. Manual entry and CSV import remain the current MVP advertising data source. No live Meta OAuth, live Meta API call, token storage, `meta_ad_connections` implementation, production sync job, apply-sync, or Meta sync DB write is added.
+
+### Current schema/model audit result
+
+- Current `ad_campaigns` model fields include workspace/soft-delete/timestamps plus `name`, `platform`, `status`, `objective`, `budget_type`, optional budgets, date range, notes, metrics, leads, and orders.
+- Current `ad_metrics` model fields include workspace/soft-delete/timestamps plus `campaign_id`, `metric_date`, spend, impressions, reach, clicks, messages, leads, orders, revenue, net profit, and the campaign relationship.
+- Existing models did not have source/import/external identity fields before Sprint 4.10.
+- Current Alembic files use timestamp-style revisions such as `202607010015_manual_ad_attribution.py`; Sprint 4.10 follows that style with `202607010016_meta_ads_external_identity_fields.py`.
+- Manual/CSV import currently creates normal campaigns and daily metrics through the existing advertising services and must remain unchanged.
+
+### Migration draft scope
+
+The Sprint 4.10 migration draft adds nullable fields to existing `ad_campaigns` and `ad_metrics` only. It is additive, existing-data-safe, downgrade-safe, PostgreSQL-compatible, and independent of live Meta API or token storage. It intentionally does not create `meta_ad_connections`, encrypted token fields, live OAuth tables, production sync jobs, or apply-sync persistence.
+
+### AdCampaign fields added
+
+Nullable `ad_campaigns` fields:
+
+```text
+external_source: String(50), nullable=True
+external_account_id: String(128), nullable=True
+external_campaign_id: String(128), nullable=True
+external_status: String(64), nullable=True
+external_objective: String(128), nullable=True
+last_synced_at: DateTime(timezone=True), nullable=True
+sync_source: String(32), nullable=True
+```
+
+A non-unique lookup index is drafted first:
+
+```text
+ix_ad_campaigns_workspace_external_identity
+workspace_id + external_source + external_account_id + external_campaign_id
+```
+
+Future uniqueness can be considered only after safe backfill and PostgreSQL runtime QA.
+
+### AdMetric fields added
+
+Nullable `ad_metrics` fields:
+
+```text
+source_type: String(32), nullable=True
+external_source: String(50), nullable=True
+external_account_id: String(128), nullable=True
+external_campaign_id: String(128), nullable=True
+last_synced_at: DateTime(timezone=True), nullable=True
+sync_run_id: UUID, nullable=True, non-FK until meta_sync_runs exists
+```
+
+A non-unique lookup index is drafted first:
+
+```text
+ix_ad_metrics_workspace_external_identity_date
+workspace_id + external_source + external_account_id + external_campaign_id + metric_date
+```
+
+### Backfill and runtime gate
+
+Sprint 4.10 does not perform guessed or destructive backfill. New fields remain nullable. Future backfill should classify rows only when safe: manually created rows as `manual`, safely identified imported rows as `csv_import`, and unknown historical rows as `null` until reviewed. Financial formulas, attribution calculations, and import behavior remain unchanged.
+
+The migration remains runtime-gated: static Alembic validation can pass locally, but PostgreSQL upgrade/downgrade/upgrade must be run on a safe non-production database before staging or pilot approval. Advertising import remains not pilot-ready, and Sprint 4.4 runtime/staging blockers remain open.
+
+### Preview compatibility
+
+The read-only preview now prefers exact external identity matching when existing snapshots have `external_source`, `external_account_id`, and `external_campaign_id`. If exact identity is missing, preview falls back to normalized name/platform matching and keeps `NEEDS_EXTERNAL_ID_SUPPORT` context. Ambiguous matches and manual/CSV metric overlaps remain conflicts. Preview remains dry-run only with `db_writes = false`.
+
+## Sprint 4.11 — Meta Ads sync preview UX, feature gate, and admin review flow
+
+Sprint 4.11 keeps Meta Ads API inactive and adds only UX, documentation, and regression coverage for a future review flow. The current active advertising source remains manual entry / CSV import, and advertising import is not pilot-ready until staging/runtime QA is completed.
+
+### User-facing status and feature gate
+
+- Frontend feature gate: `metaAdsSyncPreviewEnabled = false` by default.
+- Current visible state: `NOT_ACTIVE` / `COMING_SOON` only.
+- Meta Ads API is not active yet; there is no live OAuth route, no token input, no live Meta API call, no apply-sync button, and no production sync trigger.
+- The disabled CTA says Meta Ads connection will be available in a future stage and cannot start OAuth or sync.
+
+### Future sync preview UX labels
+
+Display labels are frontend-only and must not become persisted backend/API enum values:
+
+| Backend preview value | Ukrainian label | English label |
+| --- | --- | --- |
+| `WOULD_CREATE` | Буде створено | Will be created |
+| `WOULD_UPDATE` | Буде оновлено | Will be updated |
+| `WOULD_SKIP` | Без змін | No changes |
+| `POTENTIAL_CONFLICT` | Потребує перевірки | Needs review |
+| `NEEDS_EXTERNAL_ID_SUPPORT` | Потрібна підтримка Meta ID | Meta ID support needed |
+| `INVALID` | Помилка в даних | Data issue |
+
+### Future admin review flow contract
+
+1. OWNER підключає Meta Ads у майбутньому етапі.
+2. Sellora завантажує рекламні метрики у preview mode.
+3. OWNER бачить, що буде створено, оновлено, пропущено або потребує перевірки.
+4. Sellora не перезаписує ручні/CSV дані автоматично.
+5. OWNER підтверджує тільки безпечні зміни у майбутньому apply-flow.
+6. Sellora записує sync run після майбутнього підтвердженого запуску.
+
+Sprint 4.11 does not implement steps 1, 5, or 6. Apply-sync, sync-run persistence execution, production sync jobs, token storage, and live OAuth remain future work.
+
+### Manual/CSV protection
+
+Sellora не перезаписує ручні або CSV-рекламні дані автоматично. Sellora does not automatically overwrite manual or CSV advertising data. Meta Ads provides spend, impressions, clicks, and messages where available; orders, revenue, and profit remain Sellora-side business data.
+
+### Future UX states
+
+Documented future states are `NOT_ACTIVE`, `COMING_SOON`, `PREVIEW_AVAILABLE`, `NEEDS_REVIEW`, `CONFLICTS_FOUND`, `READY_TO_APPLY`, `CONNECTED`, `SYNCING`, `SYNC_SUCCESS`, `SYNC_FAILED`, `TOKEN_EXPIRED`, `PERMISSION_MISSING`, and `DISCONNECTED`. Sprint 4.11 may only show `NOT_ACTIVE`, `COMING_SOON`, and feature-gated demo preview states; `CONNECTED`, `SYNCING`, and `SYNC_SUCCESS` remain future states and must not imply a live connection.
+
+### Runtime-gated blockers remain
+
+Sprint 4.10 runtime PostgreSQL migration QA remains skipped/pending, so Sprint 4.10 is not fully approved. Sprint 4.4 PostgreSQL runtime migration QA, advertising CSV import staging QA, browser/mobile/theme QA, and workspace/cross-workspace runtime QA remain open blockers.

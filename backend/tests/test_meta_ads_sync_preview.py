@@ -80,6 +80,74 @@ def test_existing_campaign_name_platform_match_can_skip_or_update() -> None:
     assert by_external_id["fake_campaign_002"].matched_campaign_id == existing_update.id
 
 
+def test_existing_external_identity_match_takes_priority_over_name_platform_fallback() -> None:
+    workspace_id = uuid4()
+    exact_campaign = ExistingAdCampaignSnapshot(
+        id=uuid4(),
+        workspace_id=workspace_id,
+        name="Owner renamed campaign",
+        platform="META",
+        status="ACTIVE",
+        created_at=datetime(2026, 7, 1, 9, 0, 0),
+        external_source="META_FAKE",
+        external_account_id="fake_act_001",
+        external_campaign_id="fake_campaign_001",
+        sync_source="meta_sync",
+    )
+    repository = InMemoryAdvertisingSyncReadRepository(campaigns=[exact_campaign, campaign_snapshot(workspace_id)])
+
+    result = preview(repository, workspace_id)
+
+    campaign_item = next(item for item in result.campaign_items if item.external_campaign_id == "fake_campaign_001")
+    assert campaign_item.classification == WOULD_SKIP
+    assert campaign_item.matched_campaign_id == exact_campaign.id
+    assert campaign_item.needs_external_id_support is False
+
+
+def test_existing_external_identity_metric_match_can_update_meta_owned_row() -> None:
+    workspace_id = uuid4()
+    exact_campaign = ExistingAdCampaignSnapshot(
+        id=uuid4(),
+        workspace_id=workspace_id,
+        name="Owner renamed campaign",
+        platform="META",
+        status="ACTIVE",
+        external_source="META_FAKE",
+        external_account_id="fake_act_001",
+        external_campaign_id="fake_campaign_001",
+        sync_source="meta_sync",
+    )
+    existing_metric = ExistingAdMetricSnapshot(
+        id=uuid4(),
+        workspace_id=workspace_id,
+        campaign_id=exact_campaign.id,
+        campaign_name=exact_campaign.name,
+        metric_date=date(2026, 7, 1),
+        spend=Decimal("1.00"),
+        impressions=1,
+        clicks=1,
+        messages=1,
+        leads=1,
+        orders=0,
+        revenue=Decimal("0.00"),
+        net_profit=Decimal("0.00"),
+        source_label="meta_sync",
+        source_type="meta_sync",
+        external_source="META_FAKE",
+        external_account_id="fake_act_001",
+        external_campaign_id="fake_campaign_001",
+    )
+    repository = InMemoryAdvertisingSyncReadRepository(campaigns=[exact_campaign], metrics=[existing_metric])
+
+    result = preview(repository, workspace_id)
+
+    metric_item = next(item for item in result.metric_items if item.external_campaign_id == "fake_campaign_001")
+    assert metric_item.classification == WOULD_UPDATE
+    assert metric_item.matched_metric_id == existing_metric.id
+    assert metric_item.needs_external_id_support is False
+    assert metric_item.conflicts == []
+
+
 def test_ambiguous_campaign_matches_return_potential_conflict() -> None:
     workspace_id = uuid4()
     repository = InMemoryAdvertisingSyncReadRepository(campaigns=[campaign_snapshot(workspace_id), campaign_snapshot(workspace_id)])

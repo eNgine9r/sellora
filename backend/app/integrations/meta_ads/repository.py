@@ -21,6 +21,10 @@ class ExistingAdCampaignSnapshot:
     platform: str
     status: str
     created_at: datetime | None = None
+    external_source: str | None = None
+    external_account_id: str | None = None
+    external_campaign_id: str | None = None
+    sync_source: str | None = None
 
 
 @dataclass(frozen=True)
@@ -39,6 +43,11 @@ class ExistingAdMetricSnapshot:
     revenue: Decimal
     net_profit: Decimal
     source_label: str = "manual_or_csv"
+    source_type: str | None = None
+    external_source: str | None = None
+    external_account_id: str | None = None
+    external_campaign_id: str | None = None
+    sync_run_id: UUID | None = None
 
 
 class AdvertisingSyncReadRepository(Protocol):
@@ -76,6 +85,10 @@ class SQLAlchemyAdvertisingSyncReadRepository:
                 platform=campaign.platform,
                 status=campaign.status,
                 created_at=campaign.created_at,
+                external_source=campaign.external_source,
+                external_account_id=campaign.external_account_id,
+                external_campaign_id=campaign.external_campaign_id,
+                sync_source=campaign.sync_source,
             )
             for campaign in campaigns
         ]
@@ -108,6 +121,12 @@ class SQLAlchemyAdvertisingSyncReadRepository:
                 orders=int(metric.orders or 0),
                 revenue=Decimal(str(metric.revenue or 0)).quantize(Decimal("0.01")),
                 net_profit=Decimal(str(metric.net_profit or 0)).quantize(Decimal("0.01")),
+                source_label=metric.source_type or "manual_or_csv",
+                source_type=metric.source_type,
+                external_source=metric.external_source,
+                external_account_id=metric.external_account_id,
+                external_campaign_id=metric.external_campaign_id,
+                sync_run_id=metric.sync_run_id,
             )
             for metric in metrics
         ]

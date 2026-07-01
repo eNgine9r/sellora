@@ -42,12 +42,12 @@ expect("manual CSV protection", combined.includes("Manual/CSV data is protected"
 expect("Meta-owned row update policy", combined.includes("Meta-owned rows") && combined.includes("same external identity"));
 expect("no live Meta API", combined.includes("no live Meta API") && combined.includes("not active"));
 expect("no token storage", combined.includes("Do not implement token storage in Sprint 4.9") || combined.includes("no token storage"));
-expect("no migration applied", combined.includes("does not create or apply an Alembic migration") || combined.includes("no database migration"));
+expect("migration remains runtime-gated", combined.includes("runtime-gated") || combined.includes("does not create or apply an Alembic migration") || combined.includes("no database migration"));
 expect("no DB writes", combined.includes("No DB writes are added for Meta sync") || combined.includes("no DB writes"));
 expect("orders revenue profit remain Sellora-side", combined.includes("Orders, revenue, and net profit remain Sellora-side") || combined.includes("orders, revenue, and profit remain Sellora-side"));
 expect("Sprint 4.4 blockers documented", combined.includes("Sprint 4.4") && combined.includes("PostgreSQL runtime"));
 expect("advertising import not pilot-ready", combined.includes("advertising import remains not pilot-ready") || combined.includes("Advertising import remains not pilot-ready"));
-expect("no external identity schema implemented in code", !/external_source\s*[:=]\s*mapped_column|source_type\s*[:=]\s*mapped_column|meta_sync_runs\s*=/.test(code));
+expect("no sync-run persistence implemented", !/meta_sync_runs\s*=|class\s+MetaSyncRun|__tablename__\s*=\s*["']meta_sync_runs["']/.test(code));
 expect("no live Meta HTTP calls", !/requests\.|httpx\.|urllib\.request|GraphAPI|facebook_business/.test(code));
 expect("no token storage implementation", !/encrypted_token|access_token|refresh_token/.test(code));
 

@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
-from sqlalchemy import Date, Numeric, String, Text
+from sqlalchemy import Date, DateTime, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -54,6 +54,13 @@ class AdCampaign(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Tim
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    external_source: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    external_account_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    external_campaign_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    external_status: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    external_objective: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sync_source: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     metrics = relationship("AdMetric", back_populates="campaign", cascade="all, delete-orphan")
     leads = relationship("Lead", back_populates="campaign")

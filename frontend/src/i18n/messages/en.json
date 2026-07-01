@@ -1386,6 +1386,37 @@
     "automaticLater": "Automatic Meta Ads sync will be added later.",
     "safeTokenRule": "Raw access tokens, app secrets, ad account IDs, and business IDs are not shown or stored in the frontend.",
     "workspaceRule": "Future Meta Ads settings must be scoped to the current workspace.",
-    "ownerRule": "Future Meta credential management must remain OWNER-only."
+    "ownerRule": "Future Meta credential management must remain OWNER-only.",
+    "notActiveTitle": "Meta Ads API is not active yet",
+    "currentSourceCopy": "Sellora currently uses manual entry and CSV import for advertising data.",
+    "futureSyncCopy": "Future Meta Ads sync will help import spend, impressions, clicks, and messages automatically.",
+    "selloraSideCopy": "Orders, revenue, and profit remain Sellora-side data.",
+    "notActiveStatus": "Not active",
+    "statusLabel": "Status",
+    "currentSourceLabel": "Current source",
+    "currentSourceValue": "Manual entry / CSV import",
+    "futureLabel": "Future stage",
+    "futureValue": "Read-only ad delivery metrics sync",
+    "connectComingSoon": "Connect Meta Ads — coming soon",
+    "comingSoonHelp": "Meta Ads connection will be available in a future stage.",
+    "manualCsvProtection": "Sellora does not automatically overwrite manual or CSV advertising data.",
+    "deliveryMetricsOnly": "Meta Ads provides spend, impressions, clicks, and messages where available. Orders, revenue, and profit remain Sellora-side business data.",
+    "demoPreviewEyebrow": "Demo / future preview",
+    "demoPreviewTitle": "Future sync preview without database writes",
+    "demoPreviewDescription": "This block appears only after a future dev/staging feature gate is enabled and does not start live sync.",
+    "reviewFlowStep1": "OWNER connects Meta Ads in a future stage.",
+    "reviewFlowStep2": "Sellora loads advertising metrics in preview mode.",
+    "reviewFlowStep3": "OWNER sees what will be created, updated, skipped, or needs review.",
+    "reviewFlowStep4": "Sellora does not automatically overwrite manual/CSV data.",
+    "reviewFlowStep5": "OWNER confirms only safe changes in a future apply flow.",
+    "reviewFlowStep6": "Sellora records a sync run after a future confirmed apply run.",
+    "previewStatuses": {
+      "WOULD_CREATE": "Will be created",
+      "WOULD_UPDATE": "Will be updated",
+      "WOULD_SKIP": "No changes",
+      "POTENTIAL_CONFLICT": "Needs review",
+      "NEEDS_EXTERNAL_ID_SUPPORT": "Meta ID support needed",
+      "INVALID": "Data issue"
+    }
   }
 }
