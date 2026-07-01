@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.customer import Customer
 from app.models.lead import Lead, LeadStatus
 from app.models.user import User
+from app.repositories.advertising_repository import AdCampaignRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.lead_repository import LeadRepository
@@ -26,6 +27,7 @@ class LeadService:
         self.lead_sources = LeadSourceRepository(db)
         self.customers = CustomerRepository(db)
         self.audit_logs = AuditLogRepository(db)
+        self.campaigns = AdCampaignRepository(db)
 
     def list(self, workspace_id: UUID, search: str | None = None, status: LeadStatus | None = None, lead_source_id: UUID | None = None) -> list[Lead]:
         return self.leads.list_for_workspace(workspace_id, search, status.value if status else None, lead_source_id)
@@ -36,6 +38,7 @@ class LeadService:
     def create(self, workspace_id: UUID, payload: LeadCreate, actor_user_id: UUID | None) -> Lead:
         self._validate_lead_source(workspace_id, payload.lead_source_id)
         self._validate_assigned_user(workspace_id, payload.assigned_user_id)
+        self._validate_campaign(workspace_id, payload.campaign_id)
         lead = self.leads.create(Lead(workspace_id=workspace_id, status=LeadStatus.NEW.value, **payload.model_dump()))
         self.audit_logs.create(
             workspace_id=workspace_id,
@@ -58,6 +61,8 @@ class LeadService:
             self._validate_lead_source(workspace_id, update_values["lead_source_id"])
         if "assigned_user_id" in update_values:
             self._validate_assigned_user(workspace_id, update_values["assigned_user_id"])
+        if "campaign_id" in update_values:
+            self._validate_campaign(workspace_id, update_values["campaign_id"])
         if update_values.get("status") == LeadStatus.LOST and not update_values.get("loss_reason") and not lead.loss_reason:
             raise LeadServiceError("loss_reason is required when status is LOST")
         old_value = snapshot(lead)
@@ -181,3 +186,7 @@ class LeadService:
         user = self.db.get(User, assigned_user_id)
         if user is None or not any(membership.workspace_id == workspace_id for membership in user.workspaces):
             raise LeadServiceError("Assigned user does not belong to this workspace")
+
+    def _validate_campaign(self, workspace_id: UUID, campaign_id: UUID | None) -> None:
+        if campaign_id and self.campaigns.get(workspace_id, campaign_id) is None:
+            raise LeadServiceError("Campaign does not exist in this workspace")

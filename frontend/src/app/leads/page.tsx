@@ -10,6 +10,7 @@ import { LeadForm } from "@/features/leads/components/lead-form";
 import { LeadTable } from "@/features/leads/components/lead-table";
 import { ApiError, safeApiErrorMessage } from "@/services/api";
 import { createLead, deleteLead, fetchLeads, fetchLeadSources, LeadCreatePayload, updateLead } from "@/services/crm";
+import { fetchAdCampaigns } from "@/services/advertising";
 import { Lead, LeadStatus } from "@/types/crm";
 import { buildLeadUpdatePayload } from "@/lib/payload-builders";
 import { useAuth } from "@/hooks/use-auth";
@@ -48,6 +49,7 @@ export default function LeadsPage() {
   const filters = useMemo(() => ({ search, status, leadSourceId }), [search, status, leadSourceId]);
   const leadsQuery = useQuery({ queryKey: ["leads", workspaceId, filters], queryFn: () => fetchLeads(workspaceId, filters, undefined), enabled });
   const sourcesQuery = useQuery({ queryKey: ["lead-sources", workspaceId], queryFn: () => fetchLeadSources(workspaceId, undefined), enabled });
+  const campaignsQuery = useQuery({ queryKey: ["ad-campaigns", workspaceId], queryFn: () => fetchAdCampaigns(workspaceId, undefined), enabled });
   const createMutation = useMutation({
     mutationFn: (payload: LeadCreatePayload) => createLead(workspaceId, payload, undefined),
     onSuccess: async () => {
@@ -127,6 +129,7 @@ export default function LeadsPage() {
             <LeadForm
               isSubmitting={createMutation.isPending}
               leadSources={sourcesQuery.data ?? []}
+              campaigns={campaignsQuery.data ?? []}
               submitError={createError}
               onSubmit={async (payload) => {
                 await createMutation.mutateAsync(payload);
@@ -135,7 +138,7 @@ export default function LeadsPage() {
           </FormDialog>
         ) : null}
         {archivingLead ? <ConfirmActionDialog title="Archive lead?" description={archivingLead.status === "CONVERTED" ? "This lead is converted. Archiving it will not delete the customer." : "This lead will be hidden from active lead lists. Historical audit records remain available."} actionLabel={t("leads.archive")} isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingLead(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
-        {editingLead ? <EditRecordDialog title={t("leads.edit")} fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "instagram_profile_url", label: "Instagram profile URL" }, { name: "lead_source_id", label: "Lead source ID" }, { name: "status", label: "Status", type: "select", options: STATUSES.filter(Boolean).map((item) => ({ value: item, label: item })) }, { name: "expected_revenue", label: "Expected revenue", type: "number" }, { name: "loss_reason", label: "Loss reason", type: "textarea" }, { name: "notes", label: "Notes", type: "textarea" }]} initialValues={editingLead} isSubmitting={updateMutation.isPending} submitError={updateError} onClose={() => setEditingLead(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
+        {editingLead ? <EditRecordDialog title={t("leads.edit")} fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "instagram_profile_url", label: "Instagram profile URL" }, { name: "lead_source_id", label: t("leads.source"), type: "select", options: [{ value: "", label: t("leads.noSource") }, ...(sourcesQuery.data ?? []).map((source) => ({ value: source.id, label: source.name }))] }, { name: "campaign_id", label: t("leads.campaignLabel"), type: "select", options: [{ value: "", label: t("leads.noCampaign") }, ...(campaignsQuery.data ?? []).map((campaign) => ({ value: campaign.id, label: `${campaign.name} · ${campaign.platform}` }))] }, { name: "status", label: "Status", type: "select", options: STATUSES.filter(Boolean).map((item) => ({ value: item, label: item })) }, { name: "expected_revenue", label: "Expected revenue", type: "number" }, { name: "loss_reason", label: "Loss reason", type: "textarea" }, { name: "notes", label: "Notes", type: "textarea" }]} initialValues={editingLead} isSubmitting={updateMutation.isPending} submitError={updateError} onClose={() => setEditingLead(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
       </div>
     </main>
   );
