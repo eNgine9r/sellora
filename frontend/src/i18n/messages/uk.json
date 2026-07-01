@@ -323,7 +323,10 @@
     "archive": "Архівувати лід",
     "empty": "Лідів не знайдено.",
     "searchPlaceholder": "Пошук лідів за імʼям, телефоном, Instagram або нотатками",
-    "allSources": "Усі джерела"
+    "allSources": "Усі джерела",
+    "campaignLabel": "Кампанія реклами",
+    "campaignHelp": "Необов’язково. Вкажіть кампанію, якщо цей лід прийшов з конкретної реклами.",
+    "noCampaign": "Без кампанії"
   },
   "customers": {
     "title": "Клієнти",
@@ -412,7 +415,10 @@
     "customerPreview": "Обраний клієнт",
     "customerMissing": "Клієнта не вказано.",
     "customerSearchEmpty": "Клієнтів не знайдено. Спробуйте інший пошук або додайте нового клієнта.",
-    "customerOrdersCount": "{count} замовлень"
+    "customerOrdersCount": "{count} замовлень",
+    "campaignLabel": "Рекламна кампанія",
+    "campaignHelp": "Необов’язково. Допомагає зрозуміти, яка реклама привела замовлення.",
+    "noCampaign": "Без кампанії"
   },
   "products": {
     "title": "Товари",
