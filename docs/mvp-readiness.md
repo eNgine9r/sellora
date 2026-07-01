@@ -178,3 +178,15 @@ Current advertising readiness remains conditional:
 Sprint 4.5.1 local validation passed, but staging/runtime validation did not proceed because required inputs were missing. Advertising remains blocked for pilot readiness until a safe staging/runtime environment is provided and the PostgreSQL migration, CSV import, browser attribution, workspace isolation, mobile, and theme QA checklists pass with synthetic data only.
 
 Do not mark advertising import pilot-ready and do not mark Sprint 4.4 fully approved until those runtime checks are completed.
+
+## Sprint 4.6 — Meta Ads API readiness status
+
+Sprint 4.6 documents future Meta Ads OAuth, read-only sync, workspace/RBAC, privacy, idempotency, UI state, and future schema contracts without implementing live Meta integration.
+
+Current status remains conditional:
+
+- Meta Ads API is planned / architecture-ready / not active;
+- manual entry and CSV import remain the MVP advertising source;
+- advertising import is not pilot-ready until staging import QA passes;
+- Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass;
+- no real tokens, API keys, ad account data, business IDs, customer data, or workspace IDs should appear in docs, tests, screenshots, logs, or PR text.

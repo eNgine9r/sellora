@@ -231,3 +231,7 @@ The frontend now opens with a public Sellora landing page at `/`, uses `/dashboa
 The frontend package manager strategy is npm. CI should use a committed `frontend/package-lock.json` as the authoritative lockfile and install dependencies with `npm --prefix frontend ci` before running `npm --prefix frontend run typecheck` and `npm --prefix frontend run build`.
 
 Sprint 4.4.1 recovered the npm lockfile using `npm install --package-lock-only` with registry access. Keep `frontend/package-lock.json` committed, use `npm --prefix frontend ci` for reproducible installs, do not hand-write lockfiles, do not commit private `.npmrc` credentials, and do not introduce `yarn.lock` or `pnpm-lock.yaml` unless the package manager strategy is explicitly changed.
+
+### Sprint 4.6 — Meta Ads API readiness
+
+Sellora documents a future Meta Ads API path for OWNER-only OAuth, encrypted token storage, workspace-scoped read-only campaign metrics sync, idempotent daily metric upserts, and manual/CSV fallback. This is architecture-ready only: live Meta OAuth, live API calls, token storage implementation, automatic sync, automatic attribution, and Conversions API are not active. Manual entry and CSV import remain the current MVP advertising data source, and advertising import remains not pilot-ready until staging QA passes.

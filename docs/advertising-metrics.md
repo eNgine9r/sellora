@@ -162,3 +162,13 @@ The UI and docs use the same zero-denominator rule: `null` values render as `—
 The `/advertising` page now includes a visible but non-alarming status block. It lists manual metric entry, CSV template import, ROAS/CPA/CPL, campaign guidance, and manual order-to-campaign attribution as available MVP capabilities. It also keeps staging import QA, PostgreSQL runtime migration validation, and browser/mobile QA as pending validation items. Meta Ads API remains future work and is not active.
 
 Advertising import is still not pilot-ready until deployed staging import QA passes with synthetic data. Sprint 4.4 attribution is still not fully approved until PostgreSQL runtime migration QA and browser/mobile attribution QA are completed.
+
+## Sprint 4.6 — Meta Ads readiness boundary
+
+Meta Ads API remains future work and is not active. Manual entry and CSV import remain the current MVP advertising data source.
+
+Future Meta read-only sync may import campaign delivery metrics such as spend, impressions, reach and clicks. Orders, revenue and net profit remain Sellora-side business metrics unless a separate Conversions API sprint is implemented after legal/privacy review.
+
+Manual/import rows and future Meta-sourced rows must not silently overwrite each other. Future sync source and external ID fields should be additive, workspace-scoped, and clearly displayed in UI before any automated merge behavior exists.
+
+Advertising import remains not pilot-ready until staging CSV import QA passes. Sprint 4.4 attribution remains conditional until PostgreSQL runtime migration QA and browser/mobile attribution QA pass.
