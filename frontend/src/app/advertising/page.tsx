@@ -40,23 +40,6 @@ function StatusList({ title, items, tone }: { title: string; items: string[]; to
   );
 }
 
-function StatusList({ title, items, tone }: { title: string; items: string[]; tone: "ready" | "pending" | "future" }) {
-  const toneClasses = {
-    ready: "border-emerald-100 bg-emerald-50 text-emerald-950",
-    pending: "border-amber-100 bg-amber-50 text-amber-950",
-    future: "border-slate-200 bg-slate-50 text-slate-700",
-  };
-
-  return (
-    <div className={`rounded-2xl border p-4 text-sm ${toneClasses[tone]}`}>
-      <p className="font-black">{title}</p>
-      <ul className="mt-2 grid gap-1 pl-4 list-disc">
-        {items.map((item) => <li key={item}>{item}</li>)}
-      </ul>
-    </div>
-  );
-}
-
 export default function AdvertisingPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
