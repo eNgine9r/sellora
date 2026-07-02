@@ -69,6 +69,10 @@ export function OrderDetails({
         )}
       </div>
       <div className="rounded-xl border border-slate-200 p-3 dark:border-white/10">
+        <h3 className="font-semibold">{t("orders.campaignLabel")}</h3>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{order.campaign_name ?? "—"}</p>
+      </div>
+      <div className="rounded-xl border border-slate-200 p-3 dark:border-white/10">
         <h3 className="font-semibold">{t("shipments.details")}</h3>
         {shipment ? (
           <div className="mt-2 grid gap-1 text-sm text-slate-600 dark:text-slate-300">
