@@ -422,3 +422,17 @@ Safety guarantees for this sprint:
 - Sprint 4.10 runtime PostgreSQL migration QA remains pending;
 - Sprint 4.4 PostgreSQL runtime/staging/browser QA blockers remain open;
 - advertising import is not pilot-ready.
+
+## Sprint 4.14 — Advertising 4.x freeze and Part 5 handoff
+
+Advertising is feature-frozen for now. Advertising is architecture-ready and locally validated, but Advertising is not pilot-ready and Advertising import is not pilot-ready.
+
+Final Advertising 4.x status: **Advertising 4.x — architecture-ready / locally validated / feature-frozen / not pilot-ready**.
+
+Meta Ads status: **Meta Ads API — mock/future-ready / not active**.
+
+Manual/CSV remains the active source. Meta Ads API remains not active. Live OAuth/token storage/apply-sync are future work. Runtime/staging blockers are tracked separately in `docs/advertising-known-blockers.md`.
+
+Part 5 may use Advertising data only as conditional manual/CSV source. Finance 5.x must not depend on live Meta OAuth, token storage, automatic attribution, apply-sync, production sync jobs, or unresolved runtime/staging QA.
+
+Sprint 4.10 runtime PostgreSQL migration QA remains pending. Sprint 4.11 browser/mobile/theme QA remains pending. Sprint 4.12 browser/mobile QA remains pending. Sprint 4.4 PostgreSQL runtime/staging/browser QA blockers remain open.
