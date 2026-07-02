@@ -20,6 +20,7 @@ export type LeadCreatePayload = {
   name: string;
   phone: string | null;
   lead_source_id: string | null;
+  campaign_id: string | null;
   notes: string | null;
   assigned_user_id: string | null;
   expected_revenue: number | null;

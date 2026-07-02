@@ -160,3 +160,202 @@ Sellora now has a synthetic advertising import template, a bilingual import guid
 - Frontend typecheck/build remain blocked in this environment because dependencies cannot be restored; backend `compileall` still passes, while backend `pytest` and FastAPI app import remain blocked by missing FastAPI.
 - Advertising insights regression scripts and the full relevant frontend marker suite pass; browser/mobile/theme QA remains blocked until dependencies or staging access are available.
 - Final Sprint 4.3 recommendation remains **blocked** for full approval until the frontend lockfile is committed and build/browser validation can run reproducibly.
+
+## Sprint 4.5 — Advertising reporting consolidation
+
+Sprint 4.5 improves `/advertising` as an owner-facing MVP report. The page now clarifies the active data source, shows KPI cards, campaign decision support, manual attribution behavior, campaign/daily metric tables, trend details, import help, and a pilot readiness gate without adding Meta Ads API automation or backend enum changes.
+
+Current advertising readiness remains conditional:
+
+- manual metric entry, CSV template import, ROAS/CPA/CPL, deterministic campaign guidance, and manual order-to-campaign attribution are available MVP capabilities;
+- PostgreSQL runtime migration validation for Sprint 4.4 attribution is still pending;
+- staging/browser/mobile QA for lead/order attribution and `/advertising` is still pending;
+- advertising import is not pilot-ready until manual staging import QA passes with synthetic data;
+- Sprint 4.4 must not be marked fully approved until runtime and browser/staging QA are completed.
+
+## Sprint 4.5.1 — Pilot readiness check result
+
+Sprint 4.5.1 local validation passed, but staging/runtime validation did not proceed because required inputs were missing. Advertising remains blocked for pilot readiness until a safe staging/runtime environment is provided and the PostgreSQL migration, CSV import, browser attribution, workspace isolation, mobile, and theme QA checklists pass with synthetic data only.
+
+Do not mark advertising import pilot-ready and do not mark Sprint 4.4 fully approved until those runtime checks are completed.
+
+## Sprint 4.6 — Meta Ads API readiness status
+
+Sprint 4.6 documents future Meta Ads OAuth, read-only sync, workspace/RBAC, privacy, idempotency, UI state, and future schema contracts without implementing live Meta integration.
+
+Current status remains conditional:
+
+- Meta Ads API is planned / architecture-ready / not active;
+- manual entry and CSV import remain the MVP advertising source;
+- advertising import is not pilot-ready until staging import QA passes;
+- Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass;
+- no real tokens, API keys, ad account data, business IDs, customer data, or workspace IDs should appear in docs, tests, screenshots, logs, or PR text.
+
+## Sprint 4.7 — Meta Ads fake-client simulation readiness
+
+Sprint 4.7 adds a backend fake-client boundary, DTO contracts, mapper, and dry-run sync simulation for future Meta Ads work. This is **fake-client / simulation-ready / not active** and does not connect to Meta.
+
+Current status remains conditional:
+
+- manual entry and CSV import remain the MVP advertising source;
+- no live Meta OAuth, live API calls, token storage, production sync jobs, database migrations, automatic attribution, or Conversions API are active;
+- orders, revenue, and profit remain Sellora-side business data;
+- advertising import is not pilot-ready until staging import QA passes;
+- Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass.
+
+## Sprint 4.8 — Meta Ads sync preview readiness
+
+Sprint 4.8 adds read-only DB comparison and sync preview on top of the fake Meta client. This is **fake-client + read-only DB comparison + sync preview ready / not active** and does not connect to Meta or write sync results to the database.
+
+Current status remains conditional:
+
+- manual entry and CSV import remain the MVP advertising source;
+- preview uses current `workspace_id + normalized campaign name + platform` fallback matching until future external ID schema support exists;
+- manual/CSV rows are protected and overlapping fake Meta rows are flagged as `POTENTIAL_CONFLICT`;
+- no live Meta OAuth, live API calls, token storage, database migrations, sync-run persistence, production sync jobs, automatic attribution, or Conversions API are active;
+- orders, revenue, and profit remain Sellora-side business data;
+- advertising import is not pilot-ready until staging import QA passes;
+- Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass.
+
+## Sprint 4.9 — Meta Ads external identity contract readiness
+
+Sprint 4.9 documents future external identity, ad metric source separation, sync-run persistence, Meta connection storage, migration phases, conflict resolution, and preview-to-apply-sync rules. This is **schema design and sync persistence contract ready / not active**.
+
+Current status remains conditional:
+
+- manual entry and CSV import remain the MVP advertising source;
+- no live Meta OAuth, live API calls, token storage, database migrations, DB writes for Meta sync, sync-run persistence implementation, production sync jobs, automatic attribution, click tracking, or Conversions API are active;
+- future exact identity requires workspace-scoped `external_source`, `external_account_id`, and `external_campaign_id` support;
+- future existing rows must be backfilled as `manual` or `csv_import` before Meta-owned rows can be safely separated;
+- manual/CSV rows are protected, and Meta-owned rows can update only Meta-owned rows with the same external identity;
+- orders, revenue, and profit remain Sellora-side business data;
+- advertising import is not pilot-ready until staging import QA passes;
+- Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass.
+
+## Sprint 4.10 — External identity migration draft readiness
+
+Sprint 4.10 creates a nullable-first external identity/source-separation migration draft and matching model/read-only preview compatibility. Meta Ads API is **external identity schema draft prepared / runtime-gated / not active**.
+
+Current status remains conditional:
+
+- manual entry and CSV import remain the MVP advertising source;
+- no live Meta OAuth, live API calls, token storage, `meta_ad_connections`, production sync jobs, apply-sync, Meta sync DB writes, automatic attribution, click tracking, or Conversions API are active;
+- the migration draft is additive and nullable-first, but PostgreSQL runtime upgrade/downgrade/upgrade is still required on a safe non-production database;
+- no destructive or guessed backfill is performed;
+- orders, revenue, and profit remain Sellora-side business data;
+- advertising import is not pilot-ready until staging import QA passes;
+- Sprint 4.4 attribution is not fully approved until PostgreSQL runtime and browser/mobile QA pass.
+
+## Sprint 4.11 — Meta Ads sync preview UX, feature gate, and admin review flow
+
+Sprint 4.11 keeps Meta Ads API inactive and adds only UX, documentation, and regression coverage for a future review flow. The current active advertising source remains manual entry / CSV import, and advertising import is not pilot-ready until staging/runtime QA is completed.
+
+### User-facing status and feature gate
+
+- Frontend feature gate: `metaAdsSyncPreviewEnabled = false` by default.
+- Current visible state: `NOT_ACTIVE` / `COMING_SOON` only.
+- Meta Ads API is not active yet; there is no live OAuth route, no token input, no live Meta API call, no apply-sync button, and no production sync trigger.
+- The disabled CTA says Meta Ads connection will be available in a future stage and cannot start OAuth or sync.
+
+### Future sync preview UX labels
+
+Display labels are frontend-only and must not become persisted backend/API enum values:
+
+| Backend preview value | Ukrainian label | English label |
+| --- | --- | --- |
+| `WOULD_CREATE` | Буде створено | Will be created |
+| `WOULD_UPDATE` | Буде оновлено | Will be updated |
+| `WOULD_SKIP` | Без змін | No changes |
+| `POTENTIAL_CONFLICT` | Потребує перевірки | Needs review |
+| `NEEDS_EXTERNAL_ID_SUPPORT` | Потрібна підтримка Meta ID | Meta ID support needed |
+| `INVALID` | Помилка в даних | Data issue |
+
+### Future admin review flow contract
+
+1. OWNER підключає Meta Ads у майбутньому етапі.
+2. Sellora завантажує рекламні метрики у preview mode.
+3. OWNER бачить, що буде створено, оновлено, пропущено або потребує перевірки.
+4. Sellora не перезаписує ручні/CSV дані автоматично.
+5. OWNER підтверджує тільки безпечні зміни у майбутньому apply-flow.
+6. Sellora записує sync run після майбутнього підтвердженого запуску.
+
+Sprint 4.11 does not implement steps 1, 5, or 6. Apply-sync, sync-run persistence execution, production sync jobs, token storage, and live OAuth remain future work.
+
+### Manual/CSV protection
+
+Sellora не перезаписує ручні або CSV-рекламні дані автоматично. Sellora does not automatically overwrite manual or CSV advertising data. Meta Ads provides spend, impressions, clicks, and messages where available; orders, revenue, and profit remain Sellora-side business data.
+
+### Future UX states
+
+Documented future states are `NOT_ACTIVE`, `COMING_SOON`, `PREVIEW_AVAILABLE`, `NEEDS_REVIEW`, `CONFLICTS_FOUND`, `READY_TO_APPLY`, `CONNECTED`, `SYNCING`, `SYNC_SUCCESS`, `SYNC_FAILED`, `TOKEN_EXPIRED`, `PERMISSION_MISSING`, and `DISCONNECTED`. Sprint 4.11 may only show `NOT_ACTIVE`, `COMING_SOON`, and feature-gated demo preview states; `CONNECTED`, `SYNCING`, and `SYNC_SUCCESS` remain future states and must not imply a live connection.
+
+### Runtime-gated blockers remain
+
+Sprint 4.10 runtime PostgreSQL migration QA remains skipped/pending, so Sprint 4.10 is not fully approved. Sprint 4.4 PostgreSQL runtime migration QA, advertising CSV import staging QA, browser/mobile/theme QA, and workspace/cross-workspace runtime QA remain open blockers.
+
+## Sprint 4.12 — Meta Ads mock OAuth, RBAC contract, and token safety shell
+
+Sprint 4.12 keeps Meta Ads API inactive and adds only a mock OAuth contract, OWNER-only service authorization checks, token redaction utilities, tests, documentation, and regression coverage. The current active advertising source remains manual entry / CSV import, and advertising import is not pilot-ready until staging/runtime QA is completed.
+
+### Mock OAuth scope
+
+- Mock authorization URL: `https://mock.meta.local/oauth/authorize`.
+- Mock flow is service-only; no production route is exposed.
+- No real Meta OAuth URL, real Meta permissions, live Meta API call, token persistence, database write, production sync job, apply-sync, or `meta_ad_connections` table is added.
+- Mock state is generated server-side and includes `workspace_id`, `user_id`, `nonce`, `issued_at`, `expires_at`, and `purpose = meta_ads_mock_oauth`; it includes no token or secret.
+- Real OAuth state persistence remains future work and must be workspace-scoped, user-scoped, expiring, and non-secret-bearing.
+
+### OWNER-only RBAC contract
+
+- OWNER may start the mock connect flow, validate the mock callback, and simulate disconnect.
+- MANAGER may view status only and may not connect or disconnect.
+- ANALYST remains read-only/no-connect and may not connect or disconnect.
+- Frontend hiding is not the protection boundary; service-level authorization rejects non-OWNER roles.
+- Workspace context must be validated server-side for future live routes.
+
+### Token safety shell
+
+- Token-like values are masked with `mock_token_************abcd` style output or a fully redacted value.
+- Secret-like payload fields are redacted before safe reporting.
+- Safe diagnostics use a short one-way fingerprint, not a token value.
+- Raw token-like values must never be returned to frontend DTOs, stored, logged, included in audit payloads, or included in string/repr output.
+- Encryption persistence is not implemented in Sprint 4.12.
+
+### Mock connection DTO contract
+
+Safe mock DTOs may include `status`, `provider`, `workspace_id`, `connection_mode = mock`, `authorization_url`, `state_expires_at`, `connected = false`, `requires_live_setup = true`, `token_stored = false`, `live_api_enabled = false`, `message`, and user-safe `issues`. They must not include raw token fields, real ad account IDs, real business IDs, real Meta user IDs, customer/order data, or secret fields.
+
+### Future audit event contract
+
+Future audit events are `meta_ads_connect_started`, `meta_ads_connect_completed`, `meta_ads_connect_failed`, `meta_ads_disconnected`, `meta_ads_token_refreshed`, and `meta_ads_permission_missing`. Audit records may include workspace/user context and outcome, but must never include raw tokens, client secrets, cookies, customer PII, or customer/order payloads. Sprint 4.12 does not add a new audit table.
+
+### Runtime-gated blockers remain
+
+Sprint 4.10 runtime PostgreSQL migration QA remains pending, so Sprint 4.10 is not fully approved. Sprint 4.4 PostgreSQL runtime/staging/browser QA blockers, advertising CSV import staging QA, browser/mobile/theme QA, and workspace/cross-workspace runtime QA remain open. Meta sync remains not active, and manual/CSV remains the MVP advertising source.
+
+## Sprint 4.13 — Meta Ads mock API boundary, route RBAC, and audit stubs
+
+Sprint 4.13 keeps Meta Ads API inactive while preparing a backend-only, mock API boundary for future OAuth testing. The mock route prefix is `/integrations/meta-ads/mock`; it is disabled by default through `META_ADS_MOCK_OAUTH_API_ENABLED=false` and does not require any secret to remain inactive.
+
+Mock API contract:
+
+- `GET /integrations/meta-ads/mock/status` returns a safe not-active status with `provider=meta_ads`, `connection_mode=mock`, `connected=false`, `token_stored=false`, and `live_api_enabled=false`.
+- `POST /integrations/meta-ads/mock/oauth/start` is OWNER-only, works only when the mock API feature gate is enabled, and returns only the obvious mock URL `https://mock.meta.local/oauth/authorize`.
+- `POST /integrations/meta-ads/mock/oauth/callback` is OWNER-only, validates signed mock state, rejects invalid/expired/mismatched state, masks and discards synthetic token-like values, and returns only token-safety metadata.
+- `POST /integrations/meta-ads/mock/disconnect` is OWNER-only and returns a non-persistent mock disconnect acknowledgement.
+
+Route-level RBAC mirrors the Sprint 4.12 service contract: OWNER may start/callback/disconnect in mock mode when explicitly enabled for tests/dev; MANAGER and ANALYST are denied connect-like actions. Status viewing remains read-only. Frontend hiding is not the only protection.
+
+Audit event stubs are non-persistent DTOs only. They document future events such as `meta_ads_mock_connect_started`, `meta_ads_mock_connect_callback_validated`, `meta_ads_mock_connect_denied`, `meta_ads_mock_disconnected`, and `meta_ads_mock_status_viewed`; no audit table or migration is added. Stub payloads must not include raw tokens, client secrets, cookies, customer/order data, or live account identifiers.
+
+Safety guarantees for this sprint:
+
+- no live Meta OAuth was implemented;
+- no facebook.com OAuth redirect or graph.facebook.com API call was added;
+- no real Meta OAuth URL, token storage, token input field, `meta_ad_connections` table, database migration, apply-sync, DB write, or production sync job was added;
+- manual entry / CSV import remains the active MVP advertising source;
+- Meta sync remains not active;
+- Sprint 4.12 remains conditionally approved until frontend dependency recovery and browser/mobile QA are completed;
+- Sprint 4.10 runtime PostgreSQL migration QA remains pending;
+- Sprint 4.4 PostgreSQL runtime/staging/browser QA blockers remain open;
+- advertising import is not pilot-ready.
