@@ -75,3 +75,11 @@ ROAS and ad spend can be included in Part 5 only as manual/CSV-based advertising
 ## Handoff recommendation
 
 Part 5 can start with Sellora-side revenue, COGS, gross profit, and manual/CSV ad spend as conditional inputs. It must keep Advertising blockers visible and avoid any dependency on live Meta OAuth/API/token storage/apply-sync.
+
+## Epic Sprint 5A implementation note
+
+Finance 5A begins the Part 5 implementation with a read-only finance summary and `/finance` dashboard MVP. Finance uses Advertising data only as conditional manual/CSV source until Advertising runtime/staging blockers are resolved.
+
+Meta Ads API is not active.
+
+Sellora Finance MVP is operational profit analytics, not full accounting software. The first dashboard intentionally focuses on owner-facing clarity and data quality warnings instead of bank import, tax accounting, payment gateway reconciliation, or full бухгалтерія.

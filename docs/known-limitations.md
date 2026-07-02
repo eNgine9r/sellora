@@ -308,3 +308,13 @@ Manual/CSV remains the active source. Meta Ads API remains not active. Live OAut
 Part 5 may use Advertising data only as conditional manual/CSV source. Finance 5.x must not depend on live Meta OAuth, token storage, automatic attribution, apply-sync, production sync jobs, or unresolved runtime/staging QA.
 
 Sprint 4.10 runtime PostgreSQL migration QA remains pending. Sprint 4.11 browser/mobile/theme QA remains pending. Sprint 4.12 browser/mobile QA remains pending. Sprint 4.4 PostgreSQL runtime/staging/browser QA blockers remain open.
+
+## Finance 5A known limitations
+
+Finance 5A is not full бухгалтерія and does not include bank statement import, payment gateway reconciliation, tax accounting, or a complete expenses ledger.
+
+Finance uses Advertising data only as conditional manual/CSV source until Advertising runtime/staging blockers are resolved.
+
+Meta Ads API is not active.
+
+Discount fields are not available in the current finance schema, and cancelled/returned/refunded orders are excluded from revenue to avoid double-counting refunds. Shipment costs may be incomplete if shipment data is missing.

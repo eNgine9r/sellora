@@ -379,3 +379,13 @@ Manual/CSV remains the active source. Meta Ads API remains not active. Live OAut
 Part 5 may use Advertising data only as conditional manual/CSV source. Finance 5.x must not depend on live Meta OAuth, token storage, automatic attribution, apply-sync, production sync jobs, or unresolved runtime/staging QA.
 
 Sprint 4.10 runtime PostgreSQL migration QA remains pending. Sprint 4.11 browser/mobile/theme QA remains pending. Sprint 4.12 browser/mobile QA remains pending. Sprint 4.4 PostgreSQL runtime/staging/browser QA blockers remain open.
+
+## Finance MVP status — Epic Sprint 5A
+
+Sellora Finance MVP provides read-only operational profit analytics for Instagram shops: revenue, COGS, gross profit, manual/CSV ad spend, shipping cost, refunds/discount placeholders, net profit, profit margin, and average order value.
+
+Finance uses Advertising data only as conditional manual/CSV source until Advertising runtime/staging blockers are resolved.
+
+Meta Ads API is not active.
+
+Sellora Finance MVP is operational profit analytics, not full accounting software. Advertising 4.x remains feature-frozen and is not pilot-ready.

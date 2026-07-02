@@ -28,3 +28,11 @@ Meta Ads API status: **mock/future-ready / not active**. Active Advertising data
 ## Freeze impact
 
 Advertising remains **not pilot-ready** until pilot-readiness blockers are closed. Part 5 may proceed only if it treats Advertising data as a **conditional manual/CSV source** and does not depend on live Meta sync, automatic attribution, apply-sync, or unresolved staging/runtime QA.
+
+## Finance 5A dependency note
+
+Finance uses Advertising data only as conditional manual/CSV source until Advertising runtime/staging blockers are resolved.
+
+Meta Ads API is not active.
+
+Advertising remains feature-frozen and not pilot-ready; Finance 5A may read manual/CSV ad spend for operational analytics but must not treat Advertising import or Meta sync as production-ready.
