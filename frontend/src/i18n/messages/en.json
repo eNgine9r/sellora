@@ -1417,6 +1417,7 @@
       "POTENTIAL_CONFLICT": "Needs review",
       "NEEDS_EXTERNAL_ID_SUPPORT": "Meta ID support needed",
       "INVALID": "Data issue"
-    }
+    },
+    "mockOAuthPrepared": "Meta Ads connection is not active yet. A safe mock flow is prepared for future integration, but no real Meta account is connected now."
   }
 }

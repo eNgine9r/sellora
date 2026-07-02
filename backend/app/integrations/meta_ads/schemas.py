@@ -204,3 +204,76 @@ class MetaSyncPreviewResultDTO:
     issues: list[MetaSyncIssueDTO] = field(default_factory=list)
     dry_run: bool = True
     db_writes: bool = False
+
+@dataclass(frozen=True)
+class MetaOAuthMockStartResultDTO:
+    status: str
+    provider: str
+    workspace_id: UUID
+    connection_mode: str
+    authorization_url: str
+    state_expires_at: datetime
+    connected: bool = False
+    requires_live_setup: bool = True
+    token_stored: bool = False
+    live_api_enabled: bool = False
+    message: str = ""
+    issues: list[MetaSyncIssueDTO] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class MetaOAuthMockCallbackInputDTO:
+    state: str
+    code: str
+
+
+@dataclass(frozen=True)
+class MetaOAuthMockCallbackResultDTO:
+    status: str
+    provider: str
+    workspace_id: UUID
+    connection_mode: str
+    connected: bool = False
+    requires_live_setup: bool = True
+    token_stored: bool = False
+    live_api_enabled: bool = False
+    message: str = ""
+    token_safety: "MetaTokenSafetyCheckDTO | None" = None
+    issues: list[MetaSyncIssueDTO] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class MetaConnectionStatusDTO:
+    status: str
+    provider: str
+    workspace_id: UUID
+    connection_mode: str = "mock"
+    connected: bool = False
+    requires_live_setup: bool = True
+    token_stored: bool = False
+    live_api_enabled: bool = False
+    message: str = ""
+    issues: list[MetaSyncIssueDTO] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class MetaDisconnectMockResultDTO:
+    status: str
+    provider: str
+    workspace_id: UUID
+    connection_mode: str = "mock"
+    connected: bool = False
+    token_stored: bool = False
+    live_api_enabled: bool = False
+    message: str = ""
+    issues: list[MetaSyncIssueDTO] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class MetaTokenSafetyCheckDTO:
+    status: str
+    masked_value: str
+    fingerprint: str
+    token_stored: bool = False
+    raw_token_returned: bool = False
+    message: str = ""

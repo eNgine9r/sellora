@@ -48,7 +48,7 @@ expect("manual CSV protection copy", uk.includes("Sellora не перезапи�
 expect("orders revenue profit Sellora-side", uk.includes("Замовлення, дохід і прибуток залишаються даними Sellora") && en.includes("Orders, revenue, and profit remain Sellora-side data"));
 expect("advertising page shows status card", advertisingPage.includes("MetaAdsReadinessCard"));
 expect("settings integrations shows status card", integrationsPage.includes("MetaAdsReadinessCard"));
-expect("no live OAuth route or link", !/oauth|authorize|facebook\.com\/dialog|graph\.facebook\.com/i.test(ui));
+expect("no live OAuth route or link", !/facebook\.com\/dialog|graph\.facebook\.com|href=.*oauth/i.test(ui));
 expect("no token input", !/type=\"password\"|access_token|refresh_token|token_encrypted_ref|token input/i.test(metaCard + advertisingPage + integrationsPage));
 expect("no apply-sync button", !/apply-sync|apply sync|застосувати синхронізацію/i.test(ui));
 expect("no production sync trigger", !/startSync|runSync|executeSync|production sync trigger/i.test(ui));

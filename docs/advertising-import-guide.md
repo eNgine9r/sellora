@@ -162,3 +162,43 @@ Documented future states are `NOT_ACTIVE`, `COMING_SOON`, `PREVIEW_AVAILABLE`, `
 ### Runtime-gated blockers remain
 
 Sprint 4.10 runtime PostgreSQL migration QA remains skipped/pending, so Sprint 4.10 is not fully approved. Sprint 4.4 PostgreSQL runtime migration QA, advertising CSV import staging QA, browser/mobile/theme QA, and workspace/cross-workspace runtime QA remain open blockers.
+
+## Sprint 4.12 — Meta Ads mock OAuth, RBAC contract, and token safety shell
+
+Sprint 4.12 keeps Meta Ads API inactive and adds only a mock OAuth contract, OWNER-only service authorization checks, token redaction utilities, tests, documentation, and regression coverage. The current active advertising source remains manual entry / CSV import, and advertising import is not pilot-ready until staging/runtime QA is completed.
+
+### Mock OAuth scope
+
+- Mock authorization URL: `https://mock.meta.local/oauth/authorize`.
+- Mock flow is service-only; no production route is exposed.
+- No real Meta OAuth URL, real Meta permissions, live Meta API call, token persistence, database write, production sync job, apply-sync, or `meta_ad_connections` table is added.
+- Mock state is generated server-side and includes `workspace_id`, `user_id`, `nonce`, `issued_at`, `expires_at`, and `purpose = meta_ads_mock_oauth`; it includes no token or secret.
+- Real OAuth state persistence remains future work and must be workspace-scoped, user-scoped, expiring, and non-secret-bearing.
+
+### OWNER-only RBAC contract
+
+- OWNER may start the mock connect flow, validate the mock callback, and simulate disconnect.
+- MANAGER may view status only and may not connect or disconnect.
+- ANALYST remains read-only/no-connect and may not connect or disconnect.
+- Frontend hiding is not the protection boundary; service-level authorization rejects non-OWNER roles.
+- Workspace context must be validated server-side for future live routes.
+
+### Token safety shell
+
+- Token-like values are masked with `mock_token_************abcd` style output or a fully redacted value.
+- Secret-like payload fields are redacted before safe reporting.
+- Safe diagnostics use a short one-way fingerprint, not a token value.
+- Raw token-like values must never be returned to frontend DTOs, stored, logged, included in audit payloads, or included in string/repr output.
+- Encryption persistence is not implemented in Sprint 4.12.
+
+### Mock connection DTO contract
+
+Safe mock DTOs may include `status`, `provider`, `workspace_id`, `connection_mode = mock`, `authorization_url`, `state_expires_at`, `connected = false`, `requires_live_setup = true`, `token_stored = false`, `live_api_enabled = false`, `message`, and user-safe `issues`. They must not include raw token fields, real ad account IDs, real business IDs, real Meta user IDs, customer/order data, or secret fields.
+
+### Future audit event contract
+
+Future audit events are `meta_ads_connect_started`, `meta_ads_connect_completed`, `meta_ads_connect_failed`, `meta_ads_disconnected`, `meta_ads_token_refreshed`, and `meta_ads_permission_missing`. Audit records may include workspace/user context and outcome, but must never include raw tokens, client secrets, cookies, customer PII, or customer/order payloads. Sprint 4.12 does not add a new audit table.
+
+### Runtime-gated blockers remain
+
+Sprint 4.10 runtime PostgreSQL migration QA remains pending, so Sprint 4.10 is not fully approved. Sprint 4.4 PostgreSQL runtime/staging/browser QA blockers, advertising CSV import staging QA, browser/mobile/theme QA, and workspace/cross-workspace runtime QA remain open. Meta sync remains not active, and manual/CSV remains the MVP advertising source.

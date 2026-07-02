@@ -52,6 +52,7 @@ export function MetaAdsReadinessCard({ compact = false }: { compact?: boolean })
       <div className="grid gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-100">
         <p className="font-bold">{t("metaAds.manualCsvProtection")}</p>
         <p>{t("metaAds.deliveryMetricsOnly")}</p>
+        <p>{t("metaAds.mockOAuthPrepared")}</p>
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
