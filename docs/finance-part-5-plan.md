@@ -59,3 +59,11 @@ Sellora Finance is operational profit analytics, not full accounting or tax repo
 Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.
 
 Meta Ads API is not active.
+
+## Epic Sprint 5C stabilization note
+
+Finance 5.x is stabilized for local MVP review with static Alembic chain validation, Finance API date-range validation, auth/API boundary checks, and mobile/static regression guardrails.
+
+Finance adjustments migration has passed static Alembic chain validation, but PostgreSQL runtime migration QA remains pending until tested against a safe staging/test database.
+
+Part 6 Meta API work will be handled in separate dedicated sprints; no live OAuth, token storage, or Meta API calls are part of 5C.

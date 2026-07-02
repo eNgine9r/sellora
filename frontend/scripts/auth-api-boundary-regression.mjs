@@ -4,6 +4,8 @@ const authService = readFileSync("frontend/src/services/auth.service.ts", "utf8"
 const loginPage = readFileSync("frontend/src/app/login/page.tsx", "utf8");
 const uk = readFileSync("frontend/src/i18n/messages/uk.json", "utf8");
 const en = readFileSync("frontend/src/i18n/messages/en.json", "utf8");
+const backendAuth = readFileSync("backend/app/api/v1/auth.py", "utf8");
+const backendMain = readFileSync("backend/app/main.py", "utf8");
 
 const checks = [
   ["API base URL config exists", authService.includes("NEXT_PUBLIC_API_BASE_URL") && authService.includes("API_BASE_URL")],
@@ -13,6 +15,8 @@ const checks = [
   ["invalid credentials copy differs", authService.includes("InvalidCredentialsError") && loginPage.includes("auth.invalidCredentials")],
   ["Ukrainian network copy exists", uk.includes("Не вдалося підключитися до сервера")],
   ["English network copy exists", en.includes("Could not connect to the server")],
+  ["backend auth route prefix matches login path", backendAuth.includes('APIRouter(prefix="/auth"') && authService.includes("/auth/login")],
+  ["backend CORS middleware remains configured", backendMain.includes("CORSMiddleware") && backendMain.includes("allow_origins")],
 ];
 let failed = false;
 for (const [label, ok] of checks) {

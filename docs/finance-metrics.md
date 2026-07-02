@@ -117,3 +117,11 @@ Advertising data remains a conditional manual/CSV source until runtime/staging b
 Meta Ads API is not active.
 
 Migration runtime QA for `finance_adjustments` remains pending until a safe PostgreSQL runtime is available.
+
+## Epic Sprint 5C stabilization
+
+Finance 5.x is implementation-ready and locally validated, but not pilot-ready until runtime migration QA, browser/mobile QA, and staging QA are completed.
+
+Finance adjustments migration has passed static Alembic validation, but PostgreSQL runtime migration QA remains pending unless a safe runtime DB validation was actually executed.
+
+Sellora Finance remains operational profit analytics, not full accounting or tax reporting. Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved. Meta Ads API is not active.

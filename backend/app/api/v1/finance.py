@@ -34,7 +34,10 @@ def finance_summary(
     date_to: date | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> FinanceSummaryResponse:
-    return FinanceService(db).summary(workspace_id, date_from, date_to)
+    try:
+        return FinanceService(db).summary(workspace_id, date_from, date_to)
+    except FinanceServiceError as exc:
+        raise _bad_request(exc)
 
 
 @router.get("/breakdown", response_model=FinanceBreakdownResponse, dependencies=[Depends(require_min_role(RoleName.ANALYST))])
@@ -44,7 +47,10 @@ def finance_breakdown(
     date_to: date | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> FinanceBreakdownResponse:
-    return FinanceService(db).breakdown(workspace_id, date_from, date_to)
+    try:
+        return FinanceService(db).breakdown(workspace_id, date_from, date_to)
+    except FinanceServiceError as exc:
+        raise _bad_request(exc)
 
 
 @router.get("/trends", response_model=FinancePeriodComparisonResponse, dependencies=[Depends(require_min_role(RoleName.ANALYST))])
@@ -54,7 +60,10 @@ def finance_trends(
     date_to: date | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> FinancePeriodComparisonResponse:
-    return FinanceService(db).trends(workspace_id, date_from, date_to)
+    try:
+        return FinanceService(db).trends(workspace_id, date_from, date_to)
+    except FinanceServiceError as exc:
+        raise _bad_request(exc)
 
 
 @router.get("/adjustments", response_model=FinanceAdjustmentListResponse)
@@ -69,7 +78,10 @@ def list_finance_adjustments(
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> FinanceAdjustmentListResponse:
-    return FinanceService(db).list_adjustments(workspace_id, date_from, date_to, type, category, limit, offset)
+    try:
+        return FinanceService(db).list_adjustments(workspace_id, date_from, date_to, type, category, limit, offset)
+    except FinanceServiceError as exc:
+        raise _bad_request(exc)
 
 
 @router.post("/adjustments", response_model=FinanceAdjustmentResponse, status_code=status.HTTP_201_CREATED)

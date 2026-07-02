@@ -7,7 +7,9 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from app.models.order import OrderStatus, PaymentStatus
-from app.services.finance_service import FinanceService
+from app.services.finance_service import FinanceService, FinanceServiceError
+
+import pytest
 
 
 class FakeFinanceRepository:
@@ -20,7 +22,8 @@ class FakeFinanceRepository:
 
     def list_orders(self, workspace_id, start_at, end_at):
         self.calls.append(("orders", workspace_id, start_at, end_at))
-        return [order for order in self.orders if order.workspace_id == workspace_id]
+        rows = [order for order in self.orders if order.workspace_id == workspace_id]
+        return [order for order in rows if not hasattr(order, "metric_at") or (order.metric_at >= start_at and order.metric_at <= end_at)]
 
     def list_shipments(self, workspace_id, start_at, end_at):
         self.calls.append(("shipments", workspace_id, start_at, end_at))
@@ -178,6 +181,28 @@ def test_finance_summary_includes_manual_expenses_refunds_discounts_and_fees():
     assert summary.finance_adjustments_total == Decimal("100.00")
     assert summary.net_profit == Decimal("200.00")
     assert any(item.key == "manual_expenses" for item in summary.breakdown)
+
+
+def test_finance_date_range_rejects_reversed_period():
+    workspace_id = uuid4()
+    service = make_service(FakeFinanceRepository())
+
+    with pytest.raises(FinanceServiceError):
+        service.summary(workspace_id, date(2026, 7, 31), date(2026, 7, 1))
+
+
+def test_finance_trends_handles_empty_previous_period_safely():
+    workspace_id = uuid4()
+    current_order = order(workspace_id, revenue="120.00", items=[item("120.00", "50.00")])
+    current_order.metric_at = datetime(2026, 7, 10, tzinfo=UTC)
+    repo = FakeFinanceRepository(orders=[current_order])
+
+    trends = make_service(repo).trends(workspace_id, date(2026, 7, 1), date(2026, 7, 31))
+
+    assert trends.net_profit_change.current == Decimal("70.00")
+    assert trends.net_profit_change.previous == Decimal("0.00")
+    assert trends.net_profit_change.change == Decimal("70.00")
+    assert trends.net_profit_change.change_percent is None
 
 
 def test_finance_summary_read_paths_have_no_meta_live_dependency():

@@ -1516,6 +1516,7 @@
       "manual_discounts": "Manual discounts",
       "manual_fees": "Manual fees",
       "net_profit": "Net profit"
-    }
+    },
+    "adjustmentsLoadError": "Could not load adjustments. Please try again."
   }
 }

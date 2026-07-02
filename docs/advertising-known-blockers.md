@@ -40,3 +40,7 @@ Advertising remains feature-frozen and not pilot-ready; Finance 5A may read manu
 ## Finance 5B dependency note
 
 Finance 5B keeps Advertising frozen. Manual/CSV ad spend can be read as a conditional source for operational profit analytics, but Advertising import is still not pilot-ready and Meta Ads API is not active.
+
+## Epic Sprint 5C dependency note
+
+Finance 5C does not change Advertising 4.x scope. Advertising remains feature-frozen and not pilot-ready. Advertising data remains a conditional manual/CSV source for Finance until runtime/staging blockers are resolved, and Meta Ads API is not active.

@@ -91,3 +91,11 @@ Finance 5B adds `finance_adjustments` as manual owner-controlled records for exp
 The `/finance` dashboard now includes a net profit breakdown, previous-period comparison, and manual adjustments UI for OWNER/MANAGER with ANALYST read-only access.
 
 Sellora Finance is operational profit analytics, not full accounting or tax reporting. Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved. Meta Ads API is not active.
+
+## Epic Sprint 5C handoff status
+
+Finance 5.x handoff status: **implementation-ready / locally validated / runtime migration QA pending**.
+
+Use Finance numbers for demo review with the visible caveat that browser/mobile QA, staging QA, and PostgreSQL runtime migration QA remain pending. Finance remains operational profit analytics, not accounting or tax reporting.
+
+Part 6 Meta API planning is documented separately in `docs/meta-api-part-6-readiness-plan.md`; implementation belongs to future dedicated sprints.

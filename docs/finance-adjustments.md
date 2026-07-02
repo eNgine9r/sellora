@@ -42,3 +42,9 @@ Net profit = Revenue - COGS - Ad spend - Shipping cost - Manual expenses - Manua
 - Migration runtime QA is pending until a safe PostgreSQL runtime is available.
 - Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.
 - Meta Ads API is not active.
+
+## Epic Sprint 5C stabilization status
+
+Finance adjustments migration has passed static Alembic chain validation, but PostgreSQL runtime migration QA remains pending until tested against a safe staging/test database.
+
+Browser/mobile QA for `/finance` remains pending if no browser runtime is available. Static checks confirm layout markers and guardrail copy, but they are not a substitute for screenshot QA.

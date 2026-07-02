@@ -263,12 +263,19 @@ class FinanceService:
         today = datetime.now(UTC).date()
         resolved_to = date_to or today
         resolved_from = date_from or (resolved_to - timedelta(days=30))
+        self._validate_date_order(resolved_from, resolved_to)
         return datetime.combine(resolved_from, time.min, tzinfo=UTC), datetime.combine(resolved_to, time.max, tzinfo=UTC)
 
     def _optional_range(self, date_from: date | None, date_to: date | None) -> tuple[datetime | None, datetime | None]:
+        if date_from is not None and date_to is not None:
+            self._validate_date_order(date_from, date_to)
         start_at = datetime.combine(date_from, time.min, tzinfo=UTC) if date_from else None
         end_at = datetime.combine(date_to, time.max, tzinfo=UTC) if date_to else None
         return start_at, end_at
+
+    def _validate_date_order(self, date_from: date, date_to: date) -> None:
+        if date_from > date_to:
+            raise FinanceServiceError("date_from must be before or equal to date_to")
 
     def _is_valid_revenue_order(self, order: Order) -> bool:
         return order.status in VALID_REVENUE_STATUSES and order.payment_status != PaymentStatus.REFUNDED.value
