@@ -36,3 +36,7 @@ Finance uses Advertising data only as conditional manual/CSV source until Advert
 Meta Ads API is not active.
 
 Advertising remains feature-frozen and not pilot-ready; Finance 5A may read manual/CSV ad spend for operational analytics but must not treat Advertising import or Meta sync as production-ready.
+
+## Finance 5B dependency note
+
+Finance 5B keeps Advertising frozen. Manual/CSV ad spend can be read as a conditional source for operational profit analytics, but Advertising import is still not pilot-ready and Meta Ads API is not active.

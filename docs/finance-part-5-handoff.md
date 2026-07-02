@@ -83,3 +83,11 @@ Finance 5A begins the Part 5 implementation with a read-only finance summary and
 Meta Ads API is not active.
 
 Sellora Finance MVP is operational profit analytics, not full accounting software. The first dashboard intentionally focuses on owner-facing clarity and data quality warnings instead of bank import, tax accounting, payment gateway reconciliation, or full бухгалтерія.
+
+## Epic Sprint 5B implementation note
+
+Finance 5B adds `finance_adjustments` as manual owner-controlled records for expenses, refunds, discounts, fees, shipping adjustments, corrections, and other costs. Finance summary now includes manual expenses, manual refunds, manual discounts, manual fees, and a finance adjustments total.
+
+The `/finance` dashboard now includes a net profit breakdown, previous-period comparison, and manual adjustments UI for OWNER/MANAGER with ANALYST read-only access.
+
+Sellora Finance is operational profit analytics, not full accounting or tax reporting. Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved. Meta Ads API is not active.

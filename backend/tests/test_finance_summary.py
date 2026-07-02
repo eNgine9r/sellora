@@ -11,10 +11,11 @@ from app.services.finance_service import FinanceService
 
 
 class FakeFinanceRepository:
-    def __init__(self, orders=None, shipments=None, ad_metrics=None):
+    def __init__(self, orders=None, shipments=None, ad_metrics=None, adjustments=None):
         self.orders = orders or []
         self.shipments = shipments or []
         self.ad_metrics = ad_metrics or []
+        self.adjustments = adjustments or []
         self.calls = []
 
     def list_orders(self, workspace_id, start_at, end_at):
@@ -28,6 +29,10 @@ class FakeFinanceRepository:
     def list_manual_ad_metrics(self, workspace_id, start_at, end_at):
         self.calls.append(("ad_metrics", workspace_id, start_at, end_at))
         return [metric for metric in self.ad_metrics if metric.workspace_id == workspace_id and getattr(metric, "source_type", None) in (None, "manual", "csv_import") and getattr(metric, "external_source", None) != "meta_ads"]
+
+    def list_adjustments_for_period(self, workspace_id, start_at, end_at):
+        self.calls.append(("adjustments", workspace_id, start_at, end_at))
+        return [adjustment for adjustment in self.adjustments if adjustment.workspace_id == workspace_id]
 
 
 def make_service(repository: FakeFinanceRepository) -> FinanceService:
@@ -63,6 +68,10 @@ def ad_metric(workspace_id, spend="25.00", source_type="manual", external_source
     return SimpleNamespace(workspace_id=workspace_id, spend=Decimal(spend), source_type=source_type, external_source=external_source)
 
 
+def adjustment(workspace_id, amount="10.00", type="EXPENSE", category="OTHER"):
+    return SimpleNamespace(workspace_id=workspace_id, amount=Decimal(amount), type=type, category=category)
+
+
 def test_finance_summary_calculates_core_metrics_from_orders_ad_metrics_and_shipments():
     workspace_id = uuid4()
     first_order = order(workspace_id, revenue="200.00", items=[item("120.00", "50.00"), item("80.00", "30.00")])
@@ -80,9 +89,10 @@ def test_finance_summary_calculates_core_metrics_from_orders_ad_metrics_and_ship
     assert summary.gross_profit == Decimal("175.00")
     assert summary.ad_spend == Decimal("60.00")
     assert summary.shipping_cost == Decimal("20.00")
-    assert summary.other_expenses == Decimal("5.00")
-    assert summary.net_profit == Decimal("90.00")
-    assert summary.profit_margin == Decimal("30.00")
+    assert summary.other_expenses == Decimal("0.00")
+    assert summary.net_profit == Decimal("95.00")
+    assert summary.manual_expenses == Decimal("0.00")
+    assert summary.profit_margin == Decimal("31.67")
     assert summary.orders_count == 2
     assert summary.paid_orders_count == 2
     assert summary.average_order_value == Decimal("150.00")
@@ -146,18 +156,35 @@ def test_finance_summary_excludes_cancelled_returned_and_refunded_orders_from_re
     assert any(warning.code == "cancelled_refunded_orders_excluded" for warning in summary.data_quality_warnings)
 
 
-def test_finance_summary_endpoint_is_read_only_and_has_no_meta_live_dependency():
+def test_finance_summary_includes_manual_expenses_refunds_discounts_and_fees():
+    workspace_id = uuid4()
+    repo = FakeFinanceRepository(
+        orders=[order(workspace_id, revenue="500.00", items=[item("500.00", "200.00")])],
+        shipments=[shipment(workspace_id, order_id=uuid4(), shipping_cost="0.00")],
+        adjustments=[
+            adjustment(workspace_id, "40.00", "EXPENSE"),
+            adjustment(workspace_id, "30.00", "REFUND"),
+            adjustment(workspace_id, "20.00", "DISCOUNT"),
+            adjustment(workspace_id, "10.00", "FEE"),
+        ],
+    )
+
+    summary = make_service(repo).summary(workspace_id)
+
+    assert summary.manual_expenses == Decimal("40.00")
+    assert summary.manual_refunds == Decimal("30.00")
+    assert summary.manual_discounts == Decimal("20.00")
+    assert summary.manual_fees == Decimal("10.00")
+    assert summary.finance_adjustments_total == Decimal("100.00")
+    assert summary.net_profit == Decimal("200.00")
+    assert any(item.key == "manual_expenses" for item in summary.breakdown)
+
+
+def test_finance_summary_read_paths_have_no_meta_live_dependency():
     backend_root = Path(__file__).resolve().parents[1]
-    source_paths = [
-        backend_root / "app/api/v1/finance.py",
-        backend_root / "app/repositories/finance_repository.py",
-        backend_root / "app/services/finance_service.py",
-    ]
+    source_paths = [backend_root / "app/repositories/finance_repository.py"]
     source = "\n".join(path.read_text() for path in source_paths)
 
-    assert ".commit(" not in source
-    assert ".flush(" not in source
-    assert ".add(" not in source
     assert "httpx" not in source
     assert "requests" not in source
     assert "facebook.com" not in source

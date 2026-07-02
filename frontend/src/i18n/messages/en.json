@@ -105,7 +105,9 @@
     "loading": "Signing in…",
     "helper": "Use the staging credentials provided by the workspace owner.",
     "error": "Unable to sign in. Check your email and password.",
-    "sessionExpired": "Session expired. Please log in again."
+    "sessionExpired": "Session expired. Please log in again.",
+    "networkError": "Could not connect to the server. Try again later or check the API.",
+    "invalidCredentials": "Invalid email or password."
   },
   "landing": {
     "eyebrow": "CRM for Instagram stores",
@@ -1454,6 +1456,66 @@
     "emptyDescription": "Create or import orders, add product costs, and add advertising metrics to see profit.",
     "dataQualityEyebrow": "Data quality",
     "dataQualityTitle": "What affects accuracy",
-    "dataQualityDescription": "Sellora shows warnings when data sources are incomplete or conditional. Unavailable values are displayed as — in the UI."
+    "dataQualityDescription": "Sellora shows warnings when data sources are incomplete or conditional. Unavailable values are displayed as — in the UI.",
+    "manualExpenses": "Manual expenses",
+    "manualRefunds": "Manual refunds",
+    "manualDiscounts": "Manual discounts",
+    "manualFees": "Manual fees",
+    "manualAdjustmentsHelper": "Expenses, refunds, discounts, or fees entered manually.",
+    "manualAdjustmentsExplanation": "Manual expenses and adjustments help account for packaging, fees, refunds, discounts, and other costs more accurately.",
+    "adjustmentsEyebrow": "Expenses and adjustments",
+    "adjustmentsTitle": "Expenses and adjustments",
+    "adjustmentsDescription": "Add manual expenses, refunds, discounts, or fees that are not yet available from orders or integrations.",
+    "adjustmentsReadOnly": "You can view adjustments, but create and edit access is limited to OWNER or MANAGER.",
+    "adjustmentType": "Type",
+    "adjustmentCategory": "Category",
+    "amount": "Amount",
+    "occurredAt": "Expense date",
+    "adjustmentTitle": "Title",
+    "adjustmentDescription": "Description",
+    "createAdjustment": "Add adjustment",
+    "updateAdjustment": "Update adjustment",
+    "adjustmentSaveError": "Could not save the adjustment. Check the fields and try again.",
+    "adjustmentsEmpty": "No manual expenses or adjustments for this period yet.",
+    "breakdownEyebrow": "Profit control",
+    "breakdownTitle": "Net profit breakdown",
+    "breakdownDescription": "Shows where profit is lost: COGS, advertising, shipping, manual expenses, refunds, discounts, and fees.",
+    "periodComparison": "Previous-period comparison",
+    "netProfitChange": "Net profit change",
+    "revenueChange": "Revenue change",
+    "ofRevenue": "of revenue",
+    "adjustmentTypes": {
+      "EXPENSE": "Expense",
+      "REFUND": "Refund",
+      "DISCOUNT": "Discount",
+      "FEE": "Fee",
+      "SHIPPING_ADJUSTMENT": "Shipping adjustment",
+      "CORRECTION": "Correction",
+      "OTHER": "Other"
+    },
+    "adjustmentCategories": {
+      "PACKAGING": "Packaging",
+      "DELIVERY": "Delivery",
+      "PAYMENT_FEE": "Payment fee",
+      "MARKETPLACE_FEE": "Marketplace fee",
+      "TOOLS": "Tools",
+      "SALARY": "Salary",
+      "RENT": "Rent",
+      "REFUND": "Refund",
+      "DISCOUNT": "Discount",
+      "ADJUSTMENT": "Adjustment",
+      "OTHER": "Other"
+    },
+    "breakdown": {
+      "revenue": "Revenue",
+      "cogs": "COGS",
+      "ad_spend": "Advertising",
+      "shipping_cost": "Shipping",
+      "manual_expenses": "Manual expenses",
+      "manual_refunds": "Manual refunds",
+      "manual_discounts": "Manual discounts",
+      "manual_fees": "Manual fees",
+      "net_profit": "Net profit"
+    }
   }
 }

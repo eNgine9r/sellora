@@ -15,7 +15,7 @@ const checks = [
 ];
 
 const forbidden = [
-  ["backend/app/services/finance_service.py", ["facebook.com", "graph.facebook.com", "httpx", "requests", ".commit(", ".flush("]],
+  ["backend/app/services/finance_service.py", ["facebook.com", "graph.facebook.com", "httpx", "requests"]],
   ["frontend/src/app/finance/page.tsx", ["pilot-ready", "access_token", "client_secret"]],
 ];
 

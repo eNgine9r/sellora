@@ -389,3 +389,13 @@ Finance uses Advertising data only as conditional manual/CSV source until Advert
 Meta Ads API is not active.
 
 Sellora Finance MVP is operational profit analytics, not full accounting software. Advertising 4.x remains feature-frozen and is not pilot-ready.
+
+## Finance adjustments status — Epic Sprint 5B
+
+Sellora Finance now supports manual finance adjustments for expenses, refunds, discounts, fees, shipping corrections, and other owner-entered profit corrections. These records improve operational profit accuracy while keeping Sellora Finance simple for Instagram shops.
+
+Sellora Finance is operational profit analytics, not full accounting or tax reporting.
+
+Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.
+
+Meta Ads API is not active.

@@ -383,3 +383,9 @@ Finance uses Advertising data only as conditional manual/CSV source until Advert
 Meta Ads API is not active.
 
 Sellora Finance MVP is operational profit analytics, not full accounting software. Advertising and Advertising import remain not pilot-ready until the blocker registry is resolved.
+
+## Finance 5B readiness note
+
+Finance 5B adds manual expenses, refunds, discounts, fees, profit breakdown, and previous-period comparison. The feature is locally validated but the `finance_adjustments` migration still requires safe PostgreSQL runtime QA before production claims.
+
+Sellora Finance is operational profit analytics, not full accounting or tax reporting. Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved. Meta Ads API is not active.

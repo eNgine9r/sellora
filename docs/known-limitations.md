@@ -318,3 +318,13 @@ Finance uses Advertising data only as conditional manual/CSV source until Advert
 Meta Ads API is not active.
 
 Discount fields are not available in the current finance schema, and cancelled/returned/refunded orders are excluded from revenue to avoid double-counting refunds. Shipment costs may be incomplete if shipment data is missing.
+
+## Finance 5B known limitations
+
+Manual finance adjustments improve profit accuracy but are owner-entered and may be incomplete. They are not a full accounting ledger and do not include tax reporting, bank import, payment gateway reconciliation, payroll, invoices, or fiscal receipts.
+
+The `finance_adjustments` migration requires safe PostgreSQL runtime QA before production migration approval.
+
+Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.
+
+Meta Ads API is not active.

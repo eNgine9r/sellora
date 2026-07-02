@@ -86,3 +86,34 @@ Finance responses include owner-facing warnings when:
 - Meta Ads API is not active;
 - discounts are not available in the current schema;
 - full accounting expenses are not available.
+
+## Epic Sprint 5B — manual adjustments and advanced finance analytics
+
+Sellora Finance is operational profit analytics, not full accounting or tax reporting.
+
+Manual finance adjustments add owner-controlled records for expenses, refunds, discounts, fees, shipping adjustments, corrections, and other costs that are not reliably available from orders, shipments, imports, or integrations yet.
+
+Supported manual adjustment types:
+
+- `EXPENSE` — packaging, tools, rent, salaries, and other operating costs;
+- `REFUND` — money returned to a buyer when the order status alone is not enough;
+- `DISCOUNT` — manual discounts that are not stored on the order yet;
+- `FEE` — payment, marketplace, or operational fees;
+- `SHIPPING_ADJUSTMENT` — extra delivery cost not captured in shipment/order data;
+- `CORRECTION` and `OTHER` — owner-entered corrections with clear title/description.
+
+Updated net-profit formula:
+
+```text
+Net profit = Revenue - COGS - Ad spend - Shipping cost - Manual expenses - Manual refunds - Manual discounts - Manual fees
+```
+
+Refund safety rule: if refunded/cancelled/returned orders are already excluded from revenue, Sellora does not double-count those refunds. A manual `REFUND` adjustment reduces profit only when the owner explicitly records the returned money.
+
+Breakdown analytics show revenue, COGS, ad spend, shipping, manual expenses, manual refunds, manual discounts, manual fees, and net profit as separate lines. Period comparison compares the selected period with the previous equivalent period for revenue, gross profit, net profit, orders count, ad spend, and margin.
+
+Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.
+
+Meta Ads API is not active.
+
+Migration runtime QA for `finance_adjustments` remains pending until a safe PostgreSQL runtime is available.

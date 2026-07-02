@@ -47,3 +47,15 @@ Sellora Finance MVP is operational profit analytics, not full accounting softwar
 - Product and campaign profitability breakdowns.
 - Exportable finance reports.
 - Bank or payment-provider import in a dedicated future sprint.
+
+## Epic Sprint 5B plan update
+
+Sprint 5B adds manual finance adjustments, net profit breakdown, and previous-period comparison while keeping Sellora Finance simple for Instagram shop owners.
+
+Manual adjustments cover expenses, refunds, discounts, fees, shipping adjustments, corrections, and other costs. They improve profit accuracy without turning Sellora into bookkeeping software.
+
+Sellora Finance is operational profit analytics, not full accounting or tax reporting.
+
+Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.
+
+Meta Ads API is not active.
