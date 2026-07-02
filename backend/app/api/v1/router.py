@@ -8,6 +8,7 @@ from app.api.v1.customers import router as customers_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.lead_sources import router as lead_sources_router
 from app.api.v1.leads import router as leads_router
+from app.api.v1.meta_ads_mock import router as meta_ads_mock_router
 from app.api.v1.nova_poshta import router as nova_poshta_router
 from app.api.v1.products import router as products_router
 from app.api.v1.tags import router as tags_router
@@ -29,6 +30,7 @@ api_router.include_router(products_router)
 api_router.include_router(import_center_router)
 api_router.include_router(inventory_router)
 api_router.include_router(orders_router)
+api_router.include_router(meta_ads_mock_router)
 api_router.include_router(nova_poshta_router)
 api_router.include_router(shipments_router)
 api_router.include_router(tags_router)
