@@ -11,6 +11,7 @@ from app.dependencies.rbac import get_workspace_id, require_min_role
 from app.models.role import RoleName
 from app.models.user import User
 from app.schemas.meta_ads_read_only import MetaAdAccountDiscoveryResponse, MetaCampaignDiscoveryResponse, MetaInsightsPreviewResponse
+from app.schemas.meta_ads_staging_validation import MetaAdsStagingValidationResponse
 from app.schemas.meta_ads_connection import (
     MetaAdsConnectionStatusResponse,
     MetaAdsDisconnectResponse,
@@ -19,6 +20,7 @@ from app.schemas.meta_ads_connection import (
     MetaAdsOAuthStartResponse,
 )
 from app.services.meta_ads_connection_service import MetaAdsConnectionService, MetaAdsConnectionServiceError
+from app.services.meta_ads_staging_validation_service import MetaAdsStagingValidationService
 from app.services.meta_ads_sync_preview_service import MetaAdsSyncPreviewService
 
 router = APIRouter(prefix="/integrations/meta-ads", tags=["Meta Ads"])
@@ -93,6 +95,15 @@ def preview_meta_ads_sync(
     db: Session = Depends(get_db),
 ) -> MetaInsightsPreviewResponse:
     return MetaAdsSyncPreviewService(db).preview_insights(workspace_id, date_from=date_from, date_to=date_to, account_id=account_id)
+
+
+@router.post("/staging/validate-read-only", response_model=MetaAdsStagingValidationResponse)
+def validate_meta_ads_staging_read_only(
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.OWNER)),
+    db: Session = Depends(get_db),
+) -> MetaAdsStagingValidationResponse:
+    return MetaAdsStagingValidationService(db).validate_read_only(workspace_id)
 
 
 @router.post("/disconnect", response_model=MetaAdsDisconnectResponse)

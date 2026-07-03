@@ -21,8 +21,8 @@ from app.schemas.meta_ads_read_only import (
     MetaReadOnlyNotReadyResponse,
 )
 
-PREVIEW_WARNING = "Preview only. Manual/CSV remains the active Advertising source."
-NO_DB_WRITE_WARNING = "No ad_campaigns or ad_metrics rows are written by this preview."
+PREVIEW_WARNING = "This is a no-write preview. No Meta data has been imported into Sellora."
+NO_DB_WRITE_WARNING = "No ad_campaigns or ad_metrics rows are written by this preview. Manual/CSV remains the active Advertising source."
 
 
 @dataclass(frozen=True)

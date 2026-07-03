@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     meta_token_storage_enabled: bool = Field(default=False, alias="META_TOKEN_STORAGE_ENABLED")
     meta_sync_enabled: bool = Field(default=False, alias="META_SYNC_ENABLED")
     meta_sync_preview_enabled: bool = Field(default=False, alias="META_SYNC_PREVIEW_ENABLED")
+    meta_staging_validation_enabled: bool = Field(default=False, alias="META_STAGING_VALIDATION_ENABLED")
     meta_app_id: str | None = Field(default=None, alias="META_APP_ID")
     meta_app_secret: str | None = Field(default=None, alias="META_APP_SECRET")
     meta_oauth_redirect_uri: str | None = Field(default=None, alias="META_OAUTH_REDIRECT_URI")
