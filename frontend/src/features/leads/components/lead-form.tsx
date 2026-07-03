@@ -1,9 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useI18n } from "@/i18n/provider";
 import { buildLeadCreatePayload } from "@/lib/payload-builders";
 import { LeadCreatePayload } from "@/services/crm";
 import { LeadSource } from "@/types/crm";
+import { AdCampaign } from "@/types/advertising";
 
 export type LeadFormValues = {
   name: string;
@@ -11,6 +13,7 @@ export type LeadFormValues = {
   instagram_username?: string;
   instagram_profile_url?: string;
   lead_source_id?: string;
+  campaign_id?: string;
   notes?: string;
   assigned_user_id?: string;
   expected_revenue?: string;
@@ -18,15 +21,18 @@ export type LeadFormValues = {
 
 export function LeadForm({
   leadSources,
+  campaigns = [],
   onSubmit,
   isSubmitting = false,
   submitError,
 }: {
   leadSources: LeadSource[];
+  campaigns?: AdCampaign[];
   onSubmit: (payload: LeadCreatePayload) => Promise<void> | void;
   isSubmitting?: boolean;
   submitError?: string | null;
 }) {
+  const { t } = useI18n();
   const [values, setValues] = useState<LeadFormValues>({ name: "" });
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -66,6 +72,14 @@ export function LeadForm({
           <option value="">No source / Manual</option>
           {leadSources.map((source) => <option key={source.id} value={source.id}>{source.name}</option>)}
         </select>
+      </label>
+      <label className="grid gap-1 text-sm font-medium text-slate-700">
+        {t("leads.campaignLabel")}
+        <select className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.campaign_id ?? ""} onChange={(event) => setValues({ ...values, campaign_id: event.target.value })}>
+          <option value="">{t("leads.noCampaign")}</option>
+          {campaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name} · {campaign.platform}</option>)}
+        </select>
+        <span className="text-xs font-normal text-slate-500">{t("leads.campaignHelp")}</span>
       </label>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Expected revenue
