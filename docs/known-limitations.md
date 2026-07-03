@@ -352,3 +352,15 @@ Meta Ads API is not active.
 Sprint 6A.1 prepares legal URLs, staging URL inventory, Meta App input pack, OAuth redirect URI planning, and environment variable planning only. No live OAuth, no token storage, no live API calls, no production sync, and no `meta_ad_connections` migration were implemented.
 
 Legal pages are MVP drafts and require legal review before production launch, payment activation, or Meta App Review submission. Staging URL values remain placeholders until real public staging URLs are supplied.
+
+## Sprint 6B — Meta encrypted connection foundation
+
+Sprint 6B adds encrypted token storage infrastructure and connection records behind feature gates.
+
+Meta Ads API is not sync-active.
+
+Live sync, scheduled jobs, apply-sync, and Conversions API are not implemented.
+
+Real OAuth validation requires staging URLs, legal review, Meta App setup, and safe PostgreSQL runtime migration QA.
+
+Advertising remains feature-frozen and not pilot-ready.

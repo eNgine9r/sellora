@@ -516,3 +516,7 @@ Sprint 6A prepares setup, security, OAuth, token storage, and QA design only. No
 Sprint 6A adds a design package for the future implementation path: Meta Developer App setup checklist, least-privilege permissions plan, live OAuth flow design, secure token storage design, connection status contract, audit logging design, and staging QA checklist.
 
 Advertising remains feature-frozen and not pilot-ready. The current Advertising data source remains manual entry / CSV import until runtime/staging blockers are resolved.
+
+## Sprint 6B compatibility note
+
+Automatic Meta Ads API sync is not active; official Meta OAuth remains guarded behind disabled feature gates, with workspace isolation and manual fallback preserved.

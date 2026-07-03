@@ -80,8 +80,8 @@ const migrationNames = readFilesRecursive("backend/alembic/versions", (file) => 
 
 expect("no facebook.com redirect in application code", !/facebook\.com\/(dialog|v\d+\.\d+|oauth)/i.test(appCode));
 expect("no graph.facebook.com API call in application code", !/graph\.facebook\.com/i.test(appCode));
-expect("no token storage implementation", !/meta_ad_connections/i.test(appCode));
-expect("no meta_ad_connections migration", !/meta_ad_connections/i.test(migrationNames));
+expect("Sprint 6B token storage foundation remains gated", /META_TOKEN_STORAGE_ENABLED/i.test(appCode) && /meta_ad_connections/i.test(appCode));
+expect("meta_ad_connections migration exists only as guarded Sprint 6B foundation", /meta_ad_connections/i.test(migrationNames));
 expect("no Meta API active claim", !/Meta Ads API active|Meta OAuth implemented|Meta account connected|Token storage active/i.test(`${docs}\n${legalPages}`));
 
 const failed = checks.filter((check) => !check.passed);

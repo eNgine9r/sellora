@@ -39,3 +39,15 @@ Advertising remains feature-frozen and not pilot-ready until the existing Advert
 Use `docs/staging-url-inventory.md` as the source for public staging URL placeholders and `docs/meta-oauth-redirect-uri-plan.md` for future OAuth callback planning.
 
 Do not include private staging credentials, DATABASE_URL values, access tokens, app secrets, or token encryption keys in docs, code, screenshots, or PR text.
+
+## Sprint 6B — Meta encrypted connection foundation
+
+Sprint 6B adds encrypted token storage infrastructure and connection records behind feature gates.
+
+Meta Ads API is not sync-active.
+
+Live sync, scheduled jobs, apply-sync, and Conversions API are not implemented.
+
+Real OAuth validation requires staging URLs, legal review, Meta App setup, and safe PostgreSQL runtime migration QA.
+
+Advertising remains feature-frozen and not pilot-ready.

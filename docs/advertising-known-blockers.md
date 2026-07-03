@@ -52,3 +52,15 @@ Meta Ads API is not active.
 Sprint 6A prepares setup, security, OAuth, token storage, and QA design only. No live OAuth, no token storage, no live API calls, and no production sync were implemented.
 
 Advertising remains feature-frozen and not pilot-ready. Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.
+
+## Sprint 6B — Meta encrypted connection foundation
+
+Sprint 6B adds encrypted token storage infrastructure and connection records behind feature gates.
+
+Meta Ads API is not sync-active.
+
+Live sync, scheduled jobs, apply-sync, and Conversions API are not implemented.
+
+Real OAuth validation requires staging URLs, legal review, Meta App setup, and safe PostgreSQL runtime migration QA.
+
+Advertising remains feature-frozen and not pilot-ready.

@@ -9,6 +9,7 @@ from hashlib import sha256
 from uuid import UUID, uuid4
 
 MOCK_OAUTH_STATE_PURPOSE = "meta_ads_mock_oauth"
+LIVE_OAUTH_STATE_PURPOSE = "meta_ads_live_oauth"
 _STATE_SIGNING_KEY = b"sellora-meta-ads-mock-oauth-state-v1"
 
 
@@ -98,4 +99,44 @@ def validate_mock_oauth_state(state: str, workspace_id: UUID, user_id: UUID, now
         raise MetaOAuthStateError("Mock OAuth state workspace mismatch.")
     if payload.user_id != user_id:
         raise MetaOAuthStateError("Mock OAuth state user mismatch.")
+    return payload
+
+
+def generate_live_oauth_state(workspace_id: UUID, user_id: UUID, now: datetime | None = None, ttl_minutes: int = 10) -> tuple[str, MetaOAuthMockStatePayload]:
+    issued_at = now or datetime.now(UTC)
+    if issued_at.tzinfo is None:
+        issued_at = issued_at.replace(tzinfo=UTC)
+    payload = MetaOAuthMockStatePayload(
+        workspace_id=workspace_id,
+        user_id=user_id,
+        nonce=uuid4().hex,
+        issued_at=issued_at,
+        expires_at=issued_at + timedelta(minutes=ttl_minutes),
+        purpose=LIVE_OAUTH_STATE_PURPOSE,
+    )
+    encoded_payload = _b64encode(json.dumps(payload.to_safe_dict(), sort_keys=True, separators=(",", ":")).encode("utf-8"))
+    return f"{encoded_payload}.{_sign(encoded_payload)}", payload
+
+
+def decode_live_oauth_state(state: str) -> MetaOAuthMockStatePayload:
+    try:
+        payload = decode_mock_oauth_state(state)
+    except MetaOAuthStateError as exc:
+        raise MetaOAuthStateError("Invalid live OAuth state.") from exc
+    if payload.purpose != LIVE_OAUTH_STATE_PURPOSE:
+        raise MetaOAuthStateError("Invalid live OAuth state purpose.")
+    return payload
+
+
+def validate_live_oauth_state(state: str, workspace_id: UUID, user_id: UUID, now: datetime | None = None) -> MetaOAuthMockStatePayload:
+    payload = decode_live_oauth_state(state)
+    checked_at = now or datetime.now(UTC)
+    if checked_at.tzinfo is None:
+        checked_at = checked_at.replace(tzinfo=UTC)
+    if payload.expires_at <= checked_at:
+        raise MetaOAuthStateError("Live OAuth state has expired.")
+    if payload.workspace_id != workspace_id:
+        raise MetaOAuthStateError("Live OAuth state workspace mismatch.")
+    if payload.user_id != user_id:
+        raise MetaOAuthStateError("Live OAuth state user mismatch.")
     return payload

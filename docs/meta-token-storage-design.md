@@ -54,3 +54,15 @@ Future implementation must encrypt provider tokens before database persistence, 
 ## Sprint 6A.1 environment prerequisite note
 
 Future token storage prerequisites are documented in `docs/meta-env-vars-plan.md`. Sprint 6A.1 does not add token persistence, encryption-key handling, or a `meta_ad_connections` migration.
+
+## Sprint 6B — Meta encrypted connection foundation
+
+Sprint 6B adds encrypted token storage infrastructure and connection records behind feature gates.
+
+Meta Ads API is not sync-active.
+
+Live sync, scheduled jobs, apply-sync, and Conversions API are not implemented.
+
+Real OAuth validation requires staging URLs, legal review, Meta App setup, and safe PostgreSQL runtime migration QA.
+
+Advertising remains feature-frozen and not pilot-ready.

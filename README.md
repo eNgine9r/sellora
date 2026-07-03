@@ -444,3 +444,15 @@ Prepared prerequisites:
 - Meta Developer App input pack: `docs/meta-developer-app-input-pack.md`.
 - OAuth redirect URI plan: `docs/meta-oauth-redirect-uri-plan.md`.
 - Meta environment variables plan: `docs/meta-env-vars-plan.md`.
+
+## Sprint 6B — Meta encrypted connection foundation
+
+Sprint 6B adds encrypted token storage infrastructure and connection records behind feature gates.
+
+Meta Ads API is not sync-active.
+
+Live sync, scheduled jobs, apply-sync, and Conversions API are not implemented.
+
+Real OAuth validation requires staging URLs, legal review, Meta App setup, and safe PostgreSQL runtime migration QA.
+
+Advertising remains feature-frozen and not pilot-ready.

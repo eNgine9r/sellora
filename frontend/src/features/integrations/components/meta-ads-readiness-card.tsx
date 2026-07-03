@@ -18,7 +18,7 @@ export function MetaAdsReadinessCard({ compact = false }: { compact?: boolean })
   return (
     <section
       className="grid gap-4 rounded-2xl bg-white p-5 shadow-sm dark:bg-[#15172A] dark:text-white"
-      data-meta-ads-placeholder="not-active-manual-csv-current-source"
+      data-meta-ads-placeholder="manual-import-first"
       data-meta-ads-sync-preview-enabled={String(featureGates.metaAdsSyncPreviewEnabled)}
       data-meta-ads-no-live-connection="true"
       data-meta-ads-no-apply-run="true"

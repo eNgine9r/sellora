@@ -5,6 +5,16 @@ from uuid import UUID
 
 from app.integrations.meta_ads.token_safety import assert_no_raw_token_in_response, redact_secret_fields
 
+META_ADS_LIVE_AUDIT_EVENTS = {
+    "meta_ads_status_viewed",
+    "meta_ads_connect_started",
+    "meta_ads_connect_succeeded",
+    "meta_ads_connect_failed",
+    "meta_ads_disconnected",
+    "meta_ads_permission_missing",
+    "meta_ads_token_encrypted",
+}
+
 META_ADS_MOCK_AUDIT_EVENTS = {
     "meta_ads_mock_connect_started",
     "meta_ads_mock_connect_callback_validated",
@@ -52,6 +62,31 @@ def build_meta_ads_mock_audit_event(
         workspace_id=workspace_id,
         user_id=user_id,
         outcome=outcome,
+        payload=redact_secret_fields(payload or {}),
+    )
+    assert_no_raw_token_in_response(event_stub)
+    return event_stub
+
+
+
+def build_meta_ads_live_audit_event(
+    *,
+    event: str,
+    workspace_id: UUID,
+    user_id: UUID | None,
+    outcome: str,
+    payload: dict[str, object] | None = None,
+) -> MetaAdsMockAuditEventDTO:
+    """Build a safe, redacted, non-persistent audit event stub for guarded live foundations."""
+    if event not in META_ADS_LIVE_AUDIT_EVENTS:
+        raise ValueError("Unsupported Meta Ads live audit event.")
+    event_stub = MetaAdsMockAuditEventDTO(
+        event=event,
+        provider="meta_ads",
+        workspace_id=workspace_id,
+        user_id=user_id,
+        outcome=outcome,
+        connection_mode="live_guarded",
         payload=redact_secret_fields(payload or {}),
     )
     assert_no_raw_token_in_response(event_stub)

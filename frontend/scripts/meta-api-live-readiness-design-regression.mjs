@@ -70,8 +70,8 @@ const migrationNames = migrationFiles.map((file) => path.basename(file)).join("\
 
 expect("no facebook.com redirect in application code", !/facebook\.com\/(dialog|v\d+\.\d+|oauth)/i.test(appCode));
 expect("no graph.facebook.com API call in application code", !/graph\.facebook\.com/i.test(appCode));
-expect("no live token storage implementation in application code", !/meta_ad_connections/i.test(appCode));
-expect("no meta_ad_connections migration", !/meta_ad_connections/i.test(migrationNames));
+expect("Sprint 6B token storage foundation remains gated", /META_TOKEN_STORAGE_ENABLED/i.test(appCode) && /meta_ad_connections/i.test(appCode));
+expect("meta_ad_connections migration exists only as guarded Sprint 6B foundation", /meta_ad_connections/i.test(migrationNames));
 expect("no active sync wording in app code", !/live Meta sync active|Meta Ads connected|Meta Ads API active/i.test(appCode));
 expect("no pilot-ready advertising claim", !/Advertising is pilot-ready|Advertising import is pilot-ready|Meta Ads API is pilot-ready/i.test(allDocs));
 expect("no real Meta token/account fixtures", !/EA[A-Za-z0-9]{20,}|act_\d{8,}|Authorization: Bearer\s+[A-Za-z0-9._-]+/.test(allDocs));

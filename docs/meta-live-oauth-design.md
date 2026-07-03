@@ -59,3 +59,15 @@ Sprint 6A does not add a live OAuth route, does not redirect to a real Meta OAut
 ## Sprint 6A.1 prerequisite note
 
 The future callback URI is documented in `docs/meta-oauth-redirect-uri-plan.md`. Sprint 6A.1 does not implement the route, redirect to Meta, exchange authorization codes, or store tokens.
+
+## Sprint 6B — Meta encrypted connection foundation
+
+Sprint 6B adds encrypted token storage infrastructure and connection records behind feature gates.
+
+Meta Ads API is not sync-active.
+
+Live sync, scheduled jobs, apply-sync, and Conversions API are not implemented.
+
+Real OAuth validation requires staging URLs, legal review, Meta App setup, and safe PostgreSQL runtime migration QA.
+
+Advertising remains feature-frozen and not pilot-ready.
