@@ -25,3 +25,21 @@ Meta Ads API is not active. No live OAuth, live Meta API calls, token storage, r
 | Part 6.3 — Sync Runs, Rate Limits, Errors & Retry Policy | Make sync observable and recoverable. | Sync run records, retry policy, error reporting, rate-limit handling. | No Conversions API, no automatic attribution. | Same as 6.2. | Sync run persistence, worker-safe retry boundaries. | Admin status/error panel. | Redacted errors, no secrets in logs. | Rate-limit simulation, retry tests, staging dry-run. | OWNER can understand failures safely. |
 | Part 6.4 — Staging QA & Pilot Gate | Decide whether live Meta sync can enter pilot. | Full staging QA, migration runtime QA, browser/mobile QA, rollback checklist. | No production rollout before gate. | Approved permissions only. | Operational runbook and rollback path. | Pilot-facing warnings and controls. | Synthetic/staging-only artifacts. | End-to-end staging with safe ad account. | Pilot gate signed off explicitly. |
 | Part 7/8 — Conversions API, customer event privacy, hashing and consent | Future privacy-sensitive conversion events. | Legal/privacy-reviewed event design only after live read sync is stable. | Not part of Part 6. | Future CAPI permissions if approved. | Consent, hashing, event audit, opt-out. | Privacy copy and controls. | Legal/privacy review, no raw PII. | Dedicated privacy QA. | Separate approval required. |
+
+## Sprint 6A design package
+
+Meta Ads API is not active.
+
+Sprint 6A prepares setup, security, OAuth, token storage, and QA design only. No live OAuth, no token storage, no live API calls, and no production sync were implemented.
+
+Detailed Sprint 6A references:
+
+- `docs/meta-developer-app-setup-checklist.md` — Meta Developer App and product-owner setup checklist.
+- `docs/meta-permissions-plan.md` — least-privilege permissions plan for read-only insights first.
+- `docs/meta-live-oauth-design.md` — future OWNER-only live OAuth flow and state validation contract.
+- `docs/meta-token-storage-design.md` — future encrypted token storage requirements and table shape; no migration added in Sprint 6A.
+- `docs/meta-connection-status-contract.md` — future connection status enum contract with UI-only localization.
+- `docs/meta-audit-logging-design.md` — future Meta audit events and payload safety rules.
+- `docs/meta-api-staging-qa-checklist.md` — staging QA and pilot gate checklist.
+
+Part 6 Meta API work will be handled in separate dedicated sprints. Sprint 6B may only start after official Meta requirements are re-verified, staging domains are known, legal URLs are available, and a safe non-production workspace is ready.

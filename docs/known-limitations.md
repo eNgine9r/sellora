@@ -336,3 +336,11 @@ Meta Ads API is not active.
 - Sellora Finance is operational profit analytics, not full accounting or tax reporting.
 - Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.
 - Meta Ads API is not active, and Part 6 Meta API work will be handled in separate dedicated sprints.
+
+## Sprint 6A — Meta API readiness limitations
+
+Meta Ads API is not active.
+
+Sprint 6A prepares setup, security, OAuth, token storage, and QA design only. No live OAuth, no token storage, no live API calls, no real Meta app credentials, no real ad account data, no `meta_ad_connections` migration, and no production sync were implemented.
+
+Advertising remains feature-frozen and not pilot-ready. Finance 5.x remains locally validated with runtime migration QA and browser/mobile QA blockers tracked separately.

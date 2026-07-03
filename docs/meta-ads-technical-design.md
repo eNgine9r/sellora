@@ -582,3 +582,11 @@ Manual/CSV remains the active source. Meta Ads API remains not active. Live OAut
 Part 5 may use Advertising data only as conditional manual/CSV source. Finance 5.x must not depend on live Meta OAuth, token storage, automatic attribution, apply-sync, production sync jobs, or unresolved runtime/staging QA.
 
 Sprint 4.10 runtime PostgreSQL migration QA remains pending. Sprint 4.11 browser/mobile/theme QA remains pending. Sprint 4.12 browser/mobile QA remains pending. Sprint 4.4 PostgreSQL runtime/staging/browser QA blockers remain open.
+
+## Sprint 6A — secure live-readiness design boundary
+
+Meta Ads API is not active.
+
+Sprint 6A is documentation and guardrail work only. It prepares setup, security, OAuth, token storage, and QA design; it does not add live OAuth routes, real Meta redirects, token persistence, a `meta_ad_connections` migration, live API calls, apply-sync, production sync jobs, or Conversions API.
+
+Future implementation must keep provider logic isolated, tokens encrypted and never returned to the frontend, connection records workspace-scoped, OWNER connect/disconnect enforced on the backend, and audit payloads free of raw tokens, authorization codes, customer PII, order payloads, cookies, and database URLs.

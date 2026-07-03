@@ -33,3 +33,11 @@ Finance adjustments migration has passed static Alembic chain validation, but Po
 - Reversed date ranges return a safe validation error instead of an unhandled server error.
 - Zero-denominator values remain unavailable so the UI renders `—`, not NaN or Infinity.
 - Browser/mobile QA is still pending because no browser runtime was available in this environment; static regression checks are not a substitute for screenshot QA.
+
+## Sprint 6A dependency note
+
+Meta Ads API is not active.
+
+Sprint 6A prepares setup, security, OAuth, token storage, and QA design only. No live OAuth, no token storage, no live API calls, and no production sync were implemented.
+
+Finance 5.x remains locally validated with runtime migration QA and browser/mobile QA blockers tracked separately. Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.

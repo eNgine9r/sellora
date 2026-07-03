@@ -407,3 +407,21 @@ Finance 5.x is implementation-ready and locally validated, with static Alembic v
 Finance adjustments migration has passed static Alembic validation, but PostgreSQL runtime migration QA remains pending unless a safe runtime DB validation was actually executed.
 
 Sellora Finance is operational profit analytics, not full accounting or tax reporting. Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved. Meta Ads API is not active. Part 6 Meta API work will be handled in separate dedicated sprints.
+
+## Epic Sprint 6A — Meta live readiness design
+
+Meta Ads API is not active.
+
+Sprint 6A prepares setup, security, OAuth, token storage, and QA design only. No live OAuth, no token storage, no live API calls, and no production sync were implemented.
+
+New design references:
+
+- Meta Developer App setup checklist: `docs/meta-developer-app-setup-checklist.md`.
+- Permissions plan: `docs/meta-permissions-plan.md`.
+- Live OAuth design: `docs/meta-live-oauth-design.md`.
+- Secure token storage design: `docs/meta-token-storage-design.md`.
+- Connection status contract: `docs/meta-connection-status-contract.md`.
+- Audit logging design: `docs/meta-audit-logging-design.md`.
+- Staging QA checklist: `docs/meta-api-staging-qa-checklist.md`.
+
+Advertising remains feature-frozen and not pilot-ready. Finance 5.x remains locally validated with runtime migration QA and browser/mobile QA blockers tracked separately.

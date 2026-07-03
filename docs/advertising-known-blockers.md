@@ -44,3 +44,11 @@ Finance 5B keeps Advertising frozen. Manual/CSV ad spend can be read as a condit
 ## Epic Sprint 5C dependency note
 
 Finance 5C does not change Advertising 4.x scope. Advertising remains feature-frozen and not pilot-ready. Advertising data remains a conditional manual/CSV source for Finance until runtime/staging blockers are resolved, and Meta Ads API is not active.
+
+## Sprint 6A — Meta API design blocker status
+
+Meta Ads API is not active.
+
+Sprint 6A prepares setup, security, OAuth, token storage, and QA design only. No live OAuth, no token storage, no live API calls, and no production sync were implemented.
+
+Advertising remains feature-frozen and not pilot-ready. Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.
