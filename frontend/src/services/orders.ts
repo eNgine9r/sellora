@@ -7,6 +7,7 @@ function workspaceHeaders(workspaceId?: string): HeadersInit {
 
 export type OrderCreatePayload = {
   customer_id: string | null;
+  campaign_id: string | null;
   payment_status: PaymentStatus;
   items: { product_variant_id: string; quantity: number; unit_price: number; unit_cost: number }[];
   ad_cost: number;

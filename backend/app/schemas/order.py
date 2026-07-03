@@ -16,6 +16,8 @@ class OrderItemCreate(BaseModel):
 
 class OrderCreate(BaseModel):
     customer_id: UUID | None = None
+    campaign_id: UUID | None = None
+    campaign_id: UUID | None = None
     status: OrderStatus = OrderStatus.NEW
     payment_status: PaymentStatus = PaymentStatus.PENDING
     is_historical: bool = False
@@ -77,6 +79,8 @@ class OrderResponse(BaseModel):
     workspace_id: UUID
     order_number: str
     customer_id: UUID | None
+    campaign_id: UUID | None
+    campaign_name: str | None = None
     customer_name: str | None = None
     customer_phone: str | None = None
     customer_instagram_username: str | None = None

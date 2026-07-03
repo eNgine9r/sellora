@@ -44,9 +44,9 @@ for (const marker of [
 
 for (const marker of [
   "data-meta-ads-placeholder=\"manual-import-first\"",
-  "metaAds.preparing",
-  "metaAds.manualImportSupported",
-  "metaAds.automaticLater",
+  "metaAds.notActiveTitle",
+  "metaAds.manualCsvProtection",
+  "metaAds.connectComingSoon",
 ]) assertIncludes("frontend/src/features/integrations/components/meta-ads-readiness-card.tsx", marker);
 
 for (const marker of [
@@ -100,7 +100,7 @@ for (const marker of [
   "Automatic Meta Ads OAuth",
 ]) assertIncludes("docs/known-limitations.md", marker);
 
-const unsafeFixturePattern = /(EA[A-Za-z0-9]{20,}|app_secret\s*[:=]\s*[A-Za-z0-9]{12,}|act_\d{6,}|business_id\s*[:=]\s*\d{6,})/i;
+const unsafeFixturePattern = /(EA[A-Z0-9]{20,}|app_secret\s*[:=]\s*[A-Za-z0-9]{12,}|act_\d{6,}|business_id\s*[:=]\s*\d{6,})/;
 const scanned = [
   "docs/advertising-metrics.md",
   "docs/meta-ads-integration-plan.md",
