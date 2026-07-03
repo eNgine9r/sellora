@@ -38,3 +38,17 @@ Future live routes are added under `/api/v1/integrations/meta-ads`:
 - No Conversions API.
 - No customer/order data transfer to Meta.
 - No production-ready OAuth claim.
+
+## Sprint 6C — Meta read-only discovery and sync-preview foundation
+
+Sprint 6C adds read-only discovery and sync-preview foundations only.
+
+Meta Ads API is not sync-active.
+
+No scheduled sync jobs, no apply-sync, no ad_metrics writes, no customer/order data transfer, and no Conversions API were implemented.
+
+Manual/CSV remains the active Advertising source.
+
+Advertising remains feature-frozen and not pilot-ready.
+
+Runtime/staging validation is still required before any live sync claim.

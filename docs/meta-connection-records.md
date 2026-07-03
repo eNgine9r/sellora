@@ -26,3 +26,17 @@ The table stores connection metadata, status, nullable external identifiers, and
 - Support/debugging uses a one-way token fingerprint only.
 - Disconnect clears stored encrypted token material and marks the connection `DISCONNECTED`.
 - Sync remains future work and must pass separate staging QA before activation.
+
+## Sprint 6C — Meta read-only discovery and sync-preview foundation
+
+Sprint 6C adds read-only discovery and sync-preview foundations only.
+
+Meta Ads API is not sync-active.
+
+No scheduled sync jobs, no apply-sync, no ad_metrics writes, no customer/order data transfer, and no Conversions API were implemented.
+
+Manual/CSV remains the active Advertising source.
+
+Advertising remains feature-frozen and not pilot-ready.
+
+Runtime/staging validation is still required before any live sync claim.
