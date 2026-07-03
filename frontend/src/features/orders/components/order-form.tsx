@@ -15,11 +15,13 @@ import { formatMoney } from "@/lib/currency";
 import { CustomerCreatePayload } from "@/services/crm";
 import { OrderCreatePayload } from "@/services/orders";
 import { Customer } from "@/types/crm";
+import { AdCampaign } from "@/types/advertising";
 import { Order } from "@/types/orders";
 import { Inventory, Product, ProductVariant } from "@/types/products";
 
 export type OrderFormValues = {
   customer_id?: string;
+  campaign_id?: string;
   payment_status: "PENDING" | "PAID" | "COD" | "REFUNDED";
   items: {
     product_variant_id: string;
@@ -61,6 +63,7 @@ const numberValue = (value?: string | number | null) => {
 function initialOrderValues(order?: Order | null): OrderFormValues {
   return {
     customer_id: order?.customer_id ?? undefined,
+    campaign_id: order?.campaign_id ?? undefined,
     payment_status: order?.payment_status ?? "PENDING",
     items: order?.items.length
       ? order.items.map((item) => ({
@@ -83,6 +86,7 @@ export function OrderForm({
   products = [],
   inventory = [],
   customers = [],
+  campaigns = [],
   showProfit = false,
   currencyCode = "UAH",
   initialOrder,
@@ -96,6 +100,7 @@ export function OrderForm({
   products?: Product[];
   inventory?: Inventory[];
   customers?: Customer[];
+  campaigns?: AdCampaign[];
   showProfit?: boolean;
   currencyCode?: string;
   initialOrder?: Order | null;
@@ -396,6 +401,27 @@ export function OrderForm({
           {t("orders.archiveUnavailable")}
         </p>
       ) : null}
+      <section className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/[0.04]">
+        <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+          {t("orders.campaignLabel")}
+          <select
+            className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2 dark:border-white/10 dark:bg-white/10 dark:text-white"
+            value={values.campaign_id ?? ""}
+            onChange={(event) => setValues({ ...values, campaign_id: event.target.value })}
+          >
+            <option value="">{t("orders.noCampaign")}</option>
+            {campaigns.map((campaign) => (
+              <option key={campaign.id} value={campaign.id}>
+                {campaign.name} · {campaign.platform}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+            {t("orders.campaignHelp")}
+          </span>
+        </label>
+      </section>
+
       <section className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/[0.04]">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>

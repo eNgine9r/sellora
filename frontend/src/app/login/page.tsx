@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { BrandLockup } from "@/components/brand";
 import { useAuth } from "@/hooks/use-auth";
+import { AuthNetworkError, InvalidCredentialsError } from "@/services/auth.service";
 import { useI18n } from "@/i18n/provider";
 
 export default function LoginPage() {
@@ -27,7 +28,9 @@ export default function LoginPage() {
       await login(email, password);
       router.replace("/dashboard");
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : t("auth.error"));
+      if (exc instanceof AuthNetworkError) setError(t("auth.networkError"));
+      else if (exc instanceof InvalidCredentialsError) setError(t("auth.invalidCredentials"));
+      else setError(t("auth.error"));
     } finally {
       setIsSubmitting(false);
     }
