@@ -92,3 +92,11 @@ Manual/CSV remains the active Advertising source.
 Advertising remains feature-frozen and not pilot-ready.
 
 Real staging OAuth validation, runtime migration QA, Meta App setup, legal review, and browser/mobile QA are still required before pilot-ready claims.
+
+## Sprint 6E — Runtime/Staging QA gate
+
+Sprint 6E is a QA/risk-closure sprint for the existing Meta Ads foundations.
+
+Result: **BLOCKED** because confirmed safe non-production PostgreSQL runtime migration QA, real Meta OAuth staging validation, Meta Developer App setup, legal review, staging URLs, role-specific test accounts, safe connected workspace validation, and browser/mobile staging smoke QA were unavailable.
+
+Meta Ads API is not production sync-active. Advertising remains feature-frozen and not pilot-ready. No scheduled sync jobs, no apply-sync, no ad_metrics writes, no ad_campaigns writes, no customer/order data transfer, and no Conversions API were implemented.
