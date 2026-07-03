@@ -13,6 +13,8 @@ class LeadCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
     lead_source_id: UUID | None = None
+    campaign_id: UUID | None = None
+    campaign_id: UUID | None = None
     notes: str | None = None
     assigned_user_id: UUID | None = None
     expected_revenue: Decimal | None = Field(default=None, ge=0)
@@ -57,6 +59,8 @@ class LeadResponse(BaseModel):
     name: str
     phone: str | None
     lead_source_id: UUID | None
+    campaign_id: UUID | None
+    campaign_name: str | None = None
     status: LeadStatus
     notes: str | None
     assigned_user_id: UUID | None

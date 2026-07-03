@@ -12,6 +12,7 @@ from app.models.tag import Tag
 from app.models.product import Product
 from app.models.product_variant import ProductVariant
 from app.models.import_job import ImportJob, ImportJobStatus
+from app.models.finance_adjustment import FinanceAdjustment, FinanceAdjustmentCategory, FinanceAdjustmentSource, FinanceAdjustmentType
 from app.models.integration_connection import IntegrationConnection, IntegrationProvider, IntegrationStatus
 from app.models.integration_credential import IntegrationCredential
 from app.models.import_job_log import ImportJobLog, ImportJobLogStatus
@@ -27,5 +28,6 @@ from app.models.shipment import Shipment, ShipmentCarrier, ShipmentStatus
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_user import WorkspaceUser
+from app.models.meta_ad_connection import MetaAdConnection, MetaAdConnectionStatus
 
-__all__ = ["AdCampaign", "AdCampaignBudgetType", "AdCampaignObjective", "AdCampaignPlatform", "AdCampaignStatus", "AdMetric", "Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "ImportJob", "ImportJobLog", "ImportJobLogStatus", "ImportJobStatus", "IntegrationConnection", "IntegrationCredential", "IntegrationProvider", "IntegrationStatus", "LeadStatus", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "PilotFeedback", "PilotFeedbackCategory", "PilotFeedbackStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "Shipment", "ShipmentCarrier", "ShipmentStatus", "User", "Workspace", "WorkspaceUser"]
+__all__ = ["FinanceAdjustment", "FinanceAdjustmentCategory", "FinanceAdjustmentSource", "FinanceAdjustmentType", "AdCampaign", "AdCampaignBudgetType", "AdCampaignObjective", "AdCampaignPlatform", "AdCampaignStatus", "AdMetric", "MetaAdConnection", "MetaAdConnectionStatus", "Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "ImportJob", "ImportJobLog", "ImportJobLogStatus", "ImportJobStatus", "IntegrationConnection", "IntegrationCredential", "IntegrationProvider", "IntegrationStatus", "LeadStatus", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "PilotFeedback", "PilotFeedbackCategory", "PilotFeedbackStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "Shipment", "ShipmentCarrier", "ShipmentStatus", "User", "Workspace", "WorkspaceUser"]
