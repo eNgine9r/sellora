@@ -425,3 +425,22 @@ New design references:
 - Staging QA checklist: `docs/meta-api-staging-qa-checklist.md`.
 
 Advertising remains feature-frozen and not pilot-ready. Finance 5.x remains locally validated with runtime migration QA and browser/mobile QA blockers tracked separately.
+
+## Sprint 6A.1 — Meta app prerequisites and legal URLs
+
+Meta Ads API is not active.
+
+Sprint 6A.1 prepares legal URLs, staging URL inventory, Meta App input pack, OAuth redirect URI planning, and environment variable planning only.
+
+No live OAuth, no token storage, no live API calls, and no production sync were implemented.
+
+Legal pages are MVP drafts and require legal review before production launch or Meta App Review submission.
+
+Prepared prerequisites:
+
+- Public draft legal pages: `/legal/privacy`, `/legal/terms`, and `/legal/data-deletion`.
+- Legal URL readiness: `docs/legal-url-readiness.md`.
+- Staging URL inventory: `docs/staging-url-inventory.md`.
+- Meta Developer App input pack: `docs/meta-developer-app-input-pack.md`.
+- OAuth redirect URI plan: `docs/meta-oauth-redirect-uri-plan.md`.
+- Meta environment variables plan: `docs/meta-env-vars-plan.md`.

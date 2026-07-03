@@ -405,3 +405,11 @@ Meta Ads API is not active.
 Sprint 6A prepares setup, security, OAuth, token storage, and QA design only. No live OAuth, no token storage, no live API calls, and no production sync were implemented.
 
 Advertising remains feature-frozen and not pilot-ready. Finance 5.x remains locally validated with runtime migration QA and browser/mobile QA blockers tracked separately.
+
+## Sprint 6A.1 — Meta OAuth prerequisite readiness
+
+Meta Ads API is not active.
+
+Sprint 6A.1 prepares legal URLs, staging URL inventory, Meta App input pack, OAuth redirect URI planning, and environment variable planning only. No live OAuth, no token storage, no live API calls, and no production sync were implemented.
+
+Legal pages are MVP drafts and require legal review before production launch or Meta App Review submission. Advertising remains feature-frozen and not pilot-ready.

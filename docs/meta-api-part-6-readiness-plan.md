@@ -43,3 +43,11 @@ Detailed Sprint 6A references:
 - `docs/meta-api-staging-qa-checklist.md` — staging QA and pilot gate checklist.
 
 Part 6 Meta API work will be handled in separate dedicated sprints. Sprint 6B may only start after official Meta requirements are re-verified, staging domains are known, legal URLs are available, and a safe non-production workspace is ready.
+
+## Sprint 6A.1 prerequisite package
+
+Meta Ads API is not active.
+
+Sprint 6A.1 prepares legal URLs, staging URL inventory, Meta App input pack, OAuth redirect URI planning, and environment variable planning only. No live OAuth, no token storage, no live API calls, and no production sync were implemented.
+
+Sprint 6B should not begin implementation until the legal URLs, staging URL inventory, redirect URI plan, Meta Developer App inputs, and server-only environment variable plan are completed and reviewed.

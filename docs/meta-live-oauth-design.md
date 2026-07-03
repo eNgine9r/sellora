@@ -55,3 +55,7 @@ Sprint 6A does not add a live OAuth route, does not redirect to a real Meta OAut
 
 - Meta Login manual flow guide: https://developers.facebook.com/documentation/facebook-login/guides/advanced/manual-flow
 - Meta Login security guide: https://developers.facebook.com/documentation/facebook-login/security
+
+## Sprint 6A.1 prerequisite note
+
+The future callback URI is documented in `docs/meta-oauth-redirect-uri-plan.md`. Sprint 6A.1 does not implement the route, redirect to Meta, exchange authorization codes, or store tokens.

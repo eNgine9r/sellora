@@ -88,6 +88,11 @@
     "title": "Interface language",
     "description": "Choose the Sellora interface language. API values and database statuses are not changed."
   },
+  "legalLinks": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "dataDeletion": "Data Deletion"
+  },
   "theme": {
     "system": "System theme",
     "light": "Light theme",

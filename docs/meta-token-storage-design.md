@@ -50,3 +50,7 @@ meta_ad_connections:
 ## Encryption and redaction expectations
 
 Future implementation must encrypt provider tokens before database persistence, return only masked connection metadata to the frontend, and include automated tests proving raw tokens do not appear in API responses, logs, audit payloads, fixtures, or documentation.
+
+## Sprint 6A.1 environment prerequisite note
+
+Future token storage prerequisites are documented in `docs/meta-env-vars-plan.md`. Sprint 6A.1 does not add token persistence, encryption-key handling, or a `meta_ad_connections` migration.

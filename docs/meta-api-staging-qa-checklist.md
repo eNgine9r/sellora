@@ -33,3 +33,9 @@ Sprint 6A prepares a future staging QA checklist only. No live OAuth, no token s
 Meta Ads API cannot be called pilot-ready until OAuth, token storage, read-only sync, staging QA, workspace isolation QA, browser/mobile QA, and safety scans pass.
 
 Advertising remains feature-frozen and not pilot-ready until the existing Advertising runtime/staging blockers are closed.
+
+## Sprint 6A.1 staging prerequisites
+
+Use `docs/staging-url-inventory.md` as the source for public staging URL placeholders and `docs/meta-oauth-redirect-uri-plan.md` for future OAuth callback planning.
+
+Do not include private staging credentials, DATABASE_URL values, access tokens, app secrets, or token encryption keys in docs, code, screenshots, or PR text.

@@ -36,3 +36,9 @@ No real Meta app credentials, client secrets, app secrets, ad account IDs, busin
 - Meta App Review tutorial: https://developers.facebook.com/documentation/resp-plat-initiatives/appreview/tutorial
 - Meta Login manual flow guide: https://developers.facebook.com/documentation/facebook-login/guides/advanced/manual-flow
 - Meta Login security guide: https://developers.facebook.com/documentation/facebook-login/security
+
+## Sprint 6A.1 required inputs
+
+Before Sprint 6B implementation, complete `docs/meta-developer-app-input-pack.md`, confirm the public legal URLs from `docs/legal-url-readiness.md`, and verify staging values from `docs/staging-url-inventory.md`.
+
+Legal pages are MVP drafts and require legal review before production launch or Meta App Review submission.
