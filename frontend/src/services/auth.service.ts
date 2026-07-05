@@ -1,7 +1,22 @@
 import { normalizeWorkspaceId } from "@/lib/workspace";
 import { CurrentUser, TokenPair, WorkspaceMembership } from "@/types/auth";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const DEV_API_BASE_URL = "http://localhost:8000/api/v1";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? (process.env.NODE_ENV === "production" ? "/api/v1" : DEV_API_BASE_URL);
+
+export class AuthNetworkError extends Error {
+  constructor() {
+    super("AUTH_NETWORK_UNAVAILABLE");
+    this.name = "AuthNetworkError";
+  }
+}
+
+export class InvalidCredentialsError extends Error {
+  constructor() {
+    super("AUTH_INVALID_CREDENTIALS");
+    this.name = "InvalidCredentialsError";
+  }
+}
 
 const ACCESS_TOKEN_KEY = "sellora.access_token";
 const REFRESH_TOKEN_KEY = "sellora.refresh_token";
@@ -65,13 +80,18 @@ export const authStorage = {
 };
 
 export async function loginWithPassword(email: string, password: string): Promise<TokenPair> {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new AuthNetworkError();
+  }
   if (!response.ok) {
-    throw new Error("Invalid email or password");
+    throw new InvalidCredentialsError();
   }
   return response.json() as Promise<TokenPair>;
 }
