@@ -492,3 +492,15 @@ Sprint 6E is a QA/risk-closure sprint for the existing Meta Ads foundations.
 Result: **BLOCKED** because confirmed safe non-production PostgreSQL runtime migration QA, real Meta OAuth staging validation, Meta Developer App setup, legal review, staging URLs, role-specific test accounts, safe connected workspace validation, and browser/mobile staging smoke QA were unavailable.
 
 Meta Ads API is not production sync-active. Advertising remains feature-frozen and not pilot-ready. No scheduled sync jobs, no apply-sync, no ad_metrics writes, no ad_campaigns writes, no customer/order data transfer, and no Conversions API were implemented.
+
+## Sprint Admin Roles & Users
+
+Sprint Admin Roles & Users adds multi-workspace MVP, workspace switcher, workspace settings, and team management. OWNER can create and manage workspace/team. MANAGER and ANALYST cannot manage workspace/team. User can belong to multiple workspaces. Deactivation is workspace-level through workspace_user.is_active=false. Email invitations, password reset, billing, super admin, and audit log UI remain out of scope.
+
+## Topbar profile/mobile overlay cleanup
+
+Workspace and user actions were moved into safer profile/mobile overlay menus to avoid header overflow and clipped dropdowns.
+
+## Sprint 7A SaaS admin workspace QA
+
+Sprint 7A adds a QA report for SaaS admin workspace flows and stabilizes the empty-workspace onboarding path. Staging runtime QA remains pending when the staging URLs are not reachable from the validation environment.
