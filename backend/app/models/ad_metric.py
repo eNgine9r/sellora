@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import Date, ForeignKey, Integer, Numeric, UniqueConstraint
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,5 +25,11 @@ class AdMetric(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Times
     orders: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     revenue: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     net_profit: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
+    source_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    external_source: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    external_account_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    external_campaign_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sync_run_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
 
     campaign = relationship("AdCampaign", back_populates="metrics")

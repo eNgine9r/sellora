@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { BrandLockup } from "@/components/brand";
 import { useAuth } from "@/hooks/use-auth";
+import { AuthNetworkError, InvalidCredentialsError } from "@/services/auth.service";
 import { useI18n } from "@/i18n/provider";
 
 export default function LoginPage() {
@@ -27,7 +28,9 @@ export default function LoginPage() {
       await login(email, password);
       router.replace("/dashboard");
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : t("auth.error"));
+      if (exc instanceof AuthNetworkError) setError(t("auth.networkError"));
+      else if (exc instanceof InvalidCredentialsError) setError(t("auth.invalidCredentials"));
+      else setError(t("auth.error"));
     } finally {
       setIsSubmitting(false);
     }
@@ -57,7 +60,7 @@ export default function LoginPage() {
           <label className="mt-4 grid gap-2 text-sm font-bold text-slate-700">{t("auth.password")}<input className="min-h-12 w-full min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
           {error || authError ? <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error ?? authError}</p> : null}
           <button className="mt-6 min-h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#6D28D9_0%,#EC4899_55%,#F97316_100%)] px-4 py-3 font-black text-white shadow-lg shadow-pink-500/20 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70" type="submit" disabled={isSubmitting}>{isSubmitting ? t("auth.loading") : t("auth.login")}</button>
-          <p className="mt-5 text-center text-xs text-slate-500">{t("language.description")}</p>
+          <p className="mt-5 text-center text-xs text-slate-500">{t("language.description")}</p><div className="mt-4 flex flex-wrap justify-center gap-3 text-xs font-semibold text-slate-500"><Link className="hover:text-slate-900" href="/legal/privacy">{t("legalLinks.privacy")}</Link><Link className="hover:text-slate-900" href="/legal/terms">{t("legalLinks.terms")}</Link><Link className="hover:text-slate-900" href="/legal/data-deletion">{t("legalLinks.dataDeletion")}</Link></div>
         </form>
       </section>
     </main>
