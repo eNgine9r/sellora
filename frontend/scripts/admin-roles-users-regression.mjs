@@ -8,7 +8,7 @@ const checks = [
   ["workspace switcher exists", "frontend/src/components/workspace-switcher.tsx"],
 ];
 const requiredText = [
-  ["create workspace UI exists", "frontend/src/components/workspace-switcher.tsx", "Створити робочий простір"],
+  ["create workspace UI exists", "frontend/src/i18n/messages/uk.json", "Створити робочий простір"],
   ["add user modal exists", "frontend/src/app/settings/team/page.tsx", "Додати користувача"],
   ["role labels OWNER/MANAGER/ANALYST exist", "frontend/src/services/workspaces.ts", "OWNER"],
   ["duplicate user Ukrainian error exists", "backend/app/services/workspace_service.py", "Користувач уже доданий до команди."],
