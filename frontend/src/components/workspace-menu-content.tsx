@@ -29,7 +29,6 @@ export function WorkspaceMenuContent({ memberships, currentWorkspaceId, labels, 
     mutationFn: () => createWorkspace({ name, slug, currency_code: "UAH", timezone: "Europe/Kyiv" }),
     onSuccess: async (workspace) => {
       authStorage.setCurrentWorkspaceId(workspace.id);
-      onSwitchWorkspace(workspace.id);
       setName("");
       setSlug("");
       setError(null);

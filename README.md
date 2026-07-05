@@ -500,3 +500,7 @@ Sprint Admin Roles & Users adds multi-workspace MVP, workspace switcher, workspa
 ## Topbar profile/mobile overlay cleanup
 
 Workspace and user actions were moved into safer profile/mobile overlay menus to avoid header overflow and clipped dropdowns.
+
+## Sprint 7A SaaS admin workspace QA
+
+Sprint 7A adds a QA report for SaaS admin workspace flows and stabilizes the empty-workspace onboarding path. Staging runtime QA remains pending when the staging URLs are not reachable from the validation environment.

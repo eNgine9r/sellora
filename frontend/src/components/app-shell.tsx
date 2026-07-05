@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
+import { NoWorkspaceOnboarding } from "@/components/no-workspace-onboarding";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useI18n } from "@/i18n/provider";
@@ -74,7 +75,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           onWorkspaceCreated={reloadCurrentUser}
         />
         {error ? <p className="mx-4 mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 md:mx-6">{error}</p> : null}
-        {children}
+        {!currentWorkspaceId ? <NoWorkspaceOnboarding onWorkspaceCreated={reloadCurrentUser} onSwitchWorkspace={switchWorkspace} /> : children}
       </div>
       {mobileMenuOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">

@@ -1540,6 +1540,8 @@
     "slug": "Slug / short name",
     "creating": "Creating…",
     "emptyWorkspace": "You do not have a workspace yet. Create your first shop to start using Sellora.",
-    "createWorkspaceError": "Unable to create workspace."
+    "createWorkspaceError": "Unable to create workspace.",
+    "emptyWorkspaceTitle": "You do not have a workspace yet.",
+    "emptyWorkspaceDescription": "Create your first shop to start using Sellora."
   }
 }

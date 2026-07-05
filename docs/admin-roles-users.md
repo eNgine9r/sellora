@@ -15,3 +15,7 @@ Email invitations, password reset, billing, super admin, and audit log UI remain
 ## Topbar overlay UX follow-up
 
 Workspace and user actions were moved into safer profile/mobile overlay menus to avoid header overflow and clipped dropdowns.
+
+## Sprint 7A stabilization note
+
+The no-workspace onboarding path now keeps authenticated users in the app and offers first-workspace creation instead of treating missing memberships as an unauthenticated session.

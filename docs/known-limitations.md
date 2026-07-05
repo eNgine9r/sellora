@@ -411,3 +411,9 @@ Meta Ads API is not production sync-active. Advertising remains feature-frozen a
 - Organization-level super admin is not implemented.
 - Audit log UI is not implemented.
 - Reactivation of inactive workspace user is future work.
+
+## Sprint 7A pending QA
+
+- Staging runtime QA must be completed from an environment that can reach the Vercel and Render staging URLs.
+- PostgreSQL runtime migration QA for `202607050019_admin_roles_users` remains pending on a safe non-production database.
+- Manual mobile checks at 375px, 390px, 430px, and 768px remain required.
