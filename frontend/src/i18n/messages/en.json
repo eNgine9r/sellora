@@ -1523,5 +1523,25 @@
       "net_profit": "Net profit"
     },
     "adjustmentsLoadError": "Could not load adjustments. Please try again."
+  },
+  "accountMenu": {
+    "profile": "Profile",
+    "user": "User",
+    "workspace": "Workspace",
+    "currentWorkspace": "Current workspace",
+    "switchWorkspace": "Switch workspace",
+    "createWorkspace": "Create workspace",
+    "settings": "Settings",
+    "team": "Team",
+    "more": "More",
+    "close": "Close",
+    "quickActions": "Quick actions",
+    "storeName": "Store name",
+    "slug": "Slug / short name",
+    "creating": "Creating…",
+    "emptyWorkspace": "You do not have a workspace yet. Create your first shop to start using Sellora.",
+    "createWorkspaceError": "Unable to create workspace.",
+    "emptyWorkspaceTitle": "You do not have a workspace yet.",
+    "emptyWorkspaceDescription": "Create your first shop to start using Sellora."
   }
 }

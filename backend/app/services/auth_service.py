@@ -57,6 +57,6 @@ class AuthService:
                     currency_code=getattr(membership.workspace, "currency_code", "UAH"),
                 )
                 for membership in user.workspaces
-                if membership.workspace.is_active
+                if membership.workspace.is_active and getattr(membership, "is_active", True)
             ],
         )

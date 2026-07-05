@@ -1523,5 +1523,25 @@
       "net_profit": "Чистий прибуток"
     },
     "adjustmentsLoadError": "Не вдалося завантажити коригування. Спробуйте ще раз."
+  },
+  "accountMenu": {
+    "profile": "Профіль",
+    "user": "Користувач",
+    "workspace": "Робочий простір",
+    "currentWorkspace": "Поточний робочий простір",
+    "switchWorkspace": "Змінити робочий простір",
+    "createWorkspace": "Створити робочий простір",
+    "settings": "Налаштування",
+    "team": "Команда",
+    "more": "Більше",
+    "close": "Закрити",
+    "quickActions": "Швидкі дії",
+    "storeName": "Назва магазину",
+    "slug": "Slug / коротка назва",
+    "creating": "Створення…",
+    "emptyWorkspace": "У вас ще немає робочого простору. Створіть перший магазин, щоб почати роботу в Sellora.",
+    "createWorkspaceError": "Не вдалося створити робочий простір.",
+    "emptyWorkspaceTitle": "У вас ще немає робочого простору.",
+    "emptyWorkspaceDescription": "Створіть перший магазин, щоб почати роботу в Sellora."
   }
 }
