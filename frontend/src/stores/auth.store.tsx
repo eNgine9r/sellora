@@ -105,8 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const switchWorkspace = useCallback((workspaceId: string) => {
     const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
-    const workspace = currentUser?.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id) === normalizedWorkspaceId);
-    if (!workspace || !normalizedWorkspaceId) return;
+    if (!normalizedWorkspaceId) return;
     authStorage.setCurrentWorkspaceId(normalizedWorkspaceId);
     setCurrentWorkspaceId(normalizedWorkspaceId);
   }, [currentUser]);
