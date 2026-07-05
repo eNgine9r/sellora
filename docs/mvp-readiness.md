@@ -473,3 +473,7 @@ Workspace and user actions were moved into safer profile/mobile overlay menus to
 ## Sprint 7A SaaS Admin Workspace QA
 
 Sprint 7A adds a SaaS admin QA report and stabilizes the no-workspace onboarding path so authenticated users without active memberships can create their first workspace instead of being redirected as unauthenticated. Staging runtime QA remains pending where network access is blocked.
+
+## Sprint 7A.1 manual staging QA closure
+
+Sprint 7A.1 documents the remaining manual staging QA closure requirements for SaaS admin workspace flows. Full approval is blocked until staging role/workspace/team/mobile QA can be completed from an environment that can reach the Vercel and Render staging URLs.

@@ -19,3 +19,7 @@ Workspace and user actions were moved into safer profile/mobile overlay menus to
 ## Sprint 7A stabilization note
 
 The no-workspace onboarding path now keeps authenticated users in the app and offers first-workspace creation instead of treating missing memberships as an unauthenticated session.
+
+## Sprint 7A.1 QA closure note
+
+Manual staging QA closure remains blocked from this validation container because the staging frontend and backend cannot be reached through the proxy. No test passwords are documented.

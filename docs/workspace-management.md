@@ -11,3 +11,7 @@ Workspace and user actions were moved into safer profile/mobile overlay menus to
 ## Sprint 7A stabilization note
 
 Workspace switching is constrained to active memberships already loaded for the authenticated user. First-workspace creation remains available from the onboarding/profile workspace menu.
+
+## Sprint 7A.1 QA closure note
+
+Workspace creation, switching, settings, team management, and data isolation require final manual staging validation from an environment with access to the staging URLs.

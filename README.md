@@ -504,3 +504,7 @@ Workspace and user actions were moved into safer profile/mobile overlay menus to
 ## Sprint 7A SaaS admin workspace QA
 
 Sprint 7A adds a QA report for SaaS admin workspace flows and stabilizes the empty-workspace onboarding path. Staging runtime QA remains pending when the staging URLs are not reachable from the validation environment.
+
+## Sprint 7A.1 manual staging QA closure
+
+Sprint 7A.1 adds a manual staging QA closure report for SaaS admin workspace flows. Full approval remains blocked until staging can be accessed for OWNER/MANAGER/ANALYST role QA, workspace/team flows, mobile overlay checks, data isolation, and safe runtime migration validation.
