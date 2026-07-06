@@ -161,6 +161,8 @@ export default function DashboardPage() {
         <SetupChecklist items={setupItems} />
         {isFirstRun ? <EmptyState title={t("firstRun.empty.title")} description={t("firstRun.empty.description")} action={<FirstRunEmptyCtas />} /> : null}
 
+        <p className="rounded-2xl border border-violet-100 bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm dark:border-white/10 dark:bg-[#15172A] dark:text-slate-200">{t("dashboard.periodHelper")}</p>
+
         <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <KpiCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={t("dashboard.tooltips.revenue")} trend={formatDeltaPercent(totalRevenue, previousRevenue)} />
           <KpiCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? formatMoney(netProfit, currencyCode) : t("dashboard.restricted")} helper={t("dashboard.tooltips.netProfit")} trend={canSeeProfit ? formatDeltaPercent(netProfit, previousProfit) : undefined} />

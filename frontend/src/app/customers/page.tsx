@@ -9,6 +9,7 @@ import { FormDialog } from "@/components/form-dialog";
 import { CustomerDetails } from "@/features/customers/components/customer-details";
 import { CustomerForm } from "@/features/customers/components/customer-form";
 import { CustomerTable } from "@/features/customers/components/customer-table";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import {
   addAttachment,
   addCustomerAddress,
@@ -119,6 +120,8 @@ export default function CustomersPage() {
     if (customerSort === "nameDesc") return right.name.localeCompare(left.name);
     return right.created_at.localeCompare(left.created_at);
   }), [customersQuery.data, customerSort]);
+  const hasActiveFilters = Boolean(search.trim());
+  const customersError = customersQuery.isError ? safeApiErrorMessage(customersQuery.error, t("customers.loadError")) : null;
 
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 sm:p-6 text-slate-950">
@@ -140,17 +143,26 @@ export default function CustomersPage() {
           <ResetFiltersButton onClick={() => { setSearch(""); setCustomerSort("newest"); }} />
         </FilterBar>
 
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_380px]">
+        {customersQuery.isLoading ? <LoadingSkeleton rows={5} title={t("customers.loading")} /> : null}
+        {customersError ? <ErrorState title={t("customers.loadError")} description={customersError} onRetry={() => void customersQuery.refetch()} /> : null}
+        {!customersError && customersQuery.isSuccess && visibleCustomers.length === 0 ? (
+          <EmptyState
+            title={hasActiveFilters ? t("customers.filteredEmptyTitle") : t("customers.emptyTitle")}
+            description={hasActiveFilters ? t("customers.filteredEmptyDescription") : t("customers.emptyDescription")}
+            action={<button className="min-h-11 rounded-2xl bg-blue-600 px-4 text-sm font-black text-white" onClick={() => setIsCreateOpen(true)}>{t("customers.create")}</button>}
+          />
+        ) : null}
+        {!customersError && visibleCustomers.length > 0 ? <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_380px]">
           <CustomerTable customers={visibleCustomers} currencyCode={currentWorkspace?.currency_code ?? "UAH"} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} />
           {selectedCustomer ? (
             <div className="grid min-w-0 gap-3">
               {canEdit ? (
                 <div className="grid min-w-0 gap-2 sm:grid-cols-2">
                   <button className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700" onClick={() => setEditingCustomer(selectedCustomer)}>
-                    Edit customer
+                    {t("customers.edit")}
                   </button>
                   <button className="min-h-11 rounded-lg border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700" onClick={() => setArchivingCustomer(selectedCustomer)}>
-                    Archive customer
+                    {t("customers.archive")}
                   </button>
                 </div>
               ) : null}
@@ -161,6 +173,7 @@ export default function CustomersPage() {
                 notes={notesQuery.data ?? []}
                 addresses={addressesQuery.data ?? []}
                 attachments={attachmentsQuery.data ?? []}
+                currencyCode={currentWorkspace?.currency_code ?? "UAH"}
                 onAddTag={(tagId) => addTagMutation.mutate(tagId)}
                 onAddNote={(note) => addNoteMutation.mutate(note)}
                 onAddAddress={(addressLine1, isDefault) => addAddressMutation.mutate({ addressLine1, isDefault })}
@@ -172,19 +185,19 @@ export default function CustomersPage() {
               {t("customers.selectPrompt")}
             </aside>
           )}
-        </div>
+        </div> : null}
 
         {isCreateOpen ? (
-          <FormDialog title={t("customers.create")} description="Add customer profile details without pushing the CRM list below the fold." onClose={() => setIsCreateOpen(false)}>
+          <FormDialog title={t("customers.create")} description={t("customers.createDescription")} onClose={() => setIsCreateOpen(false)}>
             <CustomerForm
               isSubmitting={createMutation.isPending}
-              submitError={createMutation.isError ? safeApiErrorMessage(createMutation.error, "Unable to create customer. Please try again.") : null}
+              submitError={createMutation.isError ? safeApiErrorMessage(createMutation.error, t("customers.createFailed")) : null}
               onSubmit={(values) => createMutation.mutate(values)}
             />
           </FormDialog>
         ) : null}
-        {archivingCustomer ? <ConfirmActionDialog title="Archive customer?" description="This customer profile will be hidden from active CRM lists. Historical orders and shipments remain unchanged." actionLabel={t("customers.archive")} isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingCustomer(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
-        {editingCustomer ? <EditRecordDialog title={t("customers.edit")} fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "city", label: "City" }, { name: "region", label: "Region" }]} initialValues={editingCustomer} isSubmitting={updateMutation.isPending} submitError={updateMutation.isError ? safeApiErrorMessage(updateMutation.error, "Unable to save customer changes. Please try again.") : null} onClose={() => setEditingCustomer(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
+        {archivingCustomer ? <ConfirmActionDialog title={t("customers.archiveTitle")} description={t("customers.archiveDescription")} actionLabel={t("customers.archive")} isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, t("customers.deleteFailed")) : null} onCancel={() => setArchivingCustomer(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
+        {editingCustomer ? <EditRecordDialog title={t("customers.edit")} fields={[{ name: "name", label: t("tables.name") }, { name: "phone", label: t("tables.phone") }, { name: "instagram_username", label: t("tables.instagram") }, { name: "city", label: t("shipments.city") }, { name: "region", label: t("customers.region") }]} initialValues={editingCustomer} isSubmitting={updateMutation.isPending} submitError={updateMutation.isError ? safeApiErrorMessage(updateMutation.error, t("customers.saveFailed")) : null} onClose={() => setEditingCustomer(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
       </div>
     </main>
   );

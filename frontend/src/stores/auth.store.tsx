@@ -39,9 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null);
       setStatus("authenticated");
     } else {
+      authStorage.setCurrentWorkspaceId(null);
       setCurrentWorkspaceId(null);
-      setError("Your account is not assigned to an active workspace yet.");
-      setStatus("unauthenticated");
+      setError("У вас ще немає робочого простору. Створіть перший магазин, щоб почати роботу в Sellora.");
+      setStatus("authenticated");
     }
   }, []);
 
@@ -75,7 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCurrentUser(storedUser);
       if (normalizedWorkspaceId) authStorage.setCurrentWorkspaceId(normalizedWorkspaceId);
       setCurrentWorkspaceId(normalizedWorkspaceId);
-      setStatus(normalizedWorkspaceId ? "authenticated" : "loading");
+      setStatus("authenticated");
+      if (!normalizedWorkspaceId) setError("У вас ще немає робочого простору. Створіть перший магазин, щоб почати роботу в Sellora.");
       void reloadCurrentUser().catch(() => {
         authStorage.clear();
         setCurrentUser(null);
@@ -109,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!workspace || !normalizedWorkspaceId) return;
     authStorage.setCurrentWorkspaceId(normalizedWorkspaceId);
     setCurrentWorkspaceId(normalizedWorkspaceId);
+    setError(null);
   }, [currentUser]);
 
   const currentWorkspace = useMemo(() => currentUser?.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id) === currentWorkspaceId) ?? null, [currentUser, currentWorkspaceId]);
