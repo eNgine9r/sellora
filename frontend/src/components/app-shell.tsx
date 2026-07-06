@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
+import { NoWorkspaceOnboarding } from "@/components/no-workspace-onboarding";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useI18n } from "@/i18n/provider";
@@ -35,7 +36,7 @@ function isProtectedPath(pathname: string) {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { status, currentUser, currentWorkspace, currentWorkspaceId, error, logout, switchWorkspace } = useAuth();
+  const { status, currentUser, currentWorkspace, currentWorkspaceId, error, logout, switchWorkspace, reloadCurrentUser } = useAuth();
   const { t } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const protectedPath = isProtectedPath(pathname);
@@ -71,9 +72,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           onOpenMenu={() => setMobileMenuOpen(true)}
           onLogout={handleLogout}
           onSwitchWorkspace={switchWorkspace}
+          onWorkspaceCreated={reloadCurrentUser}
         />
         {error ? <p className="mx-4 mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 md:mx-6">{error}</p> : null}
-        {children}
+        {!currentWorkspaceId ? <NoWorkspaceOnboarding onWorkspaceCreated={reloadCurrentUser} onSwitchWorkspace={switchWorkspace} /> : children}
       </div>
       {mobileMenuOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">

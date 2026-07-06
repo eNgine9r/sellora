@@ -19,7 +19,11 @@
     "created": "Created",
     "draft": "Draft",
     "saving": "Saving…",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "loadingWorkspace": "Preparing your workspace…",
+    "workspaceUnavailable": "Workspace unavailable",
+    "workspaceUnavailableDescription": "Workspace is not ready yet. Refresh the page or select another workspace.",
+    "retry": "Try again"
   },
   "actions": {
     "create": "Create",
@@ -207,11 +211,15 @@
       "leads": "Leads",
       "orders": "Orders",
       "cpa": "CPA",
-      "cpl": "CPL"
+      "cpl": "CPL",
+      "ownerTitle": "Advertising",
+      "ownerSubtitle": "Evaluate spend, orders, and ad return for the selected period.",
+      "emptyTitle": "No advertising data in the selected period yet.",
+      "emptyDescription": "Add ad metrics manually or import CSV to see ROAS and CPA."
     },
     "recentOrders": {
       "title": "Recent orders",
-      "subtitle": "Latest customer purchases and fulfillment state."
+      "subtitle": "Latest created orders regardless of selected period, so period KPI values are not confused with history."
     },
     "topProducts": {
       "title": "Top products",
@@ -253,7 +261,12 @@
       "lowStock": "Low stock",
       "outOfStock": "Out of stock",
       "stockUnits": "Stock units",
-      "healthy": "Inventory looks healthy"
+      "healthy": "Inventory looks healthy",
+      "ownerTitle": "Products and stock",
+      "ownerSubtitle": "Low-stock and out-of-stock alerts.",
+      "emptyTitle": "No product data yet.",
+      "emptyDescription": "Add products or import a catalog to see stock and alerts.",
+      "lowStockHelp": "{count} products need restocking."
     },
     "tooltips": {
       "revenue": "Revenue follows the existing analytics service totals for the selected period.",
@@ -298,7 +311,89 @@
     "comparison": {
       "noData": "No comparison data"
     },
-    "analytics": "Analytics overview"
+    "analytics": "Analytics overview",
+    "periodHelper": "Metrics are calculated for the selected period: {period}. If there were no orders in this period, KPI values may be zero.",
+    "ownerContext": {
+      "question": "What needs attention today?",
+      "abbreviations": "ROAS — ad return · CPA — cost per order · AOV — average order value."
+    },
+    "kpiHelpers": {
+      "ordersHasData": "Orders for period: {period}.",
+      "ordersZero": "No orders in the selected period yet.",
+      "revenueHasData": "Revenue for period: {period}.",
+      "revenueZero": "Revenue appears after paid or completed orders.",
+      "profitMissing": "Not enough data to calculate profit. Check product costs.",
+      "profitRestricted": "Profit is available to owners or analysts.",
+      "roasHasData": "ROAS shows ad return for the selected period.",
+      "roasMissing": "Add ad spend to see advertising return."
+    },
+    "ownerAlerts": {
+      "title": "What needs attention",
+      "subtitle": "Actions are computed from this workspace data, without fake insights.",
+      "allClear": "No critical actions right now. Check leads, orders, or ad metrics to grow.",
+      "lowStock": {
+        "title": "Low stock: {count}",
+        "description": "Restock products to avoid missed sales."
+      },
+      "awaitingShipment": {
+        "title": "Orders awaiting shipment: {count}",
+        "description": "Confirmed orders have not shipped yet."
+      },
+      "profitMissing": {
+        "title": "Not enough profit data",
+        "description": "Some sales may be missing costs, expenses, or ad data."
+      },
+      "noAds": {
+        "title": "No advertising data yet",
+        "description": "Add ad metrics manually or import CSV to see ROAS and CPA."
+      },
+      "noPeriodData": {
+        "title": "No data in selected period",
+        "description": "Create a lead or order to make the dashboard useful."
+      }
+    },
+    "ownerActions": {
+      "openInventory": "Open inventory",
+      "openOrders": "Open orders",
+      "openProducts": "Open products",
+      "openAdvertising": "Open advertising",
+      "openFinance": "Open finance",
+      "createLead": "Create lead"
+    },
+    "funnel": {
+      "title": "Sales funnel",
+      "subtitle": "Shows the path from request to delivered order for the selected period.",
+      "leads": "Leads",
+      "orders": "Orders",
+      "delivered": "Delivered",
+      "leadsHelp": "Requests created in this period.",
+      "orderRate": "Lead conversion: {rate}%",
+      "deliveryRate": "Delivered from orders: {rate}%",
+      "noRate": "Not enough data for a rate.",
+      "emptyTitle": "Not enough data for the funnel",
+      "emptyDescription": "Create leads and orders to see conversion."
+    },
+    "fulfillment": {
+      "title": "Order fulfillment state",
+      "subtitle": "Shows what needs confirmation, shipment, or review.",
+      "newHelp": "New requests need confirmation.",
+      "confirmedHelp": "Confirmed orders should move to shipment.",
+      "shippedHelp": "Shipped orders are awaiting delivery.",
+      "returnedCancelled": "Returns / cancellations"
+    },
+    "finance": {
+      "title": "Finance and profit",
+      "subtitle": "Revenue, net profit, and average order value for the selected period.",
+      "profitMissing": "Profit is not calculated yet. Check product costs, expenses, and ad data.",
+      "profitHelp": "Net profit includes revenue, product cost, ads, shipping, and other expenses.",
+      "aov": "AOV"
+    },
+    "abbreviations": {
+      "roas": "ROAS — advertising return.",
+      "cpa": "CPA — cost per order.",
+      "aov": "AOV — average order value."
+    },
+    "blockError": "Could not load this block."
   },
   "tables": {
     "name": "Name",
@@ -335,7 +430,32 @@
     "campaignHelp": "Optional. Choose a campaign if this lead came from a specific ad.",
     "noCampaign": "No campaign",
     "source": "Lead source",
-    "noSource": "No source / Manual"
+    "noSource": "No source / Manual",
+    "emptyTitle": "No leads yet",
+    "emptyDescription": "Add the first Instagram Direct request or create a lead manually.",
+    "filteredEmptyTitle": "No leads match these filters.",
+    "filteredEmptyDescription": "Change search, status, or source to find the request.",
+    "loading": "Loading leads…",
+    "loadError": "Unable to load leads.",
+    "sourceWarning": "Unable to load lead sources. You can still create a lead without a source.",
+    "createHelp": "Only the name is required. Phone, Instagram, source, and notes can be added now or later.",
+    "archiveTitle": "Archive lead?",
+    "archiveConvertedDescription": "This lead is converted. Archiving it will not delete the customer or order.",
+    "archiveDescription": "This lead will be hidden from active lists. History remains available.",
+    "nextAction": "Next step",
+    "nextActionCreateOrder": "Confirm the need and create an order",
+    "nextActionContact": "Contact the customer and qualify the request",
+    "nextActionConverted": "Check the linked customer or order",
+    "nextActionLost": "Review the loss reason before follow-up",
+    "assignedManager": "Manager",
+    "createdAt": "Created",
+    "unknownSource": "Unknown source",
+    "unassigned": "Unassigned",
+    "apiSessionExpired": "Session expired. Please log in again.",
+    "apiForbidden": "You do not have permission to manage leads.",
+    "apiInvalid": "Please check the lead form.",
+    "apiCreateFailed": "Unable to create lead. Please try again.",
+    "apiLoadFailed": "Unable to load leads. Please try again."
   },
   "customers": {
     "title": "Customers",
@@ -354,7 +474,40 @@
     "quickCreateSuccess": "Customer created and selected for the order.",
     "quickCreateError": "Unable to create customer. Check the details and try again.",
     "quickCreateNameRequired": "Enter the customer name.",
-    "quickCreatePhoneRequired": "Enter the customer phone for delivery."
+    "quickCreatePhoneRequired": "Enter the customer phone for delivery.",
+    "emptyTitle": "No customers yet",
+    "emptyDescription": "Customers appear after leads or orders. You can also add one manually.",
+    "filteredEmptyTitle": "No customers match this search.",
+    "filteredEmptyDescription": "Change search or reset filters to see all customers.",
+    "loading": "Loading customers…",
+    "loadError": "Unable to load customers.",
+    "createDescription": "Add a buyer to create repeat orders faster and keep contacts in one place.",
+    "archiveTitle": "Archive customer?",
+    "archiveDescription": "The profile will be hidden from active CRM lists. Historical orders and shipments stay unchanged.",
+    "purchaseContext": "Purchases",
+    "totalOrders": "Orders",
+    "totalSpent": "Total spent",
+    "lastOrder": "Last order",
+    "contact": "Contact",
+    "tags": "Tags",
+    "selectTag": "Select tag",
+    "add": "Add",
+    "notesTimeline": "Notes",
+    "appendNote": "Append note",
+    "addresses": "Addresses",
+    "address": "Address",
+    "defaultAddress": "Default",
+    "noAddresses": "No addresses yet.",
+    "addressLine": "Delivery address",
+    "attachments": "Attachments",
+    "fileUrl": "File URL",
+    "noNotes": "No notes yet.",
+    "nameRequired": "Customer name is required.",
+    "creating": "Creating…",
+    "createFailed": "Unable to create customer. Please try again.",
+    "saveFailed": "Unable to save customer changes. Please try again.",
+    "deleteFailed": "Unable to archive customer. Please try again.",
+    "region": "Region"
   },
   "orders": {
     "title": "Orders",
@@ -427,7 +580,20 @@
     "customerOrdersCount": "{count} orders",
     "campaignLabel": "Advertising campaign",
     "campaignHelp": "Optional. Helps understand which ad brought this order.",
-    "noCampaign": "No campaign"
+    "noCampaign": "No campaign",
+    "loading": "Loading orders…",
+    "loadError": "Unable to load orders.",
+    "retry": "Try again",
+    "coreFlowHint": "Fast path: choose a customer, add a product, check payment, and continue to delivery.",
+    "paymentHint": {
+      "PENDING": "Payment is still pending",
+      "PAID": "Paid",
+      "COD": "Cash on delivery",
+      "REFUNDED": "Funds refunded"
+    },
+    "profitNotCalculated": "Profit is not calculated yet because product costs or expenses are missing.",
+    "openCustomer": "Open customer",
+    "shipmentMissing": "Shipment has not been created yet."
   },
   "products": {
     "title": "Products",
@@ -593,7 +759,8 @@
     "recipientPhoneRequired": "Enter the recipient phone number.",
     "recipientCityRequired": "Select the recipient city.",
     "recipientWarehouseRequired": "Select the recipient warehouse.",
-    "createTtnIncomplete": "Nova Poshta returned an incomplete response. Check the Nova Poshta account before trying again."
+    "createTtnIncomplete": "Nova Poshta returned an incomplete response. Check the Nova Poshta account before trying again.",
+    "loadError": "Unable to load shipments."
   },
   "advertising": {
     "title": "Advertising",
@@ -1523,5 +1690,25 @@
       "net_profit": "Net profit"
     },
     "adjustmentsLoadError": "Could not load adjustments. Please try again."
+  },
+  "accountMenu": {
+    "profile": "Profile",
+    "user": "User",
+    "workspace": "Workspace",
+    "currentWorkspace": "Current workspace",
+    "switchWorkspace": "Switch workspace",
+    "createWorkspace": "Create workspace",
+    "settings": "Settings",
+    "team": "Team",
+    "more": "More",
+    "close": "Close",
+    "quickActions": "Quick actions",
+    "storeName": "Store name",
+    "slug": "Slug / short name",
+    "creating": "Creating…",
+    "emptyWorkspace": "You do not have a workspace yet. Create your first shop to start using Sellora.",
+    "createWorkspaceError": "Unable to create workspace.",
+    "emptyWorkspaceTitle": "You do not have a workspace yet.",
+    "emptyWorkspaceDescription": "Create your first shop to start using Sellora."
   }
 }

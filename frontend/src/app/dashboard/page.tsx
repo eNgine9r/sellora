@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -33,6 +34,21 @@ const orderStatusColors: Record<OrderStatus, string> = { NEW: "#7C3AED", CONFIRM
 
 function productImage(product?: { images?: { image_url: string; is_primary: boolean }[] }) {
   return product?.images?.find((image) => image.is_primary)?.image_url ?? product?.images?.[0]?.image_url ?? null;
+}
+
+
+function OwnerActionCard({ title, description, href, action, tone = "violet" }: { title: string; description: string; href: string; action: string; tone?: "violet" | "amber" | "rose" | "emerald" }) {
+  const tones = {
+    violet: "border-violet-100 bg-violet-50 text-violet-800 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-100",
+    amber: "border-amber-100 bg-amber-50 text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100",
+    rose: "border-rose-100 bg-rose-50 text-rose-800 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100",
+    emerald: "border-emerald-100 bg-emerald-50 text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100",
+  };
+  return <Link href={href} className={`grid min-w-0 gap-2 rounded-2xl border p-4 text-sm transition hover:-translate-y-0.5 hover:shadow-md ${tones[tone]}`}><strong className="break-words text-base">{title}</strong><span className="break-words font-semibold opacity-85">{description}</span><span className="mt-1 inline-flex min-h-10 items-center font-black underline underline-offset-4">{action}</span></Link>;
+}
+
+function OwnerMetricRow({ label, value, helper }: { label: string; value: string | number; helper?: string }) {
+  return <div className="flex min-w-0 items-start justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2 text-sm dark:bg-white/5"><div className="min-w-0"><p className="break-words font-bold text-slate-800 dark:text-slate-100">{label}</p>{helper ? <p className="break-words text-xs font-semibold text-slate-500 dark:text-slate-400">{helper}</p> : null}</div><strong className="shrink-0 text-slate-950 dark:text-white">{value}</strong></div>;
 }
 
 function MetricStrip({ label, value, helper, tone = "violet" }: { label: string; value: string | number; helper?: string; tone?: "violet" | "pink" | "orange" | "amber" }) {
@@ -135,7 +151,28 @@ export default function DashboardPage() {
   const previousProfit = canSeeProfit ? toFiniteNumber(previousBackendDashboard.data?.sales.net_profit ?? previousProfitSummary.data?.total_net_profit) : 0;
   const adSpend = toFiniteNumber(backendDashboard.data?.advertising.spend ?? advertising.data?.total_spend);
   const adRevenue = toFiniteNumber(backendDashboard.data?.advertising.revenue ?? advertising.data?.total_revenue);
-  const roas = formatSafeRatio(adRevenue, adSpend);
+  const roas = adSpend > 0 ? formatSafeRatio(adRevenue, adSpend) : "—";
+  const ordersCount = backendDashboard.data?.sales.orders_count ?? currentOrderSummary.ordersCount;
+  const deliveredOrders = currentOrders.filter((order) => order.status === "DELIVERED" || order.status === "COMPLETED").length;
+  const confirmedOrders = currentOrders.filter((order) => order.status === "CONFIRMED").length;
+  const shippedOrders = currentOrders.filter((order) => order.status === "SHIPPED").length;
+  const returnedOrCancelledOrders = currentOrders.filter((order) => order.status === "RETURNED" || order.status === "CANCELLED").length;
+  const leadToOrderRate = currentLeads.length ? Math.round((ordersCount / currentLeads.length) * 100) : null;
+  const deliveryRate = ordersCount ? Math.round((deliveredOrders / ordersCount) * 100) : null;
+  const averageOrderValue = ordersCount ? formatMoney(totalRevenue / ordersCount, currencyCode) : "—";
+  const lowStockCount = backendDashboard.data?.inventory.low_stock_count ?? inventory.data?.low_stock_count ?? 0;
+  const outOfStockCount = backendDashboard.data?.inventory.out_of_stock_count ?? inventory.data?.out_of_stock_count ?? 0;
+  const hasAdvertisingData = adSpend > 0 || adRevenue > 0 || (backendDashboard.data?.advertising.orders ?? advertising.data?.total_orders ?? 0) > 0;
+  const hasProductsData = (products.data?.length ?? 0) > 0 || (inventory.data?.total_stock_units ?? 0) > 0;
+  const profitMissing = canSeeProfit && totalRevenue > 0 && netProfit === 0;
+  const selectedPeriodLabel = t(`dateRange.${range.preset}`);
+  const ownerAlerts = [
+    lowStockCount > 0 ? { title: t("dashboard.ownerAlerts.lowStock.title", { count: lowStockCount }), description: t("dashboard.ownerAlerts.lowStock.description"), href: "/inventory", action: t("dashboard.ownerActions.openInventory"), tone: "amber" as const } : null,
+    confirmedOrders > 0 ? { title: t("dashboard.ownerAlerts.awaitingShipment.title", { count: confirmedOrders }), description: t("dashboard.ownerAlerts.awaitingShipment.description"), href: "/orders", action: t("dashboard.ownerActions.openOrders"), tone: "rose" as const } : null,
+    profitMissing ? { title: t("dashboard.ownerAlerts.profitMissing.title"), description: t("dashboard.ownerAlerts.profitMissing.description"), href: "/products", action: t("dashboard.ownerActions.openProducts"), tone: "amber" as const } : null,
+    !hasAdvertisingData ? { title: t("dashboard.ownerAlerts.noAds.title"), description: t("dashboard.ownerAlerts.noAds.description"), href: "/advertising", action: t("dashboard.ownerActions.openAdvertising"), tone: "violet" as const } : null,
+    ordersCount === 0 && currentLeads.length === 0 ? { title: t("dashboard.ownerAlerts.noPeriodData.title"), description: t("dashboard.ownerAlerts.noPeriodData.description"), href: "/leads", action: t("dashboard.ownerActions.createLead"), tone: "emerald" as const } : null,
+  ].filter(Boolean) as { title: string; description: string; href: string; action: string; tone: "violet" | "amber" | "rose" | "emerald" }[];
   const setupItems = [
     { key: "products", href: "/products", done: (products.data?.length ?? 0) > 0 },
     { key: "orders", href: "/orders", done: (orders.data?.length ?? 0) > 0 },
@@ -161,12 +198,38 @@ export default function DashboardPage() {
         <SetupChecklist items={setupItems} />
         {isFirstRun ? <EmptyState title={t("firstRun.empty.title")} description={t("firstRun.empty.description")} action={<FirstRunEmptyCtas />} /> : null}
 
-        <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <KpiCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={t("dashboard.tooltips.revenue")} trend={formatDeltaPercent(totalRevenue, previousRevenue)} />
-          <KpiCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? formatMoney(netProfit, currencyCode) : t("dashboard.restricted")} helper={t("dashboard.tooltips.netProfit")} trend={canSeeProfit ? formatDeltaPercent(netProfit, previousProfit) : undefined} />
-          <KpiCard label={t("dashboard.kpis.orders")} value={backendDashboard.data?.sales.orders_count ?? currentOrderSummary.ordersCount} helper={t("dashboard.tooltips.orders")} trend={formatDeltaPercent(backendDashboard.data?.sales.orders_count ?? currentOrderSummary.ordersCount, previousBackendDashboard.data?.sales.orders_count ?? previousOrderSummary.ordersCount)} />
-          <KpiCard label={t("dashboard.kpis.newLeads")} value={currentLeads.length} helper={t("dashboard.tooltips.newLeads")} trend={formatDeltaPercent(currentLeads.length, previousLeads.length)} />
-          <KpiCard label={t("dashboard.kpis.roas")} value={roas} helper={t("dashboard.tooltips.roas")} trend={formatDeltaPercent(toFiniteNumber(backendDashboard.data?.advertising.roas ?? advertising.data?.roas), toFiniteNumber(previousBackendDashboard.data?.advertising.roas ?? previousAdvertising.data?.roas))} />
+        <section className="grid min-w-0 gap-3 rounded-[24px] border border-violet-100 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#15172A] sm:grid-cols-[1fr_auto] sm:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600 dark:text-violet-200">{t("dashboard.ownerContext.question")}</p>
+            <p className="mt-1 break-words text-sm font-semibold text-slate-600 dark:text-slate-200">{t("dashboard.periodHelper", { period: selectedPeriodLabel })}</p>
+            <p className="mt-1 break-words text-xs font-semibold text-slate-500 dark:text-slate-400">{t("dashboard.ownerContext.abbreviations")}</p>
+          </div>
+          <div className="rounded-2xl bg-violet-50 px-4 py-3 text-sm font-black text-violet-800 dark:bg-violet-400/15 dark:text-violet-100">{selectedPeriodLabel}</div>
+        </section>
+
+        <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <KpiCard label={t("dashboard.kpis.orders")} value={ordersCount} helper={ordersCount ? t("dashboard.kpiHelpers.ordersHasData", { period: selectedPeriodLabel }) : t("dashboard.kpiHelpers.ordersZero")} trend={formatDeltaPercent(ordersCount, previousBackendDashboard.data?.sales.orders_count ?? previousOrderSummary.ordersCount)} />
+          <KpiCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={totalRevenue > 0 ? t("dashboard.kpiHelpers.revenueHasData", { period: selectedPeriodLabel }) : t("dashboard.kpiHelpers.revenueZero")} trend={formatDeltaPercent(totalRevenue, previousRevenue)} />
+          <KpiCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? (profitMissing ? "—" : formatMoney(netProfit, currencyCode)) : t("dashboard.restricted")} helper={!canSeeProfit ? t("dashboard.kpiHelpers.profitRestricted") : profitMissing ? t("dashboard.kpiHelpers.profitMissing") : t("dashboard.tooltips.netProfit")} trend={canSeeProfit && !profitMissing ? formatDeltaPercent(netProfit, previousProfit) : undefined} />
+          <KpiCard label={adSpend > 0 ? t("dashboard.kpis.roas") : t("dashboard.advertising.spend")} value={adSpend > 0 ? roas : formatMoney(adSpend, currencyCode)} helper={hasAdvertisingData ? t("dashboard.kpiHelpers.roasHasData") : t("dashboard.kpiHelpers.roasMissing")} trend={adSpend > 0 ? formatDeltaPercent(toFiniteNumber(backendDashboard.data?.advertising.roas ?? advertising.data?.roas), toFiniteNumber(previousBackendDashboard.data?.advertising.roas ?? previousAdvertising.data?.roas)) : undefined} />
+        </section>
+
+        <section className="grid min-w-0 gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <ChartCard title={t("dashboard.ownerAlerts.title")} subtitle={t("dashboard.ownerAlerts.subtitle")}>
+            <div className="grid min-w-0 gap-3">
+              {ownerAlerts.length ? ownerAlerts.slice(0, 5).map((alert) => <OwnerActionCard key={alert.title} {...alert} />) : <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-100">{t("dashboard.ownerAlerts.allClear")}</p>}
+            </div>
+          </ChartCard>
+          <ChartCard title={t("dashboard.funnel.title")} subtitle={t("dashboard.funnel.subtitle")}>
+            {currentLeads.length || ordersCount ? <div className="grid min-w-0 gap-3 md:grid-cols-3"><MetricStrip label={t("dashboard.funnel.leads")} value={currentLeads.length} helper={t("dashboard.funnel.leadsHelp")} /><MetricStrip label={t("dashboard.funnel.orders")} value={ordersCount} helper={leadToOrderRate === null ? t("dashboard.funnel.noRate") : t("dashboard.funnel.orderRate", { rate: leadToOrderRate })} tone="pink" /><MetricStrip label={t("dashboard.funnel.delivered")} value={deliveredOrders} helper={deliveryRate === null ? t("dashboard.funnel.noRate") : t("dashboard.funnel.deliveryRate", { rate: deliveryRate })} tone="orange" /></div> : <EmptyState title={t("dashboard.funnel.emptyTitle")} description={t("dashboard.funnel.emptyDescription")} />}
+          </ChartCard>
+        </section>
+
+        <section className="grid min-w-0 gap-6 lg:grid-cols-2 xl:grid-cols-4">
+          <ChartCard title={t("dashboard.fulfillment.title")} subtitle={t("dashboard.fulfillment.subtitle")}><div className="grid min-w-0 gap-2"><OwnerMetricRow label={formatStatus("order", "NEW")} value={currentOrders.filter((order) => order.status === "NEW").length} helper={t("dashboard.fulfillment.newHelp")} /><OwnerMetricRow label={formatStatus("order", "CONFIRMED")} value={confirmedOrders} helper={t("dashboard.fulfillment.confirmedHelp")} /><OwnerMetricRow label={formatStatus("order", "SHIPPED")} value={shippedOrders} helper={t("dashboard.fulfillment.shippedHelp")} /><OwnerMetricRow label={t("dashboard.fulfillment.returnedCancelled")} value={returnedOrCancelledOrders} /><Link className="mt-2 inline-flex min-h-10 items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white" href="/orders">{t("dashboard.ownerActions.openOrders")}</Link></div></ChartCard>
+          <ChartCard title={t("dashboard.advertising.ownerTitle")} subtitle={t("dashboard.advertising.ownerSubtitle")}>{hasAdvertisingData ? <div className="grid min-w-0 gap-2"><OwnerMetricRow label={t("dashboard.advertising.spend")} value={formatMoney(adSpend, currencyCode)} helper={t("dashboard.abbreviations.roas")} /><OwnerMetricRow label={t("dashboard.advertising.orders")} value={backendDashboard.data?.advertising.orders ?? advertising.data?.total_orders ?? 0} /><OwnerMetricRow label={t("dashboard.advertising.cpa")} value={backendDashboard.data?.advertising.cpa ? formatMoney(backendDashboard.data.advertising.cpa, currencyCode) : advertising.data?.average_cpa ? formatMoney(advertising.data.average_cpa, currencyCode) : "—"} helper={t("dashboard.abbreviations.cpa")} /><Link className="mt-2 inline-flex min-h-10 items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white" href="/advertising">{t("dashboard.ownerActions.openAdvertising")}</Link></div> : <EmptyState title={t("dashboard.advertising.emptyTitle")} description={t("dashboard.advertising.emptyDescription")} />}</ChartCard>
+          <ChartCard title={t("dashboard.finance.title")} subtitle={t("dashboard.finance.subtitle")}><div className="grid min-w-0 gap-2"><OwnerMetricRow label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} /><OwnerMetricRow label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? (profitMissing ? "—" : formatMoney(netProfit, currencyCode)) : t("dashboard.restricted")} helper={profitMissing ? t("dashboard.finance.profitMissing") : t("dashboard.finance.profitHelp")} /><OwnerMetricRow label={t("dashboard.finance.aov")} value={averageOrderValue} helper={t("dashboard.abbreviations.aov")} /><Link className="mt-2 inline-flex min-h-10 items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white" href="/finance">{t("dashboard.ownerActions.openFinance")}</Link></div></ChartCard>
+          <ChartCard title={t("dashboard.inventoryAlerts.ownerTitle")} subtitle={t("dashboard.inventoryAlerts.ownerSubtitle")}>{hasProductsData ? <div className="grid min-w-0 gap-2"><OwnerMetricRow label={t("dashboard.inventoryAlerts.lowStock")} value={lowStockCount} helper={lowStockCount ? t("dashboard.inventoryAlerts.lowStockHelp", { count: lowStockCount }) : t("dashboard.inventoryAlerts.healthy")} /><OwnerMetricRow label={t("dashboard.inventoryAlerts.outOfStock")} value={outOfStockCount} /><OwnerMetricRow label={t("dashboard.inventoryAlerts.stockUnits")} value={inventory.data?.total_stock_units ?? 0} /><Link className="mt-2 inline-flex min-h-10 items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white" href="/inventory">{t("dashboard.ownerActions.openInventory")}</Link></div> : <EmptyState title={t("dashboard.inventoryAlerts.emptyTitle")} description={t("dashboard.inventoryAlerts.emptyDescription")} />}</ChartCard>
         </section>
 
         <section className="grid min-w-0 gap-6 xl:grid-cols-[1.45fr_0.85fr]">
@@ -191,7 +254,7 @@ export default function DashboardPage() {
           <ChartCard title={t("dashboard.logistics.title")} subtitle={t("dashboard.logistics.subtitle")}><div className="grid min-w-0 gap-3"><MetricStrip label={t("dashboard.logistics.inTransit")} value={shipments.data?.in_transit_count ?? 0} /><MetricStrip label={t("dashboard.logistics.arrived")} value={shipments.data?.arrived_count ?? 0} tone="pink" /><MetricStrip label={t("dashboard.logistics.deliveredToday")} value={shipments.data?.delivered_today ?? 0} tone="orange" /><MetricStrip label={t("dashboard.logistics.returnedThisMonth")} value={shipments.data?.returned_this_month ?? 0} tone="amber" /></div></ChartCard>
         </section>
 
-        <section className="grid min-w-0 gap-6 xl:grid-cols-[1.25fr_0.75fr]"><RecentOrdersTable orders={currentOrders} currencyCode={currencyCode} showProfit={canSeeProfit} /><NotificationsCard items={dashboardNotifications} /></section>
+        <section className="grid min-w-0 gap-6 xl:grid-cols-[1.25fr_0.75fr]"><RecentOrdersTable orders={orders.data ?? []} currencyCode={currencyCode} showProfit={canSeeProfit} /><NotificationsCard items={dashboardNotifications} /></section>
         <section className="grid min-w-0 gap-6 lg:grid-cols-2"><ActivityFeed events={dashboardActivity} /><QuickActionsCard /></section>
       </div>
     </main>
