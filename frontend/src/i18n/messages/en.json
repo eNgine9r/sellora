@@ -211,11 +211,15 @@
       "leads": "Leads",
       "orders": "Orders",
       "cpa": "CPA",
-      "cpl": "CPL"
+      "cpl": "CPL",
+      "ownerTitle": "Advertising",
+      "ownerSubtitle": "Evaluate spend, orders, and ad return for the selected period.",
+      "emptyTitle": "No advertising data in the selected period yet.",
+      "emptyDescription": "Add ad metrics manually or import CSV to see ROAS and CPA."
     },
     "recentOrders": {
       "title": "Recent orders",
-      "subtitle": "Latest customer purchases and fulfillment state."
+      "subtitle": "Latest created orders regardless of selected period, so period KPI values are not confused with history."
     },
     "topProducts": {
       "title": "Top products",
@@ -257,7 +261,12 @@
       "lowStock": "Low stock",
       "outOfStock": "Out of stock",
       "stockUnits": "Stock units",
-      "healthy": "Inventory looks healthy"
+      "healthy": "Inventory looks healthy",
+      "ownerTitle": "Products and stock",
+      "ownerSubtitle": "Low-stock and out-of-stock alerts.",
+      "emptyTitle": "No product data yet.",
+      "emptyDescription": "Add products or import a catalog to see stock and alerts.",
+      "lowStockHelp": "{count} products need restocking."
     },
     "tooltips": {
       "revenue": "Revenue follows the existing analytics service totals for the selected period.",
@@ -303,7 +312,88 @@
       "noData": "No comparison data"
     },
     "analytics": "Analytics overview",
-    "periodHelper": "Metrics use the selected period. If values are zero, there may be no events in this period yet."
+    "periodHelper": "Metrics are calculated for the selected period: {period}. If there were no orders in this period, KPI values may be zero.",
+    "ownerContext": {
+      "question": "What needs attention today?",
+      "abbreviations": "ROAS — ad return · CPA — cost per order · AOV — average order value."
+    },
+    "kpiHelpers": {
+      "ordersHasData": "Orders for period: {period}.",
+      "ordersZero": "No orders in the selected period yet.",
+      "revenueHasData": "Revenue for period: {period}.",
+      "revenueZero": "Revenue appears after paid or completed orders.",
+      "profitMissing": "Not enough data to calculate profit. Check product costs.",
+      "profitRestricted": "Profit is available to owners or analysts.",
+      "roasHasData": "ROAS shows ad return for the selected period.",
+      "roasMissing": "Add ad spend to see advertising return."
+    },
+    "ownerAlerts": {
+      "title": "What needs attention",
+      "subtitle": "Actions are computed from this workspace data, without fake insights.",
+      "allClear": "No critical actions right now. Check leads, orders, or ad metrics to grow.",
+      "lowStock": {
+        "title": "Low stock: {count}",
+        "description": "Restock products to avoid missed sales."
+      },
+      "awaitingShipment": {
+        "title": "Orders awaiting shipment: {count}",
+        "description": "Confirmed orders have not shipped yet."
+      },
+      "profitMissing": {
+        "title": "Not enough profit data",
+        "description": "Some sales may be missing costs, expenses, or ad data."
+      },
+      "noAds": {
+        "title": "No advertising data yet",
+        "description": "Add ad metrics manually or import CSV to see ROAS and CPA."
+      },
+      "noPeriodData": {
+        "title": "No data in selected period",
+        "description": "Create a lead or order to make the dashboard useful."
+      }
+    },
+    "ownerActions": {
+      "openInventory": "Open inventory",
+      "openOrders": "Open orders",
+      "openProducts": "Open products",
+      "openAdvertising": "Open advertising",
+      "openFinance": "Open finance",
+      "createLead": "Create lead"
+    },
+    "funnel": {
+      "title": "Sales funnel",
+      "subtitle": "Shows the path from request to delivered order for the selected period.",
+      "leads": "Leads",
+      "orders": "Orders",
+      "delivered": "Delivered",
+      "leadsHelp": "Requests created in this period.",
+      "orderRate": "Lead conversion: {rate}%",
+      "deliveryRate": "Delivered from orders: {rate}%",
+      "noRate": "Not enough data for a rate.",
+      "emptyTitle": "Not enough data for the funnel",
+      "emptyDescription": "Create leads and orders to see conversion."
+    },
+    "fulfillment": {
+      "title": "Order fulfillment state",
+      "subtitle": "Shows what needs confirmation, shipment, or review.",
+      "newHelp": "New requests need confirmation.",
+      "confirmedHelp": "Confirmed orders should move to shipment.",
+      "shippedHelp": "Shipped orders are awaiting delivery.",
+      "returnedCancelled": "Returns / cancellations"
+    },
+    "finance": {
+      "title": "Finance and profit",
+      "subtitle": "Revenue, net profit, and average order value for the selected period.",
+      "profitMissing": "Profit is not calculated yet. Check product costs, expenses, and ad data.",
+      "profitHelp": "Net profit includes revenue, product cost, ads, shipping, and other expenses.",
+      "aov": "AOV"
+    },
+    "abbreviations": {
+      "roas": "ROAS — advertising return.",
+      "cpa": "CPA — cost per order.",
+      "aov": "AOV — average order value."
+    },
+    "blockError": "Could not load this block."
   },
   "tables": {
     "name": "Name",

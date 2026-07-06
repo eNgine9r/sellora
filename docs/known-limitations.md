@@ -429,3 +429,7 @@ Runtime PostgreSQL migration QA remains blocked in this container by database ho
 ## Sprint 7B core flow limitations
 
 Lead conversion links and customer-specific order history remain future UX improvements unless supported by existing endpoints/routes. Manual browser QA at 375px, 390px, 430px, and 768px remains recommended. No database migration was added in Sprint 7B.
+
+## Sprint 7C dashboard limitations
+
+Dashboard owner experience now has clearer KPI, funnel, advertising, finance, inventory, alert, and recent-order explanations. Remaining limitations: manual mobile/browser QA is still recommended, Sprint 7F runtime migration QA remains blocked, and Instagram message counts are not shown because live messaging integration is out of scope. No database migration was added in Sprint 7C.

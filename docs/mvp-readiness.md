@@ -485,3 +485,7 @@ Sprint 7F completed Alembic inventory, migration risk review, local backend/fron
 ## Sprint 7B core flow UX stabilization
 
 Sprint 7B improves Lead → Customer → Order → Payment → Shipment → Profit clarity with Ukrainian loading/empty/error states, customer purchase context, order payment/profit/shipment helpers, dashboard period explanation, and no new database migrations. Manual mobile/browser QA remains recommended before full release approval.
+
+## Sprint 7C dashboard owner experience
+
+Dashboard owner experience is conditionally approved. The page now explains selected-period KPI values, missing profit/ad data, sales funnel state, fulfillment work, inventory attention, and recent-orders scope using existing workspace-scoped data. Manual browser/mobile QA remains recommended before full release approval.

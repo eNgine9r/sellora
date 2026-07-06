@@ -516,3 +516,7 @@ Sprint 7F adds a runtime migration closure report and regression guardrail. Alem
 ## Sprint 7B core flow UX stabilization
 
 Sprint 7B improves the owner-facing Lead → Customer → Order → Payment → Shipment → Profit flow with clearer Ukrainian loading/empty/error states, customer purchase context, order payment/profit/shipment helpers, and dashboard period guidance. No database migration or Meta feature work was added.
+
+## Sprint 7C dashboard owner experience
+
+Sprint 7C improves the Dashboard as an owner cockpit with clearer selected-period context, owner-facing KPI helpers, Lead → Order → Delivered funnel, fulfillment snapshot, advertising/profit/inventory explanations, actionable alerts, and recent-orders clarification. No Meta feature work, backend analytics engine, or database migration was added.
