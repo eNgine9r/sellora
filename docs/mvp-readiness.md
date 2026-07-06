@@ -461,3 +461,23 @@ Sprint 6E is a QA/risk-closure sprint for the existing Meta Ads foundations.
 Result: **BLOCKED** because confirmed safe non-production PostgreSQL runtime migration QA, real Meta OAuth staging validation, Meta Developer App setup, legal review, staging URLs, role-specific test accounts, safe connected workspace validation, and browser/mobile staging smoke QA were unavailable.
 
 Meta Ads API is not production sync-active. Advertising remains feature-frozen and not pilot-ready. No scheduled sync jobs, no apply-sync, no ad_metrics writes, no ad_campaigns writes, no customer/order data transfer, and no Conversions API were implemented.
+
+## Sprint Admin Roles & Users
+
+Sprint Admin Roles & Users adds multi-workspace MVP, workspace switcher, workspace settings, and team management. OWNER can create and manage workspace/team. MANAGER and ANALYST cannot manage workspace/team. User can belong to multiple workspaces. Deactivation is workspace-level through workspace_user.is_active=false. Email invitations, password reset, billing, super admin, and audit log UI remain out of scope.
+
+## Topbar profile/mobile overlay cleanup
+
+Workspace and user actions were moved into safer profile/mobile overlay menus to avoid header overflow and clipped dropdowns.
+
+## Sprint 7A SaaS Admin Workspace QA
+
+Sprint 7A adds a SaaS admin QA report and stabilizes the no-workspace onboarding path so authenticated users without active memberships can create their first workspace instead of being redirected as unauthenticated. Staging runtime QA remains pending where network access is blocked.
+
+## Sprint 7A.1 manual staging QA closure
+
+Sprint 7A.1 documents the remaining manual staging QA closure requirements for SaaS admin workspace flows. Full approval is blocked until staging role/workspace/team/mobile QA can be completed from an environment that can reach the Vercel and Render staging URLs.
+
+## Sprint 7F runtime migration closure
+
+Sprint 7F completed Alembic inventory, migration risk review, local backend/frontend validation, and a runtime migration attempt against the provided PostgreSQL endpoint. Full runtime approval remains blocked because the database host could not be resolved from this validation container, so `alembic upgrade head` and runtime schema verification did not execute.
