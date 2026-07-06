@@ -33,3 +33,7 @@ Sellora is **not ready for a controlled no-write Meta Ads pilot** until at least
 - No Meta writes to `ad_campaigns` or `ad_metrics` were added.
 - No customer/order data is sent to Meta.
 - No real Meta tokens, app credentials, ad account IDs, or private staging credentials were committed.
+
+## Sprint 7F runtime migration status
+
+Meta connection and advertising external identity migrations remain runtime-pending because the PostgreSQL host was unreachable from this container. No Meta feature work was added in Sprint 7F; this note only records migration QA status.

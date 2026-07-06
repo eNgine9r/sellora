@@ -1,13 +1,23 @@
 {
-  "name": "Sellora CRM",
+  "name": "Sellora — CRM для Instagram-магазинів",
   "short_name": "Sellora",
-  "description": "CRM for Instagram stores",
+  "description": "CRM/ERP для лідів, замовлень, складу, реклами, доставок і прибутку Instagram-магазину.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#080812",
-  "theme_color": "#6D28D9",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#111827",
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
-    { "src": "/brand/sellora-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "/brand/sellora-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

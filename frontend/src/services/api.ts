@@ -94,10 +94,13 @@ function headersWithAuth(path: string, initHeaders: HeadersInit | undefined, bod
   }
 
   const workspaceId = normalizeWorkspaceId(authStorage.getCurrentWorkspaceId()) ?? explicitWorkspaceId;
-  if (!workspaceId) {
+  const workspaceOptional = path === "/workspaces" || path === "/workspaces/";
+  if (!workspaceId && !workspaceOptional) {
     throw workspaceSessionError(path);
   }
-  headers.set(WORKSPACE_HEADER, workspaceId);
+  if (workspaceId) {
+    headers.set(WORKSPACE_HEADER, workspaceId);
+  }
   return headers;
 }
 

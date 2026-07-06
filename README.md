@@ -492,3 +492,35 @@ Sprint 6E is a QA/risk-closure sprint for the existing Meta Ads foundations.
 Result: **BLOCKED** because confirmed safe non-production PostgreSQL runtime migration QA, real Meta OAuth staging validation, Meta Developer App setup, legal review, staging URLs, role-specific test accounts, safe connected workspace validation, and browser/mobile staging smoke QA were unavailable.
 
 Meta Ads API is not production sync-active. Advertising remains feature-frozen and not pilot-ready. No scheduled sync jobs, no apply-sync, no ad_metrics writes, no ad_campaigns writes, no customer/order data transfer, and no Conversions API were implemented.
+
+## Sprint Admin Roles & Users
+
+Sprint Admin Roles & Users adds multi-workspace MVP, workspace switcher, workspace settings, and team management. OWNER can create and manage workspace/team. MANAGER and ANALYST cannot manage workspace/team. User can belong to multiple workspaces. Deactivation is workspace-level through workspace_user.is_active=false. Email invitations, password reset, billing, super admin, and audit log UI remain out of scope.
+
+## Topbar profile/mobile overlay cleanup
+
+Workspace and user actions were moved into safer profile/mobile overlay menus to avoid header overflow and clipped dropdowns.
+
+## Sprint 7A SaaS admin workspace QA
+
+Sprint 7A adds a QA report for SaaS admin workspace flows and stabilizes the empty-workspace onboarding path. Staging runtime QA remains pending when the staging URLs are not reachable from the validation environment.
+
+## Sprint 7A.1 manual staging QA closure
+
+Sprint 7A.1 adds a manual staging QA closure report for SaaS admin workspace flows. Full approval remains blocked until staging can be accessed for OWNER/MANAGER/ANALYST role QA, workspace/team flows, mobile overlay checks, data isolation, and safe runtime migration validation.
+
+## Sprint 7F runtime migration closure
+
+Sprint 7F adds a runtime migration closure report and regression guardrail. Alembic inventory and local validation passed, but full runtime migration approval is blocked until the provided safe non-production PostgreSQL host can be resolved and `alembic upgrade head` plus schema verification can run successfully.
+
+## Sprint 7B core flow UX stabilization
+
+Sprint 7B improves the owner-facing Lead → Customer → Order → Payment → Shipment → Profit flow with clearer Ukrainian loading/empty/error states, customer purchase context, order payment/profit/shipment helpers, and dashboard period guidance. No database migration or Meta feature work was added.
+
+## Sprint 7C dashboard owner experience
+
+Sprint 7C improves the Dashboard as an owner cockpit with clearer selected-period context, owner-facing KPI helpers, Lead → Order → Delivered funnel, fulfillment snapshot, advertising/profit/inventory explanations, actionable alerts, and recent-orders clarification. No Meta feature work, backend analytics engine, or database migration was added.
+
+## Sprint 7D mobile UX / PWA MVP
+
+Sprint 7D improves mobile Sellora with bottom quick navigation, mobile cards for Leads/Orders/Customers, safer mobile dialog copy, and owner-facing PWA manifest metadata. Service worker/offline support is intentionally deferred so private workspace, customer, order, finance, and advertising data are not cached.

@@ -19,6 +19,7 @@ from app.api.v1.shipments import router as shipments_router
 from app.api.v1.import_center import router as import_center_router
 from app.api.v1.inventory import router as inventory_router
 from app.api.v1.workspaces import router as workspaces_router
+from app.api.v1.workspace_users import router as workspace_users_router
 
 api_router = APIRouter()
 api_router.include_router(advertising_router)
@@ -40,3 +41,4 @@ api_router.include_router(shipments_router)
 api_router.include_router(tags_router)
 api_router.include_router(attachments_router)
 api_router.include_router(workspaces_router)
+api_router.include_router(workspace_users_router)
