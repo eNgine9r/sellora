@@ -1710,5 +1710,9 @@
     "createWorkspaceError": "Не вдалося створити робочий простір.",
     "emptyWorkspaceTitle": "У вас ще немає робочого простору.",
     "emptyWorkspaceDescription": "Створіть перший магазин, щоб почати роботу в Sellora."
+  },
+  "mobileNavigation": {
+    "bottomNav": "Нижня мобільна навігація",
+    "drawer": "Мобільне меню навігації"
   }
 }

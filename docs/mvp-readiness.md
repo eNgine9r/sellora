@@ -489,3 +489,7 @@ Sprint 7B improves Lead → Customer → Order → Payment → Shipment → Prof
 ## Sprint 7C dashboard owner experience
 
 Dashboard owner experience is conditionally approved. The page now explains selected-period KPI values, missing profit/ad data, sales funnel state, fulfillment work, inventory attention, and recent-orders scope using existing workspace-scoped data. Manual browser/mobile QA remains recommended before full release approval.
+
+## Sprint 7D mobile UX / PWA MVP
+
+Mobile UX/PWA MVP is conditionally approved. The app now has bottom quick navigation, better mobile cards for key CRM/order lists, owner-facing manifest metadata, and documented no-private-data caching policy. Manual mobile/PWA install QA remains required before full approval.

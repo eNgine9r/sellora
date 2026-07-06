@@ -1710,5 +1710,9 @@
     "createWorkspaceError": "Unable to create workspace.",
     "emptyWorkspaceTitle": "You do not have a workspace yet.",
     "emptyWorkspaceDescription": "Create your first shop to start using Sellora."
+  },
+  "mobileNavigation": {
+    "bottomNav": "Mobile bottom navigation",
+    "drawer": "Mobile navigation menu"
   }
 }

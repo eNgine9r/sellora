@@ -520,3 +520,7 @@ Sprint 7B improves the owner-facing Lead → Customer → Order → Payment → 
 ## Sprint 7C dashboard owner experience
 
 Sprint 7C improves the Dashboard as an owner cockpit with clearer selected-period context, owner-facing KPI helpers, Lead → Order → Delivered funnel, fulfillment snapshot, advertising/profit/inventory explanations, actionable alerts, and recent-orders clarification. No Meta feature work, backend analytics engine, or database migration was added.
+
+## Sprint 7D mobile UX / PWA MVP
+
+Sprint 7D improves mobile Sellora with bottom quick navigation, mobile cards for Leads/Orders/Customers, safer mobile dialog copy, and owner-facing PWA manifest metadata. Service worker/offline support is intentionally deferred so private workspace, customer, order, finance, and advertising data are not cached.

@@ -433,3 +433,7 @@ Lead conversion links and customer-specific order history remain future UX impro
 ## Sprint 7C dashboard limitations
 
 Dashboard owner experience now has clearer KPI, funnel, advertising, finance, inventory, alert, and recent-order explanations. Remaining limitations: manual mobile/browser QA is still recommended, Sprint 7F runtime migration QA remains blocked, and Instagram message counts are not shown because live messaging integration is out of scope. No database migration was added in Sprint 7C.
+
+## Sprint 7D mobile/PWA limitations
+
+Service worker/offline support is deferred because Sellora handles private business data and must not cache API responses, customer/order records, finance data, advertising data, workspace data, or tokens. PWA install behavior still needs manual testing on real iOS/Android browsers. No database migration was added in Sprint 7D.

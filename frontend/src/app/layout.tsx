@@ -9,7 +9,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Sellora CRM",
-  description: "Premium CRM for Instagram stores",
+  description: "CRM/ERP для лідів, замовлень, складу, реклами, доставок і прибутку Instagram-магазину.",
   applicationName: "Sellora",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Sellora", statusBarStyle: "black-translucent" },
@@ -23,7 +23,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#080812",
+  themeColor: "#111827",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
