@@ -15,3 +15,7 @@ Workspace switching is constrained to active memberships already loaded for the 
 ## Sprint 7A.1 QA closure note
 
 Workspace creation, switching, settings, team management, and data isolation require final manual staging validation from an environment with access to the staging URLs.
+
+## Sprint 7F runtime migration status
+
+Workspace-management runtime schema verification remains pending because the PostgreSQL host was unreachable from this container. Required checks include `workspaces.timezone`, `currency_code`, workspace-user active/timestamp fields, membership uniqueness, and workspace/user indexes.

@@ -23,3 +23,7 @@ The no-workspace onboarding path now keeps authenticated users in the app and of
 ## Sprint 7A.1 QA closure note
 
 Manual staging QA closure remains blocked from this validation container because the staging frontend and backend cannot be reached through the proxy. No test passwords are documented.
+
+## Sprint 7F runtime migration status
+
+Admin Roles & Users migration `202607050019_admin_roles_users` remains statically reviewed and locally validated, but runtime approval is blocked until `alembic upgrade head` can connect to the safe non-production PostgreSQL database and verify `workspaces.timezone` plus `workspace_users.is_active`, timestamps, soft-delete field, and indexes.

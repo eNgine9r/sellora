@@ -41,3 +41,7 @@ Meta Ads API is not active.
 Sprint 6A prepares setup, security, OAuth, token storage, and QA design only. No live OAuth, no token storage, no live API calls, and no production sync were implemented.
 
 Finance 5.x remains locally validated with runtime migration QA and browser/mobile QA blockers tracked separately. Advertising data remains a conditional manual/CSV source until runtime/staging blockers are resolved.
+
+## Sprint 7F runtime migration status
+
+Finance adjustments migration runtime approval remains blocked by PostgreSQL host resolution failure from this container. Static review confirms the migration creates `finance_adjustments` with workspace scoping, nullable order linkage, amount/currency/type/category fields, timestamps, and indexes.

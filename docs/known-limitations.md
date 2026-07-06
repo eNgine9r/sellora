@@ -421,3 +421,7 @@ Meta Ads API is not production sync-active. Advertising remains feature-frozen a
 ## Sprint 7A.1 staging QA blocker
 
 Manual staging QA for OWNER, MANAGER, ANALYST, workspace switching, team management, mobile More sheet, data isolation, and runtime migration remains blocked in this container because staging URLs return proxy `CONNECT tunnel failed, response 403`.
+
+## Sprint 7F runtime migration blocker
+
+Runtime PostgreSQL migration QA remains blocked in this container by database host resolution failure. No schema mutation was executed; retry from a network that can resolve and reach the safe non-production PostgreSQL host.

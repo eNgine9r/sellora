@@ -477,3 +477,7 @@ Sprint 7A adds a SaaS admin QA report and stabilizes the no-workspace onboarding
 ## Sprint 7A.1 manual staging QA closure
 
 Sprint 7A.1 documents the remaining manual staging QA closure requirements for SaaS admin workspace flows. Full approval is blocked until staging role/workspace/team/mobile QA can be completed from an environment that can reach the Vercel and Render staging URLs.
+
+## Sprint 7F runtime migration closure
+
+Sprint 7F completed Alembic inventory, migration risk review, local backend/frontend validation, and a runtime migration attempt against the provided PostgreSQL endpoint. Full runtime approval remains blocked because the database host could not be resolved from this validation container, so `alembic upgrade head` and runtime schema verification did not execute.

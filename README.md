@@ -508,3 +508,7 @@ Sprint 7A adds a QA report for SaaS admin workspace flows and stabilizes the emp
 ## Sprint 7A.1 manual staging QA closure
 
 Sprint 7A.1 adds a manual staging QA closure report for SaaS admin workspace flows. Full approval remains blocked until staging can be accessed for OWNER/MANAGER/ANALYST role QA, workspace/team flows, mobile overlay checks, data isolation, and safe runtime migration validation.
+
+## Sprint 7F runtime migration closure
+
+Sprint 7F adds a runtime migration closure report and regression guardrail. Alembic inventory and local validation passed, but full runtime migration approval is blocked until the provided safe non-production PostgreSQL host can be resolved and `alembic upgrade head` plus schema verification can run successfully.
