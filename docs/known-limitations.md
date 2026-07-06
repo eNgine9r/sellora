@@ -425,3 +425,7 @@ Manual staging QA for OWNER, MANAGER, ANALYST, workspace switching, team managem
 ## Sprint 7F runtime migration blocker
 
 Runtime PostgreSQL migration QA remains blocked in this container by database host resolution failure. No schema mutation was executed; retry from a network that can resolve and reach the safe non-production PostgreSQL host.
+
+## Sprint 7B core flow limitations
+
+Lead conversion links and customer-specific order history remain future UX improvements unless supported by existing endpoints/routes. Manual browser QA at 375px, 390px, 430px, and 768px remains recommended. No database migration was added in Sprint 7B.

@@ -512,3 +512,7 @@ Sprint 7A.1 adds a manual staging QA closure report for SaaS admin workspace flo
 ## Sprint 7F runtime migration closure
 
 Sprint 7F adds a runtime migration closure report and regression guardrail. Alembic inventory and local validation passed, but full runtime migration approval is blocked until the provided safe non-production PostgreSQL host can be resolved and `alembic upgrade head` plus schema verification can run successfully.
+
+## Sprint 7B core flow UX stabilization
+
+Sprint 7B improves the owner-facing Lead → Customer → Order → Payment → Shipment → Profit flow with clearer Ukrainian loading/empty/error states, customer purchase context, order payment/profit/shipment helpers, and dashboard period guidance. No database migration or Meta feature work was added.

@@ -481,3 +481,7 @@ Sprint 7A.1 documents the remaining manual staging QA closure requirements for S
 ## Sprint 7F runtime migration closure
 
 Sprint 7F completed Alembic inventory, migration risk review, local backend/frontend validation, and a runtime migration attempt against the provided PostgreSQL endpoint. Full runtime approval remains blocked because the database host could not be resolved from this validation container, so `alembic upgrade head` and runtime schema verification did not execute.
+
+## Sprint 7B core flow UX stabilization
+
+Sprint 7B improves Lead → Customer → Order → Payment → Shipment → Profit clarity with Ukrainian loading/empty/error states, customer purchase context, order payment/profit/shipment helpers, dashboard period explanation, and no new database migrations. Manual mobile/browser QA remains recommended before full release approval.

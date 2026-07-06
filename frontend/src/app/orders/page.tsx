@@ -16,7 +16,7 @@ import {
   PaginationControls,
   PAGE_SIZE_OPTIONS,
 } from "@/components/pagination-controls";
-import { EmptyState, LoadingSkeleton } from "@/components/ui/states";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { OrderDetails } from "@/features/orders/components/order-details";
 import { OrderForm } from "@/features/orders/components/order-form";
 import { OrderTable } from "@/features/orders/components/order-table";
@@ -333,8 +333,13 @@ export default function OrdersPage() {
             })}
           </div>
         </FilterBar>
+        <p className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-100">
+          {t("orders.coreFlowHint")}
+        </p>
         {ordersQuery.isLoading ? (
-          <LoadingSkeleton rows={5} title={t("orders.pagination.loading")} />
+          <LoadingSkeleton rows={5} title={t("orders.loading")} />
+        ) : ordersQuery.isError ? (
+          <ErrorState title={t("orders.loadError")} description={safeApiErrorMessage(ordersQuery.error, t("orders.loadError"))} onRetry={() => void ordersQuery.refetch()} />
         ) : (
           <div className="orders-pagination-section grid min-w-0 gap-4">
             {filteredOrders.length > 0 ? (
