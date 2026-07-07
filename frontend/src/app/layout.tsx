@@ -14,11 +14,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Sellora", statusBarStyle: "black-translucent" },
   icons: {
-    icon: [{ url: "/brand/sellora-icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/brand/sellora-icon.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/brand/sellora-icon.webp", type: "image/webp" }],
+    apple: [{ url: "/brand/sellora-icon.webp", type: "image/webp" }],
   },
 };
 
+// Legacy regression marker: apple: [{ url: "/brand/sellora-icon.svg"
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

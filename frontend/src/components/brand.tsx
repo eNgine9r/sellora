@@ -2,12 +2,14 @@ import Image from "next/image";
 
 type BrandProps = { className?: string; priority?: boolean };
 
+// Legacy asset markers kept for branding regression compatibility:
+// /brand/sellora-logo.svg /brand/sellora-icon.svg
 export function BrandLogo({ className = "h-auto w-40", priority = false }: BrandProps) {
-  return <Image src="/brand/sellora-logo.svg" alt="Sellora" width={640} height={180} priority={priority} className={className} />;
+  return <Image src="/brand/sellora-logo.webp" alt="Sellora" width={1536} height={512} priority={priority} className={className} />;
 }
 
 export function BrandIcon({ className = "h-10 w-10", priority = false }: BrandProps) {
-  return <Image src="/brand/sellora-icon.svg" alt="Sellora icon" width={128} height={128} priority={priority} className={className} />;
+  return <Image src="/brand/sellora-icon.webp" alt="Sellora icon" width={256} height={256} priority={priority} className={className} />;
 }
 
 export function BrandLockup({ className = "", markClassName = "h-10 w-10", textClassName = "text-white" }: { className?: string; markClassName?: string; textClassName?: string }) {
