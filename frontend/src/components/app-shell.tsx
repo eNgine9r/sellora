@@ -97,28 +97,28 @@ export function AppShell({ children }: { children: ReactNode }) {
           {mobileQuickNav.map((item) => {
             const Icon = item.icon;
             const active = isActiveNav(pathname, item.href);
-            return <Link key={item.href} href={item.href} className={`grid min-h-12 place-items-center rounded-2xl px-1 py-1 text-[0.68rem] font-black transition ${active ? "bg-primary text-white shadow-lg shadow-violet-500/20" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"}`} aria-current={active ? "page" : undefined}><Icon className="h-4 w-4" aria-hidden="true" /><span className="mt-0.5 truncate">{t(item.labelKey)}</span></Link>;
+            return <Link key={item.href} href={item.href} className={`grid min-h-12 place-items-center rounded-2xl px-1 py-1 text-[0.68rem] font-black transition ${active ? "bg-primary text-primary-foreground shadow-lg shadow-violet-500/20" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"}`} aria-current={active ? "page" : undefined}><Icon className="h-4 w-4" aria-hidden="true" /><span className="mt-0.5 truncate">{t(item.labelKey)}</span></Link>;
           })}
         </div>
       </nav>
       {mobileMenuOpen ? (
         <div className="mobile-sidebar-drawer fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={t("mobileNavigation.drawer")}>
-          <button className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" aria-label={t("actions.close")} onClick={() => setMobileMenuOpen(false)} />
+          <button className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("actions.close")} onClick={() => setMobileMenuOpen(false)} />
           <div className="relative h-full w-[88vw] max-w-sm overflow-hidden bg-sidebar shadow-2xl">
             <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
-            <div className="mobile-sidebar-footer-compact absolute inset-x-0 bottom-0 border-t border-white/10 bg-sidebar p-3">
-              <div className="mb-2 flex min-w-0 items-center gap-3 rounded-2xl bg-white/[0.06] p-3 text-sm text-slate-200">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white/10 text-xs font-black text-white">{(currentWorkspace?.workspace_name ?? "S").slice(0, 1)}</div>
+            <div className="mobile-sidebar-footer-compact absolute inset-x-0 bottom-0 border-t border-border-subtle bg-sidebar p-3">
+              <div className="mb-2 flex min-w-0 items-center gap-3 rounded-2xl bg-surface-1 p-3 text-sm text-text-secondary">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-primary/15 text-xs font-black text-primary">{(currentWorkspace?.workspace_name ?? "S").slice(0, 1)}</div>
                 <div className="min-w-0 leading-tight" aria-label={t("mobileSidebar.profile")}>
                   <p className="truncate font-black">{currentWorkspace?.workspace_name ?? "Workspace"}</p>
-                  <p className="truncate text-xs text-slate-400">{currentUser?.email}</p>
+                  <p className="truncate text-xs text-text-muted">{currentUser?.email}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2" aria-label={t("mobileSidebar.quickControls")}>
                 <LanguageSwitcher compact />
                 <ThemeToggle compact />
               </div>
-              <button className="mt-2 min-h-10 w-full rounded-2xl border border-white/10 bg-white/[0.07] px-3 text-sm font-bold text-white transition hover:bg-white/10" onClick={handleLogout}>{t("actions.logout")}</button>
+              <button className="mt-2 min-h-10 w-full rounded-2xl border border-border-subtle bg-surface-2 px-3 text-sm font-bold text-text-primary transition hover:bg-surface-hover" onClick={handleLogout}>{t("actions.logout")}</button>
             </div>
           </div>
         </div>

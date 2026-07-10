@@ -134,8 +134,8 @@
         "value": "7+"
       },
       {
-        "label": "Ukrainian interface",
-        "value": "UA"
+        "label": "English interface",
+        "value": "EN"
       }
     ]
   },
@@ -292,7 +292,8 @@
     "ctaTitle": "Start from your real Sellora workspace",
     "ctaSubtitle": "If you already have workspace access, log in and keep managing sales without spreadsheets.",
     "footer": "© 2026 Sellora. CRM/ERP for Instagram stores.",
-    "footerDescription": "Sellora helps Instagram stores manage leads, customers, orders, stock, shipments, advertising, and finance in one workspace."
+    "footerDescription": "Sellora helps Instagram stores manage leads, customers, orders, stock, shipments, advertising, and finance in one workspace.",
+    "headerExploreCta": "Explore features"
   },
   "dashboard": {
     "eyebrow": "Sellora Dashboard",

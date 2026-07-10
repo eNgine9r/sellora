@@ -8,11 +8,11 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "brand";
 type Size = "sm" | "md" | "lg";
 
 const buttonVariants: Record<Variant, string> = {
-  primary: "bg-primary text-white shadow-[var(--shadow-control)] hover:bg-primary-hover active:bg-primary-active",
+  primary: "bg-primary text-primary-foreground shadow-[var(--shadow-control)] hover:bg-primary-hover active:bg-primary-active",
   secondary: "border border-border-subtle bg-surface-2 text-text-primary hover:border-border-strong hover:bg-surface-hover active:bg-surface-3",
   ghost: "text-text-secondary hover:bg-surface-2 hover:text-text-primary active:bg-surface-3",
-  danger: "bg-danger text-white hover:bg-rose-500 active:bg-rose-700",
-  brand: "bg-brand-gradient text-white shadow-[var(--shadow-brand)] hover:brightness-110 active:brightness-95",
+  danger: "bg-danger text-primary-foreground hover:brightness-110 active:brightness-95",
+  brand: "bg-brand-gradient text-primary-foreground shadow-[var(--shadow-brand)] hover:brightness-110 active:brightness-95",
 };
 
 const buttonSizes: Record<Size, string> = {
@@ -52,7 +52,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
 }
 
 export function StatusBadge({ children, tone = "info" }: { children: ReactNode; tone?: "success" | "warning" | "danger" | "info" | "neutral" }) {
-  const tones = { success: "border-success/30 bg-success/10 text-emerald-200", warning: "border-warning/30 bg-warning/10 text-amber-200", danger: "border-danger/30 bg-danger/10 text-rose-200", info: "border-info/30 bg-info/10 text-blue-200", neutral: "border-border-subtle bg-surface-2 text-text-secondary" };
+  const tones = { success: "border-success/30 bg-[var(--success-surface)] text-[var(--success-foreground)]", warning: "border-warning/30 bg-[var(--warning-surface)] text-[var(--warning-foreground)]", danger: "border-danger/30 bg-[var(--danger-surface)] text-[var(--danger-foreground)]", info: "border-info/30 bg-[var(--info-surface)] text-[var(--info-foreground)]", neutral: "border-border-subtle bg-surface-2 text-text-secondary" };
   return <span className={twMerge("sellora-status-badge inline-flex min-h-7 items-center rounded-full border px-2.5 text-xs font-black", tones[tone])}>{children}</span>;
 }
 
@@ -60,7 +60,7 @@ export function FormField({ label, hint, error, children }: { label: string; hin
   return <label className="grid gap-2 text-sm font-bold text-text-primary"><span>{label}</span>{children}{hint && !error ? <span className="text-xs font-semibold text-text-muted">{hint}</span> : null}{error ? <span className="inline-flex items-center gap-1 text-xs font-bold text-danger"><AlertCircle className="h-3.5 w-3.5" />{error}</span> : null}</label>;
 }
 
-const controlClass = "h-10 w-full min-w-0 rounded-2xl border border-border-subtle bg-surface-2 px-3 text-sm font-semibold text-text-primary outline-none transition placeholder:text-text-muted hover:border-border-strong focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/30 disabled:cursor-not-allowed disabled:opacity-55 aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/25";
+const controlClass = "h-10 w-full min-w-0 rounded-2xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary outline-none transition placeholder:text-text-muted hover:border-border-strong focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/30 disabled:cursor-not-allowed disabled:opacity-55 aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/25";
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) { return <input {...props} className={twMerge(controlClass, props.className)} />; }
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) { return <select {...props} className={twMerge(controlClass, props.className)} />; }
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) { return <textarea {...props} className={twMerge(controlClass, "min-h-28 py-3", props.className)} />; }

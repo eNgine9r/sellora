@@ -37,7 +37,7 @@ export function EmptyState({ title, description, action }: { title: string; desc
 
 export function ErrorState({ title = "Щось пішло не так", description, onRetry }: { title?: string; description: string; onRetry?: () => void }) {
   return (
-    <div className="rounded-[24px] border border-danger/25 bg-danger/10 p-5 text-rose-100 shadow-[var(--shadow-card)]">
+    <div className="rounded-[24px] border border-danger/25 bg-[var(--danger-surface)] p-5 text-[var(--danger-foreground)] shadow-[var(--shadow-card)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-3">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface-2 text-danger shadow-sm">
@@ -45,11 +45,11 @@ export function ErrorState({ title = "Щось пішло не так", descript
           </div>
           <div>
             <h3 className="font-black">{title}</h3>
-            <p className="mt-1 text-sm leading-6 text-rose-100">{description}</p>
+            <p className="mt-1 text-sm leading-6 text-[var(--danger-foreground)]">{description}</p>
           </div>
         </div>
         {onRetry ? (
-          <button className="min-h-11 rounded-2xl bg-white px-4 text-sm font-black text-rose-100 shadow-sm" onClick={onRetry}>
+          <button className="min-h-11 rounded-2xl bg-surface-2 px-4 text-sm font-black text-[var(--danger-foreground)] shadow-sm" onClick={onRetry}>
             Спробувати ще раз
           </button>
         ) : null}

@@ -39,7 +39,7 @@ export function PublicSection({ id, eyebrow, title, description, children, class
 
 export function MarketingCTA({ href, children, className = "" }: { href: string; children: ReactNode; className?: string }) {
   return (
-    <Link href={href} className={`inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-2xl bg-brand-gradient px-5 py-3 text-sm font-black text-white shadow-[var(--shadow-brand)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${className}`}>
+    <Link href={href} className={`inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-2xl bg-brand-gradient px-5 py-3 text-sm font-black text-primary-foreground shadow-[var(--shadow-brand)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${className}`}>
       <span className="truncate">{children}</span>
       <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
     </Link>
@@ -96,18 +96,18 @@ export function PublicHeader() {
         <nav className="hidden items-center gap-2 md:flex" aria-label={t("landing.nav.label")}>
           {publicNavItems.map((item) => <a key={item.href} href={item.href} className="rounded-2xl px-3 py-2 text-sm font-bold text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t(item.label)}</a>)}
         </nav>
-        <div className="hidden shrink-0 items-center gap-2 md:flex">
+        <div className="hidden shrink-0 items-center gap-2 md:flex [&>*]:h-10">
           <LanguageSwitcher compact />
-          <Link href="/login" className="rounded-2xl border border-border-subtle bg-surface-2 px-4 py-2 text-sm font-black text-text-primary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t("auth.login")}</Link>
-          <MarketingCTA href="/login" className="min-h-10 px-4 py-2">{t("landing.primaryCta")}</MarketingCTA>
+          <Link href="/login" className="inline-flex h-10 items-center rounded-2xl border border-border-subtle bg-surface-2 px-4 text-sm font-black text-text-primary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t("auth.login")}</Link>
+          <a href="#capabilities" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border-subtle bg-surface-2 px-4 text-sm font-black text-text-primary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t("landing.headerExploreCta")}</a>
         </div>
-        <button type="button" className="grid h-11 w-11 place-items-center rounded-2xl border border-border-subtle bg-surface-2 text-text-primary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring md:hidden" aria-label={t("landing.nav.mobileMenu")} aria-expanded={open} onClick={() => setOpen(true)}>
+        <button type="button" className="grid h-10 w-10 place-items-center rounded-2xl border border-border-subtle bg-surface-2 text-text-primary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring md:hidden" aria-label={t("landing.nav.mobileMenu")} aria-expanded={open} onClick={() => setOpen(true)}>
           <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
       </div>
       {open ? (
         <div className="fixed inset-0 z-[var(--z-overlay)] md:hidden" role="dialog" aria-modal="true" aria-label={t("landing.nav.mobileMenu")}>
-          <button className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" aria-label={t("landing.nav.closeMenu")} onClick={() => setOpen(false)} />
+          <button className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("landing.nav.closeMenu")} onClick={() => setOpen(false)} />
           <div ref={panelRef} tabIndex={-1} className="absolute right-3 top-3 w-[calc(100vw-1.5rem)] max-w-sm rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-overlay)] outline-none">
             <div className="flex items-center justify-between gap-3">
               <BrandLockup markClassName="h-9 w-9" />
@@ -116,10 +116,10 @@ export function PublicHeader() {
             <nav className="mt-5 grid gap-2" aria-label={t("landing.nav.label")}>
               {publicNavItems.map((item) => <a key={item.href} href={item.href} onClick={() => setOpen(false)} className="rounded-2xl border border-border-subtle bg-surface-2 px-4 py-3 font-bold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t(item.label)}</a>)}
             </nav>
-            <div className="mt-5 grid gap-3">
+            <div className="mt-5 grid gap-3 [&>*]:min-h-11">
               <LanguageSwitcher compact />
               <Link href="/login" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-border-subtle bg-surface-2 px-4 font-black text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" onClick={() => setOpen(false)}>{t("auth.login")}</Link>
-              <MarketingCTA href="/login" className="w-full" >{t("landing.primaryCta")}</MarketingCTA>
+              <a href="#capabilities" onClick={() => setOpen(false)} className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-border-subtle bg-surface-2 px-4 font-black text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t("landing.headerExploreCta")}</a>
             </div>
           </div>
         </div>
@@ -152,9 +152,9 @@ export function PublicFooter() {
 export function IntegrationStatusBadge({ status }: { status: "available" | "pilot" | "beta" | "soon" | "notConnected" }) {
   const { t } = useI18n();
   const styles = {
-    available: "border-success/30 bg-success/10 text-emerald-200",
-    pilot: "border-warning/30 bg-warning/10 text-amber-200",
-    beta: "border-info/30 bg-info/10 text-blue-200",
+    available: "border-success/30 bg-[var(--success-surface)] text-[var(--success-foreground)]",
+    pilot: "border-warning/30 bg-[var(--warning-surface)] text-[var(--warning-foreground)]",
+    beta: "border-info/30 bg-[var(--info-surface)] text-[var(--info-foreground)]",
     soon: "border-border-subtle bg-surface-2 text-text-secondary",
     notConnected: "border-border-subtle bg-surface-2 text-text-muted",
   }[status];

@@ -59,7 +59,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
           <Bell className="h-5 w-5" />
         </button>
         <button
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-brand-gradient text-white shadow-[var(--shadow-brand)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-10 sm:w-10"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-brand-gradient text-primary-foreground shadow-[var(--shadow-brand)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:h-10 sm:w-10"
           onClick={createOrder}
           aria-label={t("topbar.createOrder")}
         >

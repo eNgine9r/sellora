@@ -20,12 +20,18 @@ const config: Config = {
           1: "var(--surface-1)",
           2: "var(--surface-2)",
           3: "var(--surface-3)",
+          elevated: "var(--surface-elevated)",
           hover: "var(--surface-hover)",
+          selected: "var(--surface-selected)",
         },
         text: {
           primary: "var(--text-primary)",
           secondary: "var(--text-secondary)",
           muted: "var(--text-muted)",
+        },
+        input: {
+          background: "var(--input-background)",
+          border: "var(--input-border)",
         },
         success: "rgb(34 197 94 / <alpha-value>)",
         warning: "rgb(245 158 11 / <alpha-value>)",

@@ -67,3 +67,15 @@ Login pages should:
 - Icon-only buttons require `aria-label`.
 - Mobile menus must close with Escape, trap focus while open, and return focus to the trigger.
 - Auth errors must use `role="alert"` / `aria-live` and connect to fields through `aria-describedby` where relevant.
+
+## Dual-theme requirement for Dd.3–Dd.7
+
+Every new or modified page/component must support and be validated in both light and dark themes on desktop and mobile.
+
+Public-page specifics:
+
+- Desktop public header controls must be 40px tall with matching radius and alignment.
+- Mobile public menu actions must be 44px tall or full-width with matching radius.
+- Public primary CTAs must be real flows; if registration/beta is unavailable, use `/login` or an in-page section link.
+- Demo previews on mobile should use simplified stacked content instead of shrinking a desktop dashboard into an unreadable card.
+- Login pages must show the form before marketing/product context below 1024px.

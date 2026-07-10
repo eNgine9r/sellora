@@ -23,9 +23,9 @@ function ProductPreview() {
   const funnel = tr<string[]>("landing.preview.funnel");
   const orders = tr<string[]>("landing.preview.orders");
   return (
-    <div className="relative min-w-0" aria-label={t("landing.preview.ariaLabel")}>
-      <div className="pointer-events-none absolute -inset-6 rounded-[2rem] bg-brand-gradient opacity-20 blur-3xl" aria-hidden="true" />
-      <Card className="relative overflow-hidden p-4 sm:p-5">
+    <div className="relative w-full min-w-0 max-w-full overflow-hidden" aria-label={t("landing.preview.ariaLabel")}>
+      <div className="pointer-events-none absolute -inset-2 rounded-[2rem] bg-brand-gradient opacity-20 blur-3xl sm:-inset-6" aria-hidden="true" />
+      <Card className="relative min-w-0 overflow-hidden p-3 sm:p-5">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div>
             <p className="text-sm font-black text-text-primary">{t("landing.previewTitle")}</p>
@@ -33,20 +33,20 @@ function ProductPreview() {
           </div>
           <span className="rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-xs font-black text-amber-200">{t("landing.preview.demo")}</span>
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {metrics.map((metric) => <div key={metric.label} className="rounded-2xl border border-border-subtle bg-surface-2 p-3"><p className="truncate text-xs font-bold text-text-muted">{metric.label}</p><p className="mt-2 text-2xl font-black text-text-primary">{metric.value}</p><p className="mt-1 text-xs font-semibold text-text-secondary">{metric.helper}</p></div>)}
+        <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-3">
+          {metrics.map((metric) => <div key={metric.label} className="min-w-0 rounded-2xl border border-border-subtle bg-surface-2 p-3"><p className="truncate text-xs font-bold text-text-muted">{metric.label}</p><p className="mt-2 text-2xl font-black text-text-primary">{metric.value}</p><p className="mt-1 text-xs font-semibold text-text-secondary">{metric.helper}</p></div>)}
         </div>
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_0.9fr]">
-          <div className="rounded-3xl border border-border-subtle bg-surface-2 p-4">
+        <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-[1fr_0.9fr]">
+          <div className="min-w-0 rounded-3xl border border-border-subtle bg-surface-2 p-3 sm:p-4">
             <div className="flex items-center justify-between gap-3"><p className="text-sm font-black text-text-primary">{t("landing.preview.funnelTitle")}</p><PackageCheck className="h-5 w-5 text-violet-300" aria-hidden="true" /></div>
             <div className="mt-4 grid gap-3">
-              {funnel.map((item, index) => <div key={item} className="flex items-center gap-3"><div className="h-2.5 rounded-full bg-brand-gradient" style={{ width: `${96 - index * 12}%` }} aria-hidden="true" /><span className="w-24 shrink-0 text-right text-xs font-bold text-text-secondary">{item}</span></div>)}
+              {funnel.map((item, index) => <div key={item} className="grid min-w-0 gap-1"><div className="flex items-center justify-between gap-2 text-xs font-bold text-text-secondary"><span className="min-w-0 truncate">{item}</span><span className="shrink-0">{96 - index * 12}%</span></div><div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-3"><div className="h-full rounded-full bg-brand-gradient" style={{ width: `${96 - index * 12}%` }} aria-hidden="true" /></div></div>)}
             </div>
           </div>
-          <div className="rounded-3xl border border-border-subtle bg-surface-2 p-4">
+          <div className="min-w-0 rounded-3xl border border-border-subtle bg-surface-2 p-3 sm:p-4">
             <p className="text-sm font-black text-text-primary">{t("landing.preview.ordersTitle")}</p>
             <div className="mt-4 grid gap-3">
-              {orders.map((order) => <div key={order} className="flex items-center justify-between gap-3 rounded-2xl bg-surface-3 px-3 py-2 text-sm"><span className="truncate font-bold text-text-secondary">{order}</span><span className="shrink-0 rounded-full bg-success/10 px-2 py-1 text-xs font-black text-emerald-200">{t("landing.preview.paid")}</span></div>)}
+              {orders.map((order) => <div key={order} className="grid min-w-0 gap-2 rounded-2xl bg-surface-3 px-3 py-2 text-sm sm:flex sm:items-center sm:justify-between"><span className="min-w-0 break-words font-bold text-text-secondary">{order}</span><span className="w-fit rounded-full bg-[var(--success-surface)] px-2 py-1 text-xs font-black text-[var(--success-foreground)]">{t("landing.preview.paid")}</span></div>)}
             </div>
           </div>
         </div>
@@ -66,7 +66,7 @@ export function LandingPage() {
     <PublicPageContainer>
       <PublicHeader />
       <main>
-        <section className="relative overflow-hidden px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+        <section className="relative overflow-hidden px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
           <div className="pointer-events-none absolute left-1/2 top-[-220px] h-[420px] w-[min(760px,92vw)] -translate-x-1/2 rounded-full bg-brand-gradient opacity-25 blur-3xl" aria-hidden="true" />
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             <div className="min-w-0">

@@ -56,12 +56,12 @@ export default function LoginPage() {
           <LanguageSwitcher compact />
         </div>
 
-        <section className="relative z-10 mx-auto grid min-h-[calc(100vh-7rem)] max-w-7xl items-center gap-8 py-10 lg:grid-cols-[0.44fr_0.56fr]">
-          <aside className="min-w-0 lg:pr-8">
+        <section className="relative z-10 mx-auto grid min-h-[calc(100vh-7rem)] max-w-7xl items-center gap-6 py-6 lg:grid-cols-[0.44fr_0.56fr] lg:gap-8 lg:py-10">
+          <aside className="order-2 min-w-0 lg:order-1 lg:pr-8">
             <BrandLockup />
-            <h1 className="mt-8 max-w-xl text-4xl font-black leading-[1.05] tracking-[-0.04em] text-text-primary sm:text-5xl">{t("auth.contextTitle")}</h1>
-            <p className="mt-5 max-w-xl text-base leading-8 text-text-secondary">{t("auth.contextDescription")}</p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+            <h1 className="mt-5 max-w-xl text-3xl lg:mt-8 lg:text-4xl font-black leading-[1.05] tracking-[-0.04em] text-text-primary sm:text-5xl">{t("auth.contextTitle")}</h1>
+            <p className="mt-3 max-w-xl text-sm leading-7 lg:mt-5 lg:text-base lg:leading-8 text-text-secondary">{t("auth.contextDescription")}</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:mt-6 lg:grid-cols-1 xl:grid-cols-3">
               {indicators.map((indicator) => <div key={indicator.label} className="rounded-2xl border border-border-subtle bg-surface-1 p-4"><p className="text-2xl font-black text-text-primary">{indicator.value}</p><p className="mt-1 text-sm font-semibold text-text-secondary">{indicator.label}</p></div>)}
             </div>
             <div className="mt-6 flex gap-3 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-4 text-sm leading-6 text-text-secondary">
@@ -70,7 +70,7 @@ export default function LoginPage() {
             </div>
           </aside>
 
-          <Card className="mx-auto w-full max-w-xl p-5 sm:p-8">
+          <Card className="order-1 mx-auto w-full max-w-xl p-5 sm:p-8 lg:order-2">
             <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15 text-violet-200"><LockKeyhole className="h-6 w-6" aria-hidden="true" /></div>
             <p className="mt-6 text-sm font-black uppercase tracking-[0.22em] text-violet-200">{t("auth.welcome")}</p>
             <h2 className="mt-3 text-3xl font-black tracking-[-0.03em] text-text-primary">{t("auth.loginTitle")}</h2>
@@ -87,7 +87,7 @@ export default function LoginPage() {
                   </button>
                 </div>
               </FormField>
-              {visibleError ? <p id={errorId} role="alert" aria-live="polite" className="rounded-2xl border border-danger/25 bg-danger/10 px-4 py-3 text-sm font-bold leading-6 text-rose-100">{visibleError}</p> : null}
+              {visibleError ? <p id={errorId} role="alert" aria-live="polite" className="rounded-2xl border border-danger/25 bg-[var(--danger-surface)] px-4 py-3 text-sm font-bold leading-6 text-[var(--danger-foreground)]">{visibleError}</p> : null}
               <Button className="mt-2 w-full" size="lg" variant="primary" loading={isSubmitting} type="submit">{isSubmitting ? t("auth.loading") : t("auth.login")}</Button>
             </form>
             <div className="mt-6 flex flex-wrap justify-center gap-3 text-xs font-bold text-text-muted">

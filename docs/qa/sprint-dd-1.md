@@ -74,3 +74,7 @@ Final browser-dependent acceptance remains pending because authenticated staging
 Sprint Dd.1 manual browser verification was completed before Sprint Dd.2 kickoff per product instruction. No Dd.1 implementation changes were required for this status update.
 
 Final Sprint Dd.1 status: APPROVED.
+
+## Sprint Dd.2.1 dual-theme note
+
+Dd.2.1 added light-theme semantic token hardening for shared Dd.1 foundations without changing protected business logic, routes, RBAC, workspace isolation, or auth/session behavior.

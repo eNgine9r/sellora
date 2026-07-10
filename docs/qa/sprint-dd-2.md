@@ -67,3 +67,9 @@ Browser visual QA was not available in this container. These viewports remain pe
 - Verify no console errors in browser.
 - Verify focus trap and focus return in the public mobile menu.
 - Verify no horizontal body scroll by measuring `document.documentElement.scrollWidth <= window.innerWidth`.
+
+## Sprint Dd.2.1 regression follow-up
+
+Dd.2.1 fixed the confirmed public UI regressions from manual QA: duplicate login-equivalent header CTAs, inconsistent header control sizing, English indicator localization, mobile demo preview overflow, and mobile login content order.
+
+Final browser verification for light/dark themes and the requested viewport matrix remains required outside this container.

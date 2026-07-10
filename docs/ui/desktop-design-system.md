@@ -113,3 +113,11 @@ Rules:
 - Product previews with illustrative numbers must be marked as demo.
 - Integration cards must use truthful statuses and must not expose mock, staging, dry-run, or internal readiness wording.
 - Login pages must avoid technical auth vocabulary and preserve the existing auth/session implementation.
+
+## Dual-theme hardening — Sprint Dd.2.1
+
+Semantic tokens must define light values in `:root` and dark values in `.dark`. New UI must avoid assuming a dark canvas.
+
+Required token families include canvas, sidebar, surfaces, selected/hover/elevated surfaces, borders, primary foreground, input background/border, overlay background, feedback surfaces/foregrounds, text disabled, focus ring, and shadow color.
+
+Primary buttons must use `primary-foreground` rather than hardcoded white text. Feedback states should use semantic feedback surface and foreground tokens.
