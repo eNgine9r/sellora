@@ -3,11 +3,44 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --border: 214.3 31.8% 91.4%;
-  --primary: 221.2 83.2% 53.3%;
+  color-scheme: dark;
+  --background: 229 48% 5%;
+  --foreground: 210 40% 98%;
+  --border: 223 28% 20%;
+  --primary: 262 83% 58%;
   --primary-foreground: 210 40% 98%;
+  --canvas: #070A14;
+  --sidebar: #090C18;
+  --surface-1: #0F1423;
+  --surface-2: #141A2B;
+  --surface-3: #1A2134;
+  --surface-hover: #20283C;
+  --border-subtle: #252D42;
+  --border-strong: #35405B;
+  --text-primary: #F8FAFC;
+  --text-secondary: #A8B0C0;
+  --text-muted: #737D91;
+  --primary-solid: #7C3AED;
+  --primary-hover: #8B5CF6;
+  --primary-active: #6D28D9;
+  --focus-ring: #A78BFA;
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --info: #3B82F6;
+  --brand-gradient: linear-gradient(135deg, #7C3AED 0%, #D946EF 52%, #F97316 100%);
+  --space-page: 24px;
+  --radius-control: 14px;
+  --radius-card: 16px;
+  --radius-shell: 24px;
+  --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.22);
+  --shadow-control: 0 10px 24px rgba(124, 58, 237, 0.24);
+  --shadow-brand: 0 18px 45px rgba(217, 70, 239, 0.25);
+  --shadow-overlay: 0 24px 80px rgba(0, 0, 0, 0.44);
+  --transition-fast: 150ms ease;
+  --z-topbar: 45;
+  --z-sidebar: 46;
+  --z-overlay: 60;
 }
 
 html,
@@ -17,7 +50,29 @@ body {
 }
 
 body {
-  @apply bg-background text-foreground;
+  @apply bg-background text-foreground antialiased;
+}
+
+@layer utilities {
+  .bg-canvas { background-color: var(--canvas); }
+  .bg-sidebar { background-color: var(--sidebar); }
+  .bg-surface-1 { background-color: var(--surface-1); }
+  .bg-surface-2 { background-color: var(--surface-2); }
+  .bg-surface-3 { background-color: var(--surface-3); }
+  .bg-surface-hover { background-color: var(--surface-hover); }
+  .bg-primary { background-color: var(--primary-solid); }
+  .bg-primary-hover { background-color: var(--primary-hover); }
+  .bg-primary-active { background-color: var(--primary-active); }
+  .bg-brand-gradient { background-image: var(--brand-gradient); }
+  .border-border-subtle { border-color: var(--border-subtle); }
+  .border-border-strong { border-color: var(--border-strong); }
+  .text-text-primary { color: var(--text-primary); }
+  .text-text-secondary { color: var(--text-secondary); }
+  .text-text-muted { color: var(--text-muted); }
+  .text-primary { color: var(--primary-solid); }
+  .text-danger { color: var(--danger); }
+  .ring-focus-ring { --tw-ring-color: var(--focus-ring); }
+  .border-focus-ring { border-color: var(--focus-ring); }
 }
 
 img,

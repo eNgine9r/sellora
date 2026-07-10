@@ -11,7 +11,7 @@ import { ProductForm } from "@/features/products/components/product-form";
 import { ProductTable } from "@/features/products/components/product-table";
 import { ProductVariantForm } from "@/features/products/components/product-variant-form";
 import { useAuth } from "@/hooks/use-auth";
-import { CATEGORY_KEYS, CategoryFilter, categoryMatches, productSearchMatches, translatedCategoryOptions } from "@/lib/categories";
+import { CATEGORY_KEYS, CategoryFilter, CategoryKey, categoryMatches, productSearchMatches, translatedCategoryOptions } from "@/lib/categories";
 import { buildProductUpdatePayload, buildProductVariantUpdatePayload } from "@/lib/payload-builders";
 import { safeApiErrorMessage } from "@/services/api";
 import { createProduct, createProductVariant, deleteProduct, deleteProductVariant, fetchProducts, fetchProductVariants, updateProduct, updateProductVariant } from "@/services/products";
@@ -274,7 +274,7 @@ export default function ProductsPage() {
             fields={[
               { name: "sku", label: "SKU" },
               { name: "name", label: t("tables.name") },
-              { name: "category", label: t("products.category"), type: "select", options: [...categoryOptions, ...(editingProduct.category && !CATEGORY_KEYS.includes(editingProduct.category as any) ? [{ value: editingProduct.category, label: editingProduct.category }] : [])] },
+              { name: "category", label: t("products.category"), type: "select", options: [...categoryOptions, ...(editingProduct.category && !CATEGORY_KEYS.includes(editingProduct.category as CategoryKey) ? [{ value: editingProduct.category, label: editingProduct.category }] : [])] },
               { name: "brand", label: t("products.brand") },
               { name: "description", label: t("products.description"), type: "textarea" },
               { name: "is_active", label: t("tables.status"), type: "select", options: [{ value: "true", label: t("products.active") }, { value: "false", label: t("products.inactive") }] },
