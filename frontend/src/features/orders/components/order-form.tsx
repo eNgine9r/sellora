@@ -401,11 +401,11 @@ export function OrderForm({
           {t("orders.archiveUnavailable")}
         </p>
       ) : null}
-      <section className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/[0.04]">
-        <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+      <section className="grid min-w-0 gap-3 rounded-2xl border border-border-subtle bg-surface-2 p-3">
+        <label className="grid min-w-0 gap-1 text-sm font-semibold text-text-secondary">
           {t("orders.campaignLabel")}
           <select
-            className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2 dark:border-white/10 dark:bg-white/10 dark:text-white"
+            className="min-h-10 min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring dark:border-white/10 dark:bg-white/10 dark:text-white"
             value={values.campaign_id ?? ""}
             onChange={(event) => setValues({ ...values, campaign_id: event.target.value })}
           >
@@ -422,13 +422,13 @@ export function OrderForm({
         </label>
       </section>
 
-      <section className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/[0.04]">
+      <section className="grid min-w-0 gap-3 rounded-2xl border border-border-subtle bg-surface-2 p-3">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="font-bold text-slate-950 dark:text-white">
               {t("orders.customerSelector")}
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-300">
+            <p className="text-sm text-text-secondary">
               {t("orders.customerSelectorHelp")}
             </p>
           </div>
@@ -442,10 +442,10 @@ export function OrderForm({
             </button>
           ) : null}
         </div>
-        <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+        <label className="grid min-w-0 gap-1 text-sm font-semibold text-text-secondary">
           {t("orders.customerSearchLabel")}
           <input
-            className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2 dark:border-white/10 dark:bg-white/10 dark:text-white"
+            className="min-h-10 min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring dark:border-white/10 dark:bg-white/10 dark:text-white"
             placeholder={t("orders.customerSearchPlaceholder")}
             value={customerSearch}
             onChange={(event) => setCustomerSearch(event.target.value)}
@@ -482,7 +482,7 @@ export function OrderForm({
               </button>
             ))
           ) : (
-            <p className="px-3 py-2 text-sm text-slate-500 dark:text-slate-300">
+            <p className="px-3 py-2 text-sm text-text-secondary">
               {t("orders.customerSearchEmpty")}
             </p>
           )}
@@ -568,10 +568,10 @@ export function OrderForm({
           </div>
         ) : null}
       </section>
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+      <label className="grid min-w-0 gap-1 text-sm font-semibold text-text-secondary">
         {t("tables.payment")}
         <select
-          className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2"
+          className="min-h-10 min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           value={values.payment_status}
           onChange={(event) =>
             setValues({
@@ -595,12 +595,12 @@ export function OrderForm({
             <h3 className="font-bold text-slate-950 dark:text-white">
               {t("orders.items")}
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-300">
+            <p className="text-sm text-text-secondary">
               {t("products.variantsDescription")}
             </p>
           </div>
           <button
-            className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold dark:border-white/10"
+            className="min-h-10 rounded-xl border border-border-subtle px-4 py-2 text-sm font-semibold text-text-primary"
             type="button"
             disabled={!canEditItems}
             onClick={addItem}
@@ -633,11 +633,11 @@ export function OrderForm({
           });
           return (
             <article
-              className="grid min-w-0 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/[0.04]"
+              className="grid min-w-0 gap-3 rounded-2xl border border-border-subtle bg-surface-2 p-3"
               key={index}
             >
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h4 className="font-semibold text-slate-950 dark:text-white">
+                <h4 className="font-semibold text-text-primary">
                   {t("orders.item")} {index + 1}
                 </h4>
                 <button
@@ -650,10 +650,10 @@ export function OrderForm({
                 </button>
               </div>
               <div className="grid min-w-0 gap-3 md:grid-cols-3">
-                <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+                <label className="grid min-w-0 gap-1 text-sm font-semibold text-text-secondary">
                   {t("orders.selectCategory")}
                   <select
-                    className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2"
+                    className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                     value={filter.category}
                     disabled={!canEditItems}
                     onChange={(event) =>
@@ -671,10 +671,10 @@ export function OrderForm({
                     ))}
                   </select>
                 </label>
-                <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+                <label className="grid min-w-0 gap-1 text-sm font-semibold text-text-secondary">
                   {t("orders.searchProduct")}
                   <input
-                    className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2"
+                    className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                     value={filter.productSearch}
                     disabled={!canEditItems}
                     placeholder={t("orders.searchProduct")}
@@ -687,14 +687,14 @@ export function OrderForm({
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                     {t("orders.selectProduct")}
                   </span>
-                  <div className="product-selector-combobox sellora-scrollbar grid max-h-64 min-w-0 gap-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 dark:border-white/10 dark:bg-slate-950">
+                  <div className="product-selector-combobox sellora-scrollbar grid max-h-56 min-w-0 gap-1 overflow-y-auto rounded-2xl border border-border-subtle bg-surface-1 p-1.5 shadow-[var(--shadow-card)]">
                     {filteredProducts.length ? (
                       visibleProductOptions.map((product) => {
                         const image = productImage(product);
                         const isSelected = filter.productId === product.id;
                         return (
                           <button
-                            className={`product-select-item flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition ${isSelected ? "border-blue-600 bg-blue-50 dark:bg-blue-500/10" : "border-transparent hover:border-blue-200 hover:bg-slate-50 dark:border-transparent dark:hover:border-blue-300/40 dark:hover:bg-white/5"}`}
+                            className={`product-select-item flex min-w-0 items-center gap-2 rounded-xl border px-2 py-2 text-left transition ${isSelected ? "border-primary bg-surface-selected" : "border-transparent hover:border-border-strong hover:bg-surface-hover"}`}
                             disabled={!canEditItems}
                             key={product.id}
                             type="button"
@@ -702,20 +702,20 @@ export function OrderForm({
                           >
                             {image ? (
                               <img
-                                className="h-9 w-9 shrink-0 rounded-lg object-cover"
+                                className="h-8 w-8 shrink-0 rounded-lg object-cover"
                                 src={image.image_url}
                                 alt={image.alt_text ?? product.name}
                               />
                             ) : (
-                              <span className="product-option-placeholder flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[9px] font-black uppercase text-slate-400 dark:bg-white/10">
+                              <span className="product-option-placeholder flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[9px] font-black uppercase text-slate-400 dark:bg-white/10">
                                 {t("orders.productOption.noImage")}
                               </span>
                             )}
                             <span className="min-w-0 flex-1">
-                              <strong className="block truncate text-sm leading-5 text-slate-950 dark:text-white">
+                              <strong className="block truncate text-sm leading-5 text-text-primary">
                                 {product.name}
                               </strong>
-                              <span className="block truncate text-[11px] leading-4 text-slate-500 dark:text-slate-300">
+                              <span className="block truncate text-[11px] leading-4 text-text-secondary">
                                 {productSummary(product)}
                               </span>
                             </span>
@@ -723,22 +723,22 @@ export function OrderForm({
                         );
                       })
                     ) : (
-                      <p className="p-3 text-sm text-slate-500 dark:text-slate-300">
+                      <p className="p-3 text-sm text-text-secondary">
                         {t("orders.productOption.noProducts")}
                       </p>
                     )}
                     {hasMoreProductOptions ? (
-                      <p className="px-2 py-1 text-xs font-semibold text-slate-500 dark:text-slate-300">
+                      <p className="px-2 py-1 text-xs font-semibold text-text-muted">
                         {t("orders.productOption.refineSearch")}
                       </p>
                     ) : null}
                   </div>
                 </div>
               </div>
-              <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+              <label className="grid min-w-0 gap-1 text-sm font-semibold text-text-secondary">
                 {t("orders.selectVariant")}
                 <select
-                  className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2"
+                  className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   value={item.product_variant_id}
                   disabled={
                     !hasVariants || !canEditItems || variantOptions.length === 0
@@ -758,10 +758,10 @@ export function OrderForm({
                 </select>
               </label>
               <div className="grid min-w-0 gap-3 sm:grid-cols-4">
-                <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+                <label className="grid min-w-0 gap-1 text-sm font-semibold text-text-secondary">
                   {t("orders.quantity")}
                   <input
-                    className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2"
+                    className="min-h-10 min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                     min={1}
                     type="number"
                     disabled={!canEditItems}
@@ -771,10 +771,10 @@ export function OrderForm({
                     }
                   />
                 </label>
-                <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+                <label className="grid min-w-0 gap-1 text-sm font-semibold text-text-secondary">
                   {t("orders.unitPrice")}
                   <input
-                    className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2"
+                    className="min-h-10 min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                     inputMode="decimal"
                     placeholder={t("orders.unitPrice")}
                     disabled={!canEditItems}
@@ -784,10 +784,10 @@ export function OrderForm({
                     }
                   />
                 </label>
-                <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+                <label className="grid min-w-0 gap-1 text-sm font-semibold text-text-secondary">
                   {t("orders.unitCost")}
                   <input
-                    className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2"
+                    className="min-h-10 min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                     inputMode="decimal"
                     placeholder={t("orders.unitCost")}
                     disabled={!canEditItems}
@@ -813,7 +813,7 @@ export function OrderForm({
 
       <div className="grid gap-3 sm:grid-cols-4">
         <input
-          className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2"
+          className="min-h-10 min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           inputMode="decimal"
           placeholder={t("orders.adCost")}
           value={values.ad_cost ?? ""}
@@ -822,7 +822,7 @@ export function OrderForm({
           }
         />
         <input
-          className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2"
+          className="min-h-10 min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           inputMode="decimal"
           placeholder={t("orders.shipping")}
           value={values.shipping_cost ?? ""}
@@ -831,7 +831,7 @@ export function OrderForm({
           }
         />
         <input
-          className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2"
+          className="min-h-10 min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           inputMode="decimal"
           placeholder={t("orders.codFee")}
           value={values.cod_fee ?? ""}
@@ -840,7 +840,7 @@ export function OrderForm({
           }
         />
         <input
-          className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2"
+          className="min-h-10 min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           inputMode="decimal"
           placeholder={t("orders.other")}
           value={values.other_cost ?? ""}

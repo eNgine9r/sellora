@@ -11,7 +11,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const Icon = resolvedTheme === "dark" ? Sun : Moon;
   return (
     <button
-      className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15 ${compact ? "w-11 px-0" : ""}`}
+      className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 px-3 text-sm font-bold text-text-primary shadow-sm transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${compact ? "h-10 min-h-10 w-10 px-0" : "min-h-11"}`}
       type="button"
       onClick={() => setMode(nextMode)}
       aria-label={`${t("theme.label")}: ${t(`theme.${mode}`)}, ${t("theme.switchTo")} ${t(`theme.${nextMode}`)}.`}
