@@ -16,7 +16,7 @@ import {
   PaginationControls,
   PAGE_SIZE_OPTIONS,
 } from "@/components/pagination-controls";
-import { Button, CompactSummary, EntityDrawer, MetricCard, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
+import { Button, CompactSummary, EntitySidePanel, MetricCard, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { OrderDetails } from "@/features/orders/components/order-details";
 import { OrderForm } from "@/features/orders/components/order-form";
@@ -241,6 +241,10 @@ export default function OrdersPage() {
   }, [search, status, paymentStatus, orderSort, pageSize]);
 
   useEffect(() => {
+    setSelectedOrder(null);
+  }, [workspaceId]);
+
+  useEffect(() => {
     setPage((currentPage) =>
       clampPage(currentPage, pageSize, filteredOrders.length),
     );
@@ -260,7 +264,7 @@ export default function OrdersPage() {
           description={t("orders.subtitle")}
           actions={<Button disabled={!enabled} onClick={() => setIsCreateOpen(true)}>{t("orders.create")}</Button>}
         />
-        <CompactSummary items={[
+        <CompactSummary layout="five-balanced" items={[
           { label: t("orders.summary.all"), value: allOrders },
           { label: t("orders.summary.new"), value: newOrders },
           { label: t("orders.summary.awaitingPayment"), value: awaitingPayment },
@@ -330,71 +334,75 @@ export default function OrdersPage() {
           helper={t("orders.todaySummary", { count: dashboardQuery.data?.orders_today ?? 0, revenue: formatMoney(dashboardQuery.data?.revenue_today, currencyCode), profit: formatMoney(dashboardQuery.data?.profit_today, currencyCode) })}
           tone="info"
         />
-        {ordersQuery.isLoading ? (
-          <LoadingSkeleton rows={5} title={t("orders.loading")} />
-        ) : ordersQuery.isError ? (
-          <ErrorState title={t("orders.loadError")} description={safeApiErrorMessage(ordersQuery.error, t("orders.loadError"))} onRetry={() => void ordersQuery.refetch()} />
-        ) : (
-          <div className="orders-pagination-section grid min-w-0 gap-4">
-            {filteredOrders.length > 0 ? (
-              <PaginationControls
-                page={page}
-                pageSize={pageSize}
-                totalItems={filteredOrders.length}
-                onPageChange={setPage}
-                onPageSizeChange={(nextPageSize) =>
-                  setPageSize(
-                    nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number],
-                  )
-                }
-              />
-            ) : null}
-            {filteredOrders.length === 0 ? (
-              <EmptyState
-                title={
-                  hasAnyOrders && hasActiveFilters
-                    ? t("orders.pagination.filteredEmptyTitle")
-                    : t("orders.pagination.emptyTitle")
-                }
-                description={
-                  hasAnyOrders && hasActiveFilters
-                    ? t("orders.pagination.filteredEmptyDescription")
-                    : t("orders.pagination.emptyDescription")
-                }
-                action={
-                  !hasAnyOrders ? (
-                    <Button onClick={() => setIsCreateOpen(true)}>{t("orders.create")}</Button>
-                  ) : null
-                }
-              />
-            ) : (
-              <OrderTable
-                orders={paginatedOrders}
+        <WorkspaceSplitView
+          panelOpen={Boolean(selectedOrder)}
+          panel={selectedOrder ? (
+            <EntitySidePanel
+              open={Boolean(selectedOrder)}
+              title={selectedOrder.order_number ?? t("orders.details")}
+              description={`${t("orders.profit")}: ${formatMoney(selectedOrder.net_profit, currencyCode)}`}
+              onClose={() => setSelectedOrder(null)}
+              footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingOrder(selectedOrder)}>{t("orders.edit")}</Button>{["NEW", "CANCELLED"].includes(selectedOrder.status) ? <Button variant="danger" onClick={() => setArchivingOrder(selectedOrder)}>{t("orders.archive")}</Button> : null}</div> : undefined}
+            >
+              <OrderDetails
+                order={selectedOrder}
                 currencyCode={currencyCode}
-                selectedOrderId={selectedOrder?.id}
-                onSelect={setSelectedOrder}
-                onEdit={canEdit ? setEditingOrder : undefined}
-                onArchive={canEdit ? setArchivingOrder : undefined}
+                shipment={shipmentQuery.data}
+                onStatusChange={(nextStatus) => statusMutation.mutate({ orderId: selectedOrder.id, nextStatus })}
               />
-            )}
-          </div>
-        )}
-        <EntityDrawer
-          open={Boolean(selectedOrder)}
-          title={selectedOrder?.order_number ?? t("orders.details")}
-          description={selectedOrder ? `${t("orders.profit")}: ${formatMoney(selectedOrder.net_profit, currencyCode)}` : undefined}
-          onClose={() => setSelectedOrder(null)}
-          footer={selectedOrder && canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingOrder(selectedOrder)}>{t("orders.edit")}</Button>{["NEW", "CANCELLED"].includes(selectedOrder.status) ? <Button variant="danger" onClick={() => setArchivingOrder(selectedOrder)}>{t("orders.archive")}</Button> : null}</div> : undefined}
-        >
-          {selectedOrder ? (
-            <OrderDetails
-              order={selectedOrder}
-              currencyCode={currencyCode}
-              shipment={shipmentQuery.data}
-              onStatusChange={(nextStatus) => statusMutation.mutate({ orderId: selectedOrder.id, nextStatus })}
-            />
+            </EntitySidePanel>
           ) : null}
-        </EntityDrawer>
+        >
+          {ordersQuery.isLoading ? (
+            <LoadingSkeleton rows={5} title={t("orders.loading")} />
+          ) : ordersQuery.isError ? (
+            <ErrorState title={t("orders.loadError")} description={safeApiErrorMessage(ordersQuery.error, t("orders.loadError"))} onRetry={() => void ordersQuery.refetch()} />
+          ) : (
+            <div className="orders-pagination-section grid min-w-0 gap-4">
+              {filteredOrders.length > 0 ? (
+                <PaginationControls
+                  page={page}
+                  pageSize={pageSize}
+                  totalItems={filteredOrders.length}
+                  onPageChange={setPage}
+                  onPageSizeChange={(nextPageSize) =>
+                    setPageSize(
+                      nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number],
+                    )
+                  }
+                />
+              ) : null}
+              {filteredOrders.length === 0 ? (
+                <EmptyState
+                  title={
+                    hasAnyOrders && hasActiveFilters
+                      ? t("orders.pagination.filteredEmptyTitle")
+                      : t("orders.pagination.emptyTitle")
+                  }
+                  description={
+                    hasAnyOrders && hasActiveFilters
+                      ? t("orders.pagination.filteredEmptyDescription")
+                      : t("orders.pagination.emptyDescription")
+                  }
+                  action={
+                    !hasAnyOrders ? (
+                      <Button onClick={() => setIsCreateOpen(true)}>{t("orders.create")}</Button>
+                    ) : null
+                  }
+                />
+              ) : (
+                <OrderTable
+                  orders={paginatedOrders}
+                  currencyCode={currencyCode}
+                  selectedOrderId={selectedOrder?.id}
+                  onSelect={setSelectedOrder}
+                  onEdit={canEdit ? setEditingOrder : undefined}
+                  onArchive={canEdit ? setArchivingOrder : undefined}
+                />
+              )}
+            </div>
+          )}
+        </WorkspaceSplitView>
         {isCreateOpen ? (
           <FormDialog
             title={t("orders.create")}

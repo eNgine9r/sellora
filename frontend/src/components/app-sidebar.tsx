@@ -23,17 +23,17 @@ const items = [
   ["/settings", "navigation.settings", Settings],
 ] as const;
 
-export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () => void; showBrand?: boolean }) {
   const pathname = usePathname();
   const { t } = useI18n();
 
   return (
     <aside className="sellora-sidebar flex h-full min-h-0 flex-col border-r border-border-subtle bg-sidebar text-text-primary">
-      <div className="px-4 py-5 sm:px-5">
+      {showBrand ? <div className="px-4 py-5 sm:px-5">
         <Link href="/dashboard" onClick={onNavigate} aria-label={t("navigation.dashboard")} className="block rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 px-3 py-3 shadow-[var(--shadow-card)] transition hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
           <BrandLockup markClassName="h-10 w-10" textClassName="text-text-primary" />
         </Link>
-      </div>
+      </div> : null}
       <nav className="sidebar-scrollbar grid min-w-0 gap-1 overflow-y-auto px-3 pb-44 lg:pb-5" aria-label={t("navigation.settings")}>
         {items.map(([href, label, Icon]) => {
           const active = pathname === href || pathname.startsWith(`${href}/`) || (href === "/dashboard" && pathname === "/overview") || (href === "/reports" && pathname === "/analytics");

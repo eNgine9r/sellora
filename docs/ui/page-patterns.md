@@ -121,3 +121,9 @@ Orders and Products should follow the same protected CRM workspace rhythm as Das
 - Entity detail views on protected CRM pages must use the responsive side-panel pattern: non-modal desktop aside, modal mobile sheet.
 - Standard generic Drawer remains modal and must not be repurposed globally for embedded page details.
 - Five-card summary rows must use the explicit balanced layout: 3 + 2 at medium desktop and five equal columns on wide desktop.
+
+## Workspace split-view entity details
+
+Protected entity pages that show list/table details must use `WorkspaceSplitView` as the route-level parent for the main content and detail panel. The detail panel is passed through the `panel` prop and must render `EntitySidePanel`, which is non-modal on desktop and falls back to the modal `Drawer` below `lg`.
+
+Five-card summaries must explicitly opt into `CompactSummary layout="five-balanced"`. Do not rely on automatic `auto-fit` behavior for five KPI cards because it can create orphan cards at common desktop widths.

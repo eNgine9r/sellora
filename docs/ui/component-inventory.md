@@ -42,3 +42,9 @@
 - `WorkspaceSplitView` — shared protected-page split layout for list/table content plus a desktop entity side panel.
 - `EntitySidePanel` — responsive entity details surface: non-modal desktop `<aside>` and modal mobile Drawer sheet.
 - `CompactSummary` now includes count-aware balanced layouts for five-card KPI/summary rows.
+
+## Dd.4.3 additions
+
+- `CompactSummary layout="five-balanced"`: explicit count-aware five-card summary layout for Orders, Products, and any future five-KPI protected page.
+- `WorkspaceSplitView`: route-level split layout that renders main table/list content and an embedded desktop entity panel as sibling columns.
+- `EntitySidePanel`: non-modal desktop detail aside with mobile `Drawer` fallback for Orders, Products, Leads, and Customers.

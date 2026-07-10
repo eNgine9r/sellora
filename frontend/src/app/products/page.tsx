@@ -6,7 +6,7 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FormDialog } from "@/components/form-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
-import { Button, CompactSummary, DrawerTabs, EntityDrawer, FieldGrid, FieldItem, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
+import { Button, CompactSummary, DrawerTabs, EntitySidePanel, FieldGrid, FieldItem, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { PaginationControls, clampPage, paginateItems } from "@/components/pagination-controls";
 import { ProductForm } from "@/features/products/components/product-form";
@@ -185,6 +185,11 @@ export default function ProductsPage() {
     setVariantPage((page) => clampPage(page, variantPageSize, variants.length));
   }, [variantPageSize, variants.length]);
 
+  useEffect(() => {
+    setSelectedProduct(null);
+    setActiveDrawerTab("overview");
+  }, [workspaceId]);
+
   return (
     <WorkspacePage>
         <WorkspaceHeader
@@ -198,7 +203,7 @@ export default function ProductsPage() {
           }
         />
 
-        <CompactSummary items={[
+        <CompactSummary layout="five-balanced" items={[
           { label: t("products.summary.all"), value: products.length },
           { label: t("products.summary.active"), value: activeProducts },
           { label: t("products.summary.variants"), value: variants.length },
@@ -224,90 +229,93 @@ export default function ProductsPage() {
           </FilterBar>
         </section>
 
-        {listError ? <ErrorState title={t("products.loadError")} description={listError} onRetry={() => void productsQuery.refetch()} /> : null}
-        {productsQuery.isLoading ? <LoadingSkeleton rows={5} title={t("products.loading")} /> : null}
-        {!listError && !productsQuery.isLoading && paginatedProducts.length === 0 ? <EmptyState title={t("products.empty")} description={t("products.emptyDescription")} action={canEdit ? <Button onClick={() => setDialog("product")}>{t("products.create")}</Button> : null} /> : null}
-        {!listError && paginatedProducts.length > 0 ? <ProductTable products={paginatedProducts} selectedProductId={selectedProduct?.id} onSelect={(product) => { setSelectedProduct(product); setActiveDrawerTab("overview"); }} onEdit={canEdit ? setEditingProduct : undefined} onArchive={canEdit ? setArchivingProduct : undefined} /> : null}
-        <PaginationControls page={productPage} pageSize={productPageSize} totalItems={visibleProducts.length} onPageChange={setProductPage} onPageSizeChange={(size) => { setProductPageSize(size); setProductPage(1); }} />
-
-        <section className="min-w-0 rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">{t("products.manageVariants")}</h2>
-              <p className="mt-1 text-sm text-text-muted">{t("products.variantsDescription")}</p>
-            </div>
-            <button className="min-h-10 rounded-xl border border-border-subtle px-4 py-2 text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-60" disabled={!enabled} onClick={() => setDialog("variant")}>
-              {t("products.createVariant")}
-            </button>
-          </div>
-          <div className="sellora-scrollbar mt-3 overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="text-xs uppercase text-text-muted">
-                <tr>
-                  <th className="px-3 py-2">SKU</th>
-                  <th className="px-3 py-2">{t("inventory.product")}</th>
-                  <th className="px-3 py-2">Color</th>
-                  <th className="px-3 py-2">Size</th>
-                  <th className="px-3 py-2">Price</th>
-                  <th className="px-3 py-2">Barcode</th>
-                  <th className="px-3 py-2">{t("tables.status")}</th>
-                  <th className="px-3 py-2">{t("tables.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedVariants.map((variant) => (
-                  <tr key={variant.id} className="border-t border-border-subtle hover:bg-surface-hover">
-                    <td className="px-3 py-2 font-semibold">{variant.sku}</td>
-                    <td className="px-3 py-2">{products.find((product) => product.id === variant.product_id)?.name ?? "—"}</td>
-                    <td className="px-3 py-2">{variant.color ?? "—"}</td>
-                    <td className="px-3 py-2">{variant.size ?? "—"}</td>
-                    <td className="px-3 py-2">{variant.price ?? "—"}</td>
-                    <td className="px-3 py-2">{variant.barcode ?? "—"}</td>
-                    <td className="px-3 py-2">{variant.is_active ? t("products.active") : t("products.inactive")}</td>
-                    <td className="px-3 py-2">
-                      {canEdit ? (
-                        <div className="flex flex-wrap gap-2">
-                          <button aria-label={`Edit variant ${variant.sku}`} className="min-h-10 rounded-xl border border-border-subtle px-3 py-2 font-semibold text-text-primary" onClick={() => setEditingVariant(variant)}>
-                            {t("products.editVariant")}
-                          </button>
-                          <button aria-label={`Archive variant ${variant.sku}`} className="min-h-10 rounded-xl border border-danger-foreground/30 px-3 py-2 font-semibold text-danger-foreground" onClick={() => setArchivingVariant(variant)}>
-                            {t("products.archive")}
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-semibold uppercase text-text-muted">{t("common.readOnly")}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {paginatedVariants.length === 0 ? (
-                  <tr>
-                    <td className="px-3 py-6 text-text-muted" colSpan={8}>{t("products.createProductVariantFirst")}</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        <PaginationControls page={variantPage} pageSize={variantPageSize} totalItems={variants.length} onPageChange={setVariantPage} onPageSizeChange={(size) => { setVariantPageSize(size); setVariantPage(1); }} />
-
-        <EntityDrawer
-          open={Boolean(selectedProduct)}
-          title={selectedProduct?.name ?? t("products.details")}
-          description={selectedProduct?.sku ? `${t("products.sku")}: ${selectedProduct.sku}` : selectedProduct?.brand ?? undefined}
-          onClose={() => setSelectedProduct(null)}
-          footer={selectedProduct && canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingProduct(selectedProduct)}>{t("products.edit")}</Button><Button variant="danger" onClick={() => setArchivingProduct(selectedProduct)}>{t("products.archive")}</Button></div> : undefined}
-        >
-          {selectedProduct ? (
-            <ProductDrawerContent
-              product={selectedProduct}
-              variants={productVariantsByProduct.get(selectedProduct.id) ?? []}
-              inventory={inventoryByVariant}
-              activeTab={activeDrawerTab}
-              onTabChange={setActiveDrawerTab}
-            />
+        <WorkspaceSplitView
+          panelOpen={Boolean(selectedProduct)}
+          panel={selectedProduct ? (
+            <EntitySidePanel
+              open={Boolean(selectedProduct)}
+              title={selectedProduct.name ?? t("products.details")}
+              description={selectedProduct.sku ? `${t("products.sku")}: ${selectedProduct.sku}` : selectedProduct.brand ?? undefined}
+              onClose={() => setSelectedProduct(null)}
+              footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingProduct(selectedProduct)}>{t("products.edit")}</Button><Button variant="danger" onClick={() => setArchivingProduct(selectedProduct)}>{t("products.archive")}</Button></div> : undefined}
+            >
+              <ProductDrawerContent
+                product={selectedProduct}
+                variants={productVariantsByProduct.get(selectedProduct.id) ?? []}
+                inventory={inventoryByVariant}
+                activeTab={activeDrawerTab}
+                onTabChange={setActiveDrawerTab}
+              />
+            </EntitySidePanel>
           ) : null}
-        </EntityDrawer>
+        >
+          {listError ? <ErrorState title={t("products.loadError")} description={listError} onRetry={() => void productsQuery.refetch()} /> : null}
+          {productsQuery.isLoading ? <LoadingSkeleton rows={5} title={t("products.loading")} /> : null}
+          {!listError && !productsQuery.isLoading && paginatedProducts.length === 0 ? <EmptyState title={t("products.empty")} description={t("products.emptyDescription")} action={canEdit ? <Button onClick={() => setDialog("product")}>{t("products.create")}</Button> : null} /> : null}
+          {!listError && paginatedProducts.length > 0 ? <ProductTable products={paginatedProducts} selectedProductId={selectedProduct?.id} onSelect={(product) => { setSelectedProduct(product); setActiveDrawerTab("overview"); }} onEdit={canEdit ? setEditingProduct : undefined} onArchive={canEdit ? setArchivingProduct : undefined} /> : null}
+          <PaginationControls page={productPage} pageSize={productPageSize} totalItems={visibleProducts.length} onPageChange={setProductPage} onPageSizeChange={(size) => { setProductPageSize(size); setProductPage(1); }} />
+
+          <section className="mt-4 min-w-0 rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">{t("products.manageVariants")}</h2>
+                <p className="mt-1 text-sm text-text-muted">{t("products.variantsDescription")}</p>
+              </div>
+              <button className="min-h-10 rounded-xl border border-border-subtle px-4 py-2 text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-60" disabled={!enabled} onClick={() => setDialog("variant")}>
+                {t("products.createVariant")}
+              </button>
+            </div>
+            <div className="sellora-scrollbar mt-3 overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="text-xs uppercase text-text-muted">
+                  <tr>
+                    <th className="px-3 py-2">SKU</th>
+                    <th className="px-3 py-2">{t("inventory.product")}</th>
+                    <th className="px-3 py-2">Color</th>
+                    <th className="px-3 py-2">Size</th>
+                    <th className="px-3 py-2">Price</th>
+                    <th className="px-3 py-2">Barcode</th>
+                    <th className="px-3 py-2">{t("tables.status")}</th>
+                    <th className="px-3 py-2">{t("tables.actions")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedVariants.map((variant) => (
+                    <tr key={variant.id} className="border-t border-border-subtle hover:bg-surface-hover">
+                      <td className="px-3 py-2 font-semibold">{variant.sku}</td>
+                      <td className="px-3 py-2">{products.find((product) => product.id === variant.product_id)?.name ?? "—"}</td>
+                      <td className="px-3 py-2">{variant.color ?? "—"}</td>
+                      <td className="px-3 py-2">{variant.size ?? "—"}</td>
+                      <td className="px-3 py-2">{variant.price ?? "—"}</td>
+                      <td className="px-3 py-2">{variant.barcode ?? "—"}</td>
+                      <td className="px-3 py-2">{variant.is_active ? t("products.active") : t("products.inactive")}</td>
+                      <td className="px-3 py-2">
+                        {canEdit ? (
+                          <div className="flex flex-wrap gap-2">
+                            <button aria-label={`Edit variant ${variant.sku}`} className="min-h-10 rounded-xl border border-border-subtle px-3 py-2 font-semibold text-text-primary" onClick={() => setEditingVariant(variant)}>
+                              {t("products.editVariant")}
+                            </button>
+                            <button aria-label={`Archive variant ${variant.sku}`} className="min-h-10 rounded-xl border border-danger-foreground/30 px-3 py-2 font-semibold text-danger-foreground" onClick={() => setArchivingVariant(variant)}>
+                              {t("products.archive")}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-semibold uppercase text-text-muted">{t("common.readOnly")}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {paginatedVariants.length === 0 ? (
+                    <tr>
+                      <td className="px-3 py-6 text-text-muted" colSpan={8}>{t("products.createProductVariantFirst")}</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <PaginationControls page={variantPage} pageSize={variantPageSize} totalItems={variants.length} onPageChange={setVariantPage} onPageSizeChange={(size) => { setVariantPageSize(size); setVariantPage(1); }} />
+        </WorkspaceSplitView>
         {dialog === "product" ? (
           <FormDialog title={t("products.create")} description={t("products.createDescription")} onClose={() => setDialog(null)}>
             <ProductForm

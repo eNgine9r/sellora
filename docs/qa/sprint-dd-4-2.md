@@ -58,3 +58,7 @@
 ## Sprint status
 
 CONDITIONALLY APPROVED until authenticated browser visual QA verifies dashboard and side-panel behavior.
+
+## Dd.4.3 closure update
+
+Sprint Dd.4.3 replaces the earlier foundation-only state with actual route-level split-view integrations for Orders, Products, Leads, and Customers. Entity details now render as sibling desktop side panels and remain modal Drawers below `lg`. The Dashboard was rebuilt into the compact operational reference hierarchy, and Orders/Products explicitly use the five-card balanced summary layout.
