@@ -30,6 +30,13 @@ import { TopProduct } from "@/types/analytics";
 import { Lead } from "@/types/crm";
 import { Order, OrderStatus } from "@/types/orders";
 
+
+type DashboardTopProductItem = TopProduct & {
+  sku?: string | null;
+  category?: string | null;
+  image_url?: string | null;
+};
+
 const orderStatusColors: Record<OrderStatus, string> = { NEW: "#7C3AED", CONFIRMED: "#8B5CF6", SHIPPED: "#EC4899", DELIVERED: "#F97316", COMPLETED: "#16A34A", RETURNED: "#F59E0B", CANCELLED: "#94A3B8" };
 
 function productImage(product?: { images?: { image_url: string; is_primary: boolean }[] }) {
@@ -108,7 +115,7 @@ export default function DashboardPage() {
   const variantById = useMemo(() => new Map((variants.data ?? []).map((variant) => [variant.id, variant])), [variants.data]);
   const productById = useMemo(() => new Map((products.data ?? []).map((product) => [product.id, product])), [products.data]);
 
-  const topProductViews: TopProductView[] = useMemo(() => (backendDashboard.data?.products.top_products ?? topProducts.data ?? []).map((item: TopProduct | any) => {
+  const topProductViews: TopProductView[] = useMemo(() => ((backendDashboard.data?.products.top_products ?? topProducts.data ?? []) as DashboardTopProductItem[]).map((item) => {
     const product = productById.get(item.product_id);
     return { ...item, variant_id: item.variant_id ?? item.product_id, variant_sku: item.variant_sku ?? item.sku ?? "—", net_profit: item.net_profit ?? "0", categoryLabel: displayCategory(item.category ?? product?.category, t), imageUrl: item.image_url ?? productImage(product) };
   }), [backendDashboard.data?.products.top_products, productById, topProducts.data, t]);

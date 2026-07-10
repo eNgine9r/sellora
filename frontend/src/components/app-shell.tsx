@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Home, MoreHorizontal, Package, ShoppingBag, Users } from "lucide-react";
+import { BarChart3, Home, Package, ShoppingBag, Users } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
 import { NoWorkspaceOnboarding } from "@/components/no-workspace-onboarding";
