@@ -23,7 +23,9 @@
     "loadingWorkspace": "Preparing your workspace…",
     "workspaceUnavailable": "Workspace unavailable",
     "workspaceUnavailableDescription": "Workspace is not ready yet. Refresh the page or select another workspace.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "yes": "Yes",
+    "no": "No"
   },
   "actions": {
     "create": "Create",
@@ -731,7 +733,15 @@
     },
     "profitNotCalculated": "Profit is not calculated yet because product costs or expenses are missing.",
     "openCustomer": "Open customer",
-    "shipmentMissing": "Shipment has not been created yet."
+    "shipmentMissing": "Shipment has not been created yet.",
+    "todayLabel": "Today",
+    "summary": {
+      "all": "All orders",
+      "new": "New",
+      "awaitingPayment": "Awaiting payment",
+      "readyToShip": "Ready to ship",
+      "problematic": "Problematic"
+    }
   },
   "products": {
     "title": "Products",
@@ -759,7 +769,42 @@
     "inactive": "Inactive",
     "createProductVariantFirst": "Create a product first before adding variants.",
     "allStatuses": "All statuses",
-    "sku": "SKU"
+    "sku": "SKU",
+    "details": "Product details",
+    "loadError": "Unable to load products.",
+    "loading": "Loading products…",
+    "emptyDescription": "Create products and variants to prepare the catalog for orders.",
+    "summary": {
+      "all": "All products",
+      "active": "Active",
+      "variants": "Variants",
+      "lowStock": "Low stock",
+      "withoutPhoto": "Without photo"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "variants": "Variants",
+      "stock": "Stock",
+      "history": "History"
+    },
+    "stockUnavailable": "Stock data is unavailable for this product.",
+    "historyUnavailable": "Product history is unavailable in the current API.",
+    "archiveTitle": "Archive product?",
+    "archiveDescription": "Archiving this product hides it from the active catalog. Existing orders remain unchanged.",
+    "archiveVariantTitle": "Archive variant?",
+    "archiveVariantDescription": "This variant will be hidden from active selectors. Inventory is not hard deleted, and historical order items remain unchanged.",
+    "archiveVariant": "Archive variant",
+    "createFailed": "Unable to create product. Please try again.",
+    "createVariantFailed": "Unable to create variant. Please try again.",
+    "saveFailed": "Unable to save product changes. Please try again.",
+    "saveVariantFailed": "Unable to save variant changes. Please try again.",
+    "deleteFailed": "Unable to delete record. Please try again.",
+    "variantInUse": "This record cannot be deleted because it is used by other records.",
+    "variantSku": "Variant SKU",
+    "color": "Color",
+    "size": "Size",
+    "sellingPrice": "Selling price",
+    "barcode": "Barcode"
   },
   "inventory": {
     "title": "Inventory",

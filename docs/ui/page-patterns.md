@@ -97,3 +97,14 @@ Rules:
 - Preserve existing workspace-scoped query keys and handlers.
 - Mobile CRM lists should remain cards; desktop tables should not replace Sprint Dm.1 mobile UX.
 - Every new or modified CRM page/component must support and be validated in both light and dark themes on desktop and mobile.
+
+## Orders and Products workspace pattern — Sprint Dd.4
+
+Orders and Products should follow the same protected CRM workspace rhythm as Dashboard, Leads, and Customers:
+
+- Compact `WorkspaceHeader` with only real supported actions.
+- `CompactSummary` cards only from reliable current data sources; if pagination is introduced, move workspace totals to server summaries or mark unavailable.
+- Tokenized `FilterBar` controls with consistent 40px desktop control height.
+- Desktop tables with selected row state; mobile card lists remain the mobile experience.
+- Right-side `EntityDrawer`/sheet for details, using honest unavailable states for missing API-backed sections such as product history.
+- Dual-theme validation is required for every touched Orders/Products surface.
