@@ -93,7 +93,7 @@ Dashboard, Leads, and Customers should use the shared CRM workspace pattern:
 Rules:
 
 - Do not use marketing hero blocks inside protected CRM pages.
-- Do not compute global totals from only a paginated table page; use server summaries when available or mark unavailable.
+- Do not compute global totals or segment totals from only a paginated table page; use server summaries when available or mark unavailable. If a list endpoint currently returns an unpaginated array, document that contract and keep derived segment metrics unavailable unless they come from a workspace-level summary source.
 - Preserve existing workspace-scoped query keys and handlers.
 - Mobile CRM lists should remain cards; desktop tables should not replace Sprint Dm.1 mobile UX.
 - Every new or modified CRM page/component must support and be validated in both light and dark themes on desktop and mobile.

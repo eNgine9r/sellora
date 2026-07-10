@@ -37,9 +37,6 @@ type DashboardTopProductItem = TopProduct & {
   image_url?: string | null;
 };
 
-
-
-
 const orderStatusColors: Record<OrderStatus, string> = { NEW: "#7C3AED", CONFIRMED: "#8B5CF6", SHIPPED: "#EC4899", DELIVERED: "#F97316", COMPLETED: "#16A34A", RETURNED: "#F59E0B", CANCELLED: "#94A3B8" };
 
 function productImage(product?: { images?: { image_url: string; is_primary: boolean }[] }) {
@@ -100,8 +97,8 @@ export default function DashboardPage() {
   const products = useQuery({ queryKey: ["dashboard-products", workspaceId], queryFn: () => fetchProducts(workspaceId), enabled });
   const variants = useQuery({ queryKey: ["dashboard-variants", workspaceId], queryFn: () => fetchProductVariants(workspaceId, undefined, undefined), enabled });
 
-  const currentOrders = useMemo(() => (orders.data ?? []).filter((order) => isInDateRange(order.created_at, range)), [orders.data, range]);
-  const currentLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, range)), [leads.data, range]);
+  const currentOrders = useMemo(() => (orders.data ?? []).filter((order) => isInDateRange(order.created_at, range)), [orders.data, range.date_from, range.date_to]);
+  const currentLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, range)), [leads.data, range.date_from, range.date_to]);
 
   const trend = useMemo(() => (salesTrend.data ?? []).map((item) => ({ ...item, revenueNumber: toFiniteNumber(item.revenue), profitNumber: toFiniteNumber(item.net_profit), ordersCount: item.orders_count })), [salesTrend.data]);
 

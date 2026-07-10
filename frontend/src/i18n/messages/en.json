@@ -634,7 +634,8 @@
       "all": "All customers",
       "withPurchases": "With purchases",
       "repeat": "Repeat",
-      "withoutOrders": "No orders"
+      "withoutOrders": "No orders",
+      "unavailable": "Workspace-level summary needed"
     },
     "activity": "Activity",
     "tabs": {

@@ -634,7 +634,8 @@
       "all": "Усі клієнти",
       "withPurchases": "З покупками",
       "repeat": "Повторні",
-      "withoutOrders": "Без замовлень"
+      "withoutOrders": "Без замовлень",
+      "unavailable": "Потрібен підсумок по всьому магазину"
     },
     "activity": "Активність",
     "tabs": {

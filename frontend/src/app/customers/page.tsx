@@ -123,16 +123,18 @@ export default function CustomersPage() {
   }), [customersQuery.data, customerSort]);
   const hasActiveFilters = Boolean(search.trim());
   const allCustomers = customersQuery.data?.length ?? 0;
-  const withPurchases = customersQuery.data?.filter((customer) => customer.total_orders >= 1).length ?? 0;
-  const repeatCustomers = customersQuery.data?.filter((customer) => customer.total_orders > 1).length ?? 0;
-  const withoutOrders = customersQuery.data?.filter((customer) => customer.total_orders === 0).length ?? 0;
   const customersError = customersQuery.isError ? safeApiErrorMessage(customersQuery.error, t("customers.loadError")) : null;
 
   return (
     <WorkspacePage>
         <WorkspaceHeader title={t("customers.title")} description={t("customers.subtitle")} actions={<Button onClick={() => setIsCreateOpen(true)}>{t("customers.create")}</Button>} />
 
-        <CompactSummary items={[{ label: t("customers.summary.all"), value: allCustomers }, { label: t("customers.summary.withPurchases"), value: withPurchases }, { label: t("customers.summary.repeat"), value: repeatCustomers }, { label: t("customers.summary.withoutOrders"), value: withoutOrders }]} />
+        <CompactSummary items={[
+          { label: t("customers.summary.all"), value: allCustomers },
+          { label: t("customers.summary.withPurchases"), value: null, unavailable: true, helper: t("customers.summary.unavailable") },
+          { label: t("customers.summary.repeat"), value: null, unavailable: true, helper: t("customers.summary.unavailable") },
+          { label: t("customers.summary.withoutOrders"), value: null, unavailable: true, helper: t("customers.summary.unavailable") },
+        ]} />
 
         <FilterBar>
           <SearchInput value={search} onChange={setSearch} placeholder={t("customers.searchPlaceholder")} />
