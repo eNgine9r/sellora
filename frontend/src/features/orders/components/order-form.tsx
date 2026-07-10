@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { RemoteImage } from "@/components/ui/remote-image";
 import { useI18n } from "@/i18n/provider";
 import {
   CategoryFilter,
@@ -701,8 +702,8 @@ export function OrderForm({
                             onClick={() => selectProduct(index, product.id)}
                           >
                             {image ? (
-                              <img
-                                className="h-9 w-9 shrink-0 rounded-lg object-cover"
+                              <RemoteImage
+                                className="h-9 w-9 shrink-0 rounded-lg"
                                 src={image.image_url}
                                 alt={image.alt_text ?? product.name}
                               />
