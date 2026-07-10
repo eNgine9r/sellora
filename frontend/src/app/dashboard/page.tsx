@@ -6,13 +6,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ActivityFeed, DashboardActivity } from "@/features/dashboard/components/activity-feed";
 import { ChartCard } from "@/features/dashboard/components/chart-card";
-import { KpiCard } from "@/features/dashboard/components/kpi-card";
 import { NotificationsCard, DashboardNotification } from "@/features/dashboard/components/notifications-card";
 import { QuickActionsCard } from "@/features/dashboard/components/quick-actions-card";
 import { RecentOrdersTable } from "@/features/dashboard/components/recent-orders-table";
 import { TopProductsCard, TopProductView } from "@/features/dashboard/components/top-products-card";
 import { DateRangeSelector } from "@/components/date-range-selector";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
+import { MetricCard, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { DemoWorkspaceNotice, FirstRunEmptyCtas, SetupChecklist } from "@/components/pilot-readiness";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
@@ -28,7 +28,14 @@ import { fetchProducts, fetchProductVariants } from "@/services/products";
 import { fetchShipmentSummary } from "@/services/shipments";
 import { TopProduct } from "@/types/analytics";
 import { Lead } from "@/types/crm";
-import { Order, OrderStatus } from "@/types/orders";
+import { OrderStatus } from "@/types/orders";
+
+
+type DashboardTopProductItem = TopProduct & {
+  sku?: string | null;
+  category?: string | null;
+  image_url?: string | null;
+};
 
 const orderStatusColors: Record<OrderStatus, string> = { NEW: "#7C3AED", CONFIRMED: "#8B5CF6", SHIPPED: "#EC4899", DELIVERED: "#F97316", COMPLETED: "#16A34A", RETURNED: "#F59E0B", CANCELLED: "#94A3B8" };
 
@@ -48,7 +55,7 @@ function OwnerActionCard({ title, description, href, action, tone = "violet" }: 
 }
 
 function OwnerMetricRow({ label, value, helper }: { label: string; value: string | number; helper?: string }) {
-  return <div className="flex min-w-0 items-start justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2 text-sm dark:bg-white/5"><div className="min-w-0"><p className="break-words font-bold text-slate-800 dark:text-slate-100">{label}</p>{helper ? <p className="break-words text-xs font-semibold text-slate-500 dark:text-slate-400">{helper}</p> : null}</div><strong className="shrink-0 text-slate-950 dark:text-white">{value}</strong></div>;
+  return <div className="flex min-w-0 items-start justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2 text-sm dark:bg-white/5"><div className="min-w-0"><p className="break-words font-bold text-slate-800 dark:text-slate-100">{label}</p>{helper ? <p className="break-words text-xs font-semibold text-text-muted">{helper}</p> : null}</div><strong className="shrink-0 text-slate-950 dark:text-white">{value}</strong></div>;
 }
 
 function MetricStrip({ label, value, helper, tone = "violet" }: { label: string; value: string | number; helper?: string; tone?: "violet" | "pink" | "orange" | "amber" }) {
@@ -77,7 +84,6 @@ export default function DashboardPage() {
   const backendDashboard = useQuery({ queryKey: ["dashboard-backend-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchDashboardSummary(workspaceId, undefined, dateFrom, dateTo), enabled });
   const previousBackendDashboard = useQuery({ queryKey: ["dashboard-backend-summary-previous", workspaceId, previousFrom, previousTo], queryFn: () => fetchDashboardSummary(workspaceId, undefined, previousFrom, previousTo), enabled: enabled && Boolean(previousFrom && previousTo) });
   const salesSummary = useQuery({ queryKey: ["dashboard-sales-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchSalesSummary(workspaceId, undefined, dateFrom, dateTo), enabled });
-  const previousSalesSummary = useQuery({ queryKey: ["dashboard-sales-summary-previous", workspaceId, previousFrom, previousTo], queryFn: () => fetchSalesSummary(workspaceId, undefined, previousFrom, previousTo), enabled: enabled && Boolean(previousFrom && previousTo) });
   const profitSummary = useQuery({ queryKey: ["dashboard-profit-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchProfitSummary(workspaceId, undefined, dateFrom, dateTo), enabled: enabled && canSeeProfit });
   const previousProfitSummary = useQuery({ queryKey: ["dashboard-profit-summary-previous", workspaceId, previousFrom, previousTo], queryFn: () => fetchProfitSummary(workspaceId, undefined, previousFrom, previousTo), enabled: enabled && canSeeProfit && Boolean(previousFrom && previousTo) });
   const salesTrend = useQuery({ queryKey: ["dashboard-sales-trend", workspaceId, dateFrom, dateTo], queryFn: () => fetchSalesTrend(workspaceId, undefined, dateFrom, dateTo), enabled: enabled && canSeeProfit });
@@ -93,7 +99,6 @@ export default function DashboardPage() {
 
   const currentOrders = useMemo(() => (orders.data ?? []).filter((order) => isInDateRange(order.created_at, range)), [orders.data, range.date_from, range.date_to]);
   const currentLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, range)), [leads.data, range.date_from, range.date_to]);
-  const previousLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, previousRange)), [leads.data, previousRange.date_from, previousRange.date_to]);
 
   const trend = useMemo(() => (salesTrend.data ?? []).map((item) => ({ ...item, revenueNumber: toFiniteNumber(item.revenue), profitNumber: toFiniteNumber(item.net_profit), ordersCount: item.orders_count })), [salesTrend.data]);
 
@@ -108,7 +113,7 @@ export default function DashboardPage() {
   const variantById = useMemo(() => new Map((variants.data ?? []).map((variant) => [variant.id, variant])), [variants.data]);
   const productById = useMemo(() => new Map((products.data ?? []).map((product) => [product.id, product])), [products.data]);
 
-  const topProductViews: TopProductView[] = useMemo(() => (backendDashboard.data?.products.top_products ?? topProducts.data ?? []).map((item: TopProduct | any) => {
+  const topProductViews: TopProductView[] = useMemo(() => ((backendDashboard.data?.products.top_products ?? topProducts.data ?? []) as DashboardTopProductItem[]).map((item) => {
     const product = productById.get(item.product_id);
     return { ...item, variant_id: item.variant_id ?? item.product_id, variant_sku: item.variant_sku ?? item.sku ?? "—", net_profit: item.net_profit ?? "0", categoryLabel: displayCategory(item.category ?? product?.category, t), imageUrl: item.image_url ?? productImage(product) };
   }), [backendDashboard.data?.products.top_products, productById, topProducts.data, t]);
@@ -183,14 +188,8 @@ export default function DashboardPage() {
   const isFirstRun = !isLoading && !hasError && setupItems.every((item) => !item.done);
 
   return (
-    <main className="overflow-x-hidden p-4 sm:p-6">
-      <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
-        <section className="rounded-[28px] bg-[linear-gradient(135deg,#6D28D9_0%,#EC4899_45%,#F97316_75%,#FACC15_100%)] p-5 text-white shadow-2xl shadow-pink-500/20 sm:p-6 lg:p-8">
-          <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[0.28em] text-white/100 sm:text-sm">{t("dashboard.eyebrow")}</p><h1 className="mt-3 text-3xl font-black leading-tight sm:text-5xl">{t("dashboard.title")}</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-white/105 sm:text-base">{t("dashboard.subtitle")}</p></div>
-            <div className="rounded-3xl bg-white/15 p-3 backdrop-blur"><DateRangeSelector compact /></div>
-          </div>
-        </section>
+    <WorkspacePage>
+        <WorkspaceHeader title={t("dashboard.titleCompact")} description={t("dashboard.descriptionCompact")} actions={<DateRangeSelector compact />} />
 
         {hasError ? <ErrorState description={t("dashboard.errors.loadFailed")} onRetry={() => { backendDashboard.refetch(); salesSummary.refetch(); if (canSeeProfit) { profitSummary.refetch(); salesTrend.refetch(); topProducts.refetch(); } advertising.refetch(); orders.refetch(); leads.refetch(); inventory.refetch(); shipments.refetch(); }} /> : null}
         {isLoading ? <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4"><LoadingSkeleton rows={2} title={t("dashboard.loading.dashboard")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.orders")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.shipments")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.ads")} /></div> : null}
@@ -198,20 +197,20 @@ export default function DashboardPage() {
         <SetupChecklist items={setupItems} />
         {isFirstRun ? <EmptyState title={t("firstRun.empty.title")} description={t("firstRun.empty.description")} action={<FirstRunEmptyCtas />} /> : null}
 
-        <section className="grid min-w-0 gap-3 rounded-[24px] border border-violet-100 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#15172A] sm:grid-cols-[1fr_auto] sm:items-center">
+        <section className="grid min-w-0 gap-3 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)] sm:grid-cols-[1fr_auto] sm:items-center">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-600 dark:text-violet-200">{t("dashboard.ownerContext.question")}</p>
-            <p className="mt-1 break-words text-sm font-semibold text-slate-600 dark:text-slate-200">{t("dashboard.periodHelper", { period: selectedPeriodLabel })}</p>
-            <p className="mt-1 break-words text-xs font-semibold text-slate-500 dark:text-slate-400">{t("dashboard.ownerContext.abbreviations")}</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">{t("dashboard.ownerContext.question")}</p>
+            <p className="mt-1 break-words text-sm font-semibold text-text-secondary">{t("dashboard.periodHelper", { period: selectedPeriodLabel })}</p>
+            <p className="mt-1 break-words text-xs font-semibold text-text-muted">{t("dashboard.ownerContext.abbreviations")}</p>
           </div>
-          <div className="rounded-2xl bg-violet-50 px-4 py-3 text-sm font-black text-violet-800 dark:bg-violet-400/15 dark:text-violet-100">{selectedPeriodLabel}</div>
+          <div className="rounded-2xl bg-surface-selected px-4 py-3 text-sm font-black text-primary">{selectedPeriodLabel}</div>
         </section>
 
         <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label={t("dashboard.kpis.orders")} value={ordersCount} helper={ordersCount ? t("dashboard.kpiHelpers.ordersHasData", { period: selectedPeriodLabel }) : t("dashboard.kpiHelpers.ordersZero")} trend={formatDeltaPercent(ordersCount, previousBackendDashboard.data?.sales.orders_count ?? previousOrderSummary.ordersCount)} />
-          <KpiCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={totalRevenue > 0 ? t("dashboard.kpiHelpers.revenueHasData", { period: selectedPeriodLabel }) : t("dashboard.kpiHelpers.revenueZero")} trend={formatDeltaPercent(totalRevenue, previousRevenue)} />
-          <KpiCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? (profitMissing ? "—" : formatMoney(netProfit, currencyCode)) : t("dashboard.restricted")} helper={!canSeeProfit ? t("dashboard.kpiHelpers.profitRestricted") : profitMissing ? t("dashboard.kpiHelpers.profitMissing") : t("dashboard.tooltips.netProfit")} trend={canSeeProfit && !profitMissing ? formatDeltaPercent(netProfit, previousProfit) : undefined} />
-          <KpiCard label={adSpend > 0 ? t("dashboard.kpis.roas") : t("dashboard.advertising.spend")} value={adSpend > 0 ? roas : formatMoney(adSpend, currencyCode)} helper={hasAdvertisingData ? t("dashboard.kpiHelpers.roasHasData") : t("dashboard.kpiHelpers.roasMissing")} trend={adSpend > 0 ? formatDeltaPercent(toFiniteNumber(backendDashboard.data?.advertising.roas ?? advertising.data?.roas), toFiniteNumber(previousBackendDashboard.data?.advertising.roas ?? previousAdvertising.data?.roas)) : undefined} />
+          <MetricCard label={t("dashboard.kpis.orders")} value={ordersCount} helper={ordersCount ? t("dashboard.kpiHelpers.ordersHasData", { period: selectedPeriodLabel }) : t("dashboard.kpiHelpers.ordersZero")} trend={formatDeltaPercent(ordersCount, previousBackendDashboard.data?.sales.orders_count ?? previousOrderSummary.ordersCount)} tone="info" />
+          <MetricCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={totalRevenue > 0 ? t("dashboard.kpiHelpers.revenueHasData", { period: selectedPeriodLabel }) : t("dashboard.kpiHelpers.revenueZero")} trend={formatDeltaPercent(totalRevenue, previousRevenue)} tone="success" />
+          <MetricCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? (profitMissing ? "—" : formatMoney(netProfit, currencyCode)) : t("dashboard.restricted")} helper={!canSeeProfit ? t("dashboard.kpiHelpers.profitRestricted") : profitMissing ? t("dashboard.kpiHelpers.profitMissing") : t("dashboard.tooltips.netProfit")} trend={canSeeProfit && !profitMissing ? formatDeltaPercent(netProfit, previousProfit) : undefined} tone={profitMissing ? "warning" : "success"} isUnavailable={!canSeeProfit || profitMissing} />
+          <MetricCard label={adSpend > 0 ? t("dashboard.kpis.roas") : t("dashboard.advertising.spend")} value={adSpend > 0 ? roas : formatMoney(adSpend, currencyCode)} helper={hasAdvertisingData ? t("dashboard.kpiHelpers.roasHasData") : t("dashboard.kpiHelpers.roasMissing")} trend={adSpend > 0 ? formatDeltaPercent(toFiniteNumber(backendDashboard.data?.advertising.roas ?? advertising.data?.roas), toFiniteNumber(previousBackendDashboard.data?.advertising.roas ?? previousAdvertising.data?.roas)) : undefined} tone={hasAdvertisingData ? "info" : "warning"} isUnavailable={!hasAdvertisingData} />
         </section>
 
         <section className="grid min-w-0 gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -250,13 +249,12 @@ export default function DashboardPage() {
 
         <section className="grid min-w-0 gap-6 xl:grid-cols-3">
           <ChartCard title={t("dashboard.advertising.title")} subtitle={t("dashboard.tooltips.roas")}><div className="grid min-w-0 gap-3 sm:grid-cols-2"><MetricStrip label={t("dashboard.advertising.spend")} value={formatMoney(adSpend, currencyCode)} /><MetricStrip label={t("dashboard.advertising.revenue")} value={formatMoney(adRevenue, currencyCode)} tone="pink" /><MetricStrip label={t("dashboard.advertising.messages")} value={backendDashboard.data?.advertising.messages ?? advertising.data?.total_messages ?? 0} tone="orange" /><MetricStrip label={t("dashboard.advertising.orders")} value={backendDashboard.data?.advertising.orders ?? advertising.data?.total_orders ?? 0} tone="amber" /><MetricStrip label={t("dashboard.advertising.cpa")} value={backendDashboard.data?.advertising.cpa ? formatMoney(backendDashboard.data.advertising.cpa, currencyCode) : advertising.data?.average_cpa ? formatMoney(advertising.data.average_cpa, currencyCode) : "—"} /><MetricStrip label={t("dashboard.advertising.cpl")} value={backendDashboard.data?.advertising.cpl ? formatMoney(backendDashboard.data.advertising.cpl, currencyCode) : advertising.data?.average_cpl ? formatMoney(advertising.data.average_cpl, currencyCode) : "—"} tone="pink" /></div></ChartCard>
-          <ChartCard title={t("dashboard.inventoryAlerts.title")} subtitle={t("dashboard.inventoryAlerts.subtitle")}><div className="grid gap-3"><MetricStrip label={t("dashboard.inventoryAlerts.lowStock")} value={backendDashboard.data?.inventory.low_stock_count ?? inventory.data?.low_stock_count ?? 0} tone="amber" /><MetricStrip label={t("dashboard.inventoryAlerts.outOfStock")} value={backendDashboard.data?.inventory.out_of_stock_count ?? inventory.data?.out_of_stock_count ?? 0} tone="orange" /><MetricStrip label={t("dashboard.inventoryAlerts.stockUnits")} value={inventory.data?.total_stock_units ?? 0} tone="violet" />{inventory.data?.low_stock_items?.slice(0, 3).map((item) => <div key={item.variant_id} className="rounded-2xl bg-slate-50 p-3 text-sm dark:bg-white/5"><strong>{item.product_name}</strong><p className="text-slate-500 dark:text-slate-400">{item.variant_sku} · {item.stock_quantity}/{item.minimum_quantity}</p></div>)}{!inventory.data?.low_stock_count ? <p className="rounded-2xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-100">{t("dashboard.inventoryAlerts.healthy")}</p> : null}</div></ChartCard>
+          <ChartCard title={t("dashboard.inventoryAlerts.title")} subtitle={t("dashboard.inventoryAlerts.subtitle")}><div className="grid gap-3"><MetricStrip label={t("dashboard.inventoryAlerts.lowStock")} value={backendDashboard.data?.inventory.low_stock_count ?? inventory.data?.low_stock_count ?? 0} tone="amber" /><MetricStrip label={t("dashboard.inventoryAlerts.outOfStock")} value={backendDashboard.data?.inventory.out_of_stock_count ?? inventory.data?.out_of_stock_count ?? 0} tone="orange" /><MetricStrip label={t("dashboard.inventoryAlerts.stockUnits")} value={inventory.data?.total_stock_units ?? 0} tone="violet" />{inventory.data?.low_stock_items?.slice(0, 3).map((item) => <div key={item.variant_id} className="rounded-2xl bg-slate-50 p-3 text-sm dark:bg-white/5"><strong>{item.product_name}</strong><p className="text-text-muted">{item.variant_sku} · {item.stock_quantity}/{item.minimum_quantity}</p></div>)}{!inventory.data?.low_stock_count ? <p className="rounded-2xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-100">{t("dashboard.inventoryAlerts.healthy")}</p> : null}</div></ChartCard>
           <ChartCard title={t("dashboard.logistics.title")} subtitle={t("dashboard.logistics.subtitle")}><div className="grid min-w-0 gap-3"><MetricStrip label={t("dashboard.logistics.inTransit")} value={shipments.data?.in_transit_count ?? 0} /><MetricStrip label={t("dashboard.logistics.arrived")} value={shipments.data?.arrived_count ?? 0} tone="pink" /><MetricStrip label={t("dashboard.logistics.deliveredToday")} value={shipments.data?.delivered_today ?? 0} tone="orange" /><MetricStrip label={t("dashboard.logistics.returnedThisMonth")} value={shipments.data?.returned_this_month ?? 0} tone="amber" /></div></ChartCard>
         </section>
 
         <section className="grid min-w-0 gap-6 xl:grid-cols-[1.25fr_0.75fr]"><RecentOrdersTable orders={orders.data ?? []} currencyCode={currencyCode} showProfit={canSeeProfit} /><NotificationsCard items={dashboardNotifications} /></section>
         <section className="grid min-w-0 gap-6 lg:grid-cols-2"><ActivityFeed events={dashboardActivity} /><QuickActionsCard /></section>
-      </div>
-    </main>
+      </WorkspacePage>
   );
 }
