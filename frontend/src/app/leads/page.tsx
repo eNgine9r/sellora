@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
@@ -15,6 +15,8 @@ import { Lead, LeadStatus } from "@/types/crm";
 import { buildLeadUpdatePayload } from "@/lib/payload-builders";
 import { useAuth } from "@/hooks/use-auth";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
+import { Button, CompactSummary, EntitySidePanel, FieldGrid, FieldItem, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
+import { Select } from "@/components/ui/primitives";
 import { useI18n } from "@/i18n/provider";
 
 const STATUSES: (LeadStatus | "")[] = ["", "NEW", "IN_PROGRESS", "QUALIFIED", "CONVERTED", "LOST"];
@@ -42,6 +44,7 @@ export default function LeadsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [archivingLead, setArchivingLead] = useState<Lead | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const authReady = authStatus !== "loading";
   const enabled = authReady && authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const canEdit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
@@ -85,45 +88,68 @@ export default function LeadsPage() {
     return right.created_at.localeCompare(left.created_at);
   }), [leadsQuery.data, leadSort]);
   const hasActiveFilters = Boolean(search.trim() || status || leadSourceId);
+  const totalLeads = leadsQuery.data?.length ?? 0;
+  const newLeads = leadsQuery.data?.filter((lead) => lead.status === "NEW").length ?? 0;
+  const inProgressLeads = leadsQuery.data?.filter((lead) => lead.status === "IN_PROGRESS").length ?? 0;
+
+  useEffect(() => {
+    setSelectedLead(null);
+  }, [workspaceId]);
 
   return (
-    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
-      <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
-        <header className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Sellora CRM</p>
-            <h1 className="mt-2 text-3xl font-bold">{t("leads.title")}</h1>
-            <p className="mt-1 text-slate-600">{t("leads.subtitle")}</p>
-          </div>
-          <button className="min-h-11 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={!enabled} onClick={() => setIsCreateOpen(true)}>{t("leads.create")}</button>
-        </header>
+    <WorkspacePage>
+        <WorkspaceHeader title={t("leads.title")} description={t("leads.subtitle")} actions={<Button disabled={!enabled} onClick={() => setIsCreateOpen(true)}>{t("leads.create")}</Button>} />
+
+        <CompactSummary items={[{ label: t("leads.summary.all"), value: totalLeads, active: !status, onClick: () => setStatus("") }, { label: t("leads.summary.new"), value: newLeads, active: status === "NEW", onClick: () => setStatus("NEW") }, { label: t("leads.summary.inProgress"), value: inProgressLeads, active: status === "IN_PROGRESS", onClick: () => setStatus("IN_PROGRESS") }, { label: t("leads.summary.needsAction"), value: "—", helper: t("leads.summary.needsActionUnavailable"), unavailable: true }]} />
 
         <FilterBar>
           <SearchInput value={search} onChange={setSearch} placeholder={t("leads.searchPlaceholder")} />
-          <select className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10 dark:text-white" value={status} onChange={(event) => setStatus(event.target.value as LeadStatus | "")}>
+          <Select value={status} onChange={(event) => setStatus(event.target.value as LeadStatus | "")}>
             {STATUSES.map((item) => <option key={item || "all"} value={item}>{item ? t(`statuses.lead.${item}`) : t("common.allStatuses")}</option>)}
-          </select>
-          <select className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10 dark:text-white" value={leadSourceId} onChange={(event) => setLeadSourceId(event.target.value)}>
+          </Select>
+          <Select value={leadSourceId} onChange={(event) => setLeadSourceId(event.target.value)}>
             <option value="">{t("leads.allSources")}</option>
             {(sourcesQuery.data ?? []).map((source) => <option key={source.id} value={source.id}>{source.name}</option>)}
-          </select>
+          </Select>
           <SortSelect value={leadSort} onChange={setLeadSort} options={[{ value: "newest", label: t("sort.newest") }, { value: "oldest", label: t("sort.oldest") }, { value: "revenueDesc", label: t("sort.revenueDesc") }, { value: "revenueAsc", label: t("sort.revenueAsc") }]} />
           <ResetFiltersButton onClick={() => { setSearch(""); setStatus(""); setLeadSourceId(""); setLeadSort("newest"); }} />
         </FilterBar>
 
-        {!authReady ? <LoadingSkeleton title={t("common.loadingWorkspace")} /> : null}
-        {authReady && authStatus === "authenticated" && !workspaceId ? <ErrorState description={t("common.workspaceUnavailableDescription")} title={t("common.workspaceUnavailable")} /> : null}
-        {sourcesError ? <p className="rounded-lg bg-amber-50 p-4 text-sm font-semibold text-amber-700">{sourcesError}</p> : null}
-        {leadsQuery.isLoading || leadsQuery.isFetching && !leadsQuery.data ? <LoadingSkeleton title={t("leads.loading")} /> : null}
-        {listError ? <ErrorState description={listError} onRetry={() => void leadsQuery.refetch()} title={t("leads.loadError")} /> : null}
-        {!listError && leadsQuery.isSuccess && (leadsQuery.data?.length ?? 0) === 0 ? (
-          <EmptyState
-            title={hasActiveFilters ? t("leads.filteredEmptyTitle") : t("leads.emptyTitle")}
-            description={hasActiveFilters ? t("leads.filteredEmptyDescription") : t("leads.emptyDescription")}
-            action={<button className="min-h-11 rounded-2xl bg-blue-600 px-4 text-sm font-black text-white" onClick={() => setIsCreateOpen(true)}>{t("leads.create")}</button>}
-          />
-        ) : null}
-        {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={visibleLeads} leadSources={sourcesQuery.data ?? []} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} /> : null}
+        <WorkspaceSplitView
+          panelOpen={Boolean(selectedLead)}
+          panel={selectedLead ? (
+            <EntitySidePanel open={Boolean(selectedLead)} title={selectedLead.name ?? t("leads.title")} description={selectedLead.instagram_username ? `@${selectedLead.instagram_username.replace(/^@/, "")}` : selectedLead.phone ?? undefined} onClose={() => setSelectedLead(null)} footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingLead(selectedLead)}>{t("leads.edit")}</Button><Button variant="danger" onClick={() => setArchivingLead(selectedLead)}>{t("leads.archive")}</Button></div> : undefined}>
+              <div className="grid gap-4">
+                <FieldGrid>
+                  <FieldItem label={t("tables.status")} value={t(`statuses.lead.${selectedLead.status}`)} />
+                  <FieldItem label={t("leads.source")} value={selectedLead.lead_source_id ? (sourcesQuery.data ?? []).find((source) => source.id === selectedLead.lead_source_id)?.name ?? t("leads.unknownSource") : "—"} />
+                  <FieldItem label={t("leads.campaignLabel")} value={selectedLead.campaign_name ?? "—"} />
+                  <FieldItem label={t("leads.assignedManager")} value={selectedLead.assigned_user_id ? t("leads.assigned") : t("leads.unassigned")} />
+                  <FieldItem label={t("analytics.revenue")} value={selectedLead.expected_revenue ?? "—"} />
+                  <FieldItem label={t("leads.nextAction")} value={selectedLead.status === "QUALIFIED" ? t("leads.nextActionCreateOrder") : selectedLead.status === "CONVERTED" ? t("leads.nextActionConverted") : selectedLead.status === "LOST" ? t("leads.nextActionLost") : t("leads.nextActionContact")} />
+                  <FieldItem label={t("tables.phone")} value={selectedLead.phone ?? "—"} />
+                  <FieldItem label={t("tables.instagram")} value={selectedLead.instagram_username ? `@${selectedLead.instagram_username.replace(/^@/, "")}` : "—"} />
+                </FieldGrid>
+                <section className="rounded-2xl border border-border-subtle bg-surface-2 p-4"><h3 className="font-black text-text-primary">{t("orders.notes")}</h3><p className="mt-2 whitespace-pre-wrap text-sm text-text-secondary">{selectedLead.notes || "—"}</p></section>
+                <section className="rounded-2xl border border-border-subtle bg-surface-2 p-4"><h3 className="font-black text-text-primary">{t("customers.activity")}</h3><p className="mt-2 text-sm text-text-secondary">{t("leads.drawerActivityUnavailable")}</p></section>
+              </div>
+            </EntitySidePanel>
+          ) : null}
+        >
+          {!authReady ? <LoadingSkeleton title={t("common.loadingWorkspace")} /> : null}
+          {authReady && authStatus === "authenticated" && !workspaceId ? <ErrorState description={t("common.workspaceUnavailableDescription")} title={t("common.workspaceUnavailable")} /> : null}
+          {sourcesError ? <p className="rounded-lg bg-amber-50 p-4 text-sm font-semibold text-amber-700">{sourcesError}</p> : null}
+          {leadsQuery.isLoading || leadsQuery.isFetching && !leadsQuery.data ? <LoadingSkeleton title={t("leads.loading")} /> : null}
+          {listError ? <ErrorState description={listError} onRetry={() => void leadsQuery.refetch()} title={t("leads.loadError")} /> : null}
+          {!listError && leadsQuery.isSuccess && (leadsQuery.data?.length ?? 0) === 0 ? (
+            <EmptyState
+              title={hasActiveFilters ? t("leads.filteredEmptyTitle") : t("leads.emptyTitle")}
+              description={hasActiveFilters ? t("leads.filteredEmptyDescription") : t("leads.emptyDescription")}
+              action={<Button onClick={() => setIsCreateOpen(true)}>{t("leads.create")}</Button>}
+            />
+          ) : null}
+          {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={visibleLeads} leadSources={sourcesQuery.data ?? []} selectedLeadId={selectedLead?.id} onSelect={setSelectedLead} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} /> : null}
+        </WorkspaceSplitView>
 
         {isCreateOpen ? (
           <FormDialog title={t("leads.create")} description={t("leads.createHelp")} size="md" onClose={() => setIsCreateOpen(false)}>
@@ -140,8 +166,7 @@ export default function LeadsPage() {
         ) : null}
         {archivingLead ? <ConfirmActionDialog title={t("leads.archiveTitle")} description={archivingLead.status === "CONVERTED" ? t("leads.archiveConvertedDescription") : t("leads.archiveDescription")} actionLabel={t("leads.archive")} isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, t("errors.deleteFailed")) : null} onCancel={() => setArchivingLead(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
         {editingLead ? <EditRecordDialog title={t("leads.edit")} fields={[{ name: "name", label: t("tables.name") }, { name: "phone", label: t("tables.phone") }, { name: "instagram_username", label: t("tables.instagram") }, { name: "instagram_profile_url", label: "Instagram URL" }, { name: "lead_source_id", label: t("leads.source"), type: "select", options: [{ value: "", label: t("leads.noSource") }, ...(sourcesQuery.data ?? []).map((source) => ({ value: source.id, label: source.name }))] }, { name: "campaign_id", label: t("leads.campaignLabel"), type: "select", options: [{ value: "", label: t("leads.noCampaign") }, ...(campaignsQuery.data ?? []).map((campaign) => ({ value: campaign.id, label: `${campaign.name} · ${campaign.platform}` }))] }, { name: "status", label: t("tables.status"), type: "select", options: STATUSES.filter(Boolean).map((item) => ({ value: item, label: t(`statuses.lead.${item}`) })) }, { name: "expected_revenue", label: t("analytics.revenue"), type: "number" }, { name: "loss_reason", label: t("statuses.lead.LOST"), type: "textarea" }, { name: "notes", label: t("orders.notes"), type: "textarea" }]} initialValues={editingLead} isSubmitting={updateMutation.isPending} submitError={updateError} onClose={() => setEditingLead(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
-      </div>
-    </main>
+    </WorkspacePage>
   );
 }
 // Localization regression compatibility marker: FormDialog title="Create lead".

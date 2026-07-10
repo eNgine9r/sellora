@@ -28,10 +28,10 @@ export function OrderDetails({
   const { t, formatStatus } = useI18n();
   const hasCostContext = Number(order.product_cost) > 0 || Number(order.ad_cost) > 0 || Number(order.shipping_cost) > 0 || Number(order.cod_fee) > 0 || Number(order.other_cost) > 0;
   return (
-    <aside className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#15172A] dark:text-white">
+    <aside className="grid gap-4">
       <div>
         <h2 className="text-xl font-bold">{order.order_number}</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
+        <p className="text-sm text-text-secondary">
           {t("orders.profit")}: {formatMoney(order.net_profit, currencyCode)}
         </p>
         {!hasCostContext ? (
@@ -56,14 +56,14 @@ export function OrderDetails({
         <span>{t("tables.payment")}</span>
         <strong>{formatStatus("payment", order.payment_status)}</strong>
       </div>
-      <p className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700 dark:bg-white/5 dark:text-slate-200">
+      <p className="rounded-xl bg-info-surface p-3 text-sm font-semibold text-info-foreground">
         {t(`orders.paymentHint.${order.payment_status}`)}
       </p>
-      <div className="rounded-xl border border-slate-200 p-3 dark:border-white/10">
+      <div className="rounded-xl border border-border-subtle bg-surface-1 p-3">
         <h3 className="font-semibold">{t("orders.customerSelector")}</h3>
         {order.customer_id ? (
-          <div className="mt-2 grid gap-1 text-sm text-slate-600 dark:text-slate-300">
-            <strong className="text-slate-950 dark:text-white">
+          <div className="mt-2 grid gap-1 text-sm text-text-secondary">
+            <strong className="text-text-primary">
               {order.customer_name ?? t("common.customer")}
             </strong>
             <span>{order.customer_phone ?? "—"}</span>
@@ -72,7 +72,7 @@ export function OrderDetails({
                 @{order.customer_instagram_username.replace(/^@/, "")}
               </span>
             ) : null}
-            <Link className="mt-2 inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 px-3 py-2 font-bold dark:border-white/10" href="/customers">
+            <Link className="mt-2 inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-3 py-2 font-bold dark:border-white/10" href="/customers">
               {t("orders.openCustomer")}
             </Link>
           </div>
@@ -82,14 +82,14 @@ export function OrderDetails({
           </p>
         )}
       </div>
-      <div className="rounded-xl border border-slate-200 p-3 dark:border-white/10">
+      <div className="rounded-xl border border-border-subtle bg-surface-1 p-3">
         <h3 className="font-semibold">{t("orders.campaignLabel")}</h3>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{order.campaign_name ?? "—"}</p>
+        <p className="mt-2 text-sm text-text-secondary">{order.campaign_name ?? "—"}</p>
       </div>
-      <div className="rounded-xl border border-slate-200 p-3 dark:border-white/10">
+      <div className="rounded-xl border border-border-subtle bg-surface-1 p-3">
         <h3 className="font-semibold">{t("shipments.details")}</h3>
         {shipment ? (
-          <div className="mt-2 grid gap-1 text-sm text-slate-600 dark:text-slate-300">
+          <div className="mt-2 grid gap-1 text-sm text-text-secondary">
             <span>
               {t("shipments.tracking")}:{" "}
               {shipment.tracking_number ?? t("shipments.draftShipment")}
@@ -108,19 +108,19 @@ export function OrderDetails({
             </span>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground hover:bg-primary-hover"
                 href="/shipments"
               >
                 {t("shipments.openShipments")}
               </Link>
-              {shipment.tracking_number ? <CopyTtnButton trackingNumber={shipment.tracking_number} /> : <Link className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 py-2 font-bold dark:border-white/10" href={`/shipments?order_id=${order.id}`}>{t("shipments.createTtn")}</Link>}
+              {shipment.tracking_number ? <CopyTtnButton trackingNumber={shipment.tracking_number} /> : <Link className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-subtle px-4 py-2 font-bold dark:border-white/10" href={`/shipments?order_id=${order.id}`}>{t("shipments.createTtn")}</Link>}
             </div>
           </div>
         ) : order.customer_id ? (
           <div className="mt-2 grid gap-2">
-            <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-700 dark:bg-white/5 dark:text-slate-200">{t("orders.shipmentMissing")}</p>
+            <p className="rounded-lg bg-info-surface p-3 text-sm font-semibold text-info-foreground">{t("orders.shipmentMissing")}</p>
             <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground hover:bg-primary-hover"
               href={`/shipments?order_id=${order.id}`}
             >
               {t("shipments.createFromOrder")}
@@ -137,9 +137,9 @@ export function OrderDetails({
         {order.items.map((item) => (
           <div
             key={item.id}
-            className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200"
+            className="rounded-lg border border-border-subtle bg-surface-2 p-3 text-sm text-text-secondary"
           >
-            <div className="font-semibold text-slate-950 dark:text-white">
+            <div className="font-semibold text-text-primary">
               {item.quantity} × {item.product_name}
             </div>
             <div className="mt-1 grid gap-1 sm:grid-cols-2">
@@ -166,7 +166,7 @@ export function OrderDetails({
         {order.status_history.map((entry) => (
           <p
             key={entry.id}
-            className="text-sm text-slate-600 dark:text-slate-300"
+            className="text-sm text-text-secondary"
           >
             {entry.from_status ? formatStatus("order", entry.from_status) : "—"}{" "}
             → {formatStatus("order", entry.to_status)}
@@ -174,7 +174,7 @@ export function OrderDetails({
         ))}
       </div>
       <select
-        className="min-h-11 rounded-md border border-slate-300 px-3 py-2 dark:border-white/10 dark:bg-white/10"
+        className="min-h-11 rounded-md border border-border-subtle px-3 py-2 dark:border-white/10 dark:bg-white/10"
         value=""
         onChange={(event) =>
           event.target.value &&
