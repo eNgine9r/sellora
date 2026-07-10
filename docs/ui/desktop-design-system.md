@@ -100,3 +100,16 @@ Mobile cards from Sprint Dm.1 must remain in place; desktop tables do not replac
 <FormField label="Телефон" error={phoneError}><Input autoComplete="tel" /></FormField>
 <StatusBadge tone="success">Оплачено</StatusBadge>
 ```
+
+## Public page additions — Sprint Dd.2
+
+Public landing and auth pages use the same dark tokens as the protected App Shell, but may be more expressive through larger typography, restrained glow, and brand-gradient CTAs.
+
+Rules:
+
+- Use `PublicHeader`, `PublicFooter`, `PublicSection`, and `MarketingCTA` for public pages.
+- Keep brand gradients limited to primary marketing CTAs and decorative background glow.
+- Use `/login` as public primary CTA unless a real registration or beta request flow exists.
+- Product previews with illustrative numbers must be marked as demo.
+- Integration cards must use truthful statuses and must not expose mock, staging, dry-run, or internal readiness wording.
+- Login pages must avoid technical auth vocabulary and preserve the existing auth/session implementation.
