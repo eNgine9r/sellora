@@ -1,5 +1,6 @@
 "use client";
 
+import { RemoteImage } from "@/components/ui/remote-image";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
 import { statusBadgeClass } from "@/lib/status-styles";
@@ -31,7 +32,7 @@ export function ProductTable({ products, onEdit, onArchive }: { products: Produc
               const image = primaryImage(product);
               return (
                 <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.04]">
-                  <td className="px-4 py-3">{image ? <img className="h-12 w-12 rounded-lg object-cover" src={image.image_url} alt={image.alt_text ?? product.name} /> : <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-400 dark:bg-white/10">IMG</div>}</td>
+                  <td className="px-4 py-3">{image ? <RemoteImage className="h-12 w-12 rounded-lg" src={image.image_url} alt={image.alt_text ?? product.name} /> : <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-400 dark:bg-white/10">IMG</div>}</td>
                   <td className="max-w-[240px] truncate px-4 py-3 font-medium text-slate-900 dark:text-white">{product.name}</td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{displayCategory(product.category, t)}</td>
                   <td className="max-w-[160px] truncate px-4 py-3 text-slate-700 dark:text-slate-200">{product.sku ?? "—"}</td>
@@ -51,7 +52,7 @@ export function ProductTable({ products, onEdit, onArchive }: { products: Produc
           return (
             <article className="min-w-0 rounded-2xl border border-slate-200 p-4 dark:border-white/10" key={product.id}>
               <div className="flex min-w-0 gap-3">
-                {image ? <img className="h-16 w-16 shrink-0 rounded-xl object-cover" src={image.image_url} alt={image.alt_text ?? product.name} /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-400 dark:bg-white/10">IMG</div>}
+                {image ? <RemoteImage className="h-16 w-16 shrink-0 rounded-xl" src={image.image_url} alt={image.alt_text ?? product.name} /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-400 dark:bg-white/10">IMG</div>}
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-lg font-black text-slate-950 dark:text-white">{product.name}</h3>
                   <p className="text-sm text-slate-500 dark:text-slate-300">{displayCategory(product.category, t)}</p>

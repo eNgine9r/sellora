@@ -100,8 +100,8 @@ export default function DashboardPage() {
   const products = useQuery({ queryKey: ["dashboard-products", workspaceId], queryFn: () => fetchProducts(workspaceId), enabled });
   const variants = useQuery({ queryKey: ["dashboard-variants", workspaceId], queryFn: () => fetchProductVariants(workspaceId, undefined, undefined), enabled });
 
-  const currentOrders = useMemo(() => (orders.data ?? []).filter((order) => isInDateRange(order.created_at, range)), [orders.data, range.date_from, range.date_to]);
-  const currentLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, range)), [leads.data, range.date_from, range.date_to]);
+  const currentOrders = useMemo(() => (orders.data ?? []).filter((order) => isInDateRange(order.created_at, range)), [orders.data, range]);
+  const currentLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, range)), [leads.data, range]);
 
   const trend = useMemo(() => (salesTrend.data ?? []).map((item) => ({ ...item, revenueNumber: toFiniteNumber(item.revenue), profitNumber: toFiniteNumber(item.net_profit), ordersCount: item.orders_count })), [salesTrend.data]);
 
@@ -142,7 +142,7 @@ export default function DashboardPage() {
     { label: t("dashboard.notificationsItems.outOfStock"), value: backendDashboard.data?.inventory.out_of_stock_count ?? inventory.data?.out_of_stock_count ?? 0, href: "/inventory" },
     { label: t("dashboard.notificationsItems.unpaidOrders"), value: currentOrders.filter((order) => order.payment_status !== "PAID").length, href: "/orders" },
     { label: t("dashboard.notificationsItems.returnedShipments"), value: shipments.data?.returned_this_month ?? 0, href: "/shipments" },
-  ].filter((item) => item.value > 0), [currentOrders, inventory.data, shipments.data, t]);
+  ].filter((item) => item.value > 0), [backendDashboard.data?.inventory.low_stock_count, backendDashboard.data?.inventory.out_of_stock_count, currentOrders, inventory.data, shipments.data, t]);
 
   const dashboardActivity: DashboardActivity[] = useMemo(() => [
     ...currentOrders.slice(0, 3).map((order) => ({ label: t("dashboard.activityItems.orderCreated", { number: order.order_number }), date: order.created_at })),
