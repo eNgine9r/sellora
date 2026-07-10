@@ -121,3 +121,15 @@ Semantic tokens must define light values in `:root` and dark values in `.dark`. 
 Required token families include canvas, sidebar, surfaces, selected/hover/elevated surfaces, borders, primary foreground, input background/border, overlay background, feedback surfaces/foregrounds, text disabled, focus ring, and shadow color.
 
 Primary buttons must use `primary-foreground` rather than hardcoded white text. Feedback states should use semantic feedback surface and foreground tokens.
+
+## CRM workspace additions — Sprint Dd.3
+
+Protected CRM pages use a compact application pattern rather than public marketing sections:
+
+- Page headers are compact, tokenized, and action-oriented.
+- KPI cards use semantic surfaces, text, borders, and status tones in both themes.
+- Summary rows are compact and may be clickable only when they apply real existing filters.
+- Entity drawers use the shared overlay foundation and must stay keyboard accessible.
+- Unsupported metrics or backend-derived states should be shown as unavailable rather than estimated or fabricated.
+
+Dd.3–Dd.7 rule: every new or modified page/component must support and be validated in both light and dark themes on desktop and mobile.

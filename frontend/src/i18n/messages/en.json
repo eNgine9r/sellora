@@ -504,7 +504,9 @@
       "cpa": "CPA — cost per order.",
       "aov": "AOV — average order value."
     },
-    "blockError": "Could not load this block."
+    "blockError": "Could not load this block.",
+    "titleCompact": "Dashboard",
+    "descriptionCompact": "Store performance overview"
   },
   "tables": {
     "name": "Name",
@@ -566,7 +568,16 @@
     "apiForbidden": "You do not have permission to manage leads.",
     "apiInvalid": "Please check the lead form.",
     "apiCreateFailed": "Unable to create lead. Please try again.",
-    "apiLoadFailed": "Unable to load leads. Please try again."
+    "apiLoadFailed": "Unable to load leads. Please try again.",
+    "summary": {
+      "all": "All leads",
+      "new": "New",
+      "inProgress": "In progress",
+      "needsAction": "Needs action",
+      "needsActionUnavailable": "Requires backend next-action logic"
+    },
+    "assigned": "Assigned",
+    "drawerActivityUnavailable": "Activity history is unavailable in the current API."
   },
   "customers": {
     "title": "Customers",
@@ -618,7 +629,22 @@
     "createFailed": "Unable to create customer. Please try again.",
     "saveFailed": "Unable to save customer changes. Please try again.",
     "deleteFailed": "Unable to archive customer. Please try again.",
-    "region": "Region"
+    "region": "Region",
+    "summary": {
+      "all": "All customers",
+      "withPurchases": "With purchases",
+      "repeat": "Repeat",
+      "withoutOrders": "No orders"
+    },
+    "activity": "Activity",
+    "tabs": {
+      "overview": "Overview",
+      "notes": "Notes",
+      "addresses": "Addresses",
+      "activity": "Activity",
+      "orders": "Orders"
+    },
+    "ordersUnavailable": "Customer orders are unavailable in the current API."
   },
   "orders": {
     "title": "Orders",

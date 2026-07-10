@@ -73,3 +73,7 @@ Browser visual QA was not available in this container. These viewports remain pe
 Dd.2.1 fixed the confirmed public UI regressions from manual QA: duplicate login-equivalent header CTAs, inconsistent header control sizing, English indicator localization, mobile demo preview overflow, and mobile login content order.
 
 Final browser verification for light/dark themes and the requested viewport matrix remains required outside this container.
+
+## Final status
+
+Final status: APPROVED based on completed user browser verification before Sprint Dd.3.

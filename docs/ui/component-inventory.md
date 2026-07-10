@@ -29,3 +29,10 @@
 - Feature tables should gradually adopt `DataTable` without replacing mobile cards.
 - Feature forms should migrate to `FormField` and shared controls without changing API payloads.
 - Existing `FormDialog` and feature drawers can migrate to the shared `Drawer` foundation where workflows require side panels.
+
+## Sprint Dd.3 additions
+
+| Area | Component(s) | Decision |
+| --- | --- | --- |
+| CRM protected pages | `WorkspacePage`, `WorkspaceHeader`, `MetricCard`, `CompactSummary` | Shared wrappers for Dashboard, Leads, and Customers; avoid page-local duplicated headers and KPI cards. |
+| Entity details | `EntityDrawer`, `FieldGrid`, `FieldItem`, `DrawerTabs` | Shared drawer/detail foundations for Lead and Customer detail flows using existing overlay behavior. |

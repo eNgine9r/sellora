@@ -79,3 +79,21 @@ Public-page specifics:
 - Public primary CTAs must be real flows; if registration/beta is unavailable, use `/login` or an in-page section link.
 - Demo previews on mobile should use simplified stacked content instead of shrinking a desktop dashboard into an unreadable card.
 - Login pages must show the form before marketing/product context below 1024px.
+
+## CRM workspace pattern — Sprint Dd.3
+
+Dashboard, Leads, and Customers should use the shared CRM workspace pattern:
+
+- `WorkspacePage` for protected-page spacing and `min-width: 0` containment.
+- `WorkspaceHeader` for compact title, description, and right-aligned actions.
+- `MetricCard` for dashboard KPIs with period context and unavailable states.
+- `CompactSummary` for compact lead/customer summary counts.
+- `EntityDrawer` for lead/customer details on desktop and full-screen mobile sheets through the shared drawer foundation.
+
+Rules:
+
+- Do not use marketing hero blocks inside protected CRM pages.
+- Do not compute global totals from only a paginated table page; use server summaries when available or mark unavailable.
+- Preserve existing workspace-scoped query keys and handlers.
+- Mobile CRM lists should remain cards; desktop tables should not replace Sprint Dm.1 mobile UX.
+- Every new or modified CRM page/component must support and be validated in both light and dark themes on desktop and mobile.
