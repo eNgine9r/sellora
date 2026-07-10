@@ -8,7 +8,7 @@ import { cn } from "@/services/utils";
 type MetricTone = "neutral" | "success" | "warning" | "danger" | "info";
 
 export function WorkspacePage({ children, className }: { children: ReactNode; className?: string }) {
-  return <main className={cn("min-w-0 overflow-x-hidden px-4 py-4 text-text-primary sm:px-6 sm:py-6", className)}><div className="mx-auto grid min-w-0 max-w-7xl gap-5 lg:gap-6">{children}</div></main>;
+  return <main className={cn("min-w-0 overflow-x-hidden px-4 py-4 text-text-primary sm:px-6 sm:py-6", className)}><div className="grid min-w-0 w-full gap-5 lg:gap-6">{children}</div></main>;
 }
 
 export function WorkspaceHeader({ title, description, eyebrow, actions }: { title: string; description?: string; eyebrow?: string; actions?: ReactNode }) {
@@ -30,7 +30,7 @@ export function MetricCard({ label, value, helper, trend, tone = "neutral", isUn
 }
 
 export function CompactSummary({ items }: { items: { label: string; value: ReactNode; helper?: string; active?: boolean; onClick?: () => void; unavailable?: boolean }[] }) {
-  return <section className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">{items.map((item) => {
+  return <section className="grid min-w-0 gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr))]">{items.map((item) => {
     const content = <><p className="text-xs font-black uppercase tracking-[0.14em] text-text-muted">{item.label}</p><p className={cn("mt-2 text-2xl font-black text-text-primary", item.unavailable && "text-text-muted")}>{item.unavailable ? "—" : item.value}</p>{item.helper ? <p className="mt-1 text-sm text-text-secondary">{item.helper}</p> : null}</>;
     if (item.onClick) return <button key={item.label} type="button" onClick={item.onClick} className={cn("rounded-2xl border border-border-subtle bg-surface-1 p-4 text-left shadow-sm transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring", item.active && "border-primary bg-surface-selected")}>{content}</button>;
     return <Card key={item.label} className={cn("p-4", item.active && "border-primary bg-surface-selected")}>{content}</Card>;

@@ -108,3 +108,10 @@ Orders and Products should follow the same protected CRM workspace rhythm as Das
 - Desktop tables with selected row state; mobile card lists remain the mobile experience.
 - Right-side `EntityDrawer`/sheet for details, using honest unavailable states for missing API-backed sections such as product history.
 - Dual-theme validation is required for every touched Orders/Products surface.
+
+## Workspace closure rules — Sprint Dd.4.1
+
+- `WorkspacePage` must use the available protected content width and must not recenter CRM pages into a narrow column that creates a large sidebar/content gutter.
+- Summary/KPI grids should use balanced auto-fit behavior or deliberate column spans; never leave a single orphan card on a second row at common desktop widths.
+- Protected entity details should use the shared right-side panel behavior. Desktop panels must avoid blur-heavy modal takeovers; mobile can continue to use a lightweight sheet pattern.
+- Dense selector panels inside modals must use semantic input/surface tokens, bounded scroll height, compact option rows, and visible selected/hover/focus states in both themes.
