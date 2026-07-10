@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Home, MoreHorizontal, Package, ShoppingBag, Users } from "lucide-react";
+import { BarChart3, Home, Package, ShoppingBag, Users } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
 import { NoWorkspaceOnboarding } from "@/components/no-workspace-onboarding";
@@ -71,15 +71,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   if (!protectedPath) return <>{children}</>;
-  if (status === "loading") return <div className="grid min-h-screen place-items-center bg-[#F8F7FC] text-slate-600 dark:bg-[#101120] dark:text-slate-300">{t("common.loadingSellora")}</div>;
-  if (status === "unauthenticated") return <div className="grid min-h-screen place-items-center bg-[#F8F7FC] text-slate-600 dark:bg-[#101120] dark:text-slate-300">{t("common.redirectingLogin")}</div>;
+  if (status === "loading") return <main className="grid min-h-screen place-items-center bg-background text-muted-foreground" aria-busy="true">{t("common.loadingSellora")}</main>;
+  if (status === "unauthenticated") return <main className="grid min-h-screen place-items-center bg-background text-muted-foreground" aria-live="polite">{t("common.redirectingLogin")}</main>;
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-[#F8F7FC] text-[#111827] dark:bg-[#101120] dark:text-slate-100 lg:flex">
+    <div className="min-h-screen w-full overflow-x-hidden bg-background text-foreground lg:flex">
       <aside className="hidden lg:fixed lg:inset-y-0 lg:block lg:w-72">
         <AppSidebar />
       </aside>
-      <div className="min-w-0 flex-1 overflow-x-hidden pb-24 lg:pb-0 lg:pl-72">
+      <main className="min-w-0 flex-1 overflow-x-hidden pb-24 lg:pb-0 lg:pl-72">
         <AppTopbar
           currentUser={currentUser}
           currentWorkspace={currentWorkspace}
@@ -91,13 +91,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         />
         {error ? <p className="mx-4 mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 md:mx-6">{error}</p> : null}
         {!currentWorkspaceId ? <NoWorkspaceOnboarding onWorkspaceCreated={reloadCurrentUser} onSwitchWorkspace={switchWorkspace} /> : children}
-      </div>
-      <nav className="mobile-bottom-nav mobile-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-2 py-2 shadow-[0_-12px_35px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#101120]/95 lg:hidden" aria-label={t("mobileNavigation.bottomNav")}>
+      </main>
+      <nav className="mobile-bottom-nav mobile-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-2 py-2 shadow-[0_-12px_35px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#101120]/95 lg:hidden" aria-label={t("mobileNavigation.bottomNav")}>
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
           {mobileQuickNav.map((item) => {
             const Icon = item.icon;
             const active = isActiveNav(pathname, item.href);
-            return <Link key={item.href} href={item.href} className={`grid min-h-12 place-items-center rounded-2xl px-1 py-1 text-[0.68rem] font-black transition ${active ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20" : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"}`} aria-current={active ? "page" : undefined}><Icon className="h-4 w-4" aria-hidden="true" /><span className="mt-0.5 truncate">{t(item.labelKey)}</span></Link>;
+            return <Link key={item.href} href={item.href} className={`grid min-h-12 place-items-center rounded-2xl px-1 py-1 text-[0.68rem] font-black transition ${active ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20" : "text-muted-foreground hover:bg-muted"}`} aria-current={active ? "page" : undefined}><Icon className="h-4 w-4" aria-hidden="true" /><span className="mt-0.5 truncate">{t(item.labelKey)}</span></Link>;
           })}
         </div>
       </nav>
