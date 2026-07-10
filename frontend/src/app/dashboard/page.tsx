@@ -37,6 +37,13 @@ type DashboardTopProductItem = TopProduct & {
   image_url?: string | null;
 };
 
+
+type DashboardTopProductItem = TopProduct & {
+  sku?: string | null;
+  category?: string | null;
+  image_url?: string | null;
+};
+
 const orderStatusColors: Record<OrderStatus, string> = { NEW: "#7C3AED", CONFIRMED: "#8B5CF6", SHIPPED: "#EC4899", DELIVERED: "#F97316", COMPLETED: "#16A34A", RETURNED: "#F59E0B", CANCELLED: "#94A3B8" };
 
 function productImage(product?: { images?: { image_url: string; is_primary: boolean }[] }) {
