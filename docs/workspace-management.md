@@ -19,3 +19,7 @@ Workspace creation, switching, settings, team management, and data isolation req
 ## Sprint 7F runtime migration status
 
 Workspace-management runtime schema verification remains pending because the PostgreSQL host was unreachable from this container. Required checks include `workspaces.timezone`, `currency_code`, workspace-user active/timestamp fields, membership uniqueness, and workspace/user indexes.
+
+## Sprint 7E workspace isolation note
+
+Workspace access is authorized from the authenticated user plus active workspace membership, not from frontend state alone. Workspace-scoped requests must carry `X-Workspace-ID`, and backend guards/services validate active membership before returning or mutating workspace data. Inactive memberships are excluded from access and switching.

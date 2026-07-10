@@ -184,7 +184,12 @@ class LeadService:
         if assigned_user_id is None:
             return
         user = self.db.get(User, assigned_user_id)
-        if user is None or not any(membership.workspace_id == workspace_id for membership in user.workspaces):
+        if user is None or not any(
+            membership.workspace_id == workspace_id
+            and getattr(membership, "is_active", True)
+            and getattr(getattr(membership, "workspace", None), "is_active", True)
+            for membership in user.workspaces
+        ):
             raise LeadServiceError("Assigned user does not belong to this workspace")
 
     def _validate_campaign(self, workspace_id: UUID, campaign_id: UUID | None) -> None:

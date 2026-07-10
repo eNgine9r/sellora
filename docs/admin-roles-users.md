@@ -27,3 +27,7 @@ Manual staging QA closure remains blocked from this validation container because
 ## Sprint 7F runtime migration status
 
 Admin Roles & Users migration `202607050019_admin_roles_users` remains statically reviewed and locally validated, but runtime approval is blocked until `alembic upgrade head` can connect to the safe non-production PostgreSQL database and verify `workspaces.timezone` plus `workspace_users.is_active`, timestamps, soft-delete field, and indexes.
+
+## Sprint 7E security note
+
+Sprint 7E confirms that workspace/team management remains OWNER-only on the backend. MANAGER and ANALYST direct API attempts for team creation, role changes, membership deactivation, and workspace settings updates are denied by backend guards or workspace service owner checks. Inactive memberships are not valid workspace authorization.

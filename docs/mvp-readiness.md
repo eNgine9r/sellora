@@ -493,3 +493,9 @@ Dashboard owner experience is conditionally approved. The page now explains sele
 ## Sprint 7D mobile UX / PWA MVP
 
 Mobile UX/PWA MVP is conditionally approved. The app now has bottom quick navigation, better mobile cards for key CRM/order lists, owner-facing manifest metadata, and documented no-private-data caching policy. Manual mobile/PWA install QA remains required before full approval.
+
+## Sprint 7E RBAC, tenant isolation & security QA
+
+Sprint 7E is conditionally approved. Backend security tests now cover endpoint inventory, OWNER/MANAGER/ANALYST guards, inactive/no-membership denial, tenant list/detail/update/archive IDOR for representative core flows, nested order/finance ownership checks, and finance aggregation scoping. A Lead assignment bug was fixed so inactive workspace memberships cannot be assigned to leads.
+
+Manual browser/mobile workspace-switch race-condition QA and broader audit-log standardization remain follow-ups. Sprint 7F runtime migration QA remains blocked separately.

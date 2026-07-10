@@ -437,3 +437,11 @@ Dashboard owner experience now has clearer KPI, funnel, advertising, finance, in
 ## Sprint 7D mobile/PWA limitations
 
 Service worker/offline support is deferred because Sellora handles private business data and must not cache API responses, customer/order records, finance data, advertising data, workspace data, or tokens. PWA install behavior still needs manual testing on real iOS/Android browsers. No database migration was added in Sprint 7D.
+
+## Sprint 7E security QA limitations
+
+Sprint 7E added automated RBAC and tenant-isolation coverage for shared guards and representative high-risk flows, but it does not replace manual browser/mobile security QA for route flashes, workspace-switch race conditions, and role-specific navigation behavior.
+
+Audit logging is reviewed but not fully standardized for every critical mutation. Expanding audit schema or persistence semantics is deferred because Sprint 7E does not allow new migrations.
+
+Sprint 7F runtime PostgreSQL migration QA remains blocked separately and is not resolved by Sprint 7E.

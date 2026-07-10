@@ -524,3 +524,11 @@ Sprint 7C improves the Dashboard as an owner cockpit with clearer selected-perio
 ## Sprint 7D mobile UX / PWA MVP
 
 Sprint 7D improves mobile Sellora with bottom quick navigation, mobile cards for Leads/Orders/Customers, safer mobile dialog copy, and owner-facing PWA manifest metadata. Service worker/offline support is intentionally deferred so private workspace, customer, order, finance, and advertising data are not cached.
+
+## Sprint 7E RBAC, tenant isolation & security QA
+
+Sprint 7E adds backend security regression tests and a QA report for RBAC, workspace membership activity, tenant list/detail/update/archive IDOR, nested resource isolation, finance aggregation scoping, frontend workspace-switch/cache policy, and secret-safety scans.
+
+A confirmed Lead assignment hardening fix now requires the assignee's workspace membership and workspace to be active before assignment. No database migration, Meta feature work, or private-data caching was added.
+
+Sprint 7F runtime migration closure remains separately blocked until safe non-production PostgreSQL runtime migration QA can be completed.
