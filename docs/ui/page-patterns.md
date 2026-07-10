@@ -115,3 +115,9 @@ Orders and Products should follow the same protected CRM workspace rhythm as Das
 - Summary/KPI grids should use balanced auto-fit behavior or deliberate column spans; never leave a single orphan card on a second row at common desktop widths.
 - Protected entity details should use the shared right-side panel behavior. Desktop panels must avoid blur-heavy modal takeovers; mobile can continue to use a lightweight sheet pattern.
 - Dense selector panels inside modals must use semantic input/surface tokens, bounded scroll height, compact option rows, and visible selected/hover/focus states in both themes.
+
+## Embedded entity panels — Sprint Dd.4.2
+
+- Entity detail views on protected CRM pages must use the responsive side-panel pattern: non-modal desktop aside, modal mobile sheet.
+- Standard generic Drawer remains modal and must not be repurposed globally for embedded page details.
+- Five-card summary rows must use the explicit balanced layout: 3 + 2 at medium desktop and five equal columns on wide desktop.

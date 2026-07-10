@@ -36,3 +36,9 @@
 | --- | --- | --- |
 | CRM protected pages | `WorkspacePage`, `WorkspaceHeader`, `MetricCard`, `CompactSummary` | Shared wrappers for Dashboard, Leads, and Customers; avoid page-local duplicated headers and KPI cards. |
 | Entity details | `EntityDrawer`, `FieldGrid`, `FieldItem`, `DrawerTabs` | Shared drawer/detail foundations for Lead and Customer detail flows using existing overlay behavior. |
+
+## Sprint Dd.4.2 additions
+
+- `WorkspaceSplitView` — shared protected-page split layout for list/table content plus a desktop entity side panel.
+- `EntitySidePanel` — responsive entity details surface: non-modal desktop `<aside>` and modal mobile Drawer sheet.
+- `CompactSummary` now includes count-aware balanced layouts for five-card KPI/summary rows.

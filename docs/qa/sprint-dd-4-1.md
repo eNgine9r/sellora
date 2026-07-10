@@ -48,3 +48,10 @@ Manual authenticated browser QA remains required:
 ## Sprint status
 
 CONDITIONALLY APPROVED until authenticated browser visual QA confirms the reviewed layout issues are closed.
+
+
+## Dd.4.2 follow-up
+
+- Dd.4.2 added `WorkspaceSplitView` and `EntitySidePanel` as the target embedded entity-detail architecture.
+- Standard modal Drawer behavior is preserved for generic Drawer usages; entity details route through the responsive side-panel compatibility surface.
+- Five-card summary layouts now use explicit count-aware balancing instead of generic auto-fit.
