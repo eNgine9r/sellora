@@ -16,6 +16,7 @@ import {
   PaginationControls,
   PAGE_SIZE_OPTIONS,
 } from "@/components/pagination-controls";
+import { Button, CompactSummary, EntityDrawer, MetricCard, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { OrderDetails } from "@/features/orders/components/order-details";
 import { OrderForm } from "@/features/orders/components/order-form";
@@ -245,24 +246,27 @@ export default function OrdersPage() {
     );
   }, [filteredOrders.length, pageSize]);
 
+  const orders = ordersQuery.data ?? [];
+  const allOrders = orders.length;
+  const newOrders = orders.filter((order) => order.status === "NEW").length;
+  const awaitingPayment = orders.filter((order) => order.payment_status === "PENDING" || order.payment_status === "COD").length;
+  const readyToShip = orders.filter((order) => order.status === "CONFIRMED").length;
+  const problematicOrders = orders.filter((order) => ["RETURNED", "CANCELLED"].includes(order.status)).length;
+
   return (
-    <main className="min-h-screen min-w-0 overflow-x-hidden bg-slate-100 p-4 text-slate-950 sm:p-6">
-      <div className="mx-auto grid min-w-0 max-w-7xl gap-6">
-        <header className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
-              Sellora
-            </p>
-            <h1 className="mt-2 text-3xl font-bold">{t("orders.title")}</h1>
-            <p className="mt-1 text-slate-600">{t("orders.subtitle")}</p>
-          </div>
-          <button
-            className="min-h-11 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white"
-            onClick={() => setIsCreateOpen(true)}
-          >
-            {t("orders.create")}
-          </button>
-        </header>
+    <WorkspacePage>
+        <WorkspaceHeader
+          title={t("orders.title")}
+          description={t("orders.subtitle")}
+          actions={<Button disabled={!enabled} onClick={() => setIsCreateOpen(true)}>{t("orders.create")}</Button>}
+        />
+        <CompactSummary items={[
+          { label: t("orders.summary.all"), value: allOrders },
+          { label: t("orders.summary.new"), value: newOrders },
+          { label: t("orders.summary.awaitingPayment"), value: awaitingPayment },
+          { label: t("orders.summary.readyToShip"), value: readyToShip },
+          { label: t("orders.summary.problematic"), value: problematicOrders },
+        ]} />
         <FilterBar>
           <SearchInput
             value={search}
@@ -270,7 +274,7 @@ export default function OrdersPage() {
             placeholder={t("orders.searchPlaceholder")}
           />
           <select
-            className="min-h-11 w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10 dark:text-white"
+            className="min-h-10 w-full min-w-0 max-w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             value={status}
             onChange={(event) =>
               setStatus(event.target.value as OrderStatus | "")
@@ -283,7 +287,7 @@ export default function OrdersPage() {
             ))}
           </select>
           <select
-            className="min-h-11 w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10 dark:text-white"
+            className="min-h-10 w-full min-w-0 max-w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             value={paymentStatus}
             onChange={(event) =>
               setPaymentStatus(event.target.value as PaymentStatus | "")
@@ -319,23 +323,13 @@ export default function OrdersPage() {
               setPage(1);
             }}
           />
-          <div className="text-sm text-slate-600 dark:text-slate-300">
-            {t("orders.todaySummary", {
-              count: dashboardQuery.data?.orders_today ?? 0,
-              revenue: formatMoney(
-                dashboardQuery.data?.revenue_today,
-                currencyCode,
-              ),
-              profit: formatMoney(
-                dashboardQuery.data?.profit_today,
-                currencyCode,
-              ),
-            })}
-          </div>
         </FilterBar>
-        <p className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-100">
-          {t("orders.coreFlowHint")}
-        </p>
+        <MetricCard
+          label={t("orders.todayLabel")}
+          value={formatMoney(dashboardQuery.data?.revenue_today, currencyCode)}
+          helper={t("orders.todaySummary", { count: dashboardQuery.data?.orders_today ?? 0, revenue: formatMoney(dashboardQuery.data?.revenue_today, currencyCode), profit: formatMoney(dashboardQuery.data?.profit_today, currencyCode) })}
+          tone="info"
+        />
         {ordersQuery.isLoading ? (
           <LoadingSkeleton rows={5} title={t("orders.loading")} />
         ) : ordersQuery.isError ? (
@@ -369,46 +363,38 @@ export default function OrdersPage() {
                 }
                 action={
                   !hasAnyOrders ? (
-                    <button
-                      className="min-h-11 rounded-2xl bg-blue-600 px-4 text-sm font-black text-white"
-                      type="button"
-                      onClick={() => setIsCreateOpen(true)}
-                    >
-                      {t("orders.create")}
-                    </button>
+                    <Button onClick={() => setIsCreateOpen(true)}>{t("orders.create")}</Button>
                   ) : null
                 }
               />
             ) : (
-              <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_360px]">
-                <OrderTable
-                  orders={paginatedOrders}
-                  currencyCode={currencyCode}
-                  onSelect={setSelectedOrder}
-                  onEdit={canEdit ? setEditingOrder : undefined}
-                  onArchive={canEdit ? setArchivingOrder : undefined}
-                />
-                {selectedOrder ? (
-                  <OrderDetails
-                    order={selectedOrder}
-                    currencyCode={currencyCode}
-                    shipment={shipmentQuery.data}
-                    onStatusChange={(nextStatus) =>
-                      statusMutation.mutate({
-                        orderId: selectedOrder.id,
-                        nextStatus,
-                      })
-                    }
-                  />
-                ) : (
-                  <div className="rounded-xl border border-slate-200 bg-white p-4 text-slate-500 dark:border-white/10 dark:bg-[#15172A] dark:text-slate-300">
-                    {t("orders.selectPrompt")}
-                  </div>
-                )}
-              </div>
+              <OrderTable
+                orders={paginatedOrders}
+                currencyCode={currencyCode}
+                selectedOrderId={selectedOrder?.id}
+                onSelect={setSelectedOrder}
+                onEdit={canEdit ? setEditingOrder : undefined}
+                onArchive={canEdit ? setArchivingOrder : undefined}
+              />
             )}
           </div>
         )}
+        <EntityDrawer
+          open={Boolean(selectedOrder)}
+          title={selectedOrder?.order_number ?? t("orders.details")}
+          description={selectedOrder ? `${t("orders.profit")}: ${formatMoney(selectedOrder.net_profit, currencyCode)}` : undefined}
+          onClose={() => setSelectedOrder(null)}
+          footer={selectedOrder && canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingOrder(selectedOrder)}>{t("orders.edit")}</Button>{["NEW", "CANCELLED"].includes(selectedOrder.status) ? <Button variant="danger" onClick={() => setArchivingOrder(selectedOrder)}>{t("orders.archive")}</Button> : null}</div> : undefined}
+        >
+          {selectedOrder ? (
+            <OrderDetails
+              order={selectedOrder}
+              currencyCode={currencyCode}
+              shipment={shipmentQuery.data}
+              onStatusChange={(nextStatus) => statusMutation.mutate({ orderId: selectedOrder.id, nextStatus })}
+            />
+          ) : null}
+        </EntityDrawer>
         {isCreateOpen ? (
           <FormDialog
             title={t("orders.create")}
@@ -488,8 +474,7 @@ export default function OrdersPage() {
             onConfirm={() => archiveMutation.mutate()}
           />
         ) : null}
-      </div>
-    </main>
+    </WorkspacePage>
   );
 }
 // Localization regression compatibility markers: Edit order; Save order.
