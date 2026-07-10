@@ -8,12 +8,12 @@ import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states"
 import { clampPage, paginateItems, PaginationControls, PAGE_SIZE_OPTIONS } from "@/components/pagination-controls";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
-import { ANALYTICS_ORDER_STATUSES, ANALYTICS_PAYMENT_STATUSES, buildBusinessInsights, buildDailySalesRows, buildVariantLookups, formatDecimal, formatPercentValue, formatSafeRatio, leadsInRange, ordersInRange, summarizeAdvertising, safeDivide, summarizeCustomers, summarizeInventory, summarizeOrders, toFiniteNumber, UNAVAILABLE } from "@/lib/analytics-formulas";
+import { ANALYTICS_ORDER_STATUSES, ANALYTICS_PAYMENT_STATUSES, buildBusinessInsights, buildDailySalesRows, buildVariantLookups, formatDecimal, formatPercentValue, leadsInRange, ordersInRange, summarizeAdvertising, safeDivide, summarizeCustomers, summarizeInventory, summarizeOrders, toFiniteNumber, UNAVAILABLE } from "@/lib/analytics-formulas";
 import { displayCategory } from "@/lib/categories";
 import { formatMoney } from "@/lib/currency";
 import { useDateRange } from "@/providers/date-range-provider";
 import { fetchAdvertisingSummary, fetchCampaignPerformance, fetchAdvertisingTrend } from "@/services/advertising";
-import { fetchAdvertisingReport, fetchBusinessInsights, fetchCustomersReport, fetchCustomersSummary, fetchInventoryReport, fetchInventorySummary, fetchProductsReport, fetchProfitSummary, fetchSalesReport, fetchSalesSummary, fetchSalesTrend, fetchTopProducts } from "@/services/analytics";
+import { fetchAdvertisingReport, fetchBusinessInsights, fetchCustomersSummary, fetchInventoryReport, fetchInventorySummary, fetchProfitSummary, fetchSalesReport, fetchSalesSummary, fetchTopProducts } from "@/services/analytics";
 import { fetchCustomers, fetchLeads } from "@/services/crm";
 import { fetchOrders } from "@/services/orders";
 import { fetchInventory, fetchProducts, fetchProductVariants } from "@/services/products";
@@ -44,14 +44,11 @@ export default function AnalyticsPage() {
   const [analyticsPageSize, setAnalyticsPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
 
   const salesReport = useQuery({ queryKey: ["analytics-sales-report", workspaceId, startDate, endDate], queryFn: () => fetchSalesReport(workspaceId, undefined, startDate, endDate), enabled });
-  const productsReport = useQuery({ queryKey: ["analytics-products-report", workspaceId, startDate, endDate], queryFn: () => fetchProductsReport(workspaceId, undefined, startDate, endDate), enabled });
   const advertisingReport = useQuery({ queryKey: ["analytics-advertising-report", workspaceId, startDate, endDate], queryFn: () => fetchAdvertisingReport(workspaceId, undefined, startDate, endDate), enabled });
-  const customersReport = useQuery({ queryKey: ["analytics-customers-report", workspaceId, startDate, endDate], queryFn: () => fetchCustomersReport(workspaceId, undefined, startDate, endDate), enabled });
   const inventoryReport = useQuery({ queryKey: ["analytics-inventory-report", workspaceId, startDate, endDate], queryFn: () => fetchInventoryReport(workspaceId, undefined, startDate, endDate), enabled });
   const backendInsights = useQuery({ queryKey: ["analytics-business-insights", workspaceId, startDate, endDate], queryFn: () => fetchBusinessInsights(workspaceId, undefined, startDate, endDate), enabled });
   const sales = useQuery({ queryKey: ["analytics-sales", workspaceId, startDate, endDate], queryFn: () => fetchSalesSummary(workspaceId, undefined, startDate, endDate), enabled });
   const profit = useQuery({ queryKey: ["analytics-profit", workspaceId, startDate, endDate], queryFn: () => fetchProfitSummary(workspaceId, undefined, startDate, endDate), enabled: enabled && canSeeProfit });
-  const trend = useQuery({ queryKey: ["analytics-trend", workspaceId, startDate, endDate], queryFn: () => fetchSalesTrend(workspaceId, undefined, startDate, endDate), enabled: enabled && canSeeProfit });
   const topProducts = useQuery({ queryKey: ["analytics-products", workspaceId, startDate, endDate], queryFn: () => fetchTopProducts(workspaceId, undefined, startDate, endDate, 12), enabled: enabled && canSeeProfit });
   const customersSummary = useQuery({ queryKey: ["analytics-customers-summary", workspaceId, startDate, endDate], queryFn: () => fetchCustomersSummary(workspaceId, undefined, startDate, endDate), enabled });
   const inventorySummary = useQuery({ queryKey: ["analytics-inventory-summary", workspaceId], queryFn: () => fetchInventorySummary(workspaceId, undefined), enabled });
@@ -65,8 +62,8 @@ export default function AnalyticsPage() {
   const variants = useQuery({ queryKey: ["analytics-variants", workspaceId], queryFn: () => fetchProductVariants(workspaceId, undefined, undefined), enabled });
   const inventory = useQuery({ queryKey: ["analytics-inventory", workspaceId], queryFn: () => fetchInventory(workspaceId), enabled });
 
-  const currentOrders = useMemo(() => ordersInRange(orders.data ?? [], range), [orders.data, range.date_from, range.date_to]);
-  const currentLeads = useMemo(() => leadsInRange(leads.data ?? [], range), [leads.data, range.date_from, range.date_to]);
+  const currentOrders = useMemo(() => ordersInRange(orders.data ?? [], range), [orders.data, range]);
+  const currentLeads = useMemo(() => leadsInRange(leads.data ?? [], range), [leads.data, range]);
   const orderSummary = useMemo(() => summarizeOrders(currentOrders), [currentOrders]);
   const salesRows = useMemo(() => buildDailySalesRows(currentOrders), [currentOrders]);
   const paginatedSalesRows = useMemo(() => paginateItems(salesRows, analyticsPage, analyticsPageSize), [analyticsPage, analyticsPageSize, salesRows]);
@@ -80,7 +77,6 @@ export default function AnalyticsPage() {
   const backendInsightRows = backendInsights.data?.insights ?? [];
 
   const productRows = useMemo(() => (topProducts.data ?? []).map((item) => {
-    const variant = lookups.variantById.get(item.variant_id);
     const product = lookups.productById.get(item.product_id);
     const stock = lookups.inventoryByVariantId.get(item.variant_id);
     return { ...item, category: displayCategory(product?.category, t), stockQuantity: stock?.stock_quantity ?? 0, reservedQuantity: stock?.reserved_quantity ?? 0, status: stock && stock.stock_quantity <= stock.minimum_quantity ? t("analytics.inventory.lowStockStatus") : t("analytics.inventory.healthyStatus") };

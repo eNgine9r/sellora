@@ -197,12 +197,16 @@ export function buildLeadUpdatePayload(values: RawLeadValues & { status?: string
 export const buildCustomerUpdatePayload = buildCustomerCreatePayload;
 export function buildProductUpdatePayload(values: RawProductValues) {
   const payload = buildProductCreatePayload(values);
-  const { images: _images, ...update } = payload;
+  const { images, ...update } = payload;
+  void images;
   return update;
 }
 export function buildProductVariantUpdatePayload(values: RawProductVariantValues) {
   const payload = buildProductVariantCreatePayload({ ...values, product_id: "00000000-0000-0000-0000-000000000000", initial_stock_quantity: 0, minimum_quantity: 0 });
-  const { product_id: _product_id, initial_stock_quantity: _initial, minimum_quantity: _minimum, ...update } = payload;
+  const { product_id, initial_stock_quantity, minimum_quantity, ...update } = payload;
+  void product_id;
+  void initial_stock_quantity;
+  void minimum_quantity;
   return update;
 }
 export function buildInventoryUpdatePayload(values: Record<string, string | number | null | undefined>) {
@@ -218,11 +222,13 @@ export function buildOrderUpdatePayload(values: RawOrderValues) {
   return stripUndefinedFields({ campaign_id: cleanOptionalUuid(values.campaign_id), payment_status: cleanOptionalEnum(values.payment_status, PAYMENT_STATUSES) ?? undefined, ad_cost: cleanOptionalNumber(values.ad_cost) ?? undefined, shipping_cost: cleanOptionalNumber(values.shipping_cost) ?? undefined, cod_fee: cleanOptionalNumber(values.cod_fee) ?? undefined, other_cost: cleanOptionalNumber(values.other_cost) ?? undefined, notes: cleanOptionalString(values.notes), items });
 }
 export function buildShipmentUpdatePayload(values: RawShipmentValues) {
-  const { order_id: _order_id, ...payload } = buildShipmentCreatePayload({ ...values, order_id: "00000000-0000-0000-0000-000000000000" });
+  const { order_id, ...payload } = buildShipmentCreatePayload({ ...values, order_id: "00000000-0000-0000-0000-000000000000" });
+  void order_id;
   return payload;
 }
 export const buildAdCampaignUpdatePayload = buildAdCampaignCreatePayload;
 export function buildAdMetricUpdatePayload(values: Record<string, string | number | null | undefined>) {
-  const { campaign_id: _campaign_id, ...payload } = buildAdMetricCreatePayload({ ...values, campaign_id: "00000000-0000-0000-0000-000000000000" });
+  const { campaign_id, ...payload } = buildAdMetricCreatePayload({ ...values, campaign_id: "00000000-0000-0000-0000-000000000000" });
+  void campaign_id;
   return payload;
 }
