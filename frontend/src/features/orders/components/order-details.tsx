@@ -26,6 +26,7 @@ export function OrderDetails({
   onStatusChange: (status: OrderStatus) => void;
 }) {
   const { t, formatStatus } = useI18n();
+  const hasCostContext = Number(order.product_cost) > 0 || Number(order.ad_cost) > 0 || Number(order.shipping_cost) > 0 || Number(order.cod_fee) > 0 || Number(order.other_cost) > 0;
   return (
     <aside className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#15172A] dark:text-white">
       <div>
@@ -33,6 +34,11 @@ export function OrderDetails({
         <p className="text-sm text-slate-600 dark:text-slate-300">
           {t("orders.profit")}: {formatMoney(order.net_profit, currencyCode)}
         </p>
+        {!hasCostContext ? (
+          <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-100">
+            {t("orders.profitNotCalculated")}
+          </p>
+        ) : null}
       </div>
       <div className="grid min-w-0 grid-cols-[auto,minmax(0,1fr)] gap-2 text-sm">
         <span>{t("analytics.revenue")}</span>
@@ -47,7 +53,12 @@ export function OrderDetails({
         <strong>{formatMoney(order.cod_fee, currencyCode)}</strong>
         <span>{t("orders.otherCost")}</span>
         <strong>{formatMoney(order.other_cost, currencyCode)}</strong>
+        <span>{t("tables.payment")}</span>
+        <strong>{formatStatus("payment", order.payment_status)}</strong>
       </div>
+      <p className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700 dark:bg-white/5 dark:text-slate-200">
+        {t(`orders.paymentHint.${order.payment_status}`)}
+      </p>
       <div className="rounded-xl border border-slate-200 p-3 dark:border-white/10">
         <h3 className="font-semibold">{t("orders.customerSelector")}</h3>
         {order.customer_id ? (
@@ -61,6 +72,9 @@ export function OrderDetails({
                 @{order.customer_instagram_username.replace(/^@/, "")}
               </span>
             ) : null}
+            <Link className="mt-2 inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 px-3 py-2 font-bold dark:border-white/10" href="/customers">
+              {t("orders.openCustomer")}
+            </Link>
           </div>
         ) : (
           <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-100">
@@ -103,12 +117,15 @@ export function OrderDetails({
             </div>
           </div>
         ) : order.customer_id ? (
-          <Link
-            className="mt-2 inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white"
-            href={`/shipments?order_id=${order.id}`}
-          >
-            {t("shipments.createFromOrder")}
-          </Link>
+          <div className="mt-2 grid gap-2">
+            <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-700 dark:bg-white/5 dark:text-slate-200">{t("orders.shipmentMissing")}</p>
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white"
+              href={`/shipments?order_id=${order.id}`}
+            >
+              {t("shipments.createFromOrder")}
+            </Link>
+          </div>
         ) : (
           <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-100">
             {t("shipments.orderCustomerMissing")}

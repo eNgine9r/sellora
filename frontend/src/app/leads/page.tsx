@@ -19,15 +19,15 @@ import { useI18n } from "@/i18n/provider";
 
 const STATUSES: (LeadStatus | "")[] = ["", "NEW", "IN_PROGRESS", "QUALIFIED", "CONVERTED", "LOST"];
 
-function messageForApiError(error: unknown, context: "list" | "create" | "sources") {
+function messageForApiError(error: unknown, context: "list" | "create" | "sources", t: (key: string) => string) {
   if (error instanceof ApiError) {
-    if (error.status === 401) return "Session expired. Please log in again.";
-    if (error.status === 403) return "You do not have permission to manage leads.";
-    if (error.status === 422) return safeApiErrorMessage(error, context === "create" ? "Lead data is invalid. Please check the form." : "Lead filters are invalid. Please reset filters and try again.");
+    if (error.status === 401) return t("leads.apiSessionExpired");
+    if (error.status === 403) return t("leads.apiForbidden");
+    if (error.status === 422) return safeApiErrorMessage(error, context === "create" ? t("leads.apiInvalid") : t("leads.apiLoadFailed"));
   }
-  if (context === "create") return "Unable to create lead. Please try again.";
-  if (context === "sources") return "Unable to load lead sources. You can still create a lead without a source.";
-  return "Unable to load leads. Please try again.";
+  if (context === "create") return t("leads.apiCreateFailed");
+  if (context === "sources") return t("leads.sourceWarning");
+  return t("leads.apiLoadFailed");
 }
 
 export default function LeadsPage() {
@@ -72,10 +72,10 @@ export default function LeadsPage() {
     },
   });
 
-  const listError = leadsQuery.isError ? messageForApiError(leadsQuery.error, "list") : null;
-  const createError = createMutation.isError ? messageForApiError(createMutation.error, "create") : null;
-  const updateError = updateMutation.isError ? messageForApiError(updateMutation.error, "create") : null;
-  const sourcesError = sourcesQuery.isError ? messageForApiError(sourcesQuery.error, "sources") : null;
+  const listError = leadsQuery.isError ? messageForApiError(leadsQuery.error, "list", t) : null;
+  const createError = createMutation.isError ? messageForApiError(createMutation.error, "create", t) : null;
+  const updateError = updateMutation.isError ? messageForApiError(updateMutation.error, "create", t) : null;
+  const sourcesError = sourcesQuery.isError ? messageForApiError(sourcesQuery.error, "sources", t) : null;
   const visibleLeads = useMemo(() => [...(leadsQuery.data ?? [])].sort((left, right) => {
     const leftRevenue = Number(left.expected_revenue ?? 0);
     const rightRevenue = Number(right.expected_revenue ?? 0);
@@ -84,6 +84,7 @@ export default function LeadsPage() {
     if (leadSort === "revenueAsc") return leftRevenue - rightRevenue;
     return right.created_at.localeCompare(left.created_at);
   }), [leadsQuery.data, leadSort]);
+  const hasActiveFilters = Boolean(search.trim() || status || leadSourceId);
 
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
@@ -110,22 +111,22 @@ export default function LeadsPage() {
           <ResetFiltersButton onClick={() => { setSearch(""); setStatus(""); setLeadSourceId(""); setLeadSort("newest"); }} />
         </FilterBar>
 
-        {!authReady ? <LoadingSkeleton title="Preparing your workspace…" /> : null}
-        {authReady && authStatus === "authenticated" && !workspaceId ? <ErrorState description="Workspace is not ready yet. Please refresh the page." title="Workspace unavailable" /> : null}
+        {!authReady ? <LoadingSkeleton title={t("common.loadingWorkspace")} /> : null}
+        {authReady && authStatus === "authenticated" && !workspaceId ? <ErrorState description={t("common.workspaceUnavailableDescription")} title={t("common.workspaceUnavailable")} /> : null}
         {sourcesError ? <p className="rounded-lg bg-amber-50 p-4 text-sm font-semibold text-amber-700">{sourcesError}</p> : null}
-        {leadsQuery.isLoading || leadsQuery.isFetching && !leadsQuery.data ? <LoadingSkeleton title="Loading leads…" /> : null}
-        {listError ? <ErrorState description={listError} onRetry={() => void leadsQuery.refetch()} title="Unable to load leads" /> : null}
+        {leadsQuery.isLoading || leadsQuery.isFetching && !leadsQuery.data ? <LoadingSkeleton title={t("leads.loading")} /> : null}
+        {listError ? <ErrorState description={listError} onRetry={() => void leadsQuery.refetch()} title={t("leads.loadError")} /> : null}
         {!listError && leadsQuery.isSuccess && (leadsQuery.data?.length ?? 0) === 0 ? (
           <EmptyState
-            title="No leads yet"
-            description="Create your first lead or import historical Instagram conversations to start building your CRM pipeline."
+            title={hasActiveFilters ? t("leads.filteredEmptyTitle") : t("leads.emptyTitle")}
+            description={hasActiveFilters ? t("leads.filteredEmptyDescription") : t("leads.emptyDescription")}
             action={<button className="min-h-11 rounded-2xl bg-blue-600 px-4 text-sm font-black text-white" onClick={() => setIsCreateOpen(true)}>{t("leads.create")}</button>}
           />
         ) : null}
         {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={visibleLeads} leadSources={sourcesQuery.data ?? []} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} /> : null}
 
         {isCreateOpen ? (
-          <FormDialog title={t("leads.create")} description="Only the name is required. Empty optional fields are safely omitted." size="md" onClose={() => setIsCreateOpen(false)}>
+          <FormDialog title={t("leads.create")} description={t("leads.createHelp")} size="md" onClose={() => setIsCreateOpen(false)}>
             <LeadForm
               isSubmitting={createMutation.isPending}
               leadSources={sourcesQuery.data ?? []}
@@ -137,8 +138,8 @@ export default function LeadsPage() {
             />
           </FormDialog>
         ) : null}
-        {archivingLead ? <ConfirmActionDialog title="Archive lead?" description={archivingLead.status === "CONVERTED" ? "This lead is converted. Archiving it will not delete the customer." : "This lead will be hidden from active lead lists. Historical audit records remain available."} actionLabel={t("leads.archive")} isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingLead(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
-        {editingLead ? <EditRecordDialog title={t("leads.edit")} fields={[{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "instagram_username", label: "Instagram username" }, { name: "instagram_profile_url", label: "Instagram profile URL" }, { name: "lead_source_id", label: t("leads.source"), type: "select", options: [{ value: "", label: t("leads.noSource") }, ...(sourcesQuery.data ?? []).map((source) => ({ value: source.id, label: source.name }))] }, { name: "campaign_id", label: t("leads.campaignLabel"), type: "select", options: [{ value: "", label: t("leads.noCampaign") }, ...(campaignsQuery.data ?? []).map((campaign) => ({ value: campaign.id, label: `${campaign.name} · ${campaign.platform}` }))] }, { name: "status", label: "Status", type: "select", options: STATUSES.filter(Boolean).map((item) => ({ value: item, label: item })) }, { name: "expected_revenue", label: "Expected revenue", type: "number" }, { name: "loss_reason", label: "Loss reason", type: "textarea" }, { name: "notes", label: "Notes", type: "textarea" }]} initialValues={editingLead} isSubmitting={updateMutation.isPending} submitError={updateError} onClose={() => setEditingLead(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
+        {archivingLead ? <ConfirmActionDialog title={t("leads.archiveTitle")} description={archivingLead.status === "CONVERTED" ? t("leads.archiveConvertedDescription") : t("leads.archiveDescription")} actionLabel={t("leads.archive")} isSubmitting={archiveMutation.isPending} error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, t("errors.deleteFailed")) : null} onCancel={() => setArchivingLead(null)} onConfirm={() => archiveMutation.mutate()} /> : null}
+        {editingLead ? <EditRecordDialog title={t("leads.edit")} fields={[{ name: "name", label: t("tables.name") }, { name: "phone", label: t("tables.phone") }, { name: "instagram_username", label: t("tables.instagram") }, { name: "instagram_profile_url", label: "Instagram URL" }, { name: "lead_source_id", label: t("leads.source"), type: "select", options: [{ value: "", label: t("leads.noSource") }, ...(sourcesQuery.data ?? []).map((source) => ({ value: source.id, label: source.name }))] }, { name: "campaign_id", label: t("leads.campaignLabel"), type: "select", options: [{ value: "", label: t("leads.noCampaign") }, ...(campaignsQuery.data ?? []).map((campaign) => ({ value: campaign.id, label: `${campaign.name} · ${campaign.platform}` }))] }, { name: "status", label: t("tables.status"), type: "select", options: STATUSES.filter(Boolean).map((item) => ({ value: item, label: t(`statuses.lead.${item}`) })) }, { name: "expected_revenue", label: t("analytics.revenue"), type: "number" }, { name: "loss_reason", label: t("statuses.lead.LOST"), type: "textarea" }, { name: "notes", label: t("orders.notes"), type: "textarea" }]} initialValues={editingLead} isSubmitting={updateMutation.isPending} submitError={updateError} onClose={() => setEditingLead(null)} onSubmit={(values) => updateMutation.mutate(values)} /> : null}
       </div>
     </main>
   );

@@ -22,7 +22,7 @@ def get_workspace_id(x_workspace_id: UUID | None = Header(default=None, alias="X
 
 def get_user_role_for_workspace(user: User, workspace_id: UUID) -> RoleName | None:
     for membership in user.workspaces:
-        if membership.workspace_id == workspace_id and membership.workspace.is_active:
+        if membership.workspace_id == workspace_id and membership.workspace.is_active and getattr(membership, "is_active", True):
             return RoleName(membership.role.name)
     return None
 

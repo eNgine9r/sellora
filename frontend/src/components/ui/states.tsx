@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { AlertCircle, Inbox } from "lucide-react";
 
-export function LoadingSkeleton({ rows = 3, title = "Loading data…" }: { rows?: number; title?: string }) {
+export function LoadingSkeleton({ rows = 3, title = "Завантаження даних…" }: { rows?: number; title?: string }) {
   return (
     <section className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
       <div className="mb-5 flex items-center justify-between gap-4">
@@ -35,7 +35,7 @@ export function EmptyState({ title, description, action }: { title: string; desc
   );
 }
 
-export function ErrorState({ title = "Something went wrong", description, onRetry }: { title?: string; description: string; onRetry?: () => void }) {
+export function ErrorState({ title = "Щось пішло не так", description, onRetry }: { title?: string; description: string; onRetry?: () => void }) {
   return (
     <div className="rounded-[24px] border border-rose-100 bg-rose-50 p-5 text-rose-900 shadow-[0_18px_45px_rgba(190,18,60,0.08)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -50,7 +50,7 @@ export function ErrorState({ title = "Something went wrong", description, onRetr
         </div>
         {onRetry ? (
           <button className="min-h-11 rounded-2xl bg-white px-4 text-sm font-black text-rose-700 shadow-sm" onClick={onRetry}>
-            Try again
+            Спробувати ще раз
           </button>
         ) : null}
       </div>
