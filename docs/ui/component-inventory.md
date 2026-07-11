@@ -60,3 +60,9 @@
 - `CompactSummary layout="five-balanced"` is used for Inventory and Shipments five-card KPI rows.
 - `InventoryTable` supports selected row/card states and separate on-hand, reserved, and available quantity presentation.
 - `ShipmentTable` supports selected row/card states, TTN copy/open-order actions, and compact desktop/mobile layouts.
+
+## Dd.6 Business performance components
+
+- `CompactSummary layout="five-balanced"` is reused for Advertising, Finance, and Analytics primary metric rows.
+- `WorkspaceSplitView` + `EntitySidePanel` is used for Advertising campaign details where a real selectable entity exists.
+- Existing report tables now keep pagination below the report content for Advertising campaign performance, ad metrics, campaigns, Finance adjustments, and Analytics sales rows.

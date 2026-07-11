@@ -1069,7 +1069,8 @@
     "readinessPendingImportQa": "staging QA імпорту",
     "readinessPendingPostgresMigration": "PostgreSQL runtime перевірка міграції атрибуції",
     "readinessPendingBrowserMobileQa": "browser/mobile QA для лідів, замовлень і реклами",
-    "readinessMetaFuture": "майбутній етап, зараз не активний"
+    "readinessMetaFuture": "майбутній етап, зараз не активний",
+    "safeZeroDenominator": "Показуємо як недоступне, якщо витрати відсутні або дорівнюють нулю."
   },
   "analytics": {
     "title": "Аналітика",
@@ -1894,7 +1895,9 @@
       "manual_fees": "Ручні комісії",
       "net_profit": "Чистий прибуток"
     },
-    "adjustmentsLoadError": "Не вдалося завантажити коригування. Спробуйте ще раз."
+    "adjustmentsLoadError": "Не вдалося завантажити коригування. Спробуйте ще раз.",
+    "totalExpenses": "Усі витрати",
+    "expenseStructure": "Собівартість, реклама, доставка, інші та ручні коригування."
   },
   "accountMenu": {
     "profile": "Профіль",

@@ -135,3 +135,7 @@ Protected pages should rely on the shared shell/header dimensions and `Workspace
 ## Inventory and Shipments workspace pattern (Dd.5)
 
 Inventory and Shipments follow the same protected list workspace pattern as Orders, Products, Leads, and Customers: compact `WorkspaceHeader`, explicit five-card `CompactSummary` where five KPIs are shown, compact filter toolbar, table/mobile-card list, `WorkspaceSplitView` for embedded desktop details, and bottom pagination under the list. Inventory details distinguish on-hand, reserved, and available stock without changing backend formulas. Shipment details keep Nova Poshta and TTN states truthful and do not claim live sync unless existing fields/actions provide it.
+
+## Business performance workspaces (Dd.6)
+
+Advertising, Finance, and Analytics use the protected workspace rhythm with one page-level period control, compact five-card summaries where reliable, semantic report cards, bottom pagination under each report list, and truthful unavailable states (`—`) for missing denominator-dependent calculations. Advertising campaigns use `WorkspaceSplitView` for embedded details; Finance keeps manual adjustments inline because the existing model is edited through the adjustment form rather than a separate detail entity.

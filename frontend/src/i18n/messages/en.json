@@ -1069,7 +1069,8 @@
     "readinessPendingImportQa": "staging import QA",
     "readinessPendingPostgresMigration": "PostgreSQL runtime validation for the attribution migration",
     "readinessPendingBrowserMobileQa": "browser/mobile QA for leads, orders, and advertising",
-    "readinessMetaFuture": "future stage, not active now"
+    "readinessMetaFuture": "future stage, not active now",
+    "safeZeroDenominator": "Shown as unavailable when spend is missing or zero."
   },
   "analytics": {
     "title": "Analytics",
@@ -1894,7 +1895,9 @@
       "manual_fees": "Manual fees",
       "net_profit": "Net profit"
     },
-    "adjustmentsLoadError": "Could not load adjustments. Please try again."
+    "adjustmentsLoadError": "Could not load adjustments. Please try again.",
+    "totalExpenses": "Total expenses",
+    "expenseStructure": "COGS, ads, shipping, other and manual adjustments."
   },
   "accountMenu": {
     "profile": "Profile",
