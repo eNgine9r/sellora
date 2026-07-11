@@ -24,13 +24,13 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#111827",
+  themeColor: "#070A14",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="uk" className="overflow-x-hidden bg-[#080812]">
-      <body className="min-w-0 overflow-x-hidden bg-[#F8F7FC] antialiased">
+    <html lang="uk" className="overflow-x-hidden bg-canvas">
+      <body className="min-w-0 overflow-x-hidden bg-canvas antialiased">
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var m=localStorage.getItem('sellora.theme-mode')||'system';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var t=m==='dark'||(m==='system'&&d)?'dark':'light';document.documentElement.classList.add(t);document.documentElement.dataset.theme=t;}catch(e){document.documentElement.classList.add('light');}})();`,

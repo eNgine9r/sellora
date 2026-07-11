@@ -23,7 +23,9 @@
     "loadingWorkspace": "Preparing your workspace…",
     "workspaceUnavailable": "Workspace unavailable",
     "workspaceUnavailableDescription": "Workspace is not ready yet. Refresh the page or select another workspace.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "yes": "Yes",
+    "no": "No"
   },
   "actions": {
     "create": "Create",
@@ -108,81 +110,192 @@
   },
   "auth": {
     "loginTitle": "Log in to Sellora",
+    "welcome": "Welcome back",
     "email": "Email",
     "password": "Password",
     "login": "Log in",
     "loading": "Signing in…",
-    "helper": "Use the staging credentials provided by the workspace owner.",
-    "error": "Unable to sign in. Check your email and password.",
+    "helper": "Enter your account details to access the store.",
+    "error": "Invalid email or password. Check the details and try again.",
     "sessionExpired": "Session expired. Please log in again.",
-    "networkError": "Could not connect to the server. Try again later or check the API.",
-    "invalidCredentials": "Invalid email or password."
+    "networkError": "Could not connect to the server. Try again a bit later.",
+    "invalidCredentials": "Invalid email or password. Check the details and try again.",
+    "backHome": "Back to site",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "contextTitle": "All store work in one workspace",
+    "contextDescription": "Sellora brings sales, customers, products, shipments, ads, and finance into one protected workspace for your team.",
+    "trustStatement": "Access is protected by an account, and each store’s data is kept separately.",
+    "indicators": [
+      {
+        "label": "operations workspace",
+        "value": "1"
+      },
+      {
+        "label": "core workflows",
+        "value": "7+"
+      },
+      {
+        "label": "English interface",
+        "value": "EN"
+      }
+    ]
   },
   "landing": {
+    "nav": {
+      "label": "Site navigation",
+      "workflow": "Workflow",
+      "capabilities": "Capabilities",
+      "integrations": "Integrations",
+      "mobileMenu": "Open site menu",
+      "closeMenu": "Close site menu"
+    },
     "eyebrow": "CRM for Instagram stores",
-    "headline": "Manage sales, stock, and advertising without chaos",
-    "subtitle": "Sellora brings leads, customers, orders, inventory, shipments, and ad metrics into one mobile SaaS workspace.",
+    "headline": "Run your Instagram store without spreadsheets and chaos",
+    "subtitle": "Leads, customers, orders, products, stock, shipments, ads, and profit — in one modern workspace.",
     "primaryCta": "Log in to Sellora",
-    "secondaryCta": "Explore features",
-    "featuresEyebrow": "Features",
-    "featuresTitle": "Built for Instagram sales",
-    "featuresSubtitle": "No overload: only the workflows your team uses every day.",
-    "workflowEyebrow": "Workflow clarity",
-    "workflowTitle": "Your store operations in one clean workspace",
-    "workflowSubtitle": "Historical imports, manual sales, stock reservations, and ad metrics work together without breaking mobile layouts.",
-    "ctaTitle": "Ready to organize sales?",
-    "ctaSubtitle": "Start with the Sellora workspace and validate key staging scenarios without changing deployment architecture.",
-    "footer": "© 2026 Sellora. CRM for Instagram stores.",
-    "previewTitle": "Sellora dashboard",
-    "previewSubtitle": "Today’s operating view",
+    "secondaryCta": "Show workflow",
+    "trustPoints": [
+      "Built for Instagram stores",
+      "Ukrainian-first interface",
+      "Each store’s data is isolated"
+    ],
+    "previewTitle": "Sellora workspace",
+    "previewSubtitle": "Compact sales and operations view",
+    "preview": {
+      "ariaLabel": "Demo preview of the Sellora interface",
+      "demo": "Demo",
+      "metrics": [
+        {
+          "label": "Revenue",
+          "value": "UAH 24,800",
+          "helper": "selected period"
+        },
+        {
+          "label": "Orders",
+          "value": "38",
+          "helper": "new and in progress"
+        },
+        {
+          "label": "ROAS",
+          "value": "4.7×",
+          "helper": "ad return"
+        }
+      ],
+      "funnelTitle": "Sales funnel",
+      "funnel": [
+        "Messages",
+        "Leads",
+        "Orders",
+        "Payments"
+      ],
+      "ordersTitle": "Recent orders",
+      "orders": [
+        "Earrings · Instagram Direct",
+        "Ring · repeat purchase",
+        "Pendant · Meta Ads"
+      ],
+      "paid": "Paid"
+    },
+    "workflowEyebrow": "Core workflow",
+    "workflowTitle": "From Instagram message to repeat purchase",
+    "workflowSubtitle": "Sellora helps the team track every step: first request, payment, shipment, profit, and the next purchase.",
     "workflow": [
-      "Lead",
-      "Customer",
-      "Order",
-      "Stock",
-      "Shipment",
-      "Profit"
+      {
+        "title": "Instagram request",
+        "description": "Capture a new request without losing the conversation."
+      },
+      {
+        "title": "Lead",
+        "description": "Assign the request and track the status."
+      },
+      {
+        "title": "Customer",
+        "description": "Keep contacts, notes, and purchase history."
+      },
+      {
+        "title": "Order",
+        "description": "Add products, payment, and owner."
+      },
+      {
+        "title": "Shipment",
+        "description": "Prepare delivery and track status."
+      },
+      {
+        "title": "Profit",
+        "description": "Separate revenue, costs, and result."
+      },
+      {
+        "title": "Repeat sale",
+        "description": "Return to customers with the right context."
+      }
     ],
-    "features": [
-      [
-        "CRM without noise",
-        "Leads, customers, notes, tags, and order history in one place."
-      ],
-      [
-        "Inventory and variants",
-        "SKU, cost, reservations, low stock, and stock movements without spreadsheets."
-      ],
-      [
-        "Orders and profit",
-        "See revenue, costs, advertising, shipping, and estimated net profit."
-      ],
-      [
-        "Historical imports",
-        "Upload catalogs, orders, and ad reports through a safe Import Center."
-      ],
-      [
-        "Shipments",
-        "TTN, cities, warehouses, COD, and delivery statuses are ready for Nova Poshta."
-      ],
-      [
-        "Mobile SaaS",
-        "The interface is tuned for phone, tablet, and desktop work."
+    "capabilities": {
+      "eyebrow": "Capabilities",
+      "title": "Everything an Instagram store needs in one place",
+      "description": "Each module solves a daily operational job without technical noise.",
+      "items": [
+        {
+          "title": "Leads and customers",
+          "description": "Turn Direct requests into customer records and repeat sales."
+        },
+        {
+          "title": "Orders",
+          "description": "Control status, payment, products, and the responsible manager."
+        },
+        {
+          "title": "Products and stock",
+          "description": "See stock, reservations, variants, SKU, and low inventory."
+        },
+        {
+          "title": "Nova Poshta",
+          "description": "Prepare delivery data for future synchronization."
+        },
+        {
+          "title": "Advertising",
+          "description": "Compare spend, leads, orders, ROAS, CPA, and CPL."
+        },
+        {
+          "title": "Finance and reports",
+          "description": "Understand revenue, costs, margin, and net profit."
+        }
       ]
-    ],
-    "benefits": [
-      [
-        "Less manual work",
-        "The team sees one source of truth for sales."
-      ],
-      [
-        "Faster control",
-        "Critical statuses and stock levels stand out immediately."
-      ],
-      [
-        "Ready to grow",
-        "A modular foundation for upcoming sprints."
+    },
+    "integrations": {
+      "eyebrow": "Integrations",
+      "title": "Only truthful integration statuses",
+      "description": "The public page does not promise connections that are not available in the product yet.",
+      "items": [
+        {
+          "title": "Nova Poshta",
+          "description": "Delivery module prepared with TTN and directories for pilot use.",
+          "status": "pilot"
+        },
+        {
+          "title": "Meta Ads",
+          "description": "Ad analytics are evolving in stages; full integration is marked as upcoming.",
+          "status": "soon"
+        },
+        {
+          "title": "Instagram Direct",
+          "description": "Direct connection is not presented as active without an available official flow.",
+          "status": "notConnected"
+        }
       ]
-    ]
+    },
+    "integrationStatuses": {
+      "available": "Available",
+      "pilot": "Pilot",
+      "beta": "Beta",
+      "soon": "Coming soon",
+      "notConnected": "Not connected"
+    },
+    "finalCtaEyebrow": "Ready for clarity",
+    "ctaTitle": "Start from your real Sellora workspace",
+    "ctaSubtitle": "If you already have workspace access, log in and keep managing sales without spreadsheets.",
+    "footer": "© 2026 Sellora. CRM/ERP for Instagram stores.",
+    "footerDescription": "Sellora helps Instagram stores manage leads, customers, orders, stock, shipments, advertising, and finance in one workspace.",
+    "headerExploreCta": "Explore features"
   },
   "dashboard": {
     "eyebrow": "Sellora Dashboard",
@@ -393,7 +506,9 @@
       "cpa": "CPA — cost per order.",
       "aov": "AOV — average order value."
     },
-    "blockError": "Could not load this block."
+    "blockError": "Could not load this block.",
+    "titleCompact": "Dashboard",
+    "descriptionCompact": "Store performance overview"
   },
   "tables": {
     "name": "Name",
@@ -455,7 +570,16 @@
     "apiForbidden": "You do not have permission to manage leads.",
     "apiInvalid": "Please check the lead form.",
     "apiCreateFailed": "Unable to create lead. Please try again.",
-    "apiLoadFailed": "Unable to load leads. Please try again."
+    "apiLoadFailed": "Unable to load leads. Please try again.",
+    "summary": {
+      "all": "All leads",
+      "new": "New",
+      "inProgress": "In progress",
+      "needsAction": "Needs action",
+      "needsActionUnavailable": "Requires backend next-action logic"
+    },
+    "assigned": "Assigned",
+    "drawerActivityUnavailable": "Activity history is unavailable in the current API."
   },
   "customers": {
     "title": "Customers",
@@ -507,7 +631,23 @@
     "createFailed": "Unable to create customer. Please try again.",
     "saveFailed": "Unable to save customer changes. Please try again.",
     "deleteFailed": "Unable to archive customer. Please try again.",
-    "region": "Region"
+    "region": "Region",
+    "summary": {
+      "all": "All customers",
+      "withPurchases": "With purchases",
+      "repeat": "Repeat",
+      "withoutOrders": "No orders",
+      "unavailable": "Workspace-level summary needed"
+    },
+    "activity": "Activity",
+    "tabs": {
+      "overview": "Overview",
+      "notes": "Notes",
+      "addresses": "Addresses",
+      "activity": "Activity",
+      "orders": "Orders"
+    },
+    "ordersUnavailable": "Customer orders are unavailable in the current API."
   },
   "orders": {
     "title": "Orders",
@@ -593,7 +733,15 @@
     },
     "profitNotCalculated": "Profit is not calculated yet because product costs or expenses are missing.",
     "openCustomer": "Open customer",
-    "shipmentMissing": "Shipment has not been created yet."
+    "shipmentMissing": "Shipment has not been created yet.",
+    "todayLabel": "Today",
+    "summary": {
+      "all": "All orders",
+      "new": "New",
+      "awaitingPayment": "Awaiting payment",
+      "readyToShip": "Ready to ship",
+      "problematic": "Problematic"
+    }
   },
   "products": {
     "title": "Products",
@@ -621,7 +769,42 @@
     "inactive": "Inactive",
     "createProductVariantFirst": "Create a product first before adding variants.",
     "allStatuses": "All statuses",
-    "sku": "SKU"
+    "sku": "SKU",
+    "details": "Product details",
+    "loadError": "Unable to load products.",
+    "loading": "Loading products…",
+    "emptyDescription": "Create products and variants to prepare the catalog for orders.",
+    "summary": {
+      "all": "All products",
+      "active": "Active",
+      "variants": "Variants",
+      "lowStock": "Low stock",
+      "withoutPhoto": "Without photo"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "variants": "Variants",
+      "stock": "Stock",
+      "history": "History"
+    },
+    "stockUnavailable": "Stock data is unavailable for this product.",
+    "historyUnavailable": "Product history is unavailable in the current API.",
+    "archiveTitle": "Archive product?",
+    "archiveDescription": "Archiving this product hides it from the active catalog. Existing orders remain unchanged.",
+    "archiveVariantTitle": "Archive variant?",
+    "archiveVariantDescription": "This variant will be hidden from active selectors. Inventory is not hard deleted, and historical order items remain unchanged.",
+    "archiveVariant": "Archive variant",
+    "createFailed": "Unable to create product. Please try again.",
+    "createVariantFailed": "Unable to create variant. Please try again.",
+    "saveFailed": "Unable to save product changes. Please try again.",
+    "saveVariantFailed": "Unable to save variant changes. Please try again.",
+    "deleteFailed": "Unable to delete record. Please try again.",
+    "variantInUse": "This record cannot be deleted because it is used by other records.",
+    "variantSku": "Variant SKU",
+    "color": "Color",
+    "size": "Size",
+    "sellingPrice": "Selling price",
+    "barcode": "Barcode"
   },
   "inventory": {
     "title": "Inventory",
@@ -662,7 +845,23 @@
       "order_reservation": "Order reservation",
       "order_shipped_release_reservation": "Order shipped release reservation",
       "order_shipped_stock_out": "Order shipped stock out"
-    }
+    },
+    "summary": {
+      "totalStock": "Total stock",
+      "available": "Available",
+      "outOfStock": "Out of stock"
+    },
+    "tabs": {
+      "stock": "Stock",
+      "transactions": "Transactions"
+    },
+    "sort": {
+      "availableAsc": "Available: low to high"
+    },
+    "loadError": "Unable to load inventory.",
+    "filteredEmptyTitle": "No stock items match these filters.",
+    "filteredEmptyDescription": "Try changing search, category, low-stock or sorting filters.",
+    "updateError": "Unable to save inventory changes. Please try again."
   },
   "shipments": {
     "title": "Shipments",
@@ -760,7 +959,13 @@
     "recipientCityRequired": "Select the recipient city.",
     "recipientWarehouseRequired": "Select the recipient warehouse.",
     "createTtnIncomplete": "Nova Poshta returned an incomplete response. Check the Nova Poshta account before trying again.",
-    "loadError": "Unable to load shipments."
+    "loadError": "Unable to load shipments.",
+    "summary": {
+      "all": "All shipments",
+      "ready": "Ready to ship",
+      "delivered": "Delivered",
+      "problems": "Problems / returned"
+    }
   },
   "advertising": {
     "title": "Advertising",
