@@ -123,7 +123,7 @@ export default function DashboardPage() {
     { label: t("dashboard.notificationsItems.outOfStock"), value: backendDashboard.data?.inventory.out_of_stock_count ?? inventory.data?.out_of_stock_count ?? 0, href: "/inventory" },
     { label: t("dashboard.notificationsItems.unpaidOrders"), value: currentOrders.filter((order) => order.payment_status !== "PAID").length, href: "/orders" },
     { label: t("dashboard.notificationsItems.returnedShipments"), value: shipments.data?.returned_this_month ?? 0, href: "/shipments" },
-  ].filter((item) => item.value > 0), [currentOrders, inventory.data, shipments.data, t]);
+  ].filter((item) => item.value > 0), [backendDashboard.data?.inventory.low_stock_count, backendDashboard.data?.inventory.out_of_stock_count, currentOrders, inventory.data, shipments.data, t]);
 
   const dashboardActivity: DashboardActivity[] = useMemo(() => [
     ...currentOrders.slice(0, 3).map((order) => ({ label: t("dashboard.activityItems.orderCreated", { number: order.order_number }), date: order.created_at })),
