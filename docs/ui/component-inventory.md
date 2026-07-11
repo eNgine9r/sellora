@@ -53,3 +53,10 @@
 
 - `WorkspacePage`: tightened default protected-page spacing for more consistent Dashboard/Orders rhythm.
 - `AppShell`/`AppTopbar`/`AppSidebar`: unified full-width desktop header treatment and clearer sidebar navigation offset below the header row.
+
+## Dd.5 Inventory and Shipments components
+
+- `WorkspaceSplitView` is now route-integrated by `/inventory` and `/shipments` so selected stock/shipment records open in embedded desktop right panels while mobile keeps the modal Drawer fallback.
+- `CompactSummary layout="five-balanced"` is used for Inventory and Shipments five-card KPI rows.
+- `InventoryTable` supports selected row/card states and separate on-hand, reserved, and available quantity presentation.
+- `ShipmentTable` supports selected row/card states, TTN copy/open-order actions, and compact desktop/mobile layouts.

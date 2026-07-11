@@ -131,3 +131,7 @@ Five-card summaries must explicitly opt into `CompactSummary layout="five-balanc
 ## Dd.4.4 protected shell and pagination polish
 
 Protected pages should rely on the shared shell/header dimensions and `WorkspacePage` spacing instead of adding page-local gutters. List pages should place primary pagination below the table/card list unless there is a deliberate reason to provide an additional top pager.
+
+## Inventory and Shipments workspace pattern (Dd.5)
+
+Inventory and Shipments follow the same protected list workspace pattern as Orders, Products, Leads, and Customers: compact `WorkspaceHeader`, explicit five-card `CompactSummary` where five KPIs are shown, compact filter toolbar, table/mobile-card list, `WorkspaceSplitView` for embedded desktop details, and bottom pagination under the list. Inventory details distinguish on-hand, reserved, and available stock without changing backend formulas. Shipment details keep Nova Poshta and TTN states truthful and do not claim live sync unless existing fields/actions provide it.

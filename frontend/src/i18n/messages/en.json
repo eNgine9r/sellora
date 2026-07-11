@@ -845,7 +845,23 @@
       "order_reservation": "Order reservation",
       "order_shipped_release_reservation": "Order shipped release reservation",
       "order_shipped_stock_out": "Order shipped stock out"
-    }
+    },
+    "summary": {
+      "totalStock": "Total stock",
+      "available": "Available",
+      "outOfStock": "Out of stock"
+    },
+    "tabs": {
+      "stock": "Stock",
+      "transactions": "Transactions"
+    },
+    "sort": {
+      "availableAsc": "Available: low to high"
+    },
+    "loadError": "Unable to load inventory.",
+    "filteredEmptyTitle": "No stock items match these filters.",
+    "filteredEmptyDescription": "Try changing search, category, low-stock or sorting filters.",
+    "updateError": "Unable to save inventory changes. Please try again."
   },
   "shipments": {
     "title": "Shipments",
@@ -943,7 +959,13 @@
     "recipientCityRequired": "Select the recipient city.",
     "recipientWarehouseRequired": "Select the recipient warehouse.",
     "createTtnIncomplete": "Nova Poshta returned an incomplete response. Check the Nova Poshta account before trying again.",
-    "loadError": "Unable to load shipments."
+    "loadError": "Unable to load shipments.",
+    "summary": {
+      "all": "All shipments",
+      "ready": "Ready to ship",
+      "delivered": "Delivered",
+      "problems": "Problems / returned"
+    }
   },
   "advertising": {
     "title": "Advertising",
