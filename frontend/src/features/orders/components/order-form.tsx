@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { RemoteImage } from "@/components/ui/remote-image";
 import { useI18n } from "@/i18n/provider";
 import {
   CategoryFilter,
