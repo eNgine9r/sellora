@@ -127,3 +127,7 @@ Orders and Products should follow the same protected CRM workspace rhythm as Das
 Protected entity pages that show list/table details must use `WorkspaceSplitView` as the route-level parent for the main content and detail panel. The detail panel is passed through the `panel` prop and must render `EntitySidePanel`, which is non-modal on desktop and falls back to the modal `Drawer` below `lg`.
 
 Five-card summaries must explicitly opt into `CompactSummary layout="five-balanced"`. Do not rely on automatic `auto-fit` behavior for five KPI cards because it can create orphan cards at common desktop widths.
+
+## Dd.4.4 protected shell and pagination polish
+
+Protected pages should rely on the shared shell/header dimensions and `WorkspacePage` spacing instead of adding page-local gutters. List pages should place primary pagination below the table/card list unless there is a deliberate reason to provide an additional top pager.

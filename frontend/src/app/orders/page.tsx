@@ -359,19 +359,6 @@ export default function OrdersPage() {
             <ErrorState title={t("orders.loadError")} description={safeApiErrorMessage(ordersQuery.error, t("orders.loadError"))} onRetry={() => void ordersQuery.refetch()} />
           ) : (
             <div className="orders-pagination-section grid min-w-0 gap-4">
-              {filteredOrders.length > 0 ? (
-                <PaginationControls
-                  page={page}
-                  pageSize={pageSize}
-                  totalItems={filteredOrders.length}
-                  onPageChange={setPage}
-                  onPageSizeChange={(nextPageSize) =>
-                    setPageSize(
-                      nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number],
-                    )
-                  }
-                />
-              ) : null}
               {filteredOrders.length === 0 ? (
                 <EmptyState
                   title={
@@ -400,6 +387,19 @@ export default function OrdersPage() {
                   onArchive={canEdit ? setArchivingOrder : undefined}
                 />
               )}
+              {filteredOrders.length > 0 ? (
+                <PaginationControls
+                  page={page}
+                  pageSize={pageSize}
+                  totalItems={filteredOrders.length}
+                  onPageChange={setPage}
+                  onPageSizeChange={(nextPageSize) =>
+                    setPageSize(
+                      nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number],
+                    )
+                  }
+                />
+              ) : null}
             </div>
           )}
         </WorkspaceSplitView>

@@ -10,7 +10,7 @@ import { cn } from "@/services/utils";
 type MetricTone = "neutral" | "success" | "warning" | "danger" | "info";
 
 export function WorkspacePage({ children, className }: { children: ReactNode; className?: string }) {
-  return <main className={cn("min-w-0 overflow-x-hidden px-4 py-4 text-text-primary sm:px-6 sm:py-6", className)}><div className="grid min-w-0 w-full gap-5 lg:gap-6">{children}</div></main>;
+  return <main className={cn("min-w-0 overflow-x-hidden px-4 py-4 text-text-primary sm:px-5 sm:py-5 lg:px-6", className)}><div className="grid min-w-0 w-full gap-4 lg:gap-5">{children}</div></main>;
 }
 
 export function WorkspaceHeader({ title, description, eyebrow, actions }: { title: string; description?: string; eyebrow?: string; actions?: ReactNode }) {

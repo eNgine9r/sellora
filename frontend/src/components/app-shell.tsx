@@ -80,8 +80,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       className="min-h-screen w-full overflow-x-hidden bg-canvas text-text-primary lg:grid lg:[--sidebar-width:220px] lg:[--topbar-height:72px] lg:[grid-template-columns:var(--sidebar-width)_minmax(0,1fr)] lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]"
       data-protected-shell-grid
     >
-      <div className="hidden min-w-0 border-b border-r border-border-subtle bg-sidebar px-4 lg:flex lg:h-[var(--topbar-height)] lg:w-[var(--sidebar-width)] lg:items-center" data-shell-brand-cell>
-        <Link href="/dashboard" aria-label={t("navigation.dashboard")} className="flex min-w-0 items-center rounded-2xl px-1 py-1 transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+      <div className="hidden min-w-0 border-b border-r border-border-subtle bg-canvas/92 px-4 backdrop-blur-xl lg:flex lg:h-[var(--topbar-height)] lg:w-[var(--sidebar-width)] lg:items-center" data-shell-brand-cell>
+        <Link href="/dashboard" aria-label={t("navigation.dashboard")} className="flex min-w-0 items-center rounded-2xl border border-transparent px-1 py-1 transition hover:border-border-subtle hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
           <BrandLockup markClassName="h-10 w-10" textClassName="text-text-primary" />
         </Link>
       </div>

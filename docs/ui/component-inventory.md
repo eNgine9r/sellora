@@ -48,3 +48,8 @@
 - `CompactSummary layout="five-balanced"`: explicit count-aware five-card summary layout for Orders, Products, and any future five-KPI protected page.
 - `WorkspaceSplitView`: route-level split layout that renders main table/list content and an embedded desktop entity panel as sibling columns.
 - `EntitySidePanel`: non-modal desktop detail aside with mobile `Drawer` fallback for Orders, Products, Leads, and Customers.
+
+## Dd.4.4 updates
+
+- `WorkspacePage`: tightened default protected-page spacing for more consistent Dashboard/Orders rhythm.
+- `AppShell`/`AppTopbar`/`AppSidebar`: unified full-width desktop header treatment and clearer sidebar navigation offset below the header row.

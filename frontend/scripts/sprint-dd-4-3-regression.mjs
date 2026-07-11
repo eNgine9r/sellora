@@ -57,6 +57,9 @@ expect(appShell.includes('data-shell-brand-cell'), 'AppShell must render a dedic
 expect(appShell.includes('<AppSidebar showBrand={false}'), 'Desktop Sidebar navigation must begin below the unified header row.');
 expect(sidebar.includes('showBrand = true'), 'AppSidebar must preserve mobile/generic brand rendering while allowing desktop shell to hide it.');
 expect(topbar.includes('data-shell-topbar') && topbar.includes('lg:h-[var(--topbar-height)]'), 'Topbar must use the shared topbar height variable.');
+expect(topbar.includes('flex w-full min-w-0') && !topbar.includes('lg:max-w-[560px]') && !topbar.includes('xl:max-w-[680px]'), 'Topbar controls/search must span the full available desktop header width without old max-width caps.');
+expect(sidebar.includes('lg:pt-5'), 'Sidebar navigation must keep a visible top offset below the unified header row.');
+expect(orders.indexOf('<OrderTable') < orders.indexOf('<PaginationControls', orders.indexOf('<OrderTable')), '/orders primary pagination must render below the order table/list.');
 
 if (failures.length) {
   console.error('Sprint Dd.4.3 regression guard failed:');

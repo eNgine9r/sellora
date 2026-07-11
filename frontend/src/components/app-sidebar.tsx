@@ -34,7 +34,7 @@ export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () =
           <BrandLockup markClassName="h-10 w-10" textClassName="text-text-primary" />
         </Link>
       </div> : null}
-      <nav className="sidebar-scrollbar grid min-w-0 gap-1 overflow-y-auto px-3 pb-44 lg:pb-5" aria-label={t("navigation.settings")}>
+      <nav className="sidebar-scrollbar grid min-w-0 gap-1 overflow-y-auto px-3 pb-44 pt-4 lg:pb-5 lg:pt-5" aria-label={t("navigation.settings")}>
         {items.map(([href, label, Icon]) => {
           const active = pathname === href || pathname.startsWith(`${href}/`) || (href === "/dashboard" && pathname === "/overview") || (href === "/reports" && pathname === "/analytics");
           return (

@@ -30,8 +30,8 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
   const createOrder = () => router.push("/orders");
 
   return (
-    <header className="mobile-safe-top sticky top-0 z-50 min-w-0 border-b border-border-subtle bg-canvas/92 px-3 py-3 text-text-primary backdrop-blur-xl sm:px-4 md:px-6 lg:static lg:h-[var(--topbar-height)] lg:bg-sidebar lg:py-0" data-shell-topbar>
-      <div className="mobile-topbar-compact flex min-w-0 items-center gap-2 sm:gap-3 lg:h-full lg:gap-4">
+    <header className="mobile-safe-top sticky top-0 z-50 min-w-0 border-b border-border-subtle bg-canvas/92 px-3 py-3 text-text-primary backdrop-blur-xl sm:px-4 md:px-6 lg:static lg:h-[var(--topbar-height)] lg:bg-canvas/92 lg:py-0" data-shell-topbar>
+      <div className="mobile-topbar-compact flex w-full min-w-0 items-center gap-2 sm:gap-3 lg:h-full lg:gap-4">
         <button className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-border-subtle bg-surface-2 shadow-sm hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring lg:hidden" onClick={onOpenMenu} aria-label={t("mobileTopbar.openNavigation")}>
           <Menu className="h-5 w-5" />
         </button>
@@ -44,7 +44,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, o
           </div>
         </div>
 
-        <div className="relative hidden min-w-[220px] flex-1 md:block lg:max-w-[560px] xl:max-w-[680px]">
+        <div className="relative hidden min-w-[220px] flex-1 md:block">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
           <input
             className="h-10 w-full min-w-0 rounded-2xl border border-border-subtle bg-surface-2 pl-11 pr-4 text-sm font-semibold text-text-primary shadow-sm outline-none transition placeholder:text-text-muted hover:border-border-strong focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/30"
