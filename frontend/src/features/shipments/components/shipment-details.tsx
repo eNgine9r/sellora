@@ -32,7 +32,7 @@ export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shi
   const actions = NEXT_ACTIONS[shipment.status];
   const trackingNumber = shipment.nova_poshta_document_number ?? shipment.tracking_number;
   return (
-    <aside className="grid min-w-0 gap-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-slate-900 sm:p-6">
+    <div className="grid min-w-0 gap-5">
       <div className="flex min-w-0 flex-col gap-3 border-b border-slate-100 pb-4 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0"><p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300">{t("shipments.details")}</p><h2 className="mt-2 max-w-full break-words text-2xl font-black leading-tight text-slate-950 dark:text-white">{trackingNumber ?? t("shipments.draftShipment")}</h2></div>
         <ShipmentStatusBadge status={shipment.status} />
@@ -70,7 +70,7 @@ export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shi
       {shipment.notes ? <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600 dark:bg-white/[0.05] dark:text-slate-300">{shipment.notes}</p> : null}
       <NovaPoshtaShipmentPanel workspaceId={workspaceId} shipment={shipment} />
       {actions.length ? <div className="grid gap-2 sm:grid-cols-2">{actions.map((status) => <button key={status} className="min-h-11 rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/10" onClick={() => onStatusChange(status)}>{formatStatus("shipment", status)}</button>)}</div> : <p className="text-sm text-slate-500 dark:text-slate-400">{t("shipments.noNextActions")}</p>}
-    </aside>
+    </div>
   );
 }
 // Shipment detail regression markers: Order section, Customer section, Recipient section, Nova Poshta section, Tracking / TTN section, Status section, TTN document limitation.
