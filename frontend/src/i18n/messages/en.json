@@ -1341,7 +1341,7 @@
       "active": "Active",
       "inactive": "Inactive",
       "addTitle": "Add user",
-      "addDescription": "The current backend creates a user with a temporary password immediately; no email invitation is sent.",
+      "addDescription": "The current backend creates a user with a temporary password immediately; no invitation message is sent.",
       "nameLabel": "Name",
       "emailLabel": "Email",
       "roleLabel": "Role",

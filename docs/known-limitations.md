@@ -445,3 +445,9 @@ Sprint 7E added automated RBAC and tenant-isolation coverage for shared guards a
 Audit logging is reviewed but not fully standardized for every critical mutation. Expanding audit schema or persistence semantics is deferred because Sprint 7E does not allow new migrations.
 
 Sprint 7F runtime PostgreSQL migration QA remains blocked separately and is not resolved by Sprint 7E.
+
+## Sprint 7E.1 closure limitations
+
+- Browser-level workspace-switch race-condition QA is still recommended for staging, but static regression proof and query-cache hardening are now in place.
+- Audit logging is not claimed complete; missing/partial events are registered in `docs/security-audit-logging-backlog.md` for a future approved hardening sprint.
+- Sprint 7F Runtime Migration Closure remains blocked until a safe PostgreSQL runtime environment is available; do not run production migrations to close it.

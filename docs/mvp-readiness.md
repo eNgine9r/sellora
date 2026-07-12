@@ -499,3 +499,12 @@ Mobile UX/PWA MVP is conditionally approved. The app now has bottom quick naviga
 Sprint 7E is conditionally approved. Backend security tests now cover endpoint inventory, OWNER/MANAGER/ANALYST guards, inactive/no-membership denial, tenant list/detail/update/archive IDOR for representative core flows, nested order/finance ownership checks, and finance aggregation scoping. A Lead assignment bug was fixed so inactive workspace memberships cannot be assigned to leads.
 
 Manual browser/mobile workspace-switch race-condition QA and broader audit-log standardization remain follow-ups. Sprint 7F runtime migration QA remains blocked separately.
+
+## Sprint 7E.1 security closure readiness
+
+- Sprint 7E and Sprint 7E.1 are approved from automated security and CI validation.
+- Request-body workspace injection is covered by create, update and nested cross-workspace negative tests.
+- Frontend deterministic install is restored through the tracked npm lockfile and clean `npm --prefix frontend ci` validation.
+- Workspace switching now cancels active React Query requests, invalidates workspace-scoped data after switching, and logout clears the private query cache.
+- Endpoint inventory primary classifications reconcile to the 150-route FastAPI inventory.
+- Sprint 7F runtime PostgreSQL migration QA remains a separate infrastructure blocker until an approved runtime environment is available.

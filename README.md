@@ -532,3 +532,7 @@ Sprint 7E adds backend security regression tests and a QA report for RBAC, works
 A confirmed Lead assignment hardening fix now requires the assignee's workspace membership and workspace to be active before assignment. No database migration, Meta feature work, or private-data caching was added.
 
 Sprint 7F runtime migration closure remains separately blocked until safe non-production PostgreSQL runtime migration QA can be completed.
+
+## Sprint 7E.1 security closure note
+
+Frontend dependency installation uses npm and the tracked `frontend/package-lock.json`; validate clean installs with `npm --prefix frontend ci`. Sprint 7E / 7E.1 security closure is approved by automated workspace-injection tests, endpoint inventory reconciliation, workspace-switch cache hardening, and regression guards. Sprint 7F runtime PostgreSQL migration QA remains separately blocked until an approved runtime environment is available.
