@@ -1236,7 +1236,7 @@
   },
   "settings": {
     "title": "Налаштування",
-    "subtitle": "Керуйте робочим простором, імпортом та інтеграціями з одного місця.",
+    "subtitle": "Керуйте магазином, командою, інтеграціями та параметрами Sellora",
     "workspace": "Робочий простір",
     "workspaceSettings": "Налаштування робочого простору",
     "currency": "Валюта",
@@ -1257,11 +1257,109 @@
       "novaAction": "Налаштувати Nova Poshta",
       "feedbackTitle": "Пілотний фідбек",
       "feedbackDescription": "Переглядайте проблеми, ідеї та незрозумілі місця від пілотних користувачів.",
-      "feedbackAction": "Відкрити фідбек"
+      "feedbackAction": "Відкрити фідбек",
+      "workspaceTitle": "Магазин",
+      "workspaceDescription": "Назва, slug, валюта та часовий пояс робочого простору.",
+      "teamTitle": "Команда",
+      "teamDescription": "Користувачі, ролі OWNER/MANAGER/ANALYST та активність доступу."
     },
     "label": "Налаштування Sellora",
     "integrationsTitle": "Інтеграції",
-    "integrationsSubtitle": "Налаштуйте інтеграції доставки для цього робочого простору."
+    "integrationsSubtitle": "Налаштуйте інтеграції доставки для цього робочого простору.",
+    "status": {
+      "configured": "Налаштовано",
+      "roles": "Ролі",
+      "available": "Доступно",
+      "requiresSetup": "Потребує налаштування",
+      "ownerManaged": "Керує власник"
+    },
+    "summary": {
+      "workspace": "Магазин",
+      "workspaceHelp": "Поточний робочий простір",
+      "role": "Ваша роль",
+      "roleHelp": "Права доступу визначає бекенд",
+      "imports": "Імпорт",
+      "importsHelp": "CSV/Excel та dry-run перевірка",
+      "integrations": "Інтеграції",
+      "integrationsHelp": "Nova Poshta/Meta Ads без фейкового live-синхрону"
+    },
+    "preferences": {
+      "title": "Профіль і вигляд",
+      "heading": "Мова та тема",
+      "description": "Змінюйте локаль і тему через наявні перемикачі без зміни backend enum-значень.",
+      "appearance": "Тема"
+    },
+    "attention": {
+      "title": "Безпечні налаштування",
+      "description": "Деструктивні або секретні дії показуються тільки коли для них існує реальний backend-потік."
+    },
+    "currencyLabels": {
+      "UAH": "UAH — українська гривня",
+      "USD": "USD — долар США"
+    },
+    "workspacePage": {
+      "title": "Магазин",
+      "description": "Основні параметри магазину та робочого простору",
+      "saved": "Налаштування робочого простору оновлено.",
+      "saveFailed": "Не вдалося зберегти налаштування робочого простору.",
+      "loading": "Завантаження налаштувань…",
+      "loadFailed": "Не вдалося завантажити робочий простір.",
+      "nameLabel": "Назва магазину",
+      "nameHint": "Цю назву бачить команда всередині Sellora.",
+      "slugLabel": "Slug / коротка назва",
+      "slugHint": "Лише латинські літери, цифри та дефіси.",
+      "slugError": "Slug може містити малі латинські літери, цифри та дефіси.",
+      "timezoneLabel": "Часовий пояс",
+      "timezoneHint": "Використовується для дат у звітах і операціях.",
+      "safetyTitle": "Безпека",
+      "safetyHeading": "Немає фейкової danger zone",
+      "safetyDescription": "Архівація, видалення або передача власності не показуються без реальних endpoint-ів.",
+      "dangerUnavailable": "Деструктивні дії для робочого простору не доступні в поточному API."
+    },
+    "teamPage": {
+      "title": "Команда",
+      "description": "Керуйте доступом користувачів до магазину",
+      "addAction": "Додати користувача",
+      "summaryActive": "Активні",
+      "summaryActiveHelp": "Активні користувачі в поточній відповіді API",
+      "summaryInactive": "Неактивні",
+      "summaryInactiveHelp": "Деактивовані записи доступу",
+      "summaryOwners": "Власники",
+      "summaryOwnersHelp": "Захист останнього OWNER",
+      "summaryRoles": "Ролі",
+      "summaryRolesHelp": "OWNER, MANAGER, ANALYST",
+      "restricted": "У вас немає доступу до керування командою.",
+      "loading": "Завантаження команди…",
+      "emptyTitle": "У команді ще немає користувачів.",
+      "emptyDescription": "Додайте менеджера або аналітика, щоб працювати разом у Sellora.",
+      "userColumn": "Користувач",
+      "emailColumn": "Email",
+      "roleColumn": "Роль",
+      "statusColumn": "Статус",
+      "actionsColumn": "Дії",
+      "currentUser": "Це ви",
+      "active": "Активний",
+      "inactive": "Неактивний",
+      "addTitle": "Додати користувача",
+      "addDescription": "Поточний backend одразу створює користувача з тимчасовим паролем; email-запрошення не відправляється.",
+      "nameLabel": "Ім’я",
+      "emailLabel": "Email",
+      "roleLabel": "Роль",
+      "roleHint": "Ролі залишаються backend enum: OWNER, MANAGER, ANALYST.",
+      "tempPasswordLabel": "Тимчасовий пароль",
+      "tempPasswordHint": "Передайте пароль користувачу безпечно поза Sellora.",
+      "addSubmit": "Додати користувача",
+      "added": "Користувача додано до команди.",
+      "addFailed": "Не вдалося додати користувача.",
+      "roleSaved": "Роль користувача оновлено.",
+      "roleFailed": "Не вдалося змінити роль.",
+      "deactivated": "Користувача деактивовано в цьому робочому просторі.",
+      "deactivateFailed": "Не вдалося деактивувати користувача.",
+      "deactivateTitle": "Деактивувати доступ",
+      "deactivateDescription": "Деактивувати доступ для {email}? Історичні записи не видаляються.",
+      "deactivateAction": "Деактивувати",
+      "lastOwnerGuard": "Не можна змінити або деактивувати останнього активного власника."
+    }
   },
   "importCenter": {
     "title": "Імпорт",
@@ -1922,5 +2020,10 @@
   "mobileNavigation": {
     "bottomNav": "Нижня мобільна навігація",
     "drawer": "Мобільне меню навігації"
+  },
+  "roles": {
+    "OWNER": "Власник",
+    "MANAGER": "Менеджер",
+    "ANALYST": "Аналітик"
   }
 }

@@ -139,3 +139,9 @@ Inventory and Shipments follow the same protected list workspace pattern as Orde
 ## Business performance workspaces (Dd.6)
 
 Advertising, Finance, and Analytics use the protected workspace rhythm with one page-level period control, compact five-card summaries where reliable, semantic report cards, bottom pagination under each report list, and truthful unavailable states (`—`) for missing denominator-dependent calculations. Advertising campaigns use `WorkspaceSplitView` for embedded details; Finance keeps manual adjustments inline because the existing model is edited through the adjustment form rather than a separate detail entity.
+
+## Dd.7 Settings workspace pattern
+
+Settings routes now use the same protected workspace shell as operational pages: `WorkspacePage`, `WorkspaceHeader`, semantic cards, shared form primitives, and bottom pagination for member lists. Navigation cards are generated only for real discovered routes (`/settings/workspace`, `/settings/team`, `/settings/import`, `/settings/integrations`, `/settings/feedback`) and do not advertise unsupported billing, OAuth, invite-email or destructive workspace features.
+
+Workspace and Team forms use dirty-state saves, safe feedback messages, backend enum preservation and UI-only role/currency labels. Destructive team actions use `ConfirmationDialog` instead of immediate row mutations or browser confirms.

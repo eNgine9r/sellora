@@ -133,3 +133,7 @@ Protected CRM pages use a compact application pattern rather than public marketi
 - Unsupported metrics or backend-derived states should be shown as unavailable rather than estimated or fabricated.
 
 Dd.3–Dd.7 rule: every new or modified page/component must support and be validated in both light and dark themes on desktop and mobile.
+
+## Dd.7 Settings finalization
+
+Settings pages follow the full-width protected workspace canvas while constraining editable forms inside intentional content columns so inputs remain readable on wide desktops. Settings navigation is content-local and does not create a second global sidebar. Destructive and secret-sensitive sections use semantic warning/danger surfaces and never display full provider keys, tokens or temporary passwords outside the supported creation flow.

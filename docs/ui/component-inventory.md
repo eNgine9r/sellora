@@ -66,3 +66,14 @@
 - `CompactSummary layout="five-balanced"` is reused for Advertising, Finance, and Analytics primary metric rows.
 - `WorkspaceSplitView` + `EntitySidePanel` is used for Advertising campaign details where a real selectable entity exists.
 - Existing report tables now keep pagination below the report content for Advertising campaign performance, ad metrics, campaigns, Finance adjustments, and Analytics sales rows.
+
+## Dd.7 Settings components usage
+
+Settings reuses existing shared primitives rather than adding a second design language:
+
+- `WorkspacePage` and `WorkspaceHeader` for route layout;
+- `CompactSummary` for Settings and Team summary rows;
+- `Card`, `Button`, `FormField`, `Input`, `Select`, `StatusBadge`, `DataTable` and `PaginationControls` for forms and lists;
+- `Modal` for add-user creation and `ConfirmationDialog` for deactivation confirmation.
+
+Role labels are translated at the UI layer while backend role enum values remain `OWNER`, `MANAGER` and `ANALYST`.
