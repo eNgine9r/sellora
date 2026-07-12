@@ -1,3 +1,4 @@
+import { RemoteImage } from "@/components/ui/remote-image";
 import { EmptyState } from "@/components/ui/states";
 import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
@@ -16,7 +17,7 @@ export function TopProductsCard({ products, currencyCode = "UAH", showProfit = f
       <div className="mt-4 grid min-w-0 gap-3">
         {topProducts.map((product, index) => (
           <div key={`${product.product_id}-${product.variant_id}`} className="flex min-w-0 items-center justify-between gap-3 overflow-hidden rounded-2xl bg-slate-50 p-3 transition hover:bg-violet-50/70 dark:bg-white/[0.05] dark:hover:bg-violet-400/10">
-            {product.imageUrl ? <img className="h-11 w-11 shrink-0 rounded-xl object-cover" src={product.imageUrl} alt={product.product_name} /> : <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-xs font-black text-slate-400 dark:bg-white/10">{index + 1}</span>}
+            {product.imageUrl ? <RemoteImage className="h-11 w-11 shrink-0 rounded-xl" src={product.imageUrl} alt={product.product_name} /> : <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-xs font-black text-slate-400 dark:bg-white/10">{index + 1}</span>}
             <div className="min-w-0 flex-1 overflow-hidden">
               <p className="truncate font-bold text-slate-900 dark:text-white">#{index + 1} {product.product_name}</p>
               <p className="truncate text-sm text-slate-500 dark:text-slate-400">{product.variant_sku} · {product.categoryLabel ?? t("categories.other")} · {product.quantity_sold} {t("dashboard.topProducts.sold")}</p>
