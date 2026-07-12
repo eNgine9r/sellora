@@ -508,3 +508,9 @@ Manual browser/mobile workspace-switch race-condition QA and broader audit-log s
 - Workspace switching now cancels active React Query requests, invalidates workspace-scoped data after switching, and logout clears the private query cache.
 - Endpoint inventory primary classifications reconcile to the 150-route FastAPI inventory.
 - Sprint 7F runtime PostgreSQL migration QA remains a separate infrastructure blocker until an approved runtime environment is available.
+
+## Sprint 8A staging release gate
+
+Sprint 8A is blocked, and the pilot release decision is **RED — NO-GO**. A safe staging release-gate runner and checklist now exist, but the local validation container could not reach the Vercel frontend or Render backend because both staging URLs returned proxy `CONNECT tunnel failed, response 403`. OWNER/MANAGER/ANALYST staging credentials were not available, runtime database revision was not verified, and the synthetic core E2E order flow was not executed.
+
+Next readiness step: rerun Sprint 8A from a network with staging access and secure synthetic role credentials after Sprint 7F runtime migration compatibility is safely resolved or independently verified.

@@ -451,3 +451,11 @@ Sprint 7F runtime PostgreSQL migration QA remains blocked separately and is not 
 - Browser-level workspace-switch race-condition QA is still recommended for staging, but static regression proof and query-cache hardening are now in place.
 - Audit logging is not claimed complete; missing/partial events are registered in `docs/security-audit-logging-backlog.md` for a future approved hardening sprint.
 - Sprint 7F Runtime Migration Closure remains blocked until a safe PostgreSQL runtime environment is available; do not run production migrations to close it.
+
+## Sprint 8A staging release gate limitations
+
+- Sprint 8A staging execution is blocked in this container by proxy `CONNECT tunnel failed, response 403` for both the Vercel frontend and Render backend URLs.
+- Secure synthetic OWNER/MANAGER/ANALYST staging credentials were not available, so authentication, role, workspace and controlled-write gates were not executed.
+- The synthetic Lead → Customer → Product/Variant → Inventory → Order flow was not executed and must be rerun from an allowed staging network.
+- Sprint 7F runtime PostgreSQL migration QA remains blocked separately; Sprint 8A does not resolve database runtime compatibility.
+- Nova Poshta real validation, Import deep QA, Finance deep QA and Advertising deep QA remain assigned to later Phase 8 sprints.
