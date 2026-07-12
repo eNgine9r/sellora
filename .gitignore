@@ -9,3 +9,5 @@ frontend/.next/
 backend/.pytest_cache/
 __pycache__/
 *.tsbuildinfo
+
+artifacts/staging-release-gate.json

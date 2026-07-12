@@ -192,3 +192,11 @@ Added frontend/docs regression guard:
 **Sprint 7E — CONDITIONALLY APPROVED ⚠️**
 
 Automated negative tests now prove the core RBAC and tenant-isolation invariants for shared guards and representative high-risk business flows, and a confirmed nested-membership bug was fixed. Conditional status is used because manual browser/mobile race-condition QA and broader audit-log standardization remain follow-ups.
+
+## 25. Sprint 7E.1 closure update
+
+Sprint 7E.1 adds explicit request-body workspace-injection negative tests, frontend clean `npm ci` recovery using the tracked npm lockfile, React Query workspace-switch cache cancellation/invalidation, exact endpoint inventory reconciliation, and a dedicated audit logging backlog.
+
+Updated recommendation: **Sprint 7E — APPROVED ✅**.
+
+Sprint 7F Runtime Migration Closure remains separately **BLOCKED ⚠️** until an approved PostgreSQL runtime environment is available.
