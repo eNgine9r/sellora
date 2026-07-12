@@ -1,14 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FormDialog } from "@/components/form-dialog";
 import { AdMetricForm } from "@/features/advertising/components/ad-metric-form";
 import { AdMetricTable } from "@/features/advertising/components/ad-metric-table";
 import { AdvertisingDateRangeFilter } from "@/features/advertising/components/advertising-date-range-filter";
-import { AdvertisingKpiCard } from "@/features/advertising/components/advertising-kpi-card";
 import { AdvertisingTrendChart } from "@/features/advertising/components/advertising-trend-chart";
 import { CampaignForm } from "@/features/advertising/components/campaign-form";
 import { CampaignInsightsPanel } from "@/features/advertising/components/campaign-insights-panel";
@@ -22,6 +21,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { formatMoney } from "@/lib/currency";
 import { useI18n } from "@/i18n/provider";
 import { MetaAdsReadinessCard } from "@/features/integrations/components/meta-ads-readiness-card";
+import { Button, CompactSummary, EntitySidePanel, FieldGrid, FieldItem, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
+import { PaginationControls, PAGE_SIZE_OPTIONS, clampPage, paginateItems } from "@/components/pagination-controls";
 
 function StatusList({ title, items, tone }: { title: string; items: string[]; tone: "ready" | "pending" | "future" }) {
   const toneClasses = {
@@ -54,6 +55,13 @@ export default function AdvertisingPage() {
   const [editingMetric, setEditingMetric] = useState<AdMetric | null>(null);
   const [archivingCampaign, setArchivingCampaign] = useState<AdCampaign | null>(null);
   const [deletingMetric, setDeletingMetric] = useState<AdMetric | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<AdCampaign | null>(null);
+  const [campaignPage, setCampaignPage] = useState(1);
+  const [campaignPageSize, setCampaignPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
+  const [metricPage, setMetricPage] = useState(1);
+  const [metricPageSize, setMetricPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
+  const [performancePage, setPerformancePage] = useState(1);
+  const [performancePageSize, setPerformancePageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
   const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const canEditAdvertising = currentWorkspace?.role === "OWNER";
   const campaigns = useQuery({ queryKey: ["ad-campaigns", workspaceId], queryFn: () => fetchAdCampaigns(workspaceId, undefined), enabled });
@@ -87,37 +95,33 @@ export default function AdvertisingPage() {
   const archiveCampaignMutation = useMutation({ mutationFn: () => deleteAdCampaign(workspaceId, archivingCampaign?.id ?? "", undefined), onSuccess: () => { setArchivingCampaign(null); invalidateAds(); queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] }); } });
   const deleteMetricMutation = useMutation({ mutationFn: () => deleteAdMetric(workspaceId, deletingMetric?.id ?? "", undefined), onSuccess: () => { setDeletingMetric(null); invalidateAds(); queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] }); } });
 
+  const campaignRows = useMemo(() => campaigns.data ?? [], [campaigns.data]);
+  const metricRows = useMemo(() => metrics.data ?? [], [metrics.data]);
+  const performanceRows = useMemo(() => performance.data ?? [], [performance.data]);
+  const paginatedCampaigns = useMemo(() => paginateItems(campaignRows, campaignPage, campaignPageSize), [campaignPage, campaignPageSize, campaignRows]);
+  const paginatedMetrics = useMemo(() => paginateItems(metricRows, metricPage, metricPageSize), [metricPage, metricPageSize, metricRows]);
+  const paginatedPerformance = useMemo(() => paginateItems(performanceRows, performancePage, performancePageSize), [performancePage, performancePageSize, performanceRows]);
+
+  useEffect(() => { setSelectedCampaign(null); }, [workspaceId]);
+  useEffect(() => { setCampaignPage((page) => clampPage(page, campaignPageSize, campaignRows.length)); }, [campaignPageSize, campaignRows.length]);
+  useEffect(() => { setMetricPage((page) => clampPage(page, metricPageSize, metricRows.length)); }, [metricPageSize, metricRows.length]);
+  useEffect(() => { setPerformancePage((page) => clampPage(page, performancePageSize, performanceRows.length)); }, [performancePageSize, performanceRows.length]);
+
   return (
-    <main className="sellora-mobile-page min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
-      <div className="mx-auto grid w-full min-w-0 max-w-7xl gap-6 overflow-hidden">
-        <header className="max-w-full min-w-0 overflow-hidden rounded-2xl bg-white p-5 shadow-sm sm:p-6">
-          <p className="break-words text-sm font-semibold uppercase tracking-[0.2em] text-orange-600">{t("advertising.reportEyebrow")}</p>
-          <h1 className="mt-2 max-w-full break-words text-2xl font-black leading-tight sm:text-3xl">{t("advertising.manualDashboard")}</h1>
-          <p className="mt-1 max-w-full break-words text-slate-600">{t("advertising.ownerReportSubtitle")}</p>
-          <div className="mt-4 grid gap-2 rounded-2xl border border-orange-100 bg-orange-50 p-4 text-sm text-orange-950" data-advertising-reporting-source="manual-import-meta-future">
-            <p className="font-bold">{t("advertising.dataSourceTitle")}: {t("advertising.manualSource")}</p>
-            <p>{t("advertising.manualImportFirst")}</p>
-            <p>{t("advertising.futureMetaSync")}</p>
-            <p>{t("advertising.formulaSafety")}</p>
-          </div>
-        </header>
+    <WorkspacePage>
+        <WorkspaceHeader title={t("advertising.title")} description={t("advertising.subtitle")} eyebrow={t("advertising.reportEyebrow")} actions={canEditAdvertising ? <div className="flex flex-wrap gap-2"><Button onClick={() => setIsCampaignCreateOpen(true)}>{t("advertising.createCampaign")}</Button><Button variant="secondary" onClick={() => setIsMetricCreateOpen(true)}>{t("advertising.addDailyMetric")}</Button></div> : undefined} />
+        <section className="grid gap-2 rounded-2xl border border-warning/20 bg-warning/10 p-4 text-sm text-warning-foreground" data-advertising-reporting-source="manual-import-meta-future">
+          <p className="font-bold">{t("advertising.dataSourceTitle")}: {t("advertising.manualSource")}</p>
+          <p>{t("advertising.manualImportFirst")}</p>
+          <p>{t("advertising.futureMetaSync")}</p>
+          <p>{t("advertising.formulaSafety")}</p>
+        </section>
 
         <AdvertisingDateRangeFilter startDate={startDate} endDate={endDate} onStartDate={setStartDate} onEndDate={setEndDate} />
 
         <MetaAdsReadinessCard compact />
 
-        <section className="grid w-full max-w-full min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label={t("advertising.summaryKpis")}>
-          <AdvertisingKpiCard label={t("advertising.spend")} value={formatMoney(summary.data?.total_spend, currencyCode)} />
-          <AdvertisingKpiCard label={t("advertising.revenue")} value={formatMoney(summary.data?.total_revenue, currencyCode)} />
-          <AdvertisingKpiCard label="ROAS" value={summary.data?.roas} />
-          <AdvertisingKpiCard label="CPA" value={summary.data?.average_cpa != null ? formatMoney(summary.data.average_cpa, currencyCode) : null} />
-          <AdvertisingKpiCard label="CPL" value={summary.data?.average_cpl != null ? formatMoney(summary.data.average_cpl, currencyCode) : null} />
-          <AdvertisingKpiCard label={t("advertising.orders")} value={summary.data?.total_orders} />
-          <AdvertisingKpiCard label={t("advertising.leads")} value={summary.data?.total_leads} />
-          <AdvertisingKpiCard label={t("advertising.messages")} value={summary.data?.total_messages} />
-          <AdvertisingKpiCard label={t("advertising.netProfit")} value={summary.data?.total_net_profit != null ? formatMoney(summary.data.total_net_profit, currencyCode) : null} />
-          <AdvertisingKpiCard label="ROI" value={summary.data?.roi ? `${summary.data.roi}%` : null} />
-        </section>
+        <CompactSummary layout="five-balanced" items={[{ label: t("advertising.spend"), value: formatMoney(summary.data?.total_spend, currencyCode), helper: t("finance.selectedPeriod") }, { label: t("advertising.leads"), value: summary.data?.total_leads ?? "—", helper: t("advertising.cplExplanation") }, { label: t("advertising.orders"), value: summary.data?.total_orders ?? "—", helper: t("advertising.cpaExplanation") }, { label: t("advertising.revenue"), value: formatMoney(summary.data?.total_revenue, currencyCode), helper: t("advertising.roasExplanation") }, { label: "ROAS", value: summary.data?.roas ?? "—", unavailable: summary.data?.roas == null, helper: t("advertising.safeZeroDenominator") }]} />
 
         <section className="grid w-full max-w-full min-w-0 gap-3 overflow-hidden rounded-2xl bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-4" data-advertising-reporting-polish="manual-import-attribution-optional">
           <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-950">
@@ -158,10 +162,10 @@ export default function AdvertisingPage() {
           </div>
         </section>
 
-        <CampaignPerformanceTable rows={performance.data ?? []} />
-        <AdMetricTable metrics={metrics.data ?? []} onEdit={canEditAdvertising ? setEditingMetric : undefined} onDelete={canEditAdvertising ? setDeletingMetric : undefined} />
+        <div className="grid min-w-0 gap-3"><CampaignPerformanceTable rows={paginatedPerformance} />{performanceRows.length > performancePageSize ? <PaginationControls page={performancePage} pageSize={performancePageSize} totalItems={performanceRows.length} onPageChange={setPerformancePage} onPageSizeChange={(size) => { setPerformancePageSize(size as (typeof PAGE_SIZE_OPTIONS)[number]); setPerformancePage(1); }} /> : null}</div>
+        <div className="grid min-w-0 gap-3"><AdMetricTable metrics={paginatedMetrics} onEdit={canEditAdvertising ? setEditingMetric : undefined} onDelete={canEditAdvertising ? setDeletingMetric : undefined} />{metricRows.length > metricPageSize ? <PaginationControls page={metricPage} pageSize={metricPageSize} totalItems={metricRows.length} onPageChange={setMetricPage} onPageSizeChange={(size) => { setMetricPageSize(size as (typeof PAGE_SIZE_OPTIONS)[number]); setMetricPage(1); }} /> : null}</div>
         <AdvertisingTrendChart data={trend.data ?? []} />
-        <CampaignTable campaigns={campaigns.data ?? []} onEdit={canEditAdvertising ? setEditingCampaign : undefined} onArchive={canEditAdvertising ? setArchivingCampaign : undefined} />
+        <WorkspaceSplitView panelOpen={Boolean(selectedCampaign)} panel={selectedCampaign ? <EntitySidePanel open={Boolean(selectedCampaign)} title={selectedCampaign.name} description={`${selectedCampaign.platform} · ${selectedCampaign.status}`} onClose={() => setSelectedCampaign(null)} footer={canEditAdvertising ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingCampaign(selectedCampaign)}>{t("advertising.editCampaign")}</Button><Button variant="danger" onClick={() => setArchivingCampaign(selectedCampaign)}>{t("actions.archive")}</Button></div> : undefined}><FieldGrid><FieldItem label={t("advertising.source")} value={t("advertising.manualSource")} /><FieldItem label={t("advertising.platform")} value={selectedCampaign.platform} /><FieldItem label={t("tables.status")} value={selectedCampaign.status} /><FieldItem label={t("advertising.objective")} value={selectedCampaign.objective} /><FieldItem label={t("advertising.dailyBudget")} value={selectedCampaign.daily_budget ?? "—"} /><FieldItem label={t("advertising.totalBudget")} value={selectedCampaign.total_budget ?? "—"} /></FieldGrid></EntitySidePanel> : null}><div className="grid min-w-0 gap-3"><CampaignTable campaigns={paginatedCampaigns} selectedCampaignId={selectedCampaign?.id} onSelect={setSelectedCampaign} onEdit={canEditAdvertising ? setEditingCampaign : undefined} onArchive={canEditAdvertising ? setArchivingCampaign : undefined} />{campaignRows.length > campaignPageSize ? <PaginationControls page={campaignPage} pageSize={campaignPageSize} totalItems={campaignRows.length} onPageChange={setCampaignPage} onPageSizeChange={(size) => { setCampaignPageSize(size as (typeof PAGE_SIZE_OPTIONS)[number]); setCampaignPage(1); }} /> : null}</div></WorkspaceSplitView>
 
         <section className="grid w-full max-w-full min-w-0 gap-4 overflow-hidden rounded-2xl bg-white p-4 shadow-sm" data-advertising-readiness-gate="not-pilot-ready-meta-future-runtime-qa-pending">
           <div>
@@ -176,19 +180,13 @@ export default function AdvertisingPage() {
           </div>
         </section>
 
-        <section className="grid w-full max-w-full min-w-0 gap-3 overflow-hidden rounded-2xl bg-white p-4 shadow-sm sm:grid-cols-2">
-          <button className="min-h-11 w-full min-w-0 whitespace-normal rounded-xl bg-blue-600 px-4 py-3 font-bold text-white" onClick={() => setIsCampaignCreateOpen(true)} type="button">{t("advertising.createCampaign")}</button>
-          <button className="min-h-11 w-full min-w-0 whitespace-normal rounded-xl bg-indigo-600 px-4 py-3 font-bold text-white" onClick={() => setIsMetricCreateOpen(true)} type="button">{t("advertising.addDailyMetric")}</button>
-        </section>
-
         {isCampaignCreateOpen ? <FormDialog title={t("advertising.createCampaign")} description="Campaign setup uses the shared responsive modal shell." size="lg" onClose={() => setIsCampaignCreateOpen(false)}><CampaignForm onSubmit={(payload) => createCampaignMutation.mutate(payload)} /></FormDialog> : null}
         {isMetricCreateOpen ? <FormDialog title={t("advertising.addDailyMetric")} description="Record spend and outcomes in the same mobile-safe dialog pattern." size="lg" onClose={() => setIsMetricCreateOpen(false)}><AdMetricForm campaigns={campaigns.data ?? []} onSubmit={(payload) => createMetricMutation.mutate(payload)} /></FormDialog> : null}
         {archivingCampaign ? <ConfirmActionDialog title="Archive campaign?" description="This campaign will be hidden from active advertising lists. Historical metrics are preserved unless deleted separately." actionLabel="Archive campaign" isSubmitting={archiveCampaignMutation.isPending} error={archiveCampaignMutation.isError ? safeApiErrorMessage(archiveCampaignMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setArchivingCampaign(null)} onConfirm={() => archiveCampaignMutation.mutate()} /> : null}
         {deletingMetric ? <ConfirmActionDialog title="Delete metric?" description="This daily metric will be removed from advertising summaries, trends, and performance calculations." actionLabel="Delete metric" isSubmitting={deleteMetricMutation.isPending} error={deleteMetricMutation.isError ? safeApiErrorMessage(deleteMetricMutation.error, "Unable to delete record. Please try again.") : null} onCancel={() => setDeletingMetric(null)} onConfirm={() => deleteMetricMutation.mutate()} /> : null}
         {editingCampaign ? <EditRecordDialog title={t("advertising.editCampaign")} fields={[{ name: "name", label: "Name" }, { name: "platform", label: "Platform", type: "select", options: ["META", "INSTAGRAM", "FACEBOOK", "TIKTOK", "GOOGLE", "TELEGRAM", "OTHER"].map((value) => ({ value, label: value })) }, { name: "status", label: "Status", type: "select", options: ["ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"].map((value) => ({ value, label: value })) }, { name: "objective", label: "Objective", type: "select", options: ["MESSAGES", "SALES", "TRAFFIC", "AWARENESS", "FOLLOWERS", "OTHER"].map((value) => ({ value, label: value })) }, { name: "budget_type", label: "Budget type", type: "select", options: ["DAILY", "LIFETIME", "MANUAL"].map((value) => ({ value, label: value })) }, { name: "daily_budget", label: "Daily budget", type: "number" }, { name: "total_budget", label: "Total budget", type: "number" }, { name: "start_date", label: "Start date", type: "date" }, { name: "end_date", label: "End date", type: "date" }, { name: "notes", label: "Notes", type: "textarea" }]} initialValues={editingCampaign} isSubmitting={updateCampaignMutation.isPending} submitError={updateCampaignMutation.isError ? safeApiErrorMessage(updateCampaignMutation.error, "Unable to save campaign changes. Please try again.") : null} onClose={() => setEditingCampaign(null)} onSubmit={(values) => updateCampaignMutation.mutate(values)} /> : null}
         {editingMetric ? <EditRecordDialog title={t("advertising.editMetric")} fields={[{ name: "metric_date", label: "Metric date", type: "date" }, { name: "spend", label: t("advertising.spend"), type: "number" }, { name: "impressions", label: "Impressions", type: "number" }, { name: "reach", label: "Reach", type: "number" }, { name: "clicks", label: "Clicks", type: "number" }, { name: "messages", label: t("advertising.messages"), type: "number" }, { name: "leads", label: t("advertising.leads"), type: "number" }, { name: "orders", label: t("advertising.orders"), type: "number" }, { name: "revenue", label: t("advertising.revenue"), type: "number" }, { name: "net_profit", label: "Net profit", type: "number" }]} initialValues={editingMetric} isSubmitting={updateMetricMutation.isPending} submitError={updateMetricMutation.isError ? safeApiErrorMessage(updateMetricMutation.error, "Unable to save metric changes. Please try again.") : null} onClose={() => setEditingMetric(null)} onSubmit={(values) => updateMetricMutation.mutate(values)} /> : null}
-      </div>
-    </main>
+    </WorkspacePage>
   );
 }
 // Localization regression compatibility markers: FormDialog title="Create campaign"; FormDialog title="Add daily metric".

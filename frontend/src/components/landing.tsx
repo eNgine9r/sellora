@@ -1,78 +1,123 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
-import { BrandIcon, BrandLockup } from "@/components/brand";
+import { BarChart3, Boxes, CheckCircle2, Megaphone, MessageCircle, PackageCheck, Repeat2, ShoppingBag, Truck, Users, WalletCards } from "lucide-react";
+import { Button, Card } from "@/components/ui/primitives";
+import { IntegrationStatusBadge, MarketingCTA, PublicFooter, PublicHeader, PublicPageContainer, PublicSection } from "@/components/public-layout";
 import { useI18n } from "@/i18n/provider";
 
-function PreviewCard({ label, value }: { label: string; value: string }) { return <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.07] p-4"><p className="truncate text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">{label}</p><p className="mt-2 truncate text-2xl font-black text-white">{value}</p></div>; }
+type PreviewMetric = { label: string; value: string; helper: string };
+type WorkflowStep = { title: string; description: string };
+type Capability = { title: string; description: string };
+type Integration = { title: string; description: string; status: "available" | "pilot" | "beta" | "soon" | "notConnected" };
 
-function LandingFeatureCard({ title, description }: { title: string; description: string }) {
-  return <article className="min-w-0 rounded-3xl border border-white/10 bg-white/[0.045] p-5 shadow-2xl shadow-black/15 transition hover:-translate-y-1 hover:bg-white/[0.07] sm:p-6"><div className="mb-5 grid h-11 w-11 place-items-center rounded-2xl bg-[linear-gradient(135deg,#6D28D9_0%,#EC4899_55%,#F97316_100%)]"><CheckCircle2 className="h-5 w-5 text-white" /></div><h3 className="text-lg font-black text-white">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-300">{description}</p></article>;
+const workflowIcons = [MessageCircle, Users, ShoppingBag, WalletCards, Truck, BarChart3, Repeat2];
+const capabilityIcons = [Users, ShoppingBag, Boxes, Truck, Megaphone, BarChart3];
+
+function TrustPoint({ children }: { children: string }) {
+  return <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-border-subtle bg-surface-1 px-3 text-sm font-bold text-text-secondary"><CheckCircle2 className="h-4 w-4 text-violet-300" aria-hidden="true" />{children}</span>;
 }
 
-function LandingFlow() {
-  const { tr } = useI18n();
-  const workflow = tr<string[]>("landing.workflow");
-  return <div className="mt-8 flex max-w-3xl flex-wrap gap-2 text-xs text-slate-200 sm:text-sm">{workflow.map((item, index) => <span key={item} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-2 font-semibold">{item}{index < workflow.length - 1 ? <span className="text-orange-300">→</span> : null}</span>)}</div>;
-}
-
-function HeroPreview() {
-  const { t } = useI18n();
-  return (
-    <div className="relative min-w-0 rounded-[2rem] border border-white/10 bg-white/[0.06] p-3 shadow-2xl shadow-purple-950/40 backdrop-blur sm:p-5">
-      <div className="rounded-[1.5rem] border border-white/10 bg-[#0F1020]/95 p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><BrandIcon className="h-10 w-10" /><div><p className="text-sm font-black">{t("landing.previewTitle")}</p><p className="text-xs text-slate-400">{t("landing.previewSubtitle")}</p></div></div><span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-200">{t("common.live")}</span></div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3"><PreviewCard label={t("dashboard.revenue")} value="₴24.8k" /><PreviewCard label={t("dashboard.roas")} value="4.7x" /><PreviewCard label={t("dashboard.orders")} value="312" /></div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-[1.35fr_.65fr]"><div className="h-48 rounded-3xl bg-[radial-gradient(circle_at_20%_20%,rgba(236,72,153,.40),transparent_35%),linear-gradient(135deg,rgba(109,40,217,.55),rgba(249,115,22,.22))] p-4"><div className="h-full rounded-2xl border border-white/10 bg-black/20" /></div><div className="grid gap-3"><PreviewCard label={t("navigation.shipments")} value="8 active" /><PreviewCard label={t("inventory.lowStock")} value="5 SKUs" /></div></div>
-      </div>
-    </div>
-  );
-}
-
-export function LandingHero() {
-  const { t } = useI18n();
-  return (
-    <section className="relative overflow-hidden bg-[#080812] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_10%,rgba(109,40,217,.35),transparent_34%),radial-gradient(circle_at_86%_12%,rgba(236,72,153,.22),transparent_30%),linear-gradient(180deg,#080812_0%,#111022_52%,#080812_100%)]" />
-      <div className="pointer-events-none absolute left-1/2 top-[-220px] h-[440px] w-[min(760px,90vw)] -translate-x-1/2 rounded-full bg-[linear-gradient(135deg,#6D28D9_0%,#EC4899_45%,#F97316_100%)] opacity-30 blur-3xl" />
-      <nav className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-8">
-        <Link href="/" aria-label="Sellora" className="min-w-0"><BrandLockup /></Link>
-        <Link href="/login" className="shrink-0 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur transition hover:bg-white/15">{t("auth.login")}</Link>
-      </nav>
-      <div className="relative mx-auto grid min-h-[78vh] w-full max-w-7xl content-center gap-12 px-4 pb-10 pt-4 sm:px-6 lg:grid-cols-[0.98fr_1.02fr] lg:items-center lg:px-8 lg:pb-16 lg:pt-8">
-        <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-pink-100"><Sparkles className="h-4 w-4" /> {t("landing.eyebrow")}</p>
-          <h1 className="mt-6 max-w-4xl text-balance text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">{t("landing.headline")}</h1>
-          <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">{t("landing.subtitle")}</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="/login" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 font-black text-slate-950 shadow-2xl shadow-pink-500/20 transition hover:-translate-y-0.5">{t("landing.primaryCta")} <ArrowRight className="h-4 w-4" /></Link>
-            <a href="#features" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/15 bg-white/10 px-6 py-3 font-bold text-white backdrop-blur transition hover:bg-white/15">{t("landing.secondaryCta")}</a>
-          </div>
-          <LandingFlow />
-        </div>
-        <HeroPreview />
-      </div>
-    </section>
-  );
-}
-
-export function LandingDashboardPreview() {
+function ProductPreview() {
   const { t, tr } = useI18n();
-  const benefits = tr<[string, string][]>("landing.benefits");
+  const metrics = tr<PreviewMetric[]>("landing.preview.metrics");
+  const funnel = tr<string[]>("landing.preview.funnel");
+  const orders = tr<string[]>("landing.preview.orders");
   return (
-    <section className="relative bg-[#080812] px-4 py-16 text-white sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
-        <div className="min-w-0"><p className="text-sm font-bold uppercase tracking-[0.28em] text-orange-300">{t("landing.workflowEyebrow")}</p><h2 className="mt-3 max-w-2xl text-3xl font-black leading-tight sm:text-4xl">{t("landing.workflowTitle")}</h2><p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">{t("landing.workflowSubtitle")}</p></div>
-        <div className="grid gap-3 sm:grid-cols-3">{benefits.map(([title, description]) => <div key={title} className="rounded-3xl border border-white/10 bg-white/[0.055] p-5"><h3 className="font-black">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-300">{description}</p></div>)}</div>
-      </div>
-    </section>
+    <div className="relative w-full min-w-0 max-w-full overflow-hidden" aria-label={t("landing.preview.ariaLabel")}>
+      <div className="pointer-events-none absolute -inset-2 rounded-[2rem] bg-brand-gradient opacity-20 blur-3xl sm:-inset-6" aria-hidden="true" />
+      <Card className="relative min-w-0 overflow-hidden p-3 sm:p-5">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-black text-text-primary">{t("landing.previewTitle")}</p>
+            <p className="mt-1 text-xs font-semibold text-text-muted">{t("landing.previewSubtitle")}</p>
+          </div>
+          <span className="rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-xs font-black text-amber-200">{t("landing.preview.demo")}</span>
+        </div>
+        <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-3">
+          {metrics.map((metric) => <div key={metric.label} className="min-w-0 rounded-2xl border border-border-subtle bg-surface-2 p-3"><p className="truncate text-xs font-bold text-text-muted">{metric.label}</p><p className="mt-2 text-2xl font-black text-text-primary">{metric.value}</p><p className="mt-1 text-xs font-semibold text-text-secondary">{metric.helper}</p></div>)}
+        </div>
+        <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-[1fr_0.9fr]">
+          <div className="min-w-0 rounded-3xl border border-border-subtle bg-surface-2 p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-3"><p className="text-sm font-black text-text-primary">{t("landing.preview.funnelTitle")}</p><PackageCheck className="h-5 w-5 text-violet-300" aria-hidden="true" /></div>
+            <div className="mt-4 grid gap-3">
+              {funnel.map((item, index) => <div key={item} className="grid min-w-0 gap-1"><div className="flex items-center justify-between gap-2 text-xs font-bold text-text-secondary"><span className="min-w-0 truncate">{item}</span><span className="shrink-0">{96 - index * 12}%</span></div><div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-3"><div className="h-full rounded-full bg-brand-gradient" style={{ width: `${96 - index * 12}%` }} aria-hidden="true" /></div></div>)}
+            </div>
+          </div>
+          <div className="min-w-0 rounded-3xl border border-border-subtle bg-surface-2 p-3 sm:p-4">
+            <p className="text-sm font-black text-text-primary">{t("landing.preview.ordersTitle")}</p>
+            <div className="mt-4 grid gap-3">
+              {orders.map((order) => <div key={order} className="grid min-w-0 gap-2 rounded-2xl bg-surface-3 px-3 py-2 text-sm sm:flex sm:items-center sm:justify-between"><span className="min-w-0 break-words font-bold text-text-secondary">{order}</span><span className="w-fit rounded-full bg-[var(--success-surface)] px-2 py-1 text-xs font-black text-[var(--success-foreground)]">{t("landing.preview.paid")}</span></div>)}
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
   );
 }
 
 export function LandingPage() {
   const { t, tr } = useI18n();
-  const features = tr<[string, string][]>("landing.features");
-  return <main className="min-w-0 overflow-x-hidden bg-[#080812]"><LandingHero /><section id="features" className="bg-[#080812] px-4 py-16 sm:px-6 lg:px-8"><div className="mx-auto max-w-7xl"><div className="mb-8 max-w-3xl"><p className="text-sm font-bold uppercase tracking-[0.28em] text-pink-300">{t("landing.featuresEyebrow")}</p><h2 className="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">{t("landing.featuresTitle")}</h2><p className="mt-3 text-slate-300">{t("landing.featuresSubtitle")}</p></div><div className="grid min-w-0 gap-4 md:grid-cols-2 lg:grid-cols-3">{features.map(([title, description]) => <LandingFeatureCard key={title} title={title} description={description} />)}</div></div></section><LandingDashboardPreview /><section className="bg-[#080812] px-4 pb-16 sm:px-6 lg:px-8"><div className="mx-auto max-w-5xl rounded-[2rem] border border-white/10 bg-white/[0.06] p-6 text-center shadow-2xl shadow-purple-950/20 sm:p-10"><h2 className="text-2xl font-black text-white sm:text-4xl">{t("landing.ctaTitle")}</h2><p className="mx-auto mt-3 max-w-2xl text-slate-300">{t("landing.ctaSubtitle")}</p><Link href="/login" className="mt-6 inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-6 py-3 font-black text-slate-950">{t("landing.primaryCta")}</Link></div></section><footer className="border-t border-white/10 bg-[#080812] px-5 py-8 text-center text-sm text-slate-400"><p>{t("landing.footer")}</p><div className="mt-3 flex flex-wrap justify-center gap-3"><Link className="font-semibold text-slate-300 hover:text-white" href="/legal/privacy">{t("legalLinks.privacy")}</Link><Link className="font-semibold text-slate-300 hover:text-white" href="/legal/terms">{t("legalLinks.terms")}</Link><Link className="font-semibold text-slate-300 hover:text-white" href="/legal/data-deletion">{t("legalLinks.dataDeletion")}</Link></div></footer></main>;
+  const trustPoints = tr<string[]>("landing.trustPoints");
+  const workflow = tr<WorkflowStep[]>("landing.workflow");
+  const capabilities = tr<Capability[]>("landing.capabilities.items");
+  const integrations = tr<Integration[]>("landing.integrations.items");
+
+  return (
+    <PublicPageContainer>
+      <PublicHeader />
+      <main>
+        <section className="relative overflow-hidden px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
+          <div className="pointer-events-none absolute left-1/2 top-[-220px] h-[420px] w-[min(760px,92vw)] -translate-x-1/2 rounded-full bg-brand-gradient opacity-25 blur-3xl" aria-hidden="true" />
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+            <div className="min-w-0">
+              <p className="inline-flex rounded-full border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-black uppercase tracking-[0.2em] text-violet-200">{t("landing.eyebrow")}</p>
+              <h1 className="mt-6 max-w-4xl text-4xl font-black leading-[1.04] tracking-[-0.05em] text-text-primary sm:text-5xl lg:text-6xl">{t("landing.headline")}</h1>
+              <p className="mt-5 max-w-2xl text-base leading-8 text-text-secondary sm:text-lg">{t("landing.subtitle")}</p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <MarketingCTA href="/login" className="w-full sm:w-auto">{t("landing.primaryCta")}</MarketingCTA>
+                <Button variant="secondary" className="w-full sm:w-auto" type="button" onClick={() => document.getElementById("workflow")?.scrollIntoView({ behavior: "smooth", block: "start" })}>{t("landing.secondaryCta")}</Button>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-2">{trustPoints.map((point) => <TrustPoint key={point}>{point}</TrustPoint>)}</div>
+            </div>
+            <ProductPreview />
+          </div>
+        </section>
+
+        <PublicSection id="workflow" eyebrow={t("landing.workflowEyebrow")} title={t("landing.workflowTitle")} description={t("landing.workflowSubtitle")}>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+            {workflow.map((step, index) => {
+              const Icon = workflowIcons[index] ?? CheckCircle2;
+              return <article key={step.title} className="rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-4"><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/15 text-violet-200"><Icon className="h-5 w-5" aria-hidden="true" /></div><span className="text-xs font-black text-text-muted">0{index + 1}</span></div><h3 className="mt-4 font-black text-text-primary">{step.title}</h3><p className="mt-2 text-sm leading-6 text-text-secondary">{step.description}</p></article>;
+            })}
+          </div>
+        </PublicSection>
+
+        <PublicSection id="capabilities" eyebrow={t("landing.capabilities.eyebrow")} title={t("landing.capabilities.title")} description={t("landing.capabilities.description")} className="pt-8">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {capabilities.map((capability, index) => {
+              const Icon = capabilityIcons[index] ?? CheckCircle2;
+              return <article key={capability.title} className="rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-5 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:bg-surface-2 motion-reduce:hover:translate-y-0"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-surface-3 text-violet-200"><Icon className="h-5 w-5" aria-hidden="true" /></div><h3 className="mt-5 text-lg font-black text-text-primary">{capability.title}</h3><p className="mt-2 text-sm leading-6 text-text-secondary">{capability.description}</p></article>;
+            })}
+          </div>
+        </PublicSection>
+
+        <PublicSection id="integrations" eyebrow={t("landing.integrations.eyebrow")} title={t("landing.integrations.title")} description={t("landing.integrations.description")} className="pt-8">
+          <div className="grid gap-4 md:grid-cols-3">
+            {integrations.map((integration) => <article key={integration.title} className="rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-5"><div className="flex items-start justify-between gap-4"><h3 className="text-lg font-black text-text-primary">{integration.title}</h3><IntegrationStatusBadge status={integration.status} /></div><p className="mt-3 text-sm leading-6 text-text-secondary">{integration.description}</p></article>)}
+          </div>
+        </PublicSection>
+
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-5xl rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-6 text-center shadow-[var(--shadow-card)] sm:p-10">
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-200">{t("landing.finalCtaEyebrow")}</p>
+            <h2 className="mt-3 text-3xl font-black tracking-[-0.03em] text-text-primary sm:text-4xl">{t("landing.ctaTitle")}</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-text-secondary">{t("landing.ctaSubtitle")}</p>
+            <div className="mt-6"><MarketingCTA href="/login">{t("landing.primaryCta")}</MarketingCTA></div>
+          </div>
+        </section>
+      </main>
+      <PublicFooter />
+    </PublicPageContainer>
+  );
 }
 // Localization regression compatibility marker: Операційна система для продажів з Instagram.

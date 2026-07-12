@@ -532,3 +532,15 @@ Sprint 7E adds backend security regression tests and a QA report for RBAC, works
 A confirmed Lead assignment hardening fix now requires the assignee's workspace membership and workspace to be active before assignment. No database migration, Meta feature work, or private-data caching was added.
 
 Sprint 7F runtime migration closure remains separately blocked until safe non-production PostgreSQL runtime migration QA can be completed.
+
+## Sprint 7E.1 security closure note
+
+Frontend dependency installation uses npm and the tracked `frontend/package-lock.json`; validate clean installs with `npm --prefix frontend ci`. Sprint 7E / 7E.1 security closure is approved by automated workspace-injection tests, endpoint inventory reconciliation, workspace-switch cache hardening, and regression guards. Sprint 7F runtime PostgreSQL migration QA remains separately blocked until an approved runtime environment is available.
+
+## Sprint 8A staging release gate
+
+Sprint 8A adds `scripts/staging_release_gate.py`, a safe staging smoke runner that reads staging URLs and role credentials from environment variables, suppresses tokens/passwords, and keeps synthetic writes behind `STAGING_ALLOW_CONTROLLED_WRITES=true`. The current pilot release decision is **RED — NO-GO** because this validation container could not reach the staging frontend/backend (`CONNECT tunnel failed, response 403`), secure role credentials were unavailable, runtime database revision was not verified, and Sprint 7F remains separately blocked.
+
+## Sprint 8A.1 staging E2E closure
+
+Sprint 8A.1 reused the staging release-gate runner and attempted read-only plus guarded controlled-write execution, but remains **BLOCKED**: this environment still cannot reach Vercel/Render staging (`CONNECT tunnel failed, response 403`), secure role credentials and `STAGING_TEST_WORKSPACE_ID` are unavailable, runtime Alembic revision is unverified, and the pilot release decision remains **RED — NO-GO**.
