@@ -1,0 +1,79 @@
+# Sprint Dd.1 Component Inventory
+
+## Frontend architecture audit
+
+- App uses Next.js App Router under `frontend/src/app` with protected pages wrapped by `AppShell` in the root layout.
+- Shared shell components live in `frontend/src/components`: `app-shell`, `app-sidebar`, `app-topbar`, workspace/profile menus, feedback dialog, pagination, filters, and existing dialog helpers.
+- Existing UI state primitives live in `frontend/src/components/ui/states.tsx`; Sprint Dd.1 extends this area with shared design-system primitives and overlay foundations.
+- Localization dictionaries live in `frontend/src/i18n/messages/uk.json` and `frontend/src/i18n/messages/en.json`; UI copy should continue to go through `useI18n` where components render feature-specific text.
+- Auth, workspace restore, switching, and membership state are exposed through `frontend/src/hooks/use-auth.ts` and `frontend/src/stores/auth.store.tsx`.
+- Styling uses Tailwind CSS with semantic CSS variables in `frontend/src/app/globals.css` and Tailwind configured in `frontend/tailwind.config.ts`.
+
+## Existing components found
+
+| Area | Existing component(s) | Sprint Dd.1 decision |
+| --- | --- | --- |
+| App shell | `AppShell`, `AppSidebar`, `AppTopbar` | Refactor in place to the dark SaaS shell; preserve routes, auth, workspace logic, mobile drawer and bottom nav. |
+| Brand | `BrandIcon`, `BrandLockup` | Reuse unchanged inside sidebar/topbar. |
+| Buttons/actions | Local page buttons, topbar buttons, dialog buttons | Add shared `Button` and `IconButton`; migrate shell actions where safe and keep page handlers unchanged. |
+| Inputs/selects/forms | Local feature forms | Add shared `FormField`, `Input`, `Select`, `Textarea`, `Checkbox` as the foundation for future page sprints. |
+| Dialogs | `FormDialog`, `ConfirmActionDialog`, `BottomSheet`, `MobileMoreSheet` | Add shared `Drawer`, `Modal`, and `ConfirmationDialog` overlay foundation with focus management for future migration. |
+| Tables | Feature tables in leads/orders/products/customers/etc. | Add shared `DataTable` foundation; defer page-level table redesigns to later Epic Dd sprints. |
+| Pagination | `PaginationControls` | Keep existing component; add design-system `Pagination` primitive for new standardized tables. |
+| States | `LoadingSkeleton`, `EmptyState`, `ErrorState` | Refactor visual styling to semantic dark tokens. |
+| Badges | Feature status badges | Add shared `StatusBadge`; feature-specific enum mappings remain UI-level and unchanged. |
+| Filters | `filter-controls`, date range selectors | Add `FilterBar`/toolbar primitive; preserve existing feature filtering behavior. |
+
+## Components to refactor in place later
+
+- Feature tables should gradually adopt `DataTable` without replacing mobile cards.
+- Feature forms should migrate to `FormField` and shared controls without changing API payloads.
+- Existing `FormDialog` and feature drawers can migrate to the shared `Drawer` foundation where workflows require side panels.
+
+## Sprint Dd.3 additions
+
+| Area | Component(s) | Decision |
+| --- | --- | --- |
+| CRM protected pages | `WorkspacePage`, `WorkspaceHeader`, `MetricCard`, `CompactSummary` | Shared wrappers for Dashboard, Leads, and Customers; avoid page-local duplicated headers and KPI cards. |
+| Entity details | `EntityDrawer`, `FieldGrid`, `FieldItem`, `DrawerTabs` | Shared drawer/detail foundations for Lead and Customer detail flows using existing overlay behavior. |
+
+## Sprint Dd.4.2 additions
+
+- `WorkspaceSplitView` — shared protected-page split layout for list/table content plus a desktop entity side panel.
+- `EntitySidePanel` — responsive entity details surface: non-modal desktop `<aside>` and modal mobile Drawer sheet.
+- `CompactSummary` now includes count-aware balanced layouts for five-card KPI/summary rows.
+
+## Dd.4.3 additions
+
+- `CompactSummary layout="five-balanced"`: explicit count-aware five-card summary layout for Orders, Products, and any future five-KPI protected page.
+- `WorkspaceSplitView`: route-level split layout that renders main table/list content and an embedded desktop entity panel as sibling columns.
+- `EntitySidePanel`: non-modal desktop detail aside with mobile `Drawer` fallback for Orders, Products, Leads, and Customers.
+
+## Dd.4.4 updates
+
+- `WorkspacePage`: tightened default protected-page spacing for more consistent Dashboard/Orders rhythm.
+- `AppShell`/`AppTopbar`/`AppSidebar`: unified full-width desktop header treatment and clearer sidebar navigation offset below the header row.
+
+## Dd.5 Inventory and Shipments components
+
+- `WorkspaceSplitView` is now route-integrated by `/inventory` and `/shipments` so selected stock/shipment records open in embedded desktop right panels while mobile keeps the modal Drawer fallback.
+- `CompactSummary layout="five-balanced"` is used for Inventory and Shipments five-card KPI rows.
+- `InventoryTable` supports selected row/card states and separate on-hand, reserved, and available quantity presentation.
+- `ShipmentTable` supports selected row/card states, TTN copy/open-order actions, and compact desktop/mobile layouts.
+
+## Dd.6 Business performance components
+
+- `CompactSummary layout="five-balanced"` is reused for Advertising, Finance, and Analytics primary metric rows.
+- `WorkspaceSplitView` + `EntitySidePanel` is used for Advertising campaign details where a real selectable entity exists.
+- Existing report tables now keep pagination below the report content for Advertising campaign performance, ad metrics, campaigns, Finance adjustments, and Analytics sales rows.
+
+## Dd.7 Settings components usage
+
+Settings reuses existing shared primitives rather than adding a second design language:
+
+- `WorkspacePage` and `WorkspaceHeader` for route layout;
+- `CompactSummary` for Settings and Team summary rows;
+- `Card`, `Button`, `FormField`, `Input`, `Select`, `StatusBadge`, `DataTable` and `PaginationControls` for forms and lists;
+- `Modal` for add-user creation and `ConfirmationDialog` for deactivation confirmation.
+
+Role labels are translated at the UI layer while backend role enum values remain `OWNER`, `MANAGER` and `ANALYST`.
