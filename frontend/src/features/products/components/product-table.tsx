@@ -1,5 +1,6 @@
 "use client";
 
+import { RemoteImage } from "@/components/ui/remote-image";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
 import { statusBadgeClass } from "@/lib/status-styles";
