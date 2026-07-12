@@ -540,3 +540,7 @@ Frontend dependency installation uses npm and the tracked `frontend/package-lock
 ## Sprint 8A staging release gate
 
 Sprint 8A adds `scripts/staging_release_gate.py`, a safe staging smoke runner that reads staging URLs and role credentials from environment variables, suppresses tokens/passwords, and keeps synthetic writes behind `STAGING_ALLOW_CONTROLLED_WRITES=true`. The current pilot release decision is **RED — NO-GO** because this validation container could not reach the staging frontend/backend (`CONNECT tunnel failed, response 403`), secure role credentials were unavailable, runtime database revision was not verified, and Sprint 7F remains separately blocked.
+
+## Sprint 8A.1 staging E2E closure
+
+Sprint 8A.1 reused the staging release-gate runner and attempted read-only plus guarded controlled-write execution, but remains **BLOCKED**: this environment still cannot reach Vercel/Render staging (`CONNECT tunnel failed, response 403`), secure role credentials and `STAGING_TEST_WORKSPACE_ID` are unavailable, runtime Alembic revision is unverified, and the pilot release decision remains **RED — NO-GO**.

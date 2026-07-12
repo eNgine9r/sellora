@@ -154,3 +154,9 @@ The gate was prepared and attempted, but required staging evidence could not be 
 **RED — NO-GO**
 
 Do not show this staging deployment to controlled pilot shops yet. The release is not rejected due to a confirmed Sellora app defect; it is blocked because staging availability, authentication, role coverage, core E2E order flow, mobile/browser QA and runtime database compatibility could not be verified.
+
+## 27. Sprint 8A.1 closure attempt
+
+Sprint 8A.1 reused the existing release-gate runner and attempted both read-only and guarded controlled-write execution. The environment still could not reach the Vercel frontend or Render backend because both preflights returned proxy `CONNECT tunnel failed, response 403`; OWNER/MANAGER/ANALYST credentials and the QA workspace ID were still unavailable; runtime Alembic revision remained unverified.
+
+Updated status remains **Sprint 8A — BLOCKED ⚠️** and release decision remains **RED — NO-GO**. See `docs/sprint-8a1-staging-e2e-closure.md` for the closure attempt evidence.

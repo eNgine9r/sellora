@@ -208,7 +208,7 @@ def build_artifact(args: argparse.Namespace) -> dict[str, Any]:
     requested_workspace = os.getenv("STAGING_TEST_WORKSPACE_ID")
     allow_writes = os.getenv("STAGING_ALLOW_CONTROLLED_WRITES", "").lower() == "true"
     state = GateState()
-    run_id = f"8A-{int(time.time())}"
+    run_id = f"8A1-{int(time.time())}"
 
     frontend_code, frontend_body = http_request(frontend_url)
     frontend_status = status_from_code(frontend_code)
@@ -236,13 +236,32 @@ def build_artifact(args: argparse.Namespace) -> dict[str, Any]:
             "commit": os.getenv("STAGING_BACKEND_COMMIT", "unknown"),
         },
         "database": {
-            "expected_alembic_head": os.getenv("STAGING_EXPECTED_ALEMBIC_HEAD", "202607080020"),
-            "runtime_revision": "not_verified_by_runner",
-            "migration_runtime_status": "BLOCKED",
+            "expected_alembic_head": os.getenv("STAGING_EXPECTED_ALEMBIC_HEAD", os.getenv("STAGING_EXPECTED_ALEMBIC_REVISION", "202607080020")),
+            "expected_revision": os.getenv("STAGING_EXPECTED_ALEMBIC_HEAD", os.getenv("STAGING_EXPECTED_ALEMBIC_REVISION", "202607080020")),
+            "runtime_revision": os.getenv("STAGING_RUNTIME_ALEMBIC_REVISION", "not_verified_by_runner"),
+            "compatibility": "PASS" if os.getenv("STAGING_RUNTIME_ALEMBIC_REVISION") == os.getenv("STAGING_EXPECTED_ALEMBIC_HEAD", os.getenv("STAGING_EXPECTED_ALEMBIC_REVISION", "202607080020")) else "BLOCKED",
+            "migration_runtime_status": "PASS" if os.getenv("STAGING_RUNTIME_ALEMBIC_REVISION") == os.getenv("STAGING_EXPECTED_ALEMBIC_HEAD", os.getenv("STAGING_EXPECTED_ALEMBIC_REVISION", "202607080020")) else "BLOCKED",
         },
         "gates": {"G0": state.gates.get("G0", "BLOCKED")},
         "role_results": {},
+        "roles": {"owner": "BLOCKED", "manager": "BLOCKED", "analyst": "BLOCKED"},
         "core_read_results": {},
+        "core_e2e": {
+            "lead": "BLOCKED",
+            "customer": "BLOCKED",
+            "product": "BLOCKED",
+            "variant": "BLOCKED",
+            "inventory": "BLOCKED",
+            "order": "BLOCKED",
+            "payment_status": "BLOCKED",
+            "shipment_draft": "BLOCKED",
+            "dashboard_finance_visibility": "BLOCKED",
+            "cross_workspace_negative": "BLOCKED",
+            "cleanup": "BLOCKED",
+        },
+        "workspace_switching": "BLOCKED",
+        "browser_mobile": "BLOCKED",
+        "console_network": "BLOCKED",
         "controlled_write": controlled_write_notice(allow_writes, args.mode, state),
         "issues": state.issues,
     }
@@ -261,6 +280,7 @@ def build_artifact(args: argparse.Namespace) -> dict[str, Any]:
         if not email or not password:
             missing_credentials.append(role)
             result["role_results"][role] = {"status": "BLOCKED", "summary": f"Missing {email_key}/{password_key}."}
+            result["roles"][role.lower()] = "BLOCKED"
             continue
         token, login_result = login(api_base, email, password)
         role_result: dict[str, Any] = {"login": login_result.__dict__}
@@ -274,6 +294,7 @@ def build_artifact(args: argparse.Namespace) -> dict[str, Any]:
                     owner_token = token
                     owner_workspace = workspace_id
         result["role_results"][role] = role_result
+        result["roles"][role.lower()] = "PASS" if token and role_result.get("me", {}).get("status") == "PASS" else "FAIL"
 
     if missing_credentials:
         state.add_issue(
@@ -300,6 +321,8 @@ def build_artifact(args: argparse.Namespace) -> dict[str, Any]:
     state.set_gate("G10", state.gates.get("G10", "BLOCKED"))
     state.set_gate("G11", state.gates.get("G11", "BLOCKED"))
 
+    if args.mode == "controlled-write" and (not owner_token or not owner_workspace):
+        result["controlled_write"] = "Blocked before writes because staging access, credentials or QA workspace resolution did not pass."
     result["gates"] = {f"G{i}": state.gates.get(f"G{i}", "BLOCKED") for i in range(12)}
     result["issues"] = state.issues
     result["critical_issues"] = sum(1 for issue in state.issues if issue["severity"] == "Critical" and issue["status"] != "Resolved")

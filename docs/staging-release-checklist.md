@@ -106,3 +106,14 @@ Use this checklist with `scripts/staging_release_gate.py` and browser/mobile QA.
 - [ ] No unexpected 403/404/500 on core routes.
 - [ ] No CORS/hydration errors.
 - [ ] No stack traces, SQL, tokens, or secrets in responses/output.
+
+## Sprint 8A.1 closure checklist addendum
+
+- [ ] Rerun from a network that can reach Vercel and Render without proxy `CONNECT` failure.
+- [ ] Provide secure synthetic OWNER/MANAGER/ANALYST credentials via environment variables only.
+- [ ] Provide `STAGING_TEST_WORKSPACE_ID` for an isolated QA workspace.
+- [ ] Verify runtime Alembic revision safely without running `alembic upgrade`.
+- [ ] Run `python scripts/staging_release_gate.py --mode read-only` successfully.
+- [ ] Run `STAGING_ALLOW_CONTROLLED_WRITES=true python scripts/staging_release_gate.py --mode controlled-write` only after G0/G1/workspace/runtime checks pass.
+- [ ] Execute browser/mobile QA on 1366px, 375px, 390px, 430px and 768px.
+- [ ] Archive or intentionally retain prefixed synthetic records inside the QA workspace.

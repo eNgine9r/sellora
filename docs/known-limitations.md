@@ -459,3 +459,10 @@ Sprint 7F runtime PostgreSQL migration QA remains blocked separately and is not 
 - The synthetic Lead → Customer → Product/Variant → Inventory → Order flow was not executed and must be rerun from an allowed staging network.
 - Sprint 7F runtime PostgreSQL migration QA remains blocked separately; Sprint 8A does not resolve database runtime compatibility.
 - Nova Poshta real validation, Import deep QA, Finance deep QA and Advertising deep QA remain assigned to later Phase 8 sprints.
+
+## Sprint 8A.1 staging E2E closure limitations
+
+- Staging access remains blocked by proxy `CONNECT tunnel failed, response 403`; no app-level frontend/backend response was observed.
+- Secure synthetic role credentials and dedicated QA workspace ID remain unavailable in this environment.
+- Runtime Alembic revision is unknown; Sprint 7F remains separately blocked and no migration was executed.
+- Controlled-write E2E, workspace-switch runtime isolation, cross-workspace staging negatives, browser/mobile QA and console/network review remain pending.
