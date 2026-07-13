@@ -2,43 +2,64 @@
 
 ## Decision
 
-**RED — NO-GO**
+**GREEN — GO FOR CONTROLLED PILOT ✅**
 
-Sellora staging must not be opened to controlled pilot shops yet.
+Sellora staging may be opened to a limited, guided pilot cohort under the documented product and integration limitations.
 
-## Current 8A.1 reason
+## Evidence supporting the decision
 
-Sprint 8A.1 attempted to close the access/runtime/E2E gaps, but required evidence is still blocked:
+- frontend staging is available;
+- backend `/health` returns HTTP 200;
+- runtime Alembic revision and packaged head match at `202607130021`;
+- OWNER, MANAGER and ANALYST authentication passed;
+- `/auth/me` and QA workspace resolution passed;
+- read-only gate passed all required core GET routes;
+- controlled-write E2E passed in an isolated synthetic workspace;
+- order reservation, payment/status history, revenue/profit state and draft shipment behavior passed;
+- cross-workspace references were rejected;
+- Nova Poshta provider endpoints were not called;
+- browser/mobile matrix passed 75/75 checks across five required viewport sizes;
+- console/network checks found no runtime exception, refresh loop, core 404/500, CORS failure or token/password/API-key exposure;
+- synthetic QA data was cleaned up.
 
-- frontend staging URL remains unreachable from this container because the proxy returned `CONNECT tunnel failed, response 403`;
-- backend staging `/health` remains unreachable for the same reason;
-- OWNER, MANAGER and ANALYST credentials were not available through secure `STAGING_*` environment variables;
-- dedicated QA workspace ID was not available;
-- runtime database revision was not verified and Sprint 7F remains blocked;
-- read-only smoke could not pass G0/G1;
-- controlled-write E2E was attempted with `STAGING_ALLOW_CONTROLLED_WRITES=true` but stopped before writes;
-- workspace switching, cross-workspace negative checks, browser/mobile QA and console/network review were not executed.
+## Allowed pilot scope
 
-## What is allowed
+- limited invited shops;
+- guided onboarding and support;
+- CRM leads/customers;
+- products, variants and inventory;
+- orders, payments, statuses and profit visibility;
+- shipment drafts without assuming real Nova Poshta provider validation;
+- manual advertising metrics;
+- dashboard, finance and analytics review;
+- synthetic or sanitized import testing under guidance.
 
-- Continue local automated validation.
-- Prepare staging QA accounts and a dedicated synthetic QA workspace.
-- Rerun `scripts/staging_release_gate.py` from a network that can reach Vercel/Render.
-- Keep internal demos limited to clearly marked local/static evidence until staging passes.
+## Not approved by this decision
 
-## What is not allowed
+- unrestricted public production launch;
+- live Instagram Direct ingestion;
+- Meta Ads live OAuth or automatic sync;
+- real Nova Poshta TTN creation without its dedicated validation;
+- billing/subscription collection;
+- unrestricted self-service onboarding;
+- use of unsanitized real customer exports for QA.
 
-- Do not claim GREEN, YELLOW, or pilot-ready status.
-- Do not provide unrestricted external pilot write access.
-- Do not run production migrations to close this gate.
-- Do not use real customer/order data for smoke testing.
-- Do not create real Nova Poshta shipments or real Meta Ads writes.
+## Pilot operating rules
 
-## Next release path
+1. Keep the pilot cohort controlled and identifiable.
+2. Use workspace isolation and role assignments exactly as tested.
+3. Do not store secrets in feedback, screenshots or issue comments.
+4. Treat external-provider actions as unavailable until separately approved.
+5. Monitor issue #134 and any new pilot regressions.
+6. Retain rollback and staging-first deployment discipline.
 
-1. Run from an environment that reaches Vercel and Render.
-2. Provide secure synthetic OWNER/MANAGER/ANALYST credentials and `STAGING_TEST_WORKSPACE_ID` outside the repository.
-3. Verify runtime Alembic revision safely without executing migrations.
-4. Rerun read-only and controlled-write smoke.
-5. Complete browser/mobile/console QA.
-6. If G0–G11 pass with no Critical/Major issues, reassess release decision as YELLOW or GREEN according to the release rules.
+## Release status
+
+```text
+Sprint 8A: APPROVED
+Sprint 8A.1: APPROVED
+Release decision: GREEN
+Target: controlled guided pilot
+```
+
+The next phase may proceed with pilot onboarding and observation rather than recreating Sprint 8A.1 scope.
