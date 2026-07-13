@@ -19,7 +19,7 @@ from app.models.role import RoleName
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_user import WorkspaceUser
-from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.audit_log_repository import AuditLogRepository, DEMO_WORKSPACE_CREATE_ACTION
 from app.repositories.user_repository import UserRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.schemas.workspace import WorkspaceCreate, WorkspaceSettingsUpdate, WorkspaceUserCreate
