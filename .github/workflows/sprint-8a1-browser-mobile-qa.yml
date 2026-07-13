@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/staging_browser_mobile_qa_v2.py"
+      - "scripts/staging_browser_mobile_qa_v3.py"
       - ".github/workflows/sprint-8a1-browser-mobile-qa.yml"
 
 permissions:
@@ -18,7 +19,7 @@ jobs:
   browser-mobile-qa:
     name: Browser/mobile staging QA
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 55
     env:
       STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
       STAGING_API_URL: https://sellora-api-staging.onrender.com
@@ -65,7 +66,7 @@ jobs:
             fi
             sleep 5
           done
-          echo "Warm-up complete; browser/API gate remains authoritative."
+          echo "Warm-up complete; retry-hardened browser/API gate remains authoritative."
           exit 0
       - name: Install Playwright Chromium
         run: |
@@ -73,13 +74,15 @@ jobs:
           python -m pip install playwright
           python -m playwright install --with-deps chromium
       - name: Compile browser QA runner
-        run: python -m py_compile scripts/staging_browser_mobile_qa_v2.py
+        run: |
+          python -m py_compile scripts/staging_browser_mobile_qa_v2.py
+          python -m py_compile scripts/staging_browser_mobile_qa_v3.py
       - name: Execute browser/mobile QA matrix
         shell: bash
         run: |
           set +e
           mkdir -p artifacts/browser-mobile-qa
-          python scripts/staging_browser_mobile_qa_v2.py > artifacts/browser-mobile-qa/console.log 2>&1
+          python scripts/staging_browser_mobile_qa_v3.py > artifacts/browser-mobile-qa/console.log 2>&1
           echo "$?" > artifacts/browser-mobile-qa/exit-code.txt
           exit 0
       - name: Validate sanitized browser QA evidence
