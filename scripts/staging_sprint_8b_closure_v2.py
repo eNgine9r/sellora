@@ -12,6 +12,7 @@ spec = importlib.util.spec_from_file_location("sellora_sprint_8b_closure", MODUL
 if spec is None or spec.loader is None:
     raise SystemExit("Unable to load Sprint 8B closure module")
 base = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = base
 spec.loader.exec_module(base)
 
 
