@@ -17,6 +17,68 @@ spec.loader.exec_module(base)
 
 
 class Sprint8BClosureV2(base.Sprint8BClosure):
+    def refresh_session(self, session: base.Session) -> None:
+        _, user = self.request("GET", "/auth/me", token=session.access_token, expected=(200,))
+        session.user = user
+
+    def api_setup_and_security(self) -> None:
+        super().api_setup_and_security()
+        for session in (self.owner, self.manager, self.analyst, self.no_workspace):
+            if session is not None:
+                self.refresh_session(session)
+
+    def open_workspace_menu(self, page, width: int) -> None:
+        if width >= 768:
+            page.locator(".account-profile-trigger").click(timeout=15000)
+        else:
+            page.locator('button[aria-controls="mobile-more-sheet"]').click(timeout=15000)
+        page.wait_for_timeout(500)
+
+    def empty_workspace_matrix(self, browser) -> None:
+        assert self.owner is not None
+        _, status_data = self.request(
+            "GET",
+            "/onboarding/status",
+            token=self.owner.access_token,
+            workspace_id=self.empty_workspace_id,
+            expected=(200,),
+        )
+        expected_progress = int(status_data.get("progress_percent", 0))
+        for viewport_name, width, height in base.VIEWPORTS:
+            for theme in base.THEMES:
+                label = f"empty-owner/{viewport_name}/{theme}"
+                context = self.init_context(browser, self.owner, self.empty_workspace_id, theme, width, height)
+                page = context.new_page()
+                self.watch_page(page, label)
+                try:
+                    page.goto(f"{self.frontend}/dashboard", wait_until="domcontentloaded", timeout=45000)
+                    self.wait_page(page)
+                    checklist = page.locator("[data-first-run-checklist]")
+                    demo_button = page.get_by_role("button", name=re.compile(r"демо|demo", re.I))
+                    checklist_text = checklist.inner_text() if checklist.count() == 1 else ""
+                    actual_theme = page.evaluate("document.documentElement.dataset.theme")
+                    passed = (
+                        checklist.count() == 1
+                        and demo_button.count() > 0
+                        and f"{expected_progress}%" in checklist_text
+                        and actual_theme == theme
+                    )
+                    self.result(
+                        "OWNER",
+                        f"{viewport_name}/{theme} checklist, progress and CTA",
+                        passed,
+                        {
+                            "expected_progress": expected_progress,
+                            "theme": actual_theme,
+                            "workspace_id": page.evaluate("localStorage.getItem('sellora.current_workspace_id')"),
+                        },
+                    )
+                    self.check_page(page, label, "empty OWNER dashboard", f"{label.replace('/', '-')}.png")
+                except Exception as exc:
+                    self.finding("FAIL", label, "runner_exception", repr(exc))
+                finally:
+                    context.close()
+
     def create_demo_flow(self, browser) -> None:
         assert self.owner is not None
         context = self.init_context(browser, self.owner, self.empty_workspace_id, "light", 1366, 768)
@@ -116,6 +178,8 @@ class Sprint8BClosureV2(base.Sprint8BClosure):
         self.result("RBAC", "MANAGER cannot deactivate OWNER demo workspace", code == 403, f"HTTP {code}")
         code, _ = self.request("PATCH", "/workspaces/demo/deactivate", token=self.analyst.access_token, workspace_id=self.demo_workspace_id)
         self.result("RBAC", "ANALYST cannot deactivate OWNER demo workspace", code == 403, f"HTTP {code}")
+
+        self.refresh_session(self.owner)
 
 
 if __name__ == "__main__":
