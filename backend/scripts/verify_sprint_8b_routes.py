@@ -10,6 +10,10 @@ sys.path.insert(0, str(BACKEND_ROOT))
 
 import app as app_package
 import app.main as main_module
+import app.api.v1.router as central_router_module
+from app.api.v1.auth import router as auth_router
+from app.api.v1.onboarding import router as onboarding_router
+from app.api.v1.workspaces import router as workspaces_router
 from app.main import app
 
 REQUIRED_ROUTES = {
@@ -19,34 +23,50 @@ REQUIRED_ROUTES = {
 }
 
 
-def packaged_routes() -> set[tuple[str, str]]:
+def router_routes(router, *, prefix: str = "") -> set[tuple[str, str]]:
     found: set[tuple[str, str]] = set()
-    for route in app.routes:
+    for route in router.routes:
         path = getattr(route, "path", None)
         methods = getattr(route, "methods", set()) or set()
         if not path:
             continue
         if not methods:
-            found.add(("MOUNT", str(path)))
+            found.add(("MOUNT", f"{prefix}{path}"))
         for method in methods:
-            found.add((str(method).upper(), str(path)))
+            found.add((str(method).upper(), f"{prefix}{path}"))
     return found
 
 
+def render_routes(routes: set[tuple[str, str]]) -> str:
+    return "; ".join(f"{method} {path}" for method, path in sorted(routes)) or "none"
+
+
 def main() -> None:
-    found = packaged_routes()
-    missing = sorted(REQUIRED_ROUTES - found)
+    child = {
+        "auth": router_routes(auth_router),
+        "onboarding": router_routes(onboarding_router),
+        "workspaces": router_routes(workspaces_router),
+    }
+    central = router_routes(central_router_module.api_router)
+    packaged = router_routes(app)
+    missing = sorted(REQUIRED_ROUTES - packaged)
+    diagnostics = (
+        f"backend_root={BACKEND_ROOT}; "
+        f"app_package={getattr(app_package, '__file__', None)}; "
+        f"main_module={getattr(main_module, '__file__', None)}; "
+        f"central_module={getattr(central_router_module, '__file__', None)}; "
+        f"child_auth={render_routes(child['auth'])}; "
+        f"child_onboarding={render_routes(child['onboarding'])}; "
+        f"child_workspaces={render_routes(child['workspaces'])}; "
+        f"central_routes={render_routes(central)}; "
+        f"app_routes={render_routes(packaged)}"
+    )
     if missing:
         rendered = ", ".join(f"{method} {path}" for method, path in missing)
-        all_routes = "; ".join(f"{method} {path}" for method, path in sorted(found))
-        raise SystemExit(
-            "Sprint 8B route verification failed. "
-            f"backend_root={BACKEND_ROOT}; app_package={getattr(app_package, '__file__', None)}; "
-            f"main_module={getattr(main_module, '__file__', None)}; missing={rendered}; "
-            f"packaged_routes={all_routes or 'none'}"
-        )
+        raise SystemExit(f"Sprint 8B route verification failed: missing {rendered}. {diagnostics}")
     rendered = ", ".join(f"{method} {path}" for method, path in sorted(REQUIRED_ROUTES))
     print(f"Sprint 8B routes verified: {rendered}")
+    print(diagnostics)
 
 
 if __name__ == "__main__":
