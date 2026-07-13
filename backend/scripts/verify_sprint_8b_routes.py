@@ -2,6 +2,13 @@
 """Fail build/startup when Sprint 8B routes are absent from the packaged API."""
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
 from app.api.v1.router import api_router
 
 REQUIRED_ROUTES = {
@@ -28,7 +35,8 @@ def main() -> None:
     missing = sorted(REQUIRED_ROUTES - found)
     if missing:
         rendered = ", ".join(f"{method} {path}" for method, path in missing)
-        raise SystemExit(f"Sprint 8B route verification failed: missing {rendered}")
+        available = ", ".join(f"{method} {path}" for method, path in sorted(found) if "onboarding" in path or "workspaces/demo" in path)
+        raise SystemExit(f"Sprint 8B route verification failed: missing {rendered}. Available relevant routes: {available or 'none'}")
     rendered = ", ".join(f"{method} {path}" for method, path in sorted(REQUIRED_ROUTES))
     print(f"Sprint 8B routes verified: {rendered}")
 
