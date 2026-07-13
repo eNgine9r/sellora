@@ -1,141 +1,141 @@
 # Sprint 8A.1 — Staging Access, Runtime Compatibility & E2E Gate Execution
 
-## 1. Scope
+## Final status
 
-Sprint 8A.1 attempted to close the Sprint 8A execution gaps by reusing the existing staging release-gate runner and documentation framework. It did not add features, roles, billing, password reset, email invitations, Meta Ads live sync, Nova Poshta TTN creation, database migrations, schema changes, or UI redesign.
+**APPROVED ✅**
 
-## 2. Execution environment
+Sprint 8A.1 reused the existing staging release-gate scope. No new product specification was created for the closure run.
 
-The execution environment is still unable to reach the public staging URLs. Both the Vercel frontend and Render backend health preflight return the platform proxy error `CONNECT tunnel failed, response 403` before Sellora application code responds.
+## Scope executed
 
-## 3. Secure inputs status
+- verified staging frontend and backend availability;
+- supplied synthetic OWNER, MANAGER and ANALYST credentials through GitHub Actions secrets;
+- used the dedicated `Sellora QA — Sprint 8A.1` workspace;
+- verified runtime Alembic compatibility without manually running a migration during the runtime-revision check;
+- executed read-only staging gate;
+- executed controlled-write synthetic E2E flow;
+- executed browser/mobile, console and network QA;
+- cleaned or archived synthetic records;
+- updated release and readiness documentation.
 
-| Input group | Status | Notes |
-| --- | --- | --- |
-| `STAGING_FRONTEND_URL` / `STAGING_API_URL` | DEFAULTED | Runner used the documented staging URLs because no overriding environment values were present. |
-| OWNER credentials | MISSING | `STAGING_OWNER_EMAIL` / `STAGING_OWNER_PASSWORD` were not present. |
-| MANAGER credentials | MISSING | `STAGING_MANAGER_EMAIL` / `STAGING_MANAGER_PASSWORD` were not present. |
-| ANALYST credentials | MISSING | `STAGING_ANALYST_EMAIL` / `STAGING_ANALYST_PASSWORD` were not present. |
-| QA workspace ID | MISSING | `STAGING_TEST_WORKSPACE_ID` was not present. |
-| Controlled-write flag | TESTED | `STAGING_ALLOW_CONTROLLED_WRITES=true` was tested, but writes were blocked before mutation because G0/G1/workspace resolution did not pass. |
+## Runtime manifest
 
-No passwords, tokens, authorization headers, full workspace IDs, database URLs, provider keys, or real user emails were committed.
+| Component | Runtime | Result |
+|---|---|---|
+| Frontend | `https://sellora-web-staging.vercel.app/` | PASS |
+| Backend | `https://sellora-api-staging.onrender.com` | PASS |
+| Backend health | `/health` | HTTP 200 |
+| PostgreSQL | Supabase staging | PASS |
+| Alembic runtime revision | `202607130021` | PASS — matches packaged head |
+| Backend deployment | Render commit `66f0da8f6d25bdbc40458c203ad2d5f200db5ba9` | PASS |
 
-## 4. Release manifest
+Render startup diagnostics confirmed:
 
-| Component | Branch | Commit/deployment | Runtime URL | Result |
-| --- | --- | --- | --- | --- |
-| Frontend | UNKNOWN — evidence unavailable | UNKNOWN — evidence unavailable | `https://sellora-web-staging.vercel.app/` | BLOCKED by proxy 403. |
-| Backend | UNKNOWN — evidence unavailable | UNKNOWN — evidence unavailable | `https://sellora-api-staging.onrender.com` | BLOCKED by proxy 403. |
-| Database | n/a | Expected revision `202607080020` | Runtime revision unavailable | BLOCKED; no runtime compatibility proof. |
-
-## 5. Network/deployment result
-
-| Target | Result | HTTP status | Duration | Notes |
-| --- | --- | ---: | --- | --- |
-| Frontend `/` | FAIL | 0 | not trusted as app timing | Proxy returned `CONNECT tunnel failed, response 403`; not a Sellora app response. |
-| Frontend `/login` | BLOCKED | n/a | n/a | Not opened because the frontend origin itself was unreachable. |
-| Backend `/health` | FAIL | 0 | not trusted as app timing | Proxy returned `CONNECT tunnel failed, response 403`; not a Sellora API response. |
-
-## 6. Runtime Alembic result
-
-Repository static head remains `202607080020`. Runtime Alembic revision could not be verified by SQL console, protected shell command, or diagnostic endpoint in this environment. No `alembic upgrade` was executed.
-
-Result: **BLOCKED**.
-
-## 7. Read-only smoke result
-
-Command attempted:
-
-```bash
-python scripts/staging_release_gate.py --mode read-only
+```text
+Alembic revision verified: 202607130021
+Alembic packaged heads: 202607130021
+Alembic current revision: 202607130021 (head)
+Starting Sellora backend...
+Application startup complete.
 ```
 
-Result: **BLOCKED / RED**.
+## Secure inputs
 
-The runner emitted a sanitized artifact with `run_id` prefix `8A1-`, frontend/backend status `FAIL`, database compatibility `BLOCKED`, all roles `BLOCKED`, and no token/password output.
+Credentials were supplied only through GitHub Actions repository secrets. Passwords, access tokens, refresh tokens, authorization headers and provider API keys were absent from reports and uploaded artifacts.
 
-## 8. OWNER result
+## Read-only gate
 
-**BLOCKED.** OWNER credentials were unavailable, so login, `/auth/me`, QA workspace membership, dashboard, settings, team page and OWNER-only action smoke could not execute.
+**PASS ✅**
 
-## 9. MANAGER result
+Verified:
 
-**BLOCKED.** MANAGER credentials were unavailable, so operational route access and admin-denial checks could not execute.
+- frontend and backend health;
+- OWNER, MANAGER and ANALYST login;
+- `/auth/me` for all three roles;
+- QA workspace resolution;
+- 13/13 core GET routes;
+- runtime database compatibility;
+- sanitized console output and JSON artifact.
 
-## 10. ANALYST result
+No controlled writes were performed during this run.
 
-**BLOCKED.** ANALYST credentials were unavailable, so read-route access and direct mutation denial checks could not execute.
+## Controlled-write E2E
 
-## 11. Workspace switching result
+**PASS ✅**
 
-**BLOCKED.** No authenticated QA workspace session was available. Workspace A/B switching, delayed-response isolation, detail-panel closure and rapid A → B → A checks could not execute.
+Synthetic flow:
 
-## 12. Controlled-write E2E result
-
-Command attempted with the required safety flag:
-
-```bash
-STAGING_ALLOW_CONTROLLED_WRITES=true python scripts/staging_release_gate.py --mode controlled-write
+```text
+Lead
+→ Customer
+→ Product
+→ Variant
+→ Stock-in
+→ Order
+→ Payment/status
+→ Shipment draft
+→ Dashboard/Finance visibility
 ```
 
-Result: **BLOCKED before writes**. The runner did not create or mutate business data because staging access, credentials and QA workspace resolution did not pass.
+Verified:
 
-## 13. Cross-workspace negative result
+- all entities remained scoped to the QA workspace;
+- order reserved the expected product variant;
+- revenue and profit states matched the synthetic inputs;
+- order status history was created;
+- shipment remained `DRAFT`;
+- Nova Poshta provider endpoints were not called;
+- cross-workspace references were rejected;
+- cleanup completed.
 
-**BLOCKED.** Runtime cross-workspace negative checks for order/customer/variant/shipment/update and request-body `workspace_id` override could not execute on staging. Local automated workspace-injection tests from Sprint 7E.1 remain the only automated proof available in this environment.
+The original blocker caused by global `order_number` uniqueness was fixed by migration `202607130021_workspace_scoped_order_numbers.py`. The active constraint is now workspace-scoped.
 
-## 14. Browser/mobile result
+## Browser/mobile QA
 
-**BLOCKED.** Browser QA could not open staging. Desktop 1366px and mobile 375px, 390px, 430px and 768px checks were not performed.
+**PASS ✅**
 
-## 15. Console/network result
+Viewport matrix:
 
-**BLOCKED.** Browser console, Network, Application storage and cookie/session inspection could not execute. The only network evidence is the staging proxy 403 before app/API response.
+- 1366 × 768;
+- 375 × 812;
+- 390 × 844;
+- 430 × 932;
+- 768 × 1024.
 
-## 16. Cleanup result
+Result: **75/75 scenario checks PASS**, 0 failures, 0 warnings.
 
-No cleanup was required because no synthetic Lead, Customer, Product, Variant, Inventory transaction, Order, Payment/status transition, Shipment draft or dashboard-affecting record was created.
+Covered Login, Dashboard, workspace switch, Leads, Customers, Products, Inventory, Orders, Shipment draft, Finance, Advertising, Analytics, Settings, Team and Logout.
 
-## 17. Issues found
+Console/network result:
 
-| ID | Severity | Gate | Issue | Status |
-| --- | --- | --- | --- | --- |
-| 8A-QA-001 | Critical | G0 | Frontend staging unreachable from this environment by proxy 403. | Open |
-| 8A-QA-003 | Critical | G0 | Backend `/health` unreachable from this environment by proxy 403. | Open |
-| 8A-QA-004 | Major | G1 | OWNER/MANAGER/ANALYST credentials missing. | Blocked |
-| 8A1-QA-001 | Major | Runtime | Runtime Alembic revision unavailable. | Blocked |
-| 8A1-QA-002 | Major | G6 | Controlled-write E2E flow not executed. | Blocked |
-| 8A1-QA-003 | Major | G10/G11 | Browser/mobile/console QA not executed. | Blocked |
+- runtime exceptions: 0;
+- refresh-token loops: 0;
+- core 404/500 responses: 0;
+- CORS failures: 0;
+- stale Workspace A data after switching to B: 0;
+- password/token/API-key exposure: 0;
+- body-level horizontal overflow: 0.
 
-No app-level cross-workspace leak, unauthorized mutation, data corruption, secret exposure, or order/inventory corruption was observed because staging could not be reached.
+GitHub Actions run: `29241616449`.
 
-## 18. Fixes implemented
+## Cleanup
 
-- Extended `scripts/staging_release_gate.py` to emit `8A1-` run IDs and include the 8A.1 artifact fields required for runtime revision, role status, core E2E status, workspace switching, browser/mobile, console/network and cleanup status.
-- Added `frontend/scripts/staging-e2e-closure-regression.mjs` to require Sprint 8A.1 evidence without replacing real staging execution.
-- Updated Sprint 8A docs, issue log, pilot decision, MVP readiness, known limitations and README while preserving original Sprint 8A blocked evidence.
+- active `QA-BROWSER-*` markers after cleanup: 0;
+- controlled-write synthetic entities were archived or deleted as appropriate;
+- temporary Browser Workspace B was deactivated;
+- the primary Sprint 8A.1 QA workspace remains available for future regression runs;
+- no real shop data was used.
 
-No product feature, migration, Meta Ads external write, Nova Poshta external write, role change or schema change was implemented.
+## Follow-up issues
 
-## 19. Remaining blockers
+| Issue | Severity | Status | Release impact |
+|---|---|---|---|
+| #129 workspace-scoped order number uniqueness | Blocker | Resolved | None |
+| Render image missing packaged Alembic revision | Critical deployment incident | Resolved by build/startup verification | None |
+| #134 archived variant may leave a zero-stock inventory row visible | Minor/Major follow-up | Open | Does not block the controlled pilot |
 
-- Execution environment still cannot reach Vercel/Render staging URLs.
-- Secure synthetic OWNER/MANAGER/ANALYST credentials are unavailable.
-- Dedicated QA workspace ID is unavailable.
-- Runtime Alembic revision is unknown.
-- Read-only smoke cannot pass until G0/G1 are unblocked.
-- Controlled-write E2E cannot safely execute until staging access, credentials and QA workspace are available.
-- Browser/mobile QA cannot execute until staging is reachable.
+## Release decision
 
-## 20. Sprint status
+**GREEN — GO FOR CONTROLLED PILOT ✅**
 
-**Sprint 8A.1 — BLOCKED ⚠️**
-
-Preparing scripts and docs does not complete Sprint 8A.1. Real staging evidence is still unavailable.
-
-## 21. Release decision
-
-**RED — NO-GO**
-
-Do not provide staging access to pilot shops. The release remains blocked because staging availability, role authentication, runtime database compatibility, controlled-write E2E and browser/mobile QA are not verified.
+Sprint 8A.1 is closed. This approval covers the tested staging build and controlled pilot scope; it does not activate Meta Ads live sync, Nova Poshta real TTN creation, billing or unrestricted production onboarding.
