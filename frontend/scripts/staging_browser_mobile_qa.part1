@@ -1,0 +1,140 @@
+  report.fixture.created_entity_ids.customer_id = customer.id;
+
+  const product = await apiRequest(token, 'POST', '/products', {
+    workspaceId: WORKSPACE_A_ID,
+    body: {
+      name: `${MARKER} Product`,
+      sku: `QABR-P-${stamp.slice(-10)}`,
+      description: 'Synthetic browser QA product',
+      category: 'qa-browser',
+      brand: 'Sellora QA',
+      is_active: true,
+      images: [],
+    },
+  });
+  report.fixture.created_entity_ids.product_id = product.id;
+
+  const variant = await apiRequest(token, 'POST', '/products/variants', {
+    workspaceId: WORKSPACE_A_ID,
+    body: {
+      product_id: product.id,
+      sku: `QABR-V-${stamp.slice(-10)}`,
+      color: 'QA Purple',
+      size: 'Browser',
+      price: '799.00',
+      barcode: `QABR${stamp.slice(-10)}`,
+      is_active: true,
+      initial_stock_quantity: 2,
+      minimum_quantity: 1,
+    },
+  });
+  report.fixture.created_entity_ids.variant_id = variant.id;
+
+  const inventoryRows = await apiRequest(token, 'GET', '/inventory', { workspaceId: WORKSPACE_A_ID });
+  const inventory = inventoryRows.find((row) => String(row.product_variant_id) === String(variant.id));
+  if (!inventory) throw new Error('Fixture inventory row not found');
+  report.fixture.created_entity_ids.inventory_id = inventory.id;
+
+  const order = await apiRequest(token, 'POST', '/orders', {
+    workspaceId: WORKSPACE_A_ID,
+    body: {
+      customer_id: customer.id,
+      status: 'NEW',
+      payment_status: 'PENDING',
+      items: [{ product_variant_id: variant.id, quantity: 1, unit_price: '799.00', unit_cost: '400.00' }],
+      notes: `${MARKER}; browser/mobile QA order`,
+    },
+  });
+  report.fixture.created_entity_ids.order_id = order.id;
+  report.fixture.order_number = order.order_number;
+
+  const shipment = await apiRequest(token, 'POST', `/orders/${order.id}/shipment`, {
+    workspaceId: WORKSPACE_A_ID,
+    body: {
+      order_id: order.id,
+      customer_id: customer.id,
+      carrier: 'NOVA_POSHTA',
+      status: 'DRAFT',
+      recipient_name: `${MARKER} Recipient`,
+      recipient_phone: '+380000000009',
+      city: 'Луцьк',
+      warehouse: 'QA Browser Відділення',
+      shipping_cost: '0.00',
+      cod_amount: '799.00',
+      declared_value: '799.00',
+      notes: `${MARKER}; draft only; no external call`,
+    },
+  });
+  report.fixture.created_entity_ids.shipment_id = shipment.id;
+  return { token, refreshToken };
+}
+
+async function cleanupFixture(token) {
+  const ids = report.fixture.created_entity_ids;
+  async function attempt(entity, fn) {
+    try {
+      await fn();
+      report.fixture.cleanup.push({ entity, status: 'PASS' });
+    } catch (error) {
+      report.fixture.cleanup.push({ entity, status: 'WARN', detail: redact(error.message, [OWNER_EMAIL, OWNER_PASSWORD]) });
+    }
+  }
+
+  if (ids.shipment_id) await attempt('shipment', () => apiRequest(token, 'DELETE', `/shipments/${ids.shipment_id}`, { workspaceId: WORKSPACE_A_ID }));
+  if (ids.order_id) {
+    await attempt('order_cancel', () => apiRequest(token, 'POST', `/orders/${ids.order_id}/status`, { workspaceId: WORKSPACE_A_ID, body: { status: 'CANCELLED', note: `${MARKER} cleanup` } }));
+    await attempt('order_archive', () => apiRequest(token, 'DELETE', `/orders/${ids.order_id}`, { workspaceId: WORKSPACE_A_ID }));
+  }
+  if (ids.inventory_id) {
+    await attempt('inventory_reset', async () => {
+      const row = await apiRequest(token, 'GET', `/inventory/${ids.inventory_id}`, { workspaceId: WORKSPACE_A_ID });
+      const reserved = Number(row.reserved_quantity || 0);
+      const stock = Number(row.stock_quantity || 0);
+      if (reserved > 0) await apiRequest(token, 'POST', `/inventory/${ids.inventory_id}/transactions`, { workspaceId: WORKSPACE_A_ID, body: { transaction_type: 'UNRESERVE', quantity: reserved, reason: `${MARKER} cleanup unreserve` } });
+      if (stock > 0) await apiRequest(token, 'POST', `/inventory/${ids.inventory_id}/transactions`, { workspaceId: WORKSPACE_A_ID, body: { transaction_type: 'STOCK_OUT', quantity: stock, reason: `${MARKER} cleanup stock-out` } });
+    });
+  }
+  if (ids.variant_id) await attempt('variant', () => apiRequest(token, 'DELETE', `/products/variants/${ids.variant_id}`, { workspaceId: WORKSPACE_A_ID }));
+  if (ids.product_id) await attempt('product', () => apiRequest(token, 'DELETE', `/products/${ids.product_id}`, { workspaceId: WORKSPACE_A_ID }));
+  if (ids.customer_id) await attempt('customer', () => apiRequest(token, 'DELETE', `/customers/${ids.customer_id}`, { workspaceId: WORKSPACE_A_ID }));
+  if (ids.lead_id) await attempt('lead', () => apiRequest(token, 'DELETE', `/leads/${ids.lead_id}`, { workspaceId: WORKSPACE_A_ID }));
+}
+
+function addIssue(viewportKey, check, detail, severity = 'Major') {
+  report.issues.push({ viewport: viewportKey, check, severity, detail: redact(detail, [OWNER_EMAIL, OWNER_PASSWORD]) });
+}
+
+async function stabilize(page) {
+  await page.waitForLoadState('domcontentloaded', { timeout: 45000 });
+  await page.waitForTimeout(1300);
+  await page.addStyleTag({ content: `*,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}` }).catch(() => {});
+}
+
+async function screenshot(page, viewportKey, name) {
+  const filename = `${viewportKey}-${name}.jpg`;
+  await page.screenshot({ path: path.join(SCREENSHOT_DIR, filename), type: 'jpeg', quality: 72, fullPage: false });
+  return filename;
+}
+
+async function openWorkspaceMenu(page, width) {
+  if (width >= 768) {
+    await page.locator('button.account-profile-trigger').click();
+    await page.locator('[role="menu"]').waitFor({ state: 'visible', timeout: 10000 });
+    return page.locator('[role="menu"]');
+  }
+  await page.locator('button[aria-controls="mobile-more-sheet"]').click();
+  const sheet = page.locator('#mobile-more-sheet');
+  await sheet.waitFor({ state: 'visible', timeout: 10000 });
+  return sheet;
+}
+
+async function switchWorkspaceUi(page, viewport, targetName, targetId, phaseRef) {
+  const panel = await openWorkspaceMenu(page, viewport.width);
+  const button = panel.getByRole('button', { name: new RegExp(targetName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).first();
+  await button.click();
+  await page.waitForFunction((id) => localStorage.getItem('sellora.current_workspace_id') === id, targetId, { timeout: 15000 });
+  phaseRef.value = targetId === WORKSPACE_A_ID ? 'workspace-a' : 'workspace-b';
+  await page.waitForTimeout(1200);
+}
+
+async function assertNoHorizontalOverflow(page, viewportKey, routeKey, routeResult) {
