@@ -9,18 +9,18 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.api.v1.router import api_router
+from app.main import app
 
 REQUIRED_ROUTES = {
-    ("GET", "/onboarding/status"),
-    ("POST", "/workspaces/demo"),
-    ("PATCH", "/workspaces/demo/deactivate"),
+    ("GET", "/api/v1/onboarding/status"),
+    ("POST", "/api/v1/workspaces/demo"),
+    ("PATCH", "/api/v1/workspaces/demo/deactivate"),
 }
 
 
 def packaged_routes() -> set[tuple[str, str]]:
     found: set[tuple[str, str]] = set()
-    for route in api_router.routes:
+    for route in app.routes:
         path = getattr(route, "path", None)
         methods = getattr(route, "methods", set()) or set()
         if not path:
@@ -35,8 +35,15 @@ def main() -> None:
     missing = sorted(REQUIRED_ROUTES - found)
     if missing:
         rendered = ", ".join(f"{method} {path}" for method, path in missing)
-        available = ", ".join(f"{method} {path}" for method, path in sorted(found) if "onboarding" in path or "workspaces/demo" in path)
-        raise SystemExit(f"Sprint 8B route verification failed: missing {rendered}. Available relevant routes: {available or 'none'}")
+        relevant = ", ".join(
+            f"{method} {path}"
+            for method, path in sorted(found)
+            if "onboarding" in path or "workspaces/demo" in path
+        )
+        raise SystemExit(
+            f"Sprint 8B route verification failed: missing {rendered}. "
+            f"Available relevant routes: {relevant or 'none'}"
+        )
     rendered = ", ".join(f"{method} {path}" for method, path in sorted(REQUIRED_ROUTES))
     print(f"Sprint 8B routes verified: {rendered}")
 
