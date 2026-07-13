@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/staging_browser_mobile_qa_v2.py"
-      - "scripts/staging_browser_mobile_qa_v3.py"
+      - "scripts/staging_browser_mobile_qa_v4.py"
       - ".github/workflows/sprint-8a1-browser-mobile-qa.yml"
 
 permissions:
@@ -22,7 +22,6 @@ jobs:
     timeout-minutes: 55
     env:
       STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
-      STAGING_API_URL: https://sellora-api-staging.onrender.com
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
       STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
@@ -35,56 +34,62 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Validate secure inputs
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           import os, re
-          required = ["STAGING_FRONTEND_URL","STAGING_API_URL","STAGING_OWNER_EMAIL","STAGING_OWNER_PASSWORD","STAGING_TEST_WORKSPACE_ID","STAGING_SECOND_WORKSPACE_ID"]
-          if any(not os.getenv(name) for name in required): raise SystemExit("Missing required browser QA inputs")
+          required = ["STAGING_FRONTEND_URL", "STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD", "STAGING_TEST_WORKSPACE_ID", "STAGING_SECOND_WORKSPACE_ID"]
+          if any(not os.getenv(name) for name in required):
+              raise SystemExit("Missing required browser QA inputs")
           for name in ("STAGING_TEST_WORKSPACE_ID", "STAGING_SECOND_WORKSPACE_ID"):
-              if not re.fullmatch(r"[0-9a-fA-F-]{36}", os.environ[name]): raise SystemExit(f"Invalid workspace UUID: {name}")
-          if os.environ["STAGING_TEST_WORKSPACE_ID"] == os.environ["STAGING_SECOND_WORKSPACE_ID"]: raise SystemExit("QA workspaces must differ")
+              if not re.fullmatch(r"[0-9a-fA-F-]{36}", os.environ[name]):
+                  raise SystemExit(f"Invalid workspace UUID: {name}")
+          if os.environ["STAGING_TEST_WORKSPACE_ID"] == os.environ["STAGING_SECOND_WORKSPACE_ID"]:
+              raise SystemExit("QA workspaces must differ")
           print("Secure browser QA input preflight: PASS")
           PY
-      - name: Warm staging frontend and backend
+
+      - name: Warm staging frontend
         shell: bash
         run: |
           set +e
           for attempt in $(seq 1 4); do
-            frontend_code="$(curl -sS -o /tmp/frontend.html -w "%{http_code}" --max-time 15 "$STAGING_FRONTEND_URL/login" || true)"
-            backend_code="$(curl -sS -o /tmp/backend.json -w "%{http_code}" --max-time 15 "$STAGING_API_URL/health" || true)"
-            echo "Warm-up attempt $attempt: frontend=$frontend_code backend=$backend_code"
-            if [[ "$frontend_code" =~ ^(200|301|302|307|308)$ ]] && [ "$backend_code" = "200" ]; then
-              echo "Staging warm-up: PASS"
-              break
-            fi
+            code="$(curl -sS -o /tmp/frontend.html -w "%{http_code}" --max-time 15 "$STAGING_FRONTEND_URL/login" || true)"
+            echo "Warm-up attempt $attempt: frontend=$code"
+            if [[ "$code" =~ ^(200|301|302|307|308)$ ]]; then break; fi
             sleep 5
           done
-          echo "Warm-up complete; retry-hardened browser/API gate remains authoritative."
+          echo "Frontend warm-up complete; Playwright gate remains authoritative."
           exit 0
+
       - name: Install Playwright Chromium
         run: |
           python -m pip install --upgrade pip
           python -m pip install playwright
           python -m playwright install --with-deps chromium
+
       - name: Compile browser QA runner
         run: |
           python -m py_compile scripts/staging_browser_mobile_qa_v2.py
-          python -m py_compile scripts/staging_browser_mobile_qa_v3.py
+          python -m py_compile scripts/staging_browser_mobile_qa_v4.py
+
       - name: Execute browser/mobile QA matrix
         shell: bash
         run: |
           set +e
           mkdir -p artifacts/browser-mobile-qa
-          python scripts/staging_browser_mobile_qa_v3.py > artifacts/browser-mobile-qa/console.log 2>&1
+          python scripts/staging_browser_mobile_qa_v4.py > artifacts/browser-mobile-qa/console.log 2>&1
           echo "$?" > artifacts/browser-mobile-qa/exit-code.txt
           exit 0
+
       - name: Validate sanitized browser QA evidence
         if: always()
         shell: bash
@@ -96,23 +101,30 @@ jobs:
           report_path = root / "browser-mobile-qa-report.json"
           markdown_path = root / "browser-mobile-qa-report.md"
           console_path = root / "console.log"
-          if not report_path.exists() or not markdown_path.exists(): raise SystemExit("Browser QA report missing")
+          if not report_path.exists() or not markdown_path.exists():
+              raise SystemExit("Browser QA report missing")
           texts = [(p.name, p.read_text(encoding="utf-8", errors="replace")) for p in (report_path, markdown_path, console_path) if p.exists()]
-          leaks=[]
-          for label,value in {"OWNER_EMAIL":os.getenv("STAGING_OWNER_EMAIL",""),"OWNER_PASSWORD":os.getenv("STAGING_OWNER_PASSWORD","")}.items():
+          leaks = []
+          for label, value in {"OWNER_EMAIL": os.getenv("STAGING_OWNER_EMAIL", ""), "OWNER_PASSWORD": os.getenv("STAGING_OWNER_PASSWORD", "")}.items():
               if value:
-                  for filename,text in texts:
+                  for filename, text in texts:
                       if value in text: leaks.append(f"{label} in {filename}")
-          patterns=[re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{20,}",re.I),re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),re.compile(r"\bsk-[A-Za-z0-9_-]{12,}\b",re.I)]
-          for filename,text in texts:
+          patterns = [
+              re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{20,}", re.I),
+              re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
+              re.compile(r"\bsk-[A-Za-z0-9_-]{12,}\b", re.I),
+          ]
+          for filename, text in texts:
               for pattern in patterns:
                   if pattern.search(text): leaks.append(f"token pattern in {filename}")
-          if leaks: raise SystemExit("Sanitization: FAIL: "+", ".join(leaks))
-          report=json.loads(report_path.read_text(encoding="utf-8"))
-          if report.get("decision")!="PASS":
-              print(json.dumps(report.get("findings",[]),ensure_ascii=False,indent=2)); raise SystemExit("Browser/mobile QA decision is not PASS")
+          if leaks: raise SystemExit("Sanitization: FAIL: " + ", ".join(leaks))
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          if report.get("decision") != "PASS":
+              print(json.dumps(report.get("findings", []), ensure_ascii=False, indent=2))
+              raise SystemExit("Browser/mobile QA decision is not PASS")
           print("Sanitized browser QA evidence: PASS")
           PY
+
       - name: Upload sanitized browser QA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -121,19 +133,29 @@ jobs:
           path: artifacts/browser-mobile-qa
           if-no-files-found: warn
           retention-days: 7
+
       - name: Publish browser QA summary
         if: always()
         shell: bash
         run: |
           python - <<'PY'
-          import json,os,pathlib
-          p=pathlib.Path("artifacts/browser-mobile-qa/browser-mobile-qa-report.json")
-          lines=["## Sprint 8A.1 Browser/Mobile QA"]
-          if p.exists():
-              r=json.loads(p.read_text()); results=r.get("results",[])
-              lines += [f"- Decision: **{r.get('decision')}**",f"- Scenario checks: **{sum(x.get('status')=='PASS' for x in results)}/{len(results)} PASS**",f"- Failures: **{r.get('summary',{}).get('fail_count')}**",f"- Warnings: **{r.get('summary',{}).get('warn_count')}**",f"- Refresh requests: **{r.get('summary',{}).get('refresh_requests')}**"]
-          with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as h: h.write("\n".join(lines)+"\n")
+          import json, os, pathlib
+          path = pathlib.Path("artifacts/browser-mobile-qa/browser-mobile-qa-report.json")
+          lines = ["## Sprint 8A.1 Browser/Mobile QA"]
+          if path.exists():
+              report = json.loads(path.read_text())
+              results = report.get("results", [])
+              lines += [
+                  f"- Decision: **{report.get('decision')}**",
+                  f"- Scenario checks: **{sum(item.get('status') == 'PASS' for item in results)}/{len(results)} PASS**",
+                  f"- Failures: **{report.get('summary', {}).get('fail_count')}**",
+                  f"- Warnings: **{report.get('summary', {}).get('warn_count')}**",
+                  f"- Refresh requests: **{report.get('summary', {}).get('refresh_requests')}**",
+              ]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write("\n".join(lines) + "\n")
           PY
+
       - name: Enforce browser/mobile gate
         if: always()
         shell: bash
@@ -142,6 +164,7 @@ jobs:
           [ "$code" = "0" ] || exit 1
           python - <<'PY'
           import json
-          if json.load(open("artifacts/browser-mobile-qa/browser-mobile-qa-report.json"))["decision"] != "PASS": raise SystemExit(1)
+          report = json.load(open("artifacts/browser-mobile-qa/browser-mobile-qa-report.json", encoding="utf-8"))
+          if report.get("decision") != "PASS": raise SystemExit(1)
           print("BROWSER/MOBILE QA GATE: PASS")
           PY
