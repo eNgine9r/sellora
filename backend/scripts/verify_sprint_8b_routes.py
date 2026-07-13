@@ -2,12 +2,15 @@
 """Fail build/startup when Sprint 8B routes are absent from the packaged API."""
 from __future__ import annotations
 
+import inspect
 import sys
 from pathlib import Path
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_ROOT))
 
+import fastapi
+from fastapi import APIRouter
 import app as app_package
 import app.main as main_module
 import app.api.v1.router as central_router_module
@@ -41,6 +44,24 @@ def render_routes(routes: set[tuple[str, str]]) -> str:
     return "; ".join(f"{method} {path}" for method, path in sorted(routes)) or "none"
 
 
+def include_router_probe() -> str:
+    child = APIRouter()
+
+    @child.get("/probe")
+    def probe_endpoint() -> dict[str, bool]:
+        return {"ok": True}
+
+    parent = APIRouter()
+    returned = parent.include_router(child)
+    return (
+        f"fastapi_version={getattr(fastapi, '__version__', 'unknown')}; "
+        f"include_router_signature={inspect.signature(parent.include_router)}; "
+        f"include_router_return_type={type(returned).__name__}; "
+        f"probe_parent_routes={render_routes(router_routes(parent))}; "
+        f"probe_return_routes={render_routes(router_routes(returned)) if hasattr(returned, 'routes') else 'n/a'}"
+    )
+
+
 def main() -> None:
     child = {
         "auth": router_routes(auth_router),
@@ -59,7 +80,8 @@ def main() -> None:
         f"child_onboarding={render_routes(child['onboarding'])}; "
         f"child_workspaces={render_routes(child['workspaces'])}; "
         f"central_routes={render_routes(central)}; "
-        f"app_routes={render_routes(packaged)}"
+        f"app_routes={render_routes(packaged)}; "
+        f"{include_router_probe()}"
     )
     if missing:
         rendered = ", ".join(f"{method} {path}" for method, path in missing)
