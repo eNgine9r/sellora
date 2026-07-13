@@ -1,0 +1,35 @@
+name: Sprint 8B Closure Docs Verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/sprint-8b-demo-data-first-run.md"
+      - "docs/sprint-8b-staging-closure.md"
+      - "docs/pilot-release-decision.md"
+      - ".github/workflows/sprint-8b-closure-docs-verification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-closure-docs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run Sprint 8B static regression
+        run: node frontend/scripts/demo-first-run-regression.mjs
+      - name: Verify approved closure markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "Sprint 8B — APPROVED" docs/sprint-8b-demo-data-first-run.md
+          grep -q "181" docs/sprint-8b-staging-closure.md
+          grep -q "0 FAIL" docs/sprint-8b-staging-closure.md
+          grep -q "Sprint 8C" docs/pilot-release-decision.md
