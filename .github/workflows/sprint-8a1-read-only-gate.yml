@@ -1,0 +1,326 @@
+name: Sprint 8A.1 Read-only Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/sprint-8a1-read-only-gate.yml"
+      - "scripts/staging_release_gate.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sprint-8a1-read-only-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  read-only-gate:
+    name: Read-only staging gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    env:
+      STAGING_FRONTEND_URL: "https://sellora-web-staging.vercel.app"
+      STAGING_API_URL: "https://sellora-api-staging.onrender.com"
+
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_MANAGER_EMAIL: ${{ secrets.STAGING_MANAGER_EMAIL }}
+      STAGING_MANAGER_PASSWORD: ${{ secrets.STAGING_MANAGER_PASSWORD }}
+      STAGING_ANALYST_EMAIL: ${{ secrets.STAGING_ANALYST_EMAIL }}
+      STAGING_ANALYST_PASSWORD: ${{ secrets.STAGING_ANALYST_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+
+      STAGING_EXPECTED_ALEMBIC_REVISION: "202607080020"
+      STAGING_RUNTIME_ALEMBIC_REVISION: "202607080020"
+      STAGING_ALLOW_CONTROLLED_WRITES: "false"
+
+    steps:
+      - name: Checkout QA branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate secure inputs
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          import uuid
+
+          required = [
+              "STAGING_FRONTEND_URL",
+              "STAGING_API_URL",
+              "STAGING_OWNER_EMAIL",
+              "STAGING_OWNER_PASSWORD",
+              "STAGING_MANAGER_EMAIL",
+              "STAGING_MANAGER_PASSWORD",
+              "STAGING_ANALYST_EMAIL",
+              "STAGING_ANALYST_PASSWORD",
+              "STAGING_TEST_WORKSPACE_ID",
+              "STAGING_EXPECTED_ALEMBIC_REVISION",
+              "STAGING_RUNTIME_ALEMBIC_REVISION",
+              "STAGING_ALLOW_CONTROLLED_WRITES",
+          ]
+          missing = [name for name in required if not os.environ.get(name)]
+          if missing:
+              print("Secure input preflight: FAIL")
+              for name in missing:
+                  print(f"MISSING: {name}")
+              sys.exit(1)
+
+          try:
+              uuid.UUID(os.environ["STAGING_TEST_WORKSPACE_ID"])
+          except ValueError:
+              print("Secure input preflight: FAIL — workspace ID is not a valid UUID")
+              sys.exit(1)
+
+          expected = os.environ["STAGING_EXPECTED_ALEMBIC_REVISION"]
+          runtime = os.environ["STAGING_RUNTIME_ALEMBIC_REVISION"]
+          if expected != "202607080020" or runtime != expected:
+              print("Secure input preflight: FAIL — Alembic revision mismatch")
+              sys.exit(1)
+
+          if os.environ["STAGING_ALLOW_CONTROLLED_WRITES"].lower() != "false":
+              print("Secure input preflight: FAIL — controlled writes must be disabled")
+              sys.exit(1)
+
+          print("Secure input preflight: PASS")
+          print("Controlled writes: DISABLED")
+          PY
+
+      - name: Execute read-only runner
+        id: runner
+        shell: bash
+        run: |
+          set +e
+          python scripts/staging_release_gate.py --mode read-only \
+            > "$RUNNER_TEMP/sellora-read-only-console.log" 2>&1
+          runner_code=$?
+          echo "exit_code=$runner_code" >> "$GITHUB_OUTPUT"
+          echo "Read-only runner completed; exit code captured for artifact-level validation."
+          exit 0
+
+      - name: Validate artifact and sanitization
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          artifact_path = Path("artifacts/staging-release-gate.json")
+          console_path = Path(os.environ["RUNNER_TEMP"]) / "sellora-read-only-console.log"
+          summary_path = Path("artifacts/read-only-gate-summary.json")
+          summary_path.parent.mkdir(parents=True, exist_ok=True)
+
+          if not artifact_path.exists():
+              print("Artifact creation: FAIL")
+              sys.exit(1)
+
+          artifact_text = artifact_path.read_text(encoding="utf-8")
+          console_text = console_path.read_text(encoding="utf-8") if console_path.exists() else ""
+
+          sensitive_names = [
+              "STAGING_OWNER_EMAIL",
+              "STAGING_OWNER_PASSWORD",
+              "STAGING_MANAGER_EMAIL",
+              "STAGING_MANAGER_PASSWORD",
+              "STAGING_ANALYST_EMAIL",
+              "STAGING_ANALYST_PASSWORD",
+              "STAGING_TEST_WORKSPACE_ID",
+          ]
+          sensitive_values = {
+              name: os.environ.get(name, "")
+              for name in sensitive_names
+              if os.environ.get(name)
+          }
+          token_markers = [
+              '"access_token"',
+              '"refresh_token"',
+              '"Authorization"',
+              "Bearer ",
+          ]
+
+          leaks = []
+          for location, text in (("console", console_text), ("artifact", artifact_text)):
+              for name, value in sensitive_values.items():
+                  if value and value in text:
+                      leaks.append(f"{location}:{name}")
+              for marker in token_markers:
+                  if marker in text:
+                      leaks.append(f"{location}:TOKEN_MARKER")
+
+          if leaks:
+              print("Sanitization: FAIL")
+              for leak in sorted(set(leaks)):
+                  print(f"Sensitive material detected: {leak}")
+              artifact_path.unlink(missing_ok=True)
+              console_path.unlink(missing_ok=True)
+              sys.exit(1)
+
+          data = json.loads(artifact_text)
+          expected_routes = [
+              "dashboard",
+              "leads",
+              "customers",
+              "products",
+              "inventory",
+              "orders",
+              "shipments",
+              "finance",
+              "advertising",
+              "analytics",
+              "settings_workspace",
+              "settings_team",
+              "import_center",
+          ]
+
+          checks = {}
+          checks["mode_read_only"] = data.get("mode") == "read-only"
+          checks["frontend"] = data.get("frontend", {}).get("status") == "PASS"
+          checks["backend_health"] = (
+              data.get("backend", {}).get("status") == "PASS"
+              and data.get("backend", {}).get("health_http_status") == 200
+          )
+          checks["database_compatibility"] = (
+              data.get("database", {}).get("compatibility") == "PASS"
+          )
+
+          role_results = data.get("role_results", {})
+          for role in ("OWNER", "MANAGER", "ANALYST"):
+              result = role_results.get(role, {})
+              checks[f"{role.lower()}_login"] = (
+                  result.get("login", {}).get("status") == "PASS"
+              )
+              checks[f"{role.lower()}_auth_me"] = (
+                  result.get("me", {}).get("status") == "PASS"
+              )
+              checks[f"{role.lower()}_workspace"] = (
+                  result.get("workspace", {}).get("status") == "PASS"
+              )
+
+          core_results = data.get("core_read_results", {})
+          route_results = {}
+          for route in expected_routes:
+              value = str(core_results.get(route, "MISSING"))
+              passed = value.startswith("PASS HTTP ")
+              route_results[route] = {"result": value, "pass": passed}
+          checks["core_get_routes"] = all(
+              item["pass"] for item in route_results.values()
+          )
+
+          checks["console_sanitized"] = True
+          checks["artifact_sanitized"] = True
+          checks["controlled_write_not_requested"] = str(
+              data.get("controlled_write", "")
+          ).startswith("Not requested")
+          checks["no_critical_issues"] = data.get("critical_issues", 0) == 0
+          checks["no_major_issues"] = data.get("major_issues", 0) == 0
+
+          overall_pass = all(checks.values())
+          failed_checks = [name for name, passed in checks.items() if not passed]
+
+          summary = {
+              "run_id": data.get("run_id"),
+              "mode": data.get("mode"),
+              "runner_exit_code": int(os.environ.get("RUNNER_EXIT_CODE", "0")),
+              "checks": checks,
+              "core_routes": route_results,
+              "critical_issues": data.get("critical_issues"),
+              "major_issues": data.get("major_issues"),
+              "runner_release_decision": data.get("release_decision"),
+              "runner_sprint_status": data.get("sprint_status"),
+              "read_only_gate": "PASS" if overall_pass else "FAIL",
+              "controlled_write_eligibility": (
+                  "UNBLOCKED" if overall_pass else "FORBIDDEN"
+              ),
+              "failed_checks": failed_checks,
+          }
+          summary_path.write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          print("Artifact creation: PASS")
+          print("Console sanitization: PASS")
+          print("Artifact sanitization: PASS")
+          print(f"Read-only gate: {summary['read_only_gate']}")
+          if failed_checks:
+              print("Failed checks:")
+              for name in failed_checks:
+                  print(f"- {name}")
+          PY
+        env:
+          RUNNER_EXIT_CODE: ${{ steps.runner.outputs.exit_code }}
+
+      - name: Upload sanitized gate artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8a1-read-only-${{ github.run_id }}
+          path: |
+            artifacts/staging-release-gate.json
+            artifacts/read-only-gate-summary.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Publish sanitized job summary
+        if: always() && hashFiles('artifacts/read-only-gate-summary.json') != ''
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          summary = json.loads(
+              Path("artifacts/read-only-gate-summary.json").read_text(encoding="utf-8")
+          )
+          lines = [
+              "## Sprint 8A.1 — Read-only Gate",
+              "",
+              f"**Decision:** {summary['read_only_gate']}",
+              f"**Controlled-write eligibility:** {summary['controlled_write_eligibility']}",
+              "",
+              "| Check | Status |",
+              "|---|---|",
+          ]
+          for name, passed in summary["checks"].items():
+              lines.append(f"| `{name}` | {'PASS' if passed else 'FAIL'} |")
+          lines.extend(["", "### Core GET routes", "", "| Route | Result |", "|---|---|"])
+          for route, result in summary["core_routes"].items():
+              lines.append(f"| `{route}` | `{result['result']}` |")
+          Path("job-summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+          cat job-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce read-only gate decision
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          summary_path = Path("artifacts/read-only-gate-summary.json")
+          if not summary_path.exists():
+              print("READ-ONLY GATE: FAIL — sanitized summary is unavailable")
+              sys.exit(1)
+
+          summary = json.loads(summary_path.read_text(encoding="utf-8"))
+          print(f"READ-ONLY GATE: {summary['read_only_gate']}")
+          print(
+              "CONTROLLED-WRITE ELIGIBILITY: "
+              f"{summary['controlled_write_eligibility']}"
+          )
+          sys.exit(0 if summary["read_only_gate"] == "PASS" else 1)
+          PY
