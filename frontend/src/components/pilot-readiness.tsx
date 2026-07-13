@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Circle, Sparkles, Trash2 } from "lucide-react";
 import { useI18n } from "@/i18n/provider";
 import { useAuth } from "@/hooks/use-auth";
 import { authStorage } from "@/services/auth.service";
 import { createDemoWorkspace, deactivateDemoWorkspace } from "@/services/workspaces";
-import { OnboardingStatus } from "@/services/onboarding";
+import { fetchOnboardingStatus, OnboardingStatus } from "@/services/onboarding";
 
 type SetupChecklistItem = { key: string; href: string; done: boolean };
 
@@ -85,10 +85,16 @@ export function DemoWorkspaceActions({ workspaceId, isDemo }: { workspaceId?: st
   return <button type="button" className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-violet-700 px-4 py-2 text-sm font-black text-white shadow-sm disabled:opacity-60" disabled={createMutation.isPending || createInFlight.current} onClick={createDemo}>{createMutation.isPending ? t("demo.creating") : t("demo.viewDemo")}</button>;
 }
 
-export function DemoWorkspaceNotice({ isDemo, workspaceId }: { isDemo: boolean; workspaceId?: string | null }) {
+export function DemoWorkspaceNotice({ workspaceId }: { workspace?: unknown; workspaceId?: string | null }) {
   const { t } = useI18n();
   const { currentWorkspaceId } = useAuth();
-  if (!isDemo) return null;
+  const activeWorkspaceId = workspaceId ?? currentWorkspaceId ?? "";
+  const onboarding = useQuery({
+    queryKey: ["onboarding-status", activeWorkspaceId],
+    queryFn: () => fetchOnboardingStatus(activeWorkspaceId),
+    enabled: Boolean(activeWorkspaceId),
+  });
+  if (!onboarding.data?.is_demo_workspace) return null;
   return (
     <section className="min-w-0 overflow-hidden rounded-[24px] border border-violet-200 bg-violet-50 p-4 text-violet-950 shadow-sm dark:border-violet-400/30 dark:bg-violet-500/10 dark:text-violet-50" data-demo-workspace-banner>
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -97,7 +103,7 @@ export function DemoWorkspaceNotice({ isDemo, workspaceId }: { isDemo: boolean; 
           <h2 className="mt-3 text-lg font-black">{t("demoWorkspace.title")}</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-violet-800 dark:text-violet-100">{t("demoWorkspace.description")}</p>
         </div>
-        <div className="flex flex-col gap-2 sm:items-end"><Link className="min-h-11 rounded-2xl bg-violet-700 px-4 py-3 text-center text-sm font-black text-white shadow-sm" href="/analytics">{t("demoWorkspace.cta")}</Link><DemoWorkspaceActions workspaceId={workspaceId ?? currentWorkspaceId} isDemo /></div>
+        <div className="flex flex-col gap-2 sm:items-end"><Link className="min-h-11 rounded-2xl bg-violet-700 px-4 py-3 text-center text-sm font-black text-white shadow-sm" href="/analytics">{t("demoWorkspace.cta")}</Link><DemoWorkspaceActions workspaceId={activeWorkspaceId} isDemo /></div>
       </div>
     </section>
   );
