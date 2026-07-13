@@ -112,11 +112,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const switchWorkspace = useCallback((workspaceId: string) => {
     const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
     if (!normalizedWorkspaceId || normalizedWorkspaceId === currentWorkspaceId) return;
+
+    // Workspace changes are tenant-boundary transitions. Destroy every cached
+    // query before exposing the next workspace ID so observers cannot render
+    // stale records from the previous tenant while the new requests load.
     void queryClient.cancelQueries();
+    queryClient.clear();
     authStorage.setCurrentWorkspaceId(normalizedWorkspaceId);
     setCurrentWorkspaceId(normalizedWorkspaceId);
     setError(null);
-    void queryClient.invalidateQueries();
   }, [currentWorkspaceId, queryClient]);
 
   const currentWorkspace = useMemo(() => currentUser?.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id) === currentWorkspaceId) ?? null, [currentUser, currentWorkspaceId]);
