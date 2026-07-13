@@ -7,6 +7,7 @@ on:
       - "scripts/staging_browser_mobile_qa_v2.py"
       - "scripts/staging_browser_mobile_qa_v4.py"
       - "scripts/staging_browser_mobile_qa_v5.py"
+      - "scripts/staging_browser_mobile_qa_v6.py"
       - ".github/workflows/sprint-8a1-browser-mobile-qa.yml"
 
 permissions:
@@ -22,6 +23,7 @@ jobs:
     timeout-minutes: 70
     env:
       STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
       STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
@@ -42,21 +44,34 @@ jobs:
         run: |
           python - <<'PY'
           import os, re
-          required = ["STAGING_FRONTEND_URL", "STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD", "STAGING_TEST_WORKSPACE_ID", "STAGING_SECOND_WORKSPACE_ID"]
-          if any(not os.getenv(name) for name in required): raise SystemExit("Missing browser QA input")
+          required = [
+              "STAGING_FRONTEND_URL",
+              "STAGING_API_URL",
+              "STAGING_OWNER_EMAIL",
+              "STAGING_OWNER_PASSWORD",
+              "STAGING_TEST_WORKSPACE_ID",
+              "STAGING_SECOND_WORKSPACE_ID",
+          ]
+          if any(not os.getenv(name) for name in required):
+              raise SystemExit("Missing browser QA input")
           for name in ("STAGING_TEST_WORKSPACE_ID", "STAGING_SECOND_WORKSPACE_ID"):
-              if not re.fullmatch(r"[0-9a-fA-F-]{36}", os.environ[name]): raise SystemExit(f"Invalid UUID: {name}")
-          if os.environ["STAGING_TEST_WORKSPACE_ID"] == os.environ["STAGING_SECOND_WORKSPACE_ID"]: raise SystemExit("QA workspaces must differ")
+              if not re.fullmatch(r"[0-9a-fA-F-]{36}", os.environ[name]):
+                  raise SystemExit(f"Invalid UUID: {name}")
+          if os.environ["STAGING_TEST_WORKSPACE_ID"] == os.environ["STAGING_SECOND_WORKSPACE_ID"]:
+              raise SystemExit("QA workspaces must differ")
           print("Secure input preflight: PASS")
           PY
 
-      - name: Warm frontend
+      - name: Warm staging
         run: |
           set +e
           for attempt in $(seq 1 4); do
-            code="$(curl -sS -o /tmp/login.html -w "%{http_code}" --max-time 15 "$STAGING_FRONTEND_URL/login" || true)"
-            echo "Frontend warm-up $attempt: $code"
-            [[ "$code" =~ ^(200|301|302|307|308)$ ]] && break
+            frontend_code="$(curl -sS -o /tmp/login.html -w "%{http_code}" --max-time 15 "$STAGING_FRONTEND_URL/login" || true)"
+            backend_code="$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 15 "$STAGING_API_URL/health" || true)"
+            echo "Warm-up $attempt: frontend=$frontend_code backend=$backend_code"
+            if [[ "$frontend_code" =~ ^(200|301|302|307|308)$ ]] && [ "$backend_code" = "200" ]; then
+              break
+            fi
             sleep 5
           done
           exit 0
@@ -72,12 +87,14 @@ jobs:
           python -m py_compile scripts/staging_browser_mobile_qa_v2.py
           python -m py_compile scripts/staging_browser_mobile_qa_v4.py
           python -m py_compile scripts/staging_browser_mobile_qa_v5.py
+          python -m py_compile scripts/staging_browser_mobile_qa_v6.py
 
       - name: Execute browser/mobile matrix
         run: |
           set +e
+          rm -rf artifacts/browser-mobile-qa
           mkdir -p artifacts/browser-mobile-qa
-          python scripts/staging_browser_mobile_qa_v5.py > artifacts/browser-mobile-qa/console.log 2>&1
+          python scripts/staging_browser_mobile_qa_v6.py > artifacts/browser-mobile-qa/console.log 2>&1
           echo "$?" > artifacts/browser-mobile-qa/exit-code.txt
           exit 0
 
@@ -90,13 +107,18 @@ jobs:
           report_path = root / "browser-mobile-qa-report.json"
           md_path = root / "browser-mobile-qa-report.md"
           console_path = root / "console.log"
-          if not report_path.exists() or not md_path.exists(): raise SystemExit("Browser QA report missing")
+          if not report_path.exists() or not md_path.exists():
+              raise SystemExit("Browser QA report missing")
           texts = [(p.name, p.read_text(encoding="utf-8", errors="replace")) for p in (report_path, md_path, console_path) if p.exists()]
           leaks = []
-          for label, value in {"OWNER_EMAIL": os.getenv("STAGING_OWNER_EMAIL", ""), "OWNER_PASSWORD": os.getenv("STAGING_OWNER_PASSWORD", "")}.items():
+          for label, value in {
+              "OWNER_EMAIL": os.getenv("STAGING_OWNER_EMAIL", ""),
+              "OWNER_PASSWORD": os.getenv("STAGING_OWNER_PASSWORD", ""),
+          }.items():
               if value:
                   for filename, text in texts:
-                      if value in text: leaks.append(f"{label} in {filename}")
+                      if value in text:
+                          leaks.append(f"{label} in {filename}")
           patterns = [
               re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{20,}", re.I),
               re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
@@ -104,8 +126,10 @@ jobs:
           ]
           for filename, text in texts:
               for pattern in patterns:
-                  if pattern.search(text): leaks.append(f"token pattern in {filename}")
-          if leaks: raise SystemExit("Sanitization FAIL: " + ", ".join(leaks))
+                  if pattern.search(text):
+                      leaks.append(f"token pattern in {filename}")
+          if leaks:
+              raise SystemExit("Sanitization FAIL: " + ", ".join(leaks))
           report = json.loads(report_path.read_text(encoding="utf-8"))
           if report.get("decision") != "PASS":
               print(json.dumps(report.get("findings", []), ensure_ascii=False, indent=2))
@@ -130,6 +154,7 @@ jobs:
           python - <<'PY'
           import json
           report = json.load(open("artifacts/browser-mobile-qa/browser-mobile-qa-report.json", encoding="utf-8"))
-          if report.get("decision") != "PASS": raise SystemExit(1)
+          if report.get("decision") != "PASS":
+              raise SystemExit(1)
           print("BROWSER/MOBILE QA GATE: PASS")
           PY
