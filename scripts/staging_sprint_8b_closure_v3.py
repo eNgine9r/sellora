@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -27,6 +28,38 @@ def lead_names(value):
 
 
 class Sprint8BClosureV3(v2.Sprint8BClosureV2):
+    def init_context(self, browser, session, workspace_id, theme, width, height):
+        context = browser.new_context(
+            viewport={"width": width, "height": height},
+            is_mobile=width < 768,
+            has_touch=width < 768,
+            color_scheme=theme,
+        )
+        payload = {
+            "access": session.access_token,
+            "refresh": session.refresh_token,
+            "user": session.user,
+            "workspace": workspace_id,
+            "theme": theme,
+        }
+        context.add_init_script(
+            script=f"""
+            (() => {{
+              const seedKey = 'sellora.qa-context-seeded';
+              if (localStorage.getItem(seedKey) === 'true') return;
+              const payload = {json.dumps(payload, ensure_ascii=False)};
+              localStorage.setItem('sellora.access_token', payload.access);
+              localStorage.setItem('sellora.refresh_token', payload.refresh);
+              localStorage.setItem('sellora.current_user', JSON.stringify(payload.user));
+              if (payload.workspace) localStorage.setItem('sellora.current_workspace_id', payload.workspace);
+              else localStorage.removeItem('sellora.current_workspace_id');
+              localStorage.setItem('sellora.theme-mode', payload.theme);
+              localStorage.setItem(seedKey, 'true');
+            }})();
+            """
+        )
+        return context
+
     def demo_matrix_and_switch(self, browser) -> None:
         if not self.demo_workspace_id:
             return
