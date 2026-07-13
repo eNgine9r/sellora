@@ -1,0 +1,78 @@
+name: Sprint 8A.1 Login Network Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/staging_login_network_probe.py"
+      - ".github/workflows/sprint-8a1-login-network-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  login-network-probe:
+    name: Bounded staging login probe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+
+    steps:
+      - name: Checkout temporary QA branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_OWNER_EMAIL"
+          test -n "$STAGING_OWNER_PASSWORD"
+          echo "Login probe inputs: PASS; secrets suppressed"
+
+      - name: Install Chromium
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Compile probe
+        run: python -m py_compile scripts/staging_login_network_probe.py
+
+      - name: Execute bounded login probe
+        run: python scripts/staging_login_network_probe.py > /tmp/probe-summary.log
+
+      - name: Validate sanitization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/login-network-probe/login-network-probe.json
+          if grep -R -F "$STAGING_OWNER_EMAIL" artifacts/login-network-probe; then
+            echo "Email leaked into probe artifact" >&2
+            exit 1
+          fi
+          if grep -R -F "$STAGING_OWNER_PASSWORD" artifacts/login-network-probe; then
+            echo "Password leaked into probe artifact" >&2
+            exit 1
+          fi
+          if grep -R -E 'Bearer |"(access|refresh)_token"[[:space:]]*:' artifacts/login-network-probe; then
+            echo "Token leaked into probe artifact" >&2
+            exit 1
+          fi
+          cat /tmp/probe-summary.log
+
+      - name: Upload sanitized probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8a1-login-network-probe-${{ github.run_id }}
+          path: artifacts/login-network-probe
+          if-no-files-found: error
+          retention-days: 7
