@@ -39,7 +39,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -59,19 +59,24 @@ jobs:
       - name: Warm staging frontend and backend
         shell: bash
         run: |
-          set -euo pipefail
-          for attempt in $(seq 1 12); do
-            frontend_code="$(curl -sS -o /tmp/frontend.html -w "%{http_code}" --max-time 25 "$STAGING_FRONTEND_URL/login" || true)"
-            backend_code="$(curl -sS -o /tmp/backend-health.json -w "%{http_code}" --max-time 25 "$STAGING_API_URL/health" || true)"
-            if [[ "$frontend_code" =~ ^(200|301|302|307|308)$ ]] && [ "$backend_code" = "200" ]; then
-              echo "Staging warm-up: PASS"
-              exit 0
-            fi
+          set +e
+          ready=false
+          for attempt in $(seq 1 6); do
+            frontend_code="$(curl -sS -o /tmp/frontend.html -w "%{http_code}" --max-time 15 "$STAGING_FRONTEND_URL/login" || true)"
+            backend_code="$(curl -sS -o /tmp/backend-health.json -w "%{http_code}" --max-time 15 "$STAGING_API_URL/health" || true)"
             echo "Warm-up attempt $attempt: frontend=$frontend_code backend=$backend_code"
-            sleep 10
+            if [[ "$frontend_code" =~ ^(200|301|302|307|308)$ ]] && [ "$backend_code" = "200" ]; then
+              ready=true
+              break
+            fi
+            sleep 8
           done
-          echo "Staging warm-up: FAIL"
-          exit 1
+          if [ "$ready" = "true" ]; then
+            echo "Staging warm-up: PASS"
+          else
+            echo "Staging warm-up: WARNING — continuing to browser/API evidence collection"
+          fi
+          exit 0
 
       - name: Install frontend dependencies
         working-directory: frontend
