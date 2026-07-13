@@ -6,9 +6,10 @@ import sys
 from pathlib import Path
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-if str(BACKEND_ROOT) not in sys.path:
-    sys.path.insert(0, str(BACKEND_ROOT))
+sys.path.insert(0, str(BACKEND_ROOT))
 
+import app as app_package
+import app.main as main_module
 from app.main import app
 
 REQUIRED_ROUTES = {
@@ -25,6 +26,8 @@ def packaged_routes() -> set[tuple[str, str]]:
         methods = getattr(route, "methods", set()) or set()
         if not path:
             continue
+        if not methods:
+            found.add(("MOUNT", str(path)))
         for method in methods:
             found.add((str(method).upper(), str(path)))
     return found
@@ -35,14 +38,12 @@ def main() -> None:
     missing = sorted(REQUIRED_ROUTES - found)
     if missing:
         rendered = ", ".join(f"{method} {path}" for method, path in missing)
-        relevant = ", ".join(
-            f"{method} {path}"
-            for method, path in sorted(found)
-            if "onboarding" in path or "workspaces/demo" in path
-        )
+        all_routes = "; ".join(f"{method} {path}" for method, path in sorted(found))
         raise SystemExit(
-            f"Sprint 8B route verification failed: missing {rendered}. "
-            f"Available relevant routes: {relevant or 'none'}"
+            "Sprint 8B route verification failed. "
+            f"backend_root={BACKEND_ROOT}; app_package={getattr(app_package, '__file__', None)}; "
+            f"main_module={getattr(main_module, '__file__', None)}; missing={rendered}; "
+            f"packaged_routes={all_routes or 'none'}"
         )
     rendered = ", ".join(f"{method} {path}" for method, path in sorted(REQUIRED_ROUTES))
     print(f"Sprint 8B routes verified: {rendered}")
