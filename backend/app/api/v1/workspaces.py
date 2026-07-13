@@ -37,6 +37,8 @@ def create_workspace(payload: WorkspaceCreate, current_user: User = Depends(get_
 def create_demo_workspace(payload: DemoWorkspaceCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> WorkspaceResponse:
     try:
         return _membership_response(WorkspaceService(db).create_or_get_demo_workspace(current_user.id, locale=payload.locale, currency_code=payload.currency_code.value))
+    except WorkspacePermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient workspace permissions") from exc
     except WorkspaceValidationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
