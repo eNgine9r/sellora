@@ -1,0 +1,192 @@
+name: Sprint 8A.1 Browser and Mobile QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend/scripts/staging_browser_mobile_qa.part0"
+      - "frontend/scripts/staging_browser_mobile_qa.part1"
+      - "frontend/scripts/staging_browser_mobile_qa.part2"
+      - "frontend/scripts/staging_browser_mobile_qa.part3"
+      - ".github/workflows/sprint-8a1-browser-mobile-qa.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sellora-sprint-8a1-browser-mobile-qa
+  cancel-in-progress: false
+
+jobs:
+  browser-mobile-qa:
+    name: Browser/mobile staging QA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+      STAGING_ALLOW_BROWSER_WRITES: "true"
+
+    steps:
+      - name: Checkout temporary QA branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Validate secure inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const required = ["STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD", "STAGING_TEST_WORKSPACE_ID"];
+          const missing = required.filter((name) => !process.env[name]);
+          if (missing.length) throw new Error("Missing required browser QA secrets");
+          if (process.env.STAGING_ALLOW_BROWSER_WRITES !== "true") throw new Error("Browser QA writes are not explicitly enabled");
+          if (!/^[0-9a-f-]{36}$/i.test(process.env.STAGING_TEST_WORKSPACE_ID)) throw new Error("Workspace ID format is invalid");
+          console.log("Secure input preflight: PASS");
+          NODE
+
+      - name: Warm staging frontend and backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            frontend_code="$(curl -sS -o /tmp/frontend.html -w "%{http_code}" --max-time 25 "$STAGING_FRONTEND_URL/login" || true)"
+            backend_code="$(curl -sS -o /tmp/backend-health.json -w "%{http_code}" --max-time 25 "$STAGING_API_URL/health" || true)"
+            if [[ "$frontend_code" =~ ^(200|301|302|307|308)$ ]] && [ "$backend_code" = "200" ]; then
+              echo "Staging warm-up: PASS"
+              exit 0
+            fi
+            echo "Warm-up attempt $attempt: frontend=$frontend_code backend=$backend_code"
+            sleep 10
+          done
+          echo "Staging warm-up: FAIL"
+          exit 1
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: |
+          npm install --no-save --package-lock=false playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Assemble browser QA runner
+        working-directory: frontend
+        run: cat scripts/staging_browser_mobile_qa.part0 scripts/staging_browser_mobile_qa.part1 scripts/staging_browser_mobile_qa.part2 scripts/staging_browser_mobile_qa.part3 > scripts/staging_browser_mobile_qa.mjs
+
+      - name: Compile browser QA runner
+        working-directory: frontend
+        run: node --check scripts/staging_browser_mobile_qa.mjs
+
+      - name: Execute browser/mobile QA matrix
+        id: browser_qa
+        working-directory: frontend
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts/browser-mobile-qa
+          node scripts/staging_browser_mobile_qa.mjs > artifacts/browser-mobile-qa/console.log 2>&1
+          code=$?
+          echo "$code" > artifacts/browser-mobile-qa/exit-code.txt
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Validate sanitized evidence
+        if: always()
+        working-directory: frontend
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const dir = path.join('artifacts', 'browser-mobile-qa');
+          const reportPath = path.join(dir, 'browser-mobile-qa-report.json');
+          const summaryPath = path.join(dir, 'browser-mobile-qa-summary.json');
+          const consolePath = path.join(dir, 'console.log');
+          if (!fs.existsSync(reportPath) || !fs.existsSync(summaryPath)) throw new Error('Browser QA artifact missing');
+          const texts = [reportPath, summaryPath, consolePath].filter(fs.existsSync).map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
+          const secrets = { OWNER_EMAIL: process.env.STAGING_OWNER_EMAIL || '', OWNER_PASSWORD: process.env.STAGING_OWNER_PASSWORD || '' };
+          const leaks = [];
+          for (const [label, value] of Object.entries(secrets)) {
+            if (!value) continue;
+            for (const item of texts) if (item.text.includes(value)) leaks.push(`${label} in ${item.file}`);
+          }
+          const forbidden = [/Bearer\s+[A-Za-z0-9._~+\/-]+/i, /"access_token"\s*:/i, /"refresh_token"\s*:/i, /"password"\s*:/i, /api[_-]?key\s*[:=]/i];
+          for (const item of texts) for (const pattern of forbidden) if (pattern.test(item.text)) leaks.push(`${pattern} in ${item.file}`);
+          if (leaks.length) {
+            console.error('Sanitization: FAIL');
+            for (const leak of leaks) console.error(leak);
+            process.exit(1);
+          }
+          const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+          if (report.security?.credentials_suppressed !== true || report.security?.tokens_suppressed !== true || report.security?.api_keys_suppressed !== true) throw new Error('Security evidence invalid');
+          if (report.decision !== 'PASS') {
+            console.error(JSON.stringify(report.issues || [], null, 2));
+            throw new Error('Browser/mobile QA decision is not PASS');
+          }
+          console.log('Sanitized evidence: PASS');
+          NODE
+
+      - name: Upload browser/mobile QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8a1-browser-mobile-qa-${{ github.run_id }}
+          path: frontend/artifacts/browser-mobile-qa
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Publish browser QA summary
+        if: always()
+        working-directory: frontend
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const reportPath = 'artifacts/browser-mobile-qa/browser-mobile-qa-report.json';
+          const lines = ['## Sprint 8A.1 Browser/Mobile QA'];
+          if (fs.existsSync(reportPath)) {
+            const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+            const viewports = Object.entries(report.viewport_matrix || {});
+            lines.push(`- Decision: **${report.decision || 'UNKNOWN'}**`);
+            lines.push(`- Viewports passed: **${viewports.filter(([,v]) => v.status === 'PASS').length}/${viewports.length}**`);
+            lines.push(`- Issues: **${(report.issues || []).length}**`);
+            lines.push(`- Console runtime errors: **${viewports.reduce((n,[,v]) => n + (v.console_errors || []).length + (v.page_errors || []).length, 0)}**`);
+            lines.push(`- Core HTTP errors: **${viewports.reduce((n,[,v]) => n + (v.core_http_errors || []).length, 0)}**`);
+            lines.push(`- CORS errors: **${viewports.reduce((n,[,v]) => n + (v.cors_errors || []).length, 0)}**`);
+            lines.push(`- Temporary Workspace B: **${report.fixture?.workspace_b_name || 'unknown'}**`);
+          } else {
+            lines.push('- Artifact: **MISSING**');
+          }
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Enforce browser/mobile gate
+        if: always()
+        working-directory: frontend
+        shell: bash
+        run: |
+          code="$(cat artifacts/browser-mobile-qa/exit-code.txt 2>/dev/null || echo 99)"
+          if [ "$code" != "0" ]; then
+            echo "Browser QA runner exit code: $code"
+            exit 1
+          fi
+          node - <<'NODE'
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('artifacts/browser-mobile-qa/browser-mobile-qa-report.json', 'utf8'));
+          if (report.decision !== 'PASS') process.exit(1);
+          console.log('BROWSER/MOBILE QA GATE: PASS');
+          NODE
