@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Circle, Sparkles, Trash2 } from "lucide-react";
 import { useI18n } from "@/i18n/provider";
@@ -9,15 +10,7 @@ import { authStorage } from "@/services/auth.service";
 import { createDemoWorkspace, deactivateDemoWorkspace } from "@/services/workspaces";
 import { OnboardingStatus } from "@/services/onboarding";
 
-type WorkspaceLike = { workspace_slug?: string | null; workspace_name?: string | null } | null | undefined;
 type SetupChecklistItem = { key: string; href: string; done: boolean };
-
-export function isDemoWorkspace(workspace: WorkspaceLike) {
-  const slug = workspace?.workspace_slug?.toLowerCase() ?? "";
-  const name = workspace?.workspace_name?.toLowerCase() ?? "";
-  return slug === "sellora-demo" || slug.includes("demo") || name.includes("demo");
-}
-
 
 export function FirstRunChecklist({ status }: { status: OnboardingStatus | undefined }) {
   const { t } = useI18n();
@@ -57,11 +50,12 @@ export function DemoWorkspaceActions({ workspaceId, isDemo }: { workspaceId?: st
   const { t } = useI18n();
   const { reloadCurrentUser, switchWorkspace } = useAuth();
   const queryClient = useQueryClient();
+  const createInFlight = useRef(false);
   const createMutation = useMutation({
     mutationFn: createDemoWorkspace,
     onSuccess: async (workspace) => {
       authStorage.setCurrentWorkspaceId(workspace.id);
-      await queryClient.invalidateQueries();
+      queryClient.clear();
       await reloadCurrentUser();
       switchWorkspace(workspace.id);
     },
@@ -74,25 +68,36 @@ export function DemoWorkspaceActions({ workspaceId, isDemo }: { workspaceId?: st
       await reloadCurrentUser();
     },
   });
+
+  const createDemo = () => {
+    if (createInFlight.current || createMutation.isPending) return;
+    createInFlight.current = true;
+    createMutation.mutate(undefined, {
+      onSettled: () => {
+        createInFlight.current = false;
+      },
+    });
+  };
+
   if (isDemo) {
     return <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-white px-4 py-2 text-sm font-black text-violet-700 dark:border-violet-400/30 dark:bg-white/10 dark:text-violet-100" disabled={deactivateMutation.isPending || !workspaceId} onClick={() => window.confirm(t("demo.removeConfirm")) && deactivateMutation.mutate()}><Trash2 className="h-4 w-4" />{deactivateMutation.isPending ? t("demo.removing") : t("demo.remove")}</button>;
   }
-  return <button type="button" className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-violet-700 px-4 py-2 text-sm font-black text-white shadow-sm disabled:opacity-60" disabled={createMutation.isPending} onClick={() => createMutation.mutate()}>{createMutation.isPending ? t("demo.creating") : t("demo.viewDemo")}</button>;
+  return <button type="button" className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-violet-700 px-4 py-2 text-sm font-black text-white shadow-sm disabled:opacity-60" disabled={createMutation.isPending || createInFlight.current} onClick={createDemo}>{createMutation.isPending ? t("demo.creating") : t("demo.viewDemo")}</button>;
 }
 
-export function DemoWorkspaceNotice({ workspace }: { workspace: WorkspaceLike }) {
+export function DemoWorkspaceNotice({ isDemo, workspaceId }: { isDemo: boolean; workspaceId?: string | null }) {
   const { t } = useI18n();
   const { currentWorkspaceId } = useAuth();
-  if (!isDemoWorkspace(workspace)) return null;
+  if (!isDemo) return null;
   return (
-    <section className="min-w-0 overflow-hidden rounded-[24px] border border-violet-200 bg-violet-50 p-4 text-violet-950 shadow-sm dark:border-violet-400/30 dark:bg-violet-500/10 dark:text-violet-50">
+    <section className="min-w-0 overflow-hidden rounded-[24px] border border-violet-200 bg-violet-50 p-4 text-violet-950 shadow-sm dark:border-violet-400/30 dark:bg-violet-500/10 dark:text-violet-50" data-demo-workspace-banner>
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-violet-700 shadow-sm dark:bg-white/10 dark:text-violet-100"><Sparkles className="h-4 w-4" />{t("demoWorkspace.badge")}</p>
           <h2 className="mt-3 text-lg font-black">{t("demoWorkspace.title")}</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-violet-800 dark:text-violet-100">{t("demoWorkspace.description")}</p>
         </div>
-        <div className="flex flex-col gap-2 sm:items-end"><Link className="min-h-11 rounded-2xl bg-violet-700 px-4 py-3 text-center text-sm font-black text-white shadow-sm" href="/analytics">{t("demoWorkspace.cta")}</Link><DemoWorkspaceActions workspaceId={currentWorkspaceId} isDemo /></div>
+        <div className="flex flex-col gap-2 sm:items-end"><Link className="min-h-11 rounded-2xl bg-violet-700 px-4 py-3 text-center text-sm font-black text-white shadow-sm" href="/analytics">{t("demoWorkspace.cta")}</Link><DemoWorkspaceActions workspaceId={workspaceId ?? currentWorkspaceId} isDemo /></div>
       </div>
     </section>
   );
