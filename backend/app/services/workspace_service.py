@@ -19,7 +19,7 @@ from app.models.role import RoleName
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_user import WorkspaceUser
-from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.audit_log_repository import AuditLogRepository, DEMO_WORKSPACE_CREATE_ACTION
 from app.repositories.user_repository import UserRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.schemas.workspace import WorkspaceCreate, WorkspaceSettingsUpdate, WorkspaceUserCreate
@@ -30,10 +30,6 @@ LAST_OWNER_ROLE_MESSAGE = "Неможливо змінити роль остан
 LAST_OWNER_DEACTIVATE_MESSAGE = "Неможливо деактивувати останнього власника робочого простору."
 DEMO_WORKSPACE_NAME = "Демо Sellora"
 DEMO_WORKSPACE_SLUG_PREFIX = "demo-sellora"
-
-
-def is_demo_workspace_slug(slug: str | None) -> bool:
-    return bool(slug and (slug == "sellora-demo" or slug.startswith(f"{DEMO_WORKSPACE_SLUG_PREFIX}-")))
 
 
 class WorkspaceValidationError(ValueError):
@@ -66,11 +62,23 @@ class WorkspaceService:
             self.db.rollback()
             raise
 
+    def _find_actor_demo_workspace(self, actor_user_id: UUID) -> WorkspaceUser | None:
+        for membership in self.workspaces.list_for_user(actor_user_id):
+            if self.audit_logs.has_demo_workspace_provenance(membership.workspace_id, creator_user_id=actor_user_id):
+                return membership
+        return None
+
+    def _assert_demo_creation_access(self, actor_user_id: UUID) -> None:
+        memberships = self.workspaces.list_for_user(actor_user_id)
+        if memberships and not any(membership.role.name == RoleName.OWNER.value for membership in memberships):
+            raise WorkspacePermissionError("Only workspace owners can create or manage a demo workspace")
 
     def create_or_get_demo_workspace(self, actor_user_id: UUID, *, locale: str = "uk", currency_code: str = "UAH") -> WorkspaceUser:
-        existing = self.workspaces.find_active_demo_for_user(actor_user_id)
+        existing = self._find_actor_demo_workspace(actor_user_id)
         if existing is not None:
             return existing
+        self._assert_demo_creation_access(actor_user_id)
+
         slug = f"{DEMO_WORKSPACE_SLUG_PREFIX}-{str(actor_user_id).split('-')[0]}"
         if self.workspaces.get_by_slug(slug):
             slug = f"{slug}-{uuid4().hex[:6]}"
@@ -81,13 +89,22 @@ class WorkspaceService:
             self.db.commit()
             self.db.refresh(membership)
             return membership
+        except IntegrityError:
+            # A concurrent duplicate request may lose the deterministic slug race.
+            # Roll back the failed transaction and return the demo committed by
+            # the winning request instead of creating a second workspace.
+            self.db.rollback()
+            existing = self._find_actor_demo_workspace(actor_user_id)
+            if existing is not None:
+                return existing
+            raise
         except Exception:
             self.db.rollback()
             raise
 
     def deactivate_demo_workspace(self, workspace_id: UUID, actor_user_id: UUID) -> WorkspaceUser:
         membership = self.require_owner(workspace_id, actor_user_id)
-        if not is_demo_workspace_slug(membership.workspace.slug):
+        if not self.audit_logs.has_demo_workspace_provenance(workspace_id):
             raise WorkspaceValidationError("Only Sellora demo workspaces can be deactivated through this flow")
         membership.workspace.is_active = False
         membership.is_active = False
@@ -130,7 +147,10 @@ class WorkspaceService:
             self.db.add(inventory)
             self.db.flush()
             transaction = InventoryTransaction(workspace_id=workspace_id, inventory_id=inventory.id, product_variant_id=variant.id, transaction_type=InventoryTransactionType.STOCK_IN.value, quantity=stock, previous_stock_quantity=0, new_stock_quantity=stock, previous_reserved_quantity=0, new_reserved_quantity=reserved, reason="Sprint 8B synthetic demo dataset", created_by=actor_user_id)
-            products.append(product); variants.append(variant); inventories.append(inventory); transactions.append(transaction)
+            products.append(product)
+            variants.append(variant)
+            inventories.append(inventory)
+            transactions.append(transaction)
         self.db.add_all(transactions)
         self.db.flush()
         statuses = [OrderStatus.NEW, OrderStatus.CONFIRMED, OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.CANCELLED]
@@ -141,7 +161,7 @@ class WorkspaceService:
             self.db.add(order)
             self.db.flush()
             self.db.add(OrderItem(workspace_id=workspace_id, order_id=order.id, product_variant_id=variant.id, sku=variant.sku, product_name=variant.product.name if variant.product else variant.sku, quantity=1, unit_price=amount, unit_cost=Decimal("45.00"), line_total=amount, line_cost=Decimal("45.00")))
-        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Workspace", entity_id=workspace_id, action="DEMO_WORKSPACE_CREATE", new_value={"dataset": "Sprint 8B synthetic demo dataset"})
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Workspace", entity_id=workspace_id, action=DEMO_WORKSPACE_CREATE_ACTION, new_value={"dataset": "Sprint 8B synthetic demo dataset", "provenance_version": 1})
 
     def get_settings(self, workspace_id: UUID) -> Workspace | None:
         if hasattr(self, "workspaces"):

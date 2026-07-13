@@ -5,10 +5,10 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.role import RoleName
+from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.onboarding_repository import OnboardingRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.schemas.onboarding import OnboardingNextAction, OnboardingStatusResponse, OnboardingSteps
-from app.services.workspace_service import is_demo_workspace_slug
 
 
 class OnboardingAccessError(PermissionError):
@@ -20,6 +20,7 @@ class OnboardingService:
         self.db = db
         self.onboarding = OnboardingRepository(db)
         self.workspaces = WorkspaceRepository(db)
+        self.audit_logs = AuditLogRepository(db)
 
     def get_status(self, workspace_id: UUID, user_id: UUID) -> OnboardingStatusResponse:
         membership = self.workspaces.get_active_membership(workspace_id, user_id)
@@ -39,7 +40,7 @@ class OnboardingService:
         return OnboardingStatusResponse(
             workspace_id=workspace_id,
             role=RoleName(membership.role.name),
-            is_demo_workspace=is_demo_workspace_slug(workspace.slug),
+            is_demo_workspace=self.audit_logs.has_demo_workspace_provenance(workspace_id),
             is_empty=completed <= 1 and not any([steps.product_created, steps.stock_added, steps.lead_or_customer_created, steps.order_created]),
             progress_percent=round((completed / total) * 100),
             completed_steps=completed,
