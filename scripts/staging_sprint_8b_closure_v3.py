@@ -103,7 +103,7 @@ class Sprint8BClosureV3(v2.Sprint8BClosureV2):
                     marker_visible = self.real_marker in initial_real_body
 
                     if not marker_visible:
-                        search_input = page.locator("input").first
+                        search_input = page.locator("main input:visible").first
                         if search_input.count() > 0:
                             search_input.fill(self.real_marker)
                             page.wait_for_timeout(1200)
