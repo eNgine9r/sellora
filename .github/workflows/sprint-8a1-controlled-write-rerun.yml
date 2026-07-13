@@ -1,0 +1,171 @@
+name: Sprint 8A.1 Controlled-write E2E Rerun
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/sprint-8a1-controlled-write-rerun.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sellora-sprint-8a1-controlled-write-rerun
+  cancel-in-progress: false
+
+jobs:
+  controlled-write-rerun:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_ANALYST_EMAIL: ${{ secrets.STAGING_ANALYST_EMAIL }}
+      STAGING_ANALYST_PASSWORD: ${{ secrets.STAGING_ANALYST_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+      STAGING_EXPECTED_ALEMBIC_REVISION: "202607130021"
+      STAGING_RUNTIME_ALEMBIC_REVISION: "202607130021"
+      STAGING_ALLOW_CONTROLLED_WRITES: "true"
+
+    steps:
+      - name: Checkout temporary QA branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate safety inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import uuid
+          required = [
+              "STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD",
+              "STAGING_ANALYST_EMAIL", "STAGING_ANALYST_PASSWORD",
+              "STAGING_TEST_WORKSPACE_ID",
+          ]
+          if any(not os.environ.get(name) for name in required):
+              raise SystemExit("Missing required secrets")
+          uuid.UUID(os.environ["STAGING_TEST_WORKSPACE_ID"])
+          if os.environ.get("STAGING_ALLOW_CONTROLLED_WRITES") != "true":
+              raise SystemExit("Controlled writes not enabled")
+          if os.environ.get("STAGING_EXPECTED_ALEMBIC_REVISION") != "202607130021":
+              raise SystemExit("Unexpected expected revision")
+          if os.environ.get("STAGING_RUNTIME_ALEMBIC_REVISION") != "202607130021":
+              raise SystemExit("Runtime revision not verified")
+          print("Safety preflight: PASS")
+          PY
+
+      - name: Warm backend health
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, time
+          from urllib.request import urlopen
+          from urllib.error import HTTPError, URLError
+          url = os.environ["STAGING_API_URL"].rstrip("/") + "/health"
+          last = "not attempted"
+          for attempt in range(1, 9):
+              try:
+                  with urlopen(url, timeout=25) as response:
+                      last = f"HTTP {response.status}"
+                      if response.status == 200:
+                          print(f"Backend warm-up: PASS on attempt {attempt}")
+                          raise SystemExit(0)
+              except HTTPError as exc:
+                  last = f"HTTP {exc.code}"
+              except (URLError, TimeoutError) as exc:
+                  last = exc.__class__.__name__
+              time.sleep(8)
+          raise SystemExit(f"Backend not ready: {last}")
+          PY
+
+      - name: Patch runner expected revision
+        run: |
+          sed -i 's/EXPECTED_REVISION = "202607080020"/EXPECTED_REVISION = "202607130021"/' scripts/staging_controlled_write_e2e.py
+          grep -q 'EXPECTED_REVISION = "202607130021"' scripts/staging_controlled_write_e2e.py
+          python -m py_compile scripts/staging_controlled_write_e2e.py
+
+      - name: Execute synthetic controlled-write flow
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts
+          python scripts/staging_controlled_write_e2e.py > artifacts/controlled-write-console.log 2>&1
+          code=$?
+          echo "$code" > artifacts/controlled-write-exit-code.txt
+          exit 0
+
+      - name: Validate evidence and sanitization
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          artifact = Path("artifacts/staging-controlled-write-e2e.json")
+          summary = Path("artifacts/staging-controlled-write-summary.json")
+          console = Path("artifacts/controlled-write-console.log")
+          if not artifact.exists():
+              raise SystemExit("Artifact missing")
+          texts = [path.read_text(encoding="utf-8", errors="replace") if path.exists() else "" for path in (artifact, summary, console)]
+          sensitive = [
+              os.environ.get("STAGING_OWNER_EMAIL", ""),
+              os.environ.get("STAGING_OWNER_PASSWORD", ""),
+              os.environ.get("STAGING_ANALYST_EMAIL", ""),
+              os.environ.get("STAGING_ANALYST_PASSWORD", ""),
+              os.environ.get("STAGING_TEST_WORKSPACE_ID", ""),
+          ]
+          for value in sensitive:
+              if value and any(value in text for text in texts):
+                  raise SystemExit("Secret value detected in output")
+          for marker in ("access_token", "refresh_token", "Authorization", "Bearer "):
+              if any(marker in text for text in texts):
+                  raise SystemExit(f"Sensitive marker detected: {marker}")
+          data = json.loads(artifact.read_text(encoding="utf-8"))
+          checks = data.get("checks", {})
+          failed = [name for name, result in checks.items() if result.get("status") != "PASS"]
+          if failed:
+              raise SystemExit(f"Failed checks: {failed}")
+          if data.get("decision") != "PASS":
+              raise SystemExit(f"Decision: {data.get('decision')}")
+          if data.get("safety", {}).get("nova_poshta_routes_requested"):
+              raise SystemExit("Nova Poshta route requested")
+          if data.get("safety", {}).get("migrations_executed") is not False:
+              raise SystemExit("Unexpected migration execution in E2E runner")
+          print(f"Controlled-write evidence: PASS ({len(checks)} checks)")
+          PY
+
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8a1-controlled-write-rerun-${{ github.run_id }}
+          path: |
+            artifacts/staging-controlled-write-e2e.json
+            artifacts/staging-controlled-write-summary.json
+            artifacts/controlled-write-exit-code.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce gate decision
+        if: always()
+        shell: bash
+        run: |
+          test "$(cat artifacts/controlled-write-exit-code.txt)" = "0"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("artifacts/staging-controlled-write-e2e.json").read_text())
+          if data.get("decision") != "PASS":
+              raise SystemExit(1)
+          print("CONTROLLED-WRITE E2E GATE: PASS")
+          PY
