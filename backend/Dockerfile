@@ -12,5 +12,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8000
-CMD ["sh", "-c", "alembic upgrade head && python scripts_seed.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Fail the image build immediately when the migration graph is incomplete.
+RUN python scripts/verify_alembic_revision.py
+RUN chmod +x render-start.sh
+
+EXPOSE 10000
+CMD ["sh", "render-start.sh"]
