@@ -12,8 +12,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Fail the image build immediately when the migration graph is incomplete.
+# Fail the image build immediately when the migration graph or mandatory
+# Sprint 8B API route package is incomplete.
 RUN python scripts/verify_alembic_revision.py
+RUN python scripts/verify_sprint_8b_routes.py
 RUN chmod +x render-start.sh
 
 EXPOSE 10000
