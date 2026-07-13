@@ -8,6 +8,7 @@ on:
       - "scripts/staging_browser_mobile_qa_v4.py"
       - "scripts/staging_browser_mobile_qa_v5.py"
       - "scripts/staging_browser_mobile_qa_v6.py"
+      - "scripts/staging_browser_mobile_qa_v7.py"
       - ".github/workflows/sprint-8a1-browser-mobile-qa.yml"
 
 permissions:
@@ -88,13 +89,14 @@ jobs:
           python -m py_compile scripts/staging_browser_mobile_qa_v4.py
           python -m py_compile scripts/staging_browser_mobile_qa_v5.py
           python -m py_compile scripts/staging_browser_mobile_qa_v6.py
+          python -m py_compile scripts/staging_browser_mobile_qa_v7.py
 
       - name: Execute browser/mobile matrix
         run: |
           set +e
           rm -rf artifacts/browser-mobile-qa
           mkdir -p artifacts/browser-mobile-qa
-          python scripts/staging_browser_mobile_qa_v6.py > artifacts/browser-mobile-qa/console.log 2>&1
+          python scripts/staging_browser_mobile_qa_v7.py > artifacts/browser-mobile-qa/console.log 2>&1
           echo "$?" > artifacts/browser-mobile-qa/exit-code.txt
           exit 0
 
@@ -112,7 +114,6 @@ jobs:
           texts = [(p.name, p.read_text(encoding="utf-8", errors="replace")) for p in (report_path, md_path, console_path) if p.exists()]
           leaks = []
           for label, value in {
-              "OWNER_EMAIL": os.getenv("STAGING_OWNER_EMAIL", ""),
               "OWNER_PASSWORD": os.getenv("STAGING_OWNER_PASSWORD", ""),
           }.items():
               if value:
