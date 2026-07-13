@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: sellora-sprint-8a1-browser-mobile-qa
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   browser-mobile-qa:
