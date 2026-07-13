@@ -223,3 +223,7 @@ Sprint 8A.1 remains blocked and the pilot release decision remains **RED — NO-
 ## Sprint 8B — Demo Data & First-run Experience
 
 Sprint 8B adds workspace-scoped onboarding status, role-aware first-run guidance and an isolated `Демо Sellora` workspace flow. Controlled guided pilot remains GREEN for monitored staging/pilot use; unrestricted public production launch remains not approved.
+
+## Sprint 8C import readiness update
+
+Import Center now has explicit pilot contracts for supported `.xlsx`/`.csv` formats, file limits, duplicate policy, dry-run-before-execute gating, workspace-switch state clearing, and PII-safe handling guidance. Full Sprint 8C approval still requires staging import gates and browser/mobile QA with synthetic data.

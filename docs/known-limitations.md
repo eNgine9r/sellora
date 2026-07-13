@@ -482,3 +482,10 @@ Sprint 7F runtime PostgreSQL migration QA remains blocked separately and is not 
 ## Sprint 8B limitations
 
 First-run guidance and demo workspace generation are implemented for controlled guided pilots. Public self-service onboarding, billing, live Instagram/Meta integrations, real Nova Poshta TTN validation, Import Center deep QA, Finance deep QA and Advertising deep QA remain future sprint scope.
+
+## Sprint 8C import limitations
+
+- Import Center hardening does not add background jobs, public file storage, AI mapping, Google Sheets sync, Meta live sync, or Nova Poshta TTN creation.
+- Durable dry-run token persistence would require a schema change; Sprint 8C records an audit signature and revalidates on execute without adding a migration.
+- Staging import gates, 100/1,000 row benchmarks, and browser/mobile import QA remain required before full Sprint 8C approval.
+- Issue #134 remains a focused QA item for archived variants and zero-stock inventory rows.

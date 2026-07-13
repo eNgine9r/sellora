@@ -548,3 +548,7 @@ Sprint 8A.1 closure evidence is preserved in the release-gate docs. Current prod
 ### Sprint 8B — Demo Data & First-run Experience
 
 Sprint 8B adds a workspace-scoped onboarding status API, role-aware first-run checklist, separate synthetic `Демо Sellora` workspace creation/deactivation flow, and pilot first-run docs. Demo data is isolated from real workspaces and does not call Meta or Nova Poshta.
+
+### Sprint 8C Import Center pilot hardening
+
+Sprint 8C documents and hardens the Import Center pilot path for `.xlsx` and `.csv` uploads. The current contract requires a successful dry-run before execution, workspace-scoped import jobs/logs, duplicate-policy review, all-or-nothing pilot expectations, synthetic templates only, and no Meta/Nova Poshta external calls during import QA. See `docs/sprint-8c-import-center-pilot-hardening.md`, `docs/import-template-contracts.md`, `docs/import-validation-error-catalog.md`, `docs/import-security-and-data-handling.md`, and `docs/pilot-import-guide.md`.

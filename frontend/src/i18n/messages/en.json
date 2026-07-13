@@ -1396,7 +1396,9 @@
     "requiredColumns": "Required columns: Date, Campaign.",
     "optionalColumns": "Recommended columns: Platform, Spend, Messages, Leads, Orders, Revenue, Net Profit, Impressions, Clicks.",
     "duplicateHint": "Duplicate rows with the same campaign and date must be explained in dry-run: create, update, skip, or warning.",
-    "afterImport": "After a successful import, open Advertising, Dashboard, and Analytics with the same period."
+    "afterImport": "After a successful import, open Advertising, Dashboard, and Analytics with the same period.",
+    "uploading": "Uploading…",
+    "uploadLimits": "Supports .xlsx and .csv up to 10 MB, 5,000 rows, 100 columns, and 20 sheets. Macros and executable files are rejected."
   },
   "novaPoshta": {
     "title": "Nova Poshta",
