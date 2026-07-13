@@ -365,10 +365,22 @@ class Gate:
             self.cleanup_actions.append({"entity": "order_cancel", "id": self.created["order_id"], "http": code})
             code, payload = self.req("DELETE", f"/orders/{self.created['order_id']}")
             self.cleanup_actions.append({"entity": "order_archive", "id": self.created["order_id"], "http": code})
-        # Reset inventory to zero through public API before archiving variant/product.
+        # Reset stock to zero through public API before archiving variant/product.
+        # InventoryTransactionCreate requires quantity > 0, so ADJUSTMENT to 0 is invalid.
+        # After order cancellation reserved_quantity should be 0; remove remaining stock with STOCK_OUT.
         if self.inventory_id:
-            code, payload = self.req("POST", f"/inventory/{self.inventory_id}/transactions", body={"transaction_type": "ADJUSTMENT", "quantity": 0, "reason": f"{self.marker} cleanup reset"})
-            self.cleanup_actions.append({"entity": "inventory_reset", "id": self.inventory_id, "http": code})
+            try:
+                inventory = self.get(f"/inventory/{self.inventory_id}")
+                stock_quantity = int(inventory.get("stock_quantity") or 0)
+                reserved_quantity = int(inventory.get("reserved_quantity") or 0)
+                if reserved_quantity > 0:
+                    code, payload = self.req("POST", f"/inventory/{self.inventory_id}/transactions", body={"transaction_type": "UNRESERVE", "quantity": reserved_quantity, "reason": f"{self.marker} cleanup unreserve"})
+                    self.cleanup_actions.append({"entity": "inventory_unreserve", "id": self.inventory_id, "http": code})
+                if stock_quantity > 0:
+                    code, payload = self.req("POST", f"/inventory/{self.inventory_id}/transactions", body={"transaction_type": "STOCK_OUT", "quantity": stock_quantity, "reason": f"{self.marker} cleanup stock-out"})
+                    self.cleanup_actions.append({"entity": "inventory_stock_out", "id": self.inventory_id, "http": code})
+            except Exception as exc:
+                self.cleanup_actions.append({"entity": "inventory_reset", "id": self.inventory_id, "http": 0, "error": exc.__class__.__name__})
         if self.created.get("variant_id"):
             code, payload = self.req("DELETE", f"/products/variants/{self.created['variant_id']}")
             self.cleanup_actions.append({"entity": "variant", "id": self.created["variant_id"], "http": code})
