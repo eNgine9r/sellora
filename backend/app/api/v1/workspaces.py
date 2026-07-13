@@ -9,7 +9,7 @@ from app.dependencies.rbac import get_workspace_id
 from app.models.role import RoleName
 from app.models.user import User
 from app.models.workspace_user import WorkspaceUser
-from app.schemas.workspace import WorkspaceCreate, WorkspaceResponse, WorkspaceSettingsResponse, WorkspaceSettingsUpdate
+from app.schemas.workspace import DemoWorkspaceCreate, DemoWorkspaceDeactivateResponse, WorkspaceCreate, WorkspaceResponse, WorkspaceSettingsResponse, WorkspaceSettingsUpdate
 from app.services.workspace_service import WorkspacePermissionError, WorkspaceService, WorkspaceValidationError
 
 router = APIRouter(prefix="/workspaces", tags=["Workspaces"])
@@ -31,6 +31,26 @@ def create_workspace(payload: WorkspaceCreate, current_user: User = Depends(get_
         return _membership_response(WorkspaceService(db).create_workspace(payload, current_user.id))
     except WorkspaceValidationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/demo", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
+def create_demo_workspace(payload: DemoWorkspaceCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> WorkspaceResponse:
+    try:
+        return _membership_response(WorkspaceService(db).create_or_get_demo_workspace(current_user.id, locale=payload.locale, currency_code=payload.currency_code.value))
+    except WorkspaceValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.patch("/demo/deactivate", response_model=DemoWorkspaceDeactivateResponse)
+def deactivate_demo_workspace(workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> DemoWorkspaceDeactivateResponse:
+    service = WorkspaceService(db)
+    try:
+        membership = service.deactivate_demo_workspace(workspace_id, current_user.id)
+    except WorkspacePermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient workspace permissions") from exc
+    except WorkspaceValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return DemoWorkspaceDeactivateResponse(workspace_id=membership.workspace_id, is_active=membership.workspace.is_active, message="Demo workspace deactivated")
 
 
 @router.get("/current", response_model=WorkspaceSettingsResponse)

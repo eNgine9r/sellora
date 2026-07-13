@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from hashlib import sha256
 from collections import defaultdict
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
@@ -32,6 +33,11 @@ from app.schemas.order import OrderCreate, OrderItemCreate
 from app.services.advertising_service import AdCampaignService, AdMetricService, AdvertisingServiceError
 from app.services.business_utils import snapshot
 from app.services.order_service import OrderService, OrderServiceError
+
+IMPORT_MAX_ROWS = 5000
+IMPORT_MAX_COLUMNS = 100
+IMPORT_MAX_SHEETS = 20
+IMPORT_ALLOWED_SUFFIXES = {".xlsx", ".csv"}
 
 SUPPORTED_ENTITY_TYPES = {"customers", "products", "product_variants", "inventory", "orders", "ad_campaigns", "ad_metrics", "shipments", "product_catalog", "orders_history", "advertising_history"}
 YOUR_JEWELRY_SHEETS = ["Замовлення 2022-2025", "Аналітика Реклами 2023-2025", "Наявність на складі годинників", "Main Watchh інфа про товар"]
@@ -338,7 +344,10 @@ class ExcelParserService:
         from openpyxl import load_workbook
         workbook = load_workbook(file_path, read_only=True, data_only=True)
         try:
-            return list(workbook.sheetnames)
+            sheets = list(workbook.sheetnames)
+            if len(sheets) > IMPORT_MAX_SHEETS:
+                raise ImportServiceError(f"Workbook has more than {IMPORT_MAX_SHEETS} sheets")
+            return sheets
         finally:
             workbook.close()
 
@@ -359,6 +368,7 @@ class ExcelParserService:
             if not header:
                 return [], []
             columns = [self.normalizer.text(value) or f"column_{index + 1}" for index, value in enumerate(header)]
+            self._validate_columns(columns)
             rows: list[dict] = []
             for row in iterator:
                 if limit is not None and len(rows) >= limit:
@@ -366,14 +376,23 @@ class ExcelParserService:
                 if row is None or all(self.normalizer.text(value) is None for value in row):
                     continue
                 rows.append({columns[index]: self._clean_cell(value) for index, value in enumerate(row[: len(columns)])})
+                if limit is None and len(rows) > IMPORT_MAX_ROWS:
+                    raise ImportServiceError(f"Import file has more than {IMPORT_MAX_ROWS} data rows")
             return columns, rows
         finally:
             workbook.close()
 
     def _read_csv_rows(self, file_path: str, limit: int | None = None) -> tuple[list[str], list[dict]]:
         with open(file_path, encoding="utf-8-sig", newline="") as handle:
-            reader = csv.DictReader(handle)
-            columns = [column or f"column_{index + 1}" for index, column in enumerate(reader.fieldnames or [])]
+            sample = handle.read(4096)
+            handle.seek(0)
+            try:
+                dialect = csv.Sniffer().sniff(sample, delimiters=",;\t") if sample else csv.excel
+            except csv.Error:
+                dialect = csv.excel
+            reader = csv.DictReader(handle, dialect=dialect)
+            columns = [self.normalizer.text(column) or f"column_{index + 1}" for index, column in enumerate(reader.fieldnames or [])]
+            self._validate_columns(columns)
             rows: list[dict] = []
             for row in reader:
                 if limit is not None and len(rows) >= limit:
@@ -382,12 +401,24 @@ class ExcelParserService:
                 if all(self.normalizer.text(value) is None for value in cleaned.values()):
                     continue
                 rows.append(cleaned)
+                if limit is None and len(rows) > IMPORT_MAX_ROWS:
+                    raise ImportServiceError(f"Import file has more than {IMPORT_MAX_ROWS} data rows")
             return columns, rows
 
     def _clean_cell(self, value):
         if isinstance(value, datetime):
             return value.isoformat()
         return self.normalizer.text(value) if isinstance(value, str) else value
+
+    def _validate_columns(self, columns: list[str]) -> None:
+        if not columns:
+            raise ImportServiceError("Import sheet has no header row")
+        if len(columns) > IMPORT_MAX_COLUMNS:
+            raise ImportServiceError(f"Import sheet has more than {IMPORT_MAX_COLUMNS} columns")
+        normalized = [normalize_name(column) for column in columns]
+        duplicates = sorted({columns[index] for index, value in enumerate(normalized) if value and normalized.count(value) > 1})
+        if duplicates:
+            raise ImportServiceError(f"Duplicate header columns are not supported: {', '.join(duplicates[:5])}")
 
 
 class MappingSuggestionService:
@@ -1143,10 +1174,11 @@ class ImportService:
     async def upload(self, workspace_id: UUID, file: UploadFile, actor_user_id: UUID | None) -> ImportJob:
         safe_name = self._safe_filename(file.filename or "import.xlsx")
         suffix = Path(safe_name).suffix.lower()
-        if suffix not in {".xlsx", ".csv"}:
+        if suffix not in IMPORT_ALLOWED_SUFFIXES:
             raise ImportServiceError("Only .xlsx and .csv files are supported")
         content = await file.read()
-        if len(content) > get_settings().import_max_file_size_mb * 1024 * 1024:
+        self._validate_upload_content(safe_name, content)
+        if len(content) > min(get_settings().import_max_file_size_mb, 10) * 1024 * 1024:
             raise ImportServiceError("Import file exceeds size limit")
         job = self.jobs.create(ImportJob(workspace_id=workspace_id, file_name=safe_name, file_type=suffix.removeprefix("."), file_path="pending", status=ImportJobStatus.UPLOADED.value, created_by=actor_user_id))
         directory = Path(get_settings().import_storage_path) / str(workspace_id) / str(job.id)
@@ -1188,7 +1220,9 @@ class ImportService:
         else:
             report = self.product_catalog_importer.validate(rows, column_mapping, workspace_id) if entity_type == "product_catalog" else self.validator.validate(entity_type, column_mapping, rows, workspace_id, self.lookup)
             response = import_report(job.id, entity_type, sheet_name, rows, report, self.product_catalog_importer.metrics(rows, column_mapping, report) if entity_type == "product_catalog" else None)
-        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="ImportJob", entity_id=job.id, action="IMPORT_DRY_RUN", new_value=response.model_dump(mode="json", exclude={"sample_errors", "sample_warnings"}))
+        job.status = ImportJobStatus.VALIDATED.value if response.error_rows == 0 else ImportJobStatus.FAILED.value
+        job.total_rows = response.total_rows
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="ImportJob", entity_id=job.id, action="IMPORT_DRY_RUN", new_value={**response.model_dump(mode="json", exclude={"sample_errors", "sample_warnings"}), "dry_run_signature": dry_run_signature(job, entity_type, sheet_name, column_mapping, options)})
         self.db.commit()
         return response
 
@@ -1197,8 +1231,6 @@ class ImportService:
         _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
         report = self.product_catalog_importer.validate(rows, column_mapping, workspace_id) if entity_type == "product_catalog" else self.validator.validate(entity_type, column_mapping, rows, workspace_id, self.lookup)
         job.total_rows = report.total_rows
-        if report.is_valid:
-            job.status = ImportJobStatus.VALIDATED.value
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="ImportJob", entity_id=job.id, action="IMPORT_VALIDATE", new_value={"is_valid": report.is_valid, "total_rows": report.total_rows, "errors": len(report.errors), "warnings": len(report.warnings)})
         self.db.commit()
         return report
@@ -1209,6 +1241,8 @@ class ImportService:
         if mode != "create_only":
             raise ImportServiceError("Only create_only import mode is supported")
         job = self._job(workspace_id, job_id)
+        if job.status != ImportJobStatus.VALIDATED.value:
+            raise ImportServiceError("Successful dry-run is required before import execution")
         _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
         if entity_type in {"orders_history", "advertising_history"}:
             dry_report = self.historical_importer.dry_run(workspace_id, job.id, entity_type, sheet_name, rows, column_mapping)
@@ -1262,6 +1296,40 @@ class ImportService:
 
     def _safe_filename(self, filename: str) -> str:
         return Path(filename).name.replace("/", "_").replace("\\", "_")
+
+    def _validate_upload_content(self, filename: str, content: bytes) -> None:
+        suffix = Path(filename).suffix.lower()
+        if not content:
+            raise ImportServiceError("Import file is empty")
+        if suffix == ".xlsx" and not content.startswith(b"PK"):
+            raise ImportServiceError("Uploaded .xlsx file is not a valid workbook")
+        if suffix == ".csv":
+            if b"\x00" in content[:4096]:
+                raise ImportServiceError("CSV file appears to be binary or unsupported")
+            try:
+                content[:4096].decode("utf-8-sig")
+            except UnicodeDecodeError as exc:
+                raise ImportServiceError("CSV file must be UTF-8 encoded") from exc
+
+
+def dry_run_signature(job: ImportJob, entity_type: str, sheet_name: str, column_mapping: dict[str, str], options: dict | None = None) -> str:
+    payload = {
+        "workspace_id": str(job.workspace_id),
+        "job_id": str(job.id),
+        "file_name": job.file_name,
+        "file_type": job.file_type,
+        "entity_type": entity_type,
+        "sheet_name": sheet_name,
+        "column_mapping": dict(sorted(column_mapping.items())),
+        "options": options or {},
+    }
+    import json
+    return sha256(json.dumps(payload, sort_keys=True, default=str, ensure_ascii=False).encode()).hexdigest()
+
+
+def escape_csv_formula(value: object | None) -> str:
+    text = "" if value is None else str(value)
+    return f"'{text}" if text.startswith(("=", "+", "-", "@")) else text
 
 
 def map_row(raw_row: dict, column_mapping: dict[str, str]) -> dict:

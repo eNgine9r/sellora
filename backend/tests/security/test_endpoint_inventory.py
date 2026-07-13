@@ -1,10 +1,13 @@
+from collections import Counter
+
 from fastapi.routing import APIRoute
 
-from app.core.config import get_settings
 from app.main import app
 
 
 PUBLIC_ENDPOINTS = {"/health", "/api/v1/auth/login", "/api/v1/auth/refresh"}
+AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/me", "/api/v1/workspaces", "/api/v1/workspaces/demo"}
+FEATURE_GATED_PREFIXES = ("/api/v1/integrations/meta-ads",)
 WORKSPACE_PREFIXES = (
     "/api/v1/leads",
     "/api/v1/customers",
@@ -17,24 +20,33 @@ WORKSPACE_PREFIXES = (
     "/api/v1/analytics",
     "/api/v1/tags",
     "/api/v1/attachments",
-    "/api/v1/imports",
     "/api/v1/import",
     "/api/v1/feedback",
     "/api/v1/lead-sources",
-    "/api/v1/meta-ads",
-    "/api/v1/nova-poshta",
-    "/api/v1/integrations",
+    "/api/v1/integrations/nova-poshta",
     "/api/v1/workspace-users",
     "/api/v1/workspaces/current",
+    "/api/v1/workspaces/demo/deactivate",
+    "/api/v1/onboarding",
 )
 OWNER_ONLY_ENDPOINTS = {
     ("POST", "/api/v1/workspace-users"),
     ("PUT", "/api/v1/workspace-users/{user_id}/role"),
     ("PATCH", "/api/v1/workspace-users/{user_id}/deactivate"),
     ("PUT", "/api/v1/workspaces/current"),
+    ("PATCH", "/api/v1/workspaces/demo/deactivate"),
     ("POST", "/api/v1/advertising/campaigns"),
     ("POST", "/api/v1/advertising/metrics"),
 }
+EXPECTED_PRIMARY_COUNTS = {
+    "PUBLIC": 3,
+    "AUTHENTICATED_GLOBAL": 4,
+    "WORKSPACE_SCOPED": 134,
+    "FEATURE_GATED": 12,
+    "INTERNAL_OR_DOCUMENTATION": 0,
+}
+EXPECTED_TOTAL_ROUTES = 153
+EXPECTED_MUTATION_ROUTES = 84
 
 
 def _flatten_routes(routes, prefix: str = "") -> list[tuple[str, APIRoute]]:
@@ -53,20 +65,42 @@ def _api_routes() -> list[tuple[str, APIRoute]]:
     return _flatten_routes(app.routes)
 
 
-def test_endpoint_inventory_has_expected_workspace_scoped_security_surface() -> None:
-    routes = _api_routes()
-    workspace_routes = [(path, route) for path, route in routes if path.startswith(WORKSPACE_PREFIXES)]
-    owner_only = [(method, path) for path, route in routes for method in route.methods if (method, path) in OWNER_ONLY_ENDPOINTS]
+def _primary_scope(path: str) -> str:
+    if path in PUBLIC_ENDPOINTS:
+        return "PUBLIC"
+    if path in AUTHENTICATED_GLOBAL_ENDPOINTS:
+        return "AUTHENTICATED_GLOBAL"
+    if path.startswith(FEATURE_GATED_PREFIXES):
+        return "FEATURE_GATED"
+    if path.startswith(WORKSPACE_PREFIXES):
+        return "WORKSPACE_SCOPED"
+    return "INTERNAL_OR_DOCUMENTATION"
 
-    assert len(routes) >= 80
-    assert len(workspace_routes) >= 65
+
+def test_endpoint_inventory_primary_classifications_are_exactly_reconciled() -> None:
+    routes = _api_routes()
+    primary_counts = Counter(_primary_scope(path) for path, _route in routes)
+    classified_total = sum(primary_counts.values())
+
+    assert len(routes) == EXPECTED_TOTAL_ROUTES
+    assert classified_total == EXPECTED_TOTAL_ROUTES
+    assert {key: primary_counts[key] for key in EXPECTED_PRIMARY_COUNTS} == EXPECTED_PRIMARY_COUNTS
+
+
+def test_endpoint_inventory_permission_subsets_are_not_counted_as_primary_scopes() -> None:
+    routes = _api_routes()
+    owner_only = [(method, path) for path, route in routes for method in route.methods if (method, path) in OWNER_ONLY_ENDPOINTS]
+    mutation_routes = [(method, path) for path, route in routes for method in route.methods if method in {"POST", "PUT", "PATCH", "DELETE"}]
+
     assert len(owner_only) == len(OWNER_ONLY_ENDPOINTS)
+    assert len(mutation_routes) == EXPECTED_MUTATION_ROUTES
+    assert all(_primary_scope(path) in {"WORKSPACE_SCOPED", "FEATURE_GATED"} for _method, path in owner_only)
 
 
 def test_global_endpoint_whitelist_is_explicit_and_small() -> None:
-    public_or_global = {path for path, _route in _api_routes() if not path.startswith(WORKSPACE_PREFIXES)}
+    global_paths = {path for path, _route in _api_routes() if _primary_scope(path) in {"PUBLIC", "AUTHENTICATED_GLOBAL"}}
 
-    assert PUBLIC_ENDPOINTS.issubset(public_or_global)
-    assert "/api/v1/workspaces" in public_or_global
-    assert "/api/v1/workspaces/current" not in public_or_global
-    assert len(public_or_global - PUBLIC_ENDPOINTS - {"/api/v1/auth/me", "/api/v1/auth/logout", "/api/v1/workspaces", "/api/v1/workspaces/current"}) <= 8
+    assert PUBLIC_ENDPOINTS.issubset(global_paths)
+    assert AUTHENTICATED_GLOBAL_ENDPOINTS.issubset(global_paths)
+    assert "/api/v1/workspaces/current" not in global_paths
+    assert len(global_paths) == len(PUBLIC_ENDPOINTS | AUTHENTICATED_GLOBAL_ENDPOINTS)

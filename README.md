@@ -532,3 +532,23 @@ Sprint 7E adds backend security regression tests and a QA report for RBAC, works
 A confirmed Lead assignment hardening fix now requires the assignee's workspace membership and workspace to be active before assignment. No database migration, Meta feature work, or private-data caching was added.
 
 Sprint 7F runtime migration closure remains separately blocked until safe non-production PostgreSQL runtime migration QA can be completed.
+
+## Sprint 7E.1 security closure note
+
+Frontend dependency installation uses npm and the tracked `frontend/package-lock.json`; validate clean installs with `npm --prefix frontend ci`. Sprint 7E / 7E.1 security closure is approved by automated workspace-injection tests, endpoint inventory reconciliation, workspace-switch cache hardening, and regression guards. Sprint 7F runtime PostgreSQL migration QA remains separately blocked until an approved runtime environment is available.
+
+## Sprint 8A staging release gate
+
+Sprint 8A adds `scripts/staging_release_gate.py`, a safe staging smoke runner that reads staging URLs and role credentials from environment variables, suppresses tokens/passwords, and keeps synthetic writes behind `STAGING_ALLOW_CONTROLLED_WRITES=true`. The original local Sprint 8A execution recorded a RED/NO-GO when this validation container could not reach staging. Later controlled guided pilot closure is tracked in `docs/pilot-release-decision.md`, and Sprint 8B keeps that controlled pilot boundary while improving first-run UX.
+
+## Sprint 8A.1 staging E2E closure
+
+Sprint 8A.1 closure evidence is preserved in the release-gate docs. Current product planning treats controlled guided pilot access as GREEN while unrestricted public production launch remains not approved.
+
+### Sprint 8B — Demo Data & First-run Experience
+
+Sprint 8B adds a workspace-scoped onboarding status API, role-aware first-run checklist, separate synthetic `Демо Sellora` workspace creation/deactivation flow, and pilot first-run docs. Demo data is isolated from real workspaces and does not call Meta or Nova Poshta.
+
+### Sprint 8C Import Center pilot hardening
+
+Sprint 8C documents and hardens the Import Center pilot path for `.xlsx` and `.csv` uploads. The current contract requires a successful dry-run before execution, workspace-scoped import jobs/logs, duplicate-policy review, all-or-nothing pilot expectations, synthetic templates only, and no Meta/Nova Poshta external calls during import QA. See `docs/sprint-8c-import-center-pilot-hardening.md`, `docs/import-template-contracts.md`, `docs/import-validation-error-catalog.md`, `docs/import-security-and-data-handling.md`, and `docs/pilot-import-guide.md`.

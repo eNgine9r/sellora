@@ -83,3 +83,14 @@ class WorkspaceUserCreate(BaseModel):
 
 class WorkspaceUserRoleUpdate(BaseModel):
     role: RoleName
+
+
+class DemoWorkspaceCreate(BaseModel):
+    locale: str = Field(default="uk", max_length=8)
+    currency_code: CurrencyCode = CurrencyCode.UAH
+
+
+class DemoWorkspaceDeactivateResponse(BaseModel):
+    workspace_id: UUID
+    is_active: bool
+    message: str
