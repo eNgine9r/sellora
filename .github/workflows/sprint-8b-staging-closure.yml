@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts/staging_sprint_8b_closure.py"
       - "scripts/staging_sprint_8b_closure_v2.py"
+      - "scripts/staging_sprint_8b_closure_v3.py"
       - ".github/workflows/sprint-8b-staging-closure.yml"
 
 permissions:
@@ -96,13 +97,14 @@ jobs:
         run: |
           python -m py_compile scripts/staging_sprint_8b_closure.py
           python -m py_compile scripts/staging_sprint_8b_closure_v2.py
+          python -m py_compile scripts/staging_sprint_8b_closure_v3.py
 
       - name: Execute Sprint 8B staging closure
         shell: bash
         run: |
           set +e
           mkdir -p artifacts/sprint-8b-closure
-          python scripts/staging_sprint_8b_closure_v2.py > artifacts/sprint-8b-closure/console.log 2>&1
+          python scripts/staging_sprint_8b_closure_v3.py > artifacts/sprint-8b-closure/console.log 2>&1
           code=$?
           echo "$code" > artifacts/sprint-8b-closure/exit-code.txt
           exit 0
@@ -177,4 +179,4 @@ jobs:
           print("SPRINT 8B STAGING CLOSURE: PASS")
           PY
 
-# rerun after backend route package guard merge 2c9fe282
+# evidence-rich isolation rerun after commit 40b461dd
