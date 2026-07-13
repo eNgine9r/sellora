@@ -18,7 +18,7 @@ concurrency:
 jobs:
   staging-api-browser-closure:
     runs-on: ubuntu-24.04
-    timeout-minutes: 80
+    timeout-minutes: 95
     env:
       STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
       STAGING_API_URL: https://sellora-api-staging.onrender.com
@@ -61,22 +61,30 @@ jobs:
           print("Secure input preflight: PASS")
           PY
 
-      - name: Warm staging frontend and backend
+      - name: Wait for Sprint 8B staging deployment
         shell: bash
         run: |
           set -euo pipefail
           ready=false
-          for attempt in $(seq 1 10); do
+          for attempt in $(seq 1 30); do
             frontend_code="$(curl -sS -o /tmp/frontend.html -w "%{http_code}" --max-time 25 "$STAGING_FRONTEND_URL/login" || true)"
             backend_code="$(curl -sS -o /tmp/backend.json -w "%{http_code}" --max-time 25 "$STAGING_API_URL/health" || true)"
-            echo "Warm-up $attempt: frontend=$frontend_code backend=$backend_code"
-            if [[ "$frontend_code" =~ ^(200|301|302|307|308)$ ]] && [ "$backend_code" = "200" ]; then
+            onboarding_code="$(curl -sS -o /tmp/onboarding.json -w "%{http_code}" --max-time 25 "$STAGING_API_URL/api/v1/onboarding/status" || true)"
+            demo_code="$(curl -sS -o /tmp/demo.json -w "%{http_code}" --max-time 25 -X POST -H 'Content-Type: application/json' -d '{"locale":"uk","currency_code":"UAH"}' "$STAGING_API_URL/api/v1/workspaces/demo" || true)"
+            echo "Deployment probe $attempt: frontend=$frontend_code health=$backend_code onboarding=$onboarding_code demo=$demo_code"
+            if [[ "$frontend_code" =~ ^(200|301|302|307|308)$ ]] \
+              && [ "$backend_code" = "200" ] \
+              && [ "$onboarding_code" != "404" ] \
+              && [ "$onboarding_code" != "000" ] \
+              && [ "$demo_code" != "404" ] \
+              && [ "$demo_code" != "000" ]; then
               ready=true
               break
             fi
-            sleep 8
+            sleep 15
           done
-          [ "$ready" = "true" ] || { echo "Staging unavailable" >&2; exit 1; }
+          [ "$ready" = "true" ] || { echo "Sprint 8B backend routes are not deployed" >&2; exit 1; }
+          echo "Sprint 8B frontend/backend route readiness: PASS"
 
       - name: Install browser dependencies
         run: |
