@@ -45,16 +45,16 @@ Primary classifications are mutually exclusive; permission flags are subsets and
 
 | Metric | Count |
 | --- | ---: |
-| Total application routes | 150 |
+| Total application routes | 153 |
 | Public routes | 3 |
-| Authenticated global routes | 3 |
-| Workspace-scoped routes | 132 |
+| Authenticated global routes | 4 |
+| Workspace-scoped routes | 134 |
 | Feature-gated routes | 12 |
 | Internal/docs routes | 0 |
 | OWNER-only subset | 6 |
-| Mutation routes | 82 |
+| Mutation routes | 84 |
 
-Primary classification total: `3 + 3 + 132 + 12 + 0 = 150`.
+Primary classification total: `3 + 4 + 134 + 12 + 0 = 153`.
 
 OWNER-only routes are a permission subset of workspace-scoped or feature-gated routes, not an additional primary classification.
 

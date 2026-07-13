@@ -13,7 +13,7 @@ import { TopProductsCard, TopProductView } from "@/features/dashboard/components
 import { DateRangeSelector } from "@/components/date-range-selector";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { MetricCard, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
-import { DemoWorkspaceNotice, FirstRunEmptyCtas, SetupChecklist } from "@/components/pilot-readiness";
+import { DemoWorkspaceActions, DemoWorkspaceNotice, FirstRunChecklist } from "@/components/pilot-readiness";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
@@ -23,6 +23,7 @@ import { useDateRange } from "@/providers/date-range-provider";
 import { fetchAdvertisingSummary } from "@/services/advertising";
 import { fetchDashboardSummary, fetchInventorySummary, fetchProfitSummary, fetchSalesSummary, fetchSalesTrend, fetchTopProducts } from "@/services/analytics";
 import { fetchLeads } from "@/services/crm";
+import { fetchOnboardingStatus } from "@/services/onboarding";
 import { fetchOrders } from "@/services/orders";
 import { fetchProducts } from "@/services/products";
 import { fetchShipmentSummary } from "@/services/shipments";
@@ -95,6 +96,7 @@ export default function DashboardPage() {
   const inventory = useQuery({ queryKey: ["dashboard-inventory", workspaceId], queryFn: () => fetchInventorySummary(workspaceId), enabled });
   const shipments = useQuery({ queryKey: ["dashboard-shipments", workspaceId], queryFn: () => fetchShipmentSummary(workspaceId), enabled });
   const products = useQuery({ queryKey: ["dashboard-products", workspaceId], queryFn: () => fetchProducts(workspaceId), enabled });
+  const onboarding = useQuery({ queryKey: ["onboarding-status", workspaceId], queryFn: () => fetchOnboardingStatus(workspaceId), enabled });
 
   const currentOrders = useMemo(() => (orders.data ?? []).filter((order) => isInDateRange(order.created_at, range)), [orders.data, range.date_from, range.date_to]);
   const currentLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, range)), [leads.data, range.date_from, range.date_to]);
@@ -159,19 +161,14 @@ export default function DashboardPage() {
     !hasAdvertisingData ? { title: t("dashboard.ownerAlerts.noAds.title"), description: t("dashboard.ownerAlerts.noAds.description"), href: "/advertising", action: t("dashboard.ownerActions.openAdvertising"), tone: "violet" as const } : null,
     ordersCount === 0 && currentLeads.length === 0 ? { title: t("dashboard.ownerAlerts.noPeriodData.title"), description: t("dashboard.ownerAlerts.noPeriodData.description"), href: "/leads", action: t("dashboard.ownerActions.createLead"), tone: "emerald" as const } : null,
   ].filter(Boolean) as { title: string; description: string; href: string; action: string; tone: "violet" | "amber" | "rose" | "emerald" }[];
-  const setupItems = [
-    { key: "products", href: "/products", done: (products.data?.length ?? 0) > 0 },
-    { key: "orders", href: "/orders", done: (orders.data?.length ?? 0) > 0 },
-    { key: "advertising", href: "/advertising", done: toFiniteNumber(backendDashboard.data?.advertising.spend ?? advertising.data?.total_spend) > 0 },
-    { key: "integrations", href: "/settings/integrations", done: false },
-    { key: "analytics", href: "/analytics", done: totalRevenue > 0 || (backendDashboard.data?.sales.orders_count ?? currentOrderSummary.ordersCount) > 0 },
-  ];
-  const isFirstRun = !isLoading && !hasError && setupItems.every((item) => !item.done);
+  const isFirstRun = !isLoading && !hasError && (onboarding.data?.progress_percent ?? 0) < 100;
 
   return (
     <WorkspacePage>
         <WorkspaceHeader title={t("dashboard.titleCompact")} description={t("dashboard.descriptionCompact")} actions={<DateRangeSelector compact />} />
 
+        <DemoWorkspaceNotice workspace={currentWorkspace} />
+        {isFirstRun ? <div className="grid gap-3"><FirstRunChecklist status={onboarding.data} />{currentWorkspace?.role === "OWNER" && !onboarding.data?.is_demo_workspace ? <div><DemoWorkspaceActions /></div> : null}</div> : null}
         {hasError ? <ErrorState description={t("dashboard.errors.loadFailed")} onRetry={() => { backendDashboard.refetch(); salesSummary.refetch(); if (canSeeProfit) { profitSummary.refetch(); salesTrend.refetch(); topProducts.refetch(); } advertising.refetch(); orders.refetch(); leads.refetch(); inventory.refetch(); shipments.refetch(); }} /> : null}
         {isLoading ? <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4"><LoadingSkeleton rows={2} title={t("dashboard.loading.dashboard")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.orders")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.shipments")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.ads")} /></div> : null}
         <section data-dashboard-kpi-row className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -225,9 +222,6 @@ export default function DashboardPage() {
           <QuickActionsCard />
         </section>
 
-        <DemoWorkspaceNotice workspace={currentWorkspace} />
-        {isFirstRun ? <SetupChecklist items={setupItems} /> : null}
-        {isFirstRun ? <EmptyState title={t("firstRun.empty.title")} description={t("firstRun.empty.description")} action={<FirstRunEmptyCtas />} /> : null}
       </WorkspacePage>
   );
 }

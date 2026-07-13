@@ -33,7 +33,7 @@ Automated endpoint inventory test result:
 
 | Metric | Count |
 | --- | ---: |
-| Total FastAPI API routes in inventory | 150 |
+| Total FastAPI API routes in inventory | 153 |
 | Workspace-scoped routes classified by Sprint 7E guard | 144 |
 | OWNER-only routes explicitly checked | 6 |
 | Explicit global/public whitelist | `/health`, `/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/me`, `/api/v1/workspaces` |

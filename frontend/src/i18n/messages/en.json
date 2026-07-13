@@ -2025,5 +2025,69 @@
     "OWNER": "Owner",
     "MANAGER": "Manager",
     "ANALYST": "Analyst"
+  },
+  "demo": {
+    "viewDemo": "View Sellora demo",
+    "creating": "Creating demo workspace…",
+    "remove": "Remove demo workspace",
+    "removing": "Removing demo…",
+    "removeConfirm": "The demo workspace will be deactivated. Your real shop and its data will not change."
+  },
+  "gettingStarted": {
+    "eyebrow": "Getting started",
+    "title": "Start with Sellora",
+    "description": "Complete a few steps to set up your shop and create the first order.",
+    "analystDescription": "Explore key reports and metrics in read-only mode.",
+    "progress": "Completed {completed} of {total}",
+    "restricted": "Unavailable for your role",
+    "steps": {
+      "workspace": {
+        "title": "Configure shop",
+        "description": "Check name, currency and timezone."
+      },
+      "product": {
+        "title": "Add first product",
+        "description": "Create a product and variant for orders."
+      },
+      "stock": {
+        "title": "Add stock",
+        "description": "Record the opening inventory movement."
+      },
+      "lead": {
+        "title": "Create lead or customer",
+        "description": "Capture the first Instagram request."
+      },
+      "order": {
+        "title": "Create first order",
+        "description": "Connect customer, product and stock."
+      },
+      "dashboard": {
+        "title": "Open Dashboard",
+        "description": "Review core shop metrics."
+      },
+      "analytics": {
+        "title": "Open analytics",
+        "description": "Review sales reports."
+      },
+      "finance": {
+        "title": "Check finance",
+        "description": "Review revenue, costs and profit."
+      },
+      "advertising": {
+        "title": "Ad metrics",
+        "description": "Review spend, ROAS, CPA and CPL."
+      },
+      "inventory": {
+        "title": "Inventory state",
+        "description": "Review stock and low-stock signals."
+      }
+    }
+  },
+  "workspace": {
+    "demo": {
+      "badge": "Demo",
+      "synthetic": "Synthetic data",
+      "notReal": "Not real shop performance"
+    }
   }
 }

@@ -33,7 +33,7 @@ assert(/test_update_payload_workspace_injection/.test(injectionTest) && injectio
 assert(/test_nested_cross_workspace_reference_injection/.test(injectionTest) && injectionTest.includes("owner_workspace_id"), "Nested tenant reference scenario must exist.");
 assert(exists("frontend/package-lock.json"), "frontend/package-lock.json must exist.");
 assert(report.includes("npm --prefix frontend ci") && report.includes("No package manager switch"), "Lockfile recovery and npm CI policy must be documented.");
-assert(endpointInventory.includes("EXPECTED_PRIMARY_COUNTS") && endpointInventory.includes("EXPECTED_TOTAL_ROUTES = 150") && report.includes("Primary classification total"), "Route inventory totals must be exact and documented.");
+assert(endpointInventory.includes("EXPECTED_PRIMARY_COUNTS") && endpointInventory.includes("EXPECTED_TOTAL_ROUTES = 153") && report.includes("Primary classification total"), "Route inventory totals must be exact and documented.");
 assert(auditBacklog.includes("Role change") && auditBacklog.includes("Finance adjustments") && auditBacklog.includes("must never store passwords"), "Audit logging backlog must cover required events and secret-safety rule.");
 assert(authStore.includes("queryClient.cancelQueries") && authStore.includes("queryClient.invalidateQueries") && authStore.includes("queryClient.clear"), "Workspace switch/logout cache handling must cancel, invalidate and clear private cache.");
 for (const key of ["dashboard", "leads", "orders", "customers", "inventory", "shipments"]) {

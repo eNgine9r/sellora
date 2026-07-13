@@ -1,6 +1,7 @@
 "use client";
 
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
+import { DemoWorkspaceActions } from "@/components/pilot-readiness";
 import { useI18n } from "@/i18n/provider";
 
 export function NoWorkspaceOnboarding({ onWorkspaceCreated, onSwitchWorkspace }: { onWorkspaceCreated: () => Promise<void>; onSwitchWorkspace: (workspaceId: string) => void }) {
@@ -13,6 +14,7 @@ export function NoWorkspaceOnboarding({ onWorkspaceCreated, onSwitchWorkspace }:
           <p className="text-sm font-black uppercase tracking-[0.25em] text-violet-600 dark:text-violet-200">Sellora</p>
           <h1 className="mt-3 text-3xl font-black sm:text-4xl">{t("accountMenu.emptyWorkspaceTitle")}</h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300">{t("accountMenu.emptyWorkspaceDescription")}</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2"><DemoWorkspaceActions /></div>
         </div>
         <div className="text-left">
           <WorkspaceSwitcher memberships={[]} currentWorkspaceId={null} onSwitchWorkspace={onSwitchWorkspace} onCreated={onWorkspaceCreated} />

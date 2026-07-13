@@ -6,7 +6,7 @@ from app.main import app
 
 
 PUBLIC_ENDPOINTS = {"/health", "/api/v1/auth/login", "/api/v1/auth/refresh"}
-AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/me", "/api/v1/workspaces"}
+AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/me", "/api/v1/workspaces", "/api/v1/workspaces/demo"}
 FEATURE_GATED_PREFIXES = ("/api/v1/integrations/meta-ads",)
 WORKSPACE_PREFIXES = (
     "/api/v1/leads",
@@ -26,24 +26,27 @@ WORKSPACE_PREFIXES = (
     "/api/v1/integrations/nova-poshta",
     "/api/v1/workspace-users",
     "/api/v1/workspaces/current",
+    "/api/v1/workspaces/demo/deactivate",
+    "/api/v1/onboarding",
 )
 OWNER_ONLY_ENDPOINTS = {
     ("POST", "/api/v1/workspace-users"),
     ("PUT", "/api/v1/workspace-users/{user_id}/role"),
     ("PATCH", "/api/v1/workspace-users/{user_id}/deactivate"),
     ("PUT", "/api/v1/workspaces/current"),
+    ("PATCH", "/api/v1/workspaces/demo/deactivate"),
     ("POST", "/api/v1/advertising/campaigns"),
     ("POST", "/api/v1/advertising/metrics"),
 }
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 3,
-    "AUTHENTICATED_GLOBAL": 3,
-    "WORKSPACE_SCOPED": 132,
+    "AUTHENTICATED_GLOBAL": 4,
+    "WORKSPACE_SCOPED": 134,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 150
-EXPECTED_MUTATION_ROUTES = 82
+EXPECTED_TOTAL_ROUTES = 153
+EXPECTED_MUTATION_ROUTES = 84
 
 
 def _flatten_routes(routes, prefix: str = "") -> list[tuple[str, APIRoute]]:
