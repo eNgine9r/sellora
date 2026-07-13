@@ -11,12 +11,14 @@ const files = {
   auditRepository: read("backend/app/repositories/audit_log_repository.py"),
   dashboard: read("frontend/src/app/dashboard/page.tsx"),
   pilot: read("frontend/src/components/pilot-readiness.tsx"),
+  authStore: read("frontend/src/stores/auth.store.tsx"),
   uk: read("frontend/src/i18n/messages/uk.json"),
   en: read("frontend/src/i18n/messages/en.json"),
   release: read("docs/pilot-release-decision.md"),
 };
 const combined = Object.values(files).join("\n");
 const migrationNames = readdirSync("backend/alembic/versions");
+const switchWorkspaceBlock = files.authStore.match(/const switchWorkspace[\s\S]*?\}, \[currentWorkspaceId, queryClient\]\);/)?.[0] ?? "";
 const checks = [
   ["Sprint 8B report exists", existsSync("docs/sprint-8b-demo-data-first-run.md") && files.report.includes("Pre-implementation inventory")],
   ["demo dataset document exists", files.dataset.includes("Demo workspace dataset") && files.dataset.includes("never inserted into a user's real workspace")],
@@ -29,6 +31,8 @@ const checks = [
   ["demo eligibility ignores name and slug", files.auditRepository.includes("Workspace names, slugs, and record contents are intentionally ignored") && !files.onboardingService.includes("is_demo_workspace_slug")],
   ["rollback covered", files.workspaceService.includes("self.db.rollback()") && files.report.includes("Rollback behavior")],
   ["query cache cleared for demo lifecycle", files.pilot.includes("queryClient.clear()")],
+  ["workspace switch destroys previous tenant cache", switchWorkspaceBlock.includes("queryClient.clear()") && !switchWorkspaceBlock.includes("invalidateQueries()")],
+  ["workspace ID changes only after tenant cache clear", switchWorkspaceBlock.indexOf("queryClient.clear()") < switchWorkspaceBlock.indexOf("authStorage.setCurrentWorkspaceId")],
   ["no external Meta/Nova write path", !/novaposhta|nova.?poshta|graph\.facebook|meta.*post/i.test(files.workspaceService)],
   ["no new migration was added", !migrationNames.some((name) => /8b|onboarding|demo/i.test(name))],
   ["core demo scope is truthful", files.dataset.includes("Core demo scope") && files.dataset.includes("No shipment drafts") && files.dataset.includes("No advertising campaigns or metrics")],
