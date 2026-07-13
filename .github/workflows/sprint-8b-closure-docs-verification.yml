@@ -30,6 +30,6 @@ jobs:
         run: |
           set -euo pipefail
           grep -q "Sprint 8B — APPROVED" docs/sprint-8b-demo-data-first-run.md
-          grep -q "181" docs/sprint-8b-staging-closure.md
-          grep -q "0 FAIL" docs/sprint-8b-staging-closure.md
+          grep -q 'passed checks: `181`' docs/sprint-8b-staging-closure.md
+          grep -q 'failed checks: `0`' docs/sprint-8b-staging-closure.md
           grep -q "Sprint 8C" docs/pilot-release-decision.md
