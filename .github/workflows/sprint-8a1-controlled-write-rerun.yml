@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: sellora-sprint-8a1-controlled-write-rerun
-  cancel-in-progress: false
+  group: sellora-sprint-8a1-controlled-write-isolated
+  cancel-in-progress: true
 
 jobs:
   controlled-write-rerun:
@@ -94,7 +94,7 @@ jobs:
           grep -q 'EXPECTED_REVISION = "202607130021"' scripts/staging_controlled_write_e2e.py
           python -m py_compile scripts/staging_controlled_write_e2e.py
 
-      - name: Execute synthetic controlled-write flow
+      - name: Execute isolated synthetic controlled-write flow
         shell: bash
         run: |
           set +e
