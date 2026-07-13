@@ -6,6 +6,7 @@ echo "Render commit: ${RENDER_GIT_COMMIT:-unknown}"
 echo "Working directory: $(pwd)"
 
 python scripts/verify_alembic_revision.py
+python scripts/verify_sprint_8b_routes.py
 
 echo "Alembic current revision:"
 python -m alembic current
