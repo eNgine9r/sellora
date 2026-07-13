@@ -14,6 +14,7 @@ from app.api.v1.meta_ads_mock import router as meta_ads_mock_router
 from app.api.v1.nova_poshta import router as nova_poshta_router
 from app.api.v1.products import router as products_router
 from app.api.v1.tags import router as tags_router
+from app.api.v1.onboarding import router as onboarding_router
 from app.api.v1.orders import router as orders_router
 from app.api.v1.shipments import router as shipments_router
 from app.api.v1.import_center import router as import_center_router
@@ -33,6 +34,7 @@ api_router.include_router(finance_router)
 api_router.include_router(products_router)
 api_router.include_router(import_center_router)
 api_router.include_router(inventory_router)
+api_router.include_router(onboarding_router)
 api_router.include_router(orders_router)
 api_router.include_router(meta_ads_router)
 api_router.include_router(meta_ads_mock_router)

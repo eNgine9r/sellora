@@ -38,6 +38,22 @@ class WorkspaceRepository:
             return membership
         return None
 
+
+    def find_active_demo_for_user(self, user_id: UUID) -> WorkspaceUser | None:
+        stmt = (
+            select(WorkspaceUser)
+            .join(WorkspaceUser.workspace)
+            .where(
+                WorkspaceUser.user_id == user_id,
+                WorkspaceUser.is_active.is_(True),
+                Workspace.is_active.is_(True),
+                Workspace.slug.like("demo-sellora-%"),
+            )
+            .options(selectinload(WorkspaceUser.workspace), selectinload(WorkspaceUser.role))
+            .order_by(Workspace.created_at.asc())
+        )
+        return self.db.execute(stmt).scalars().first()
+
     def get_workspace(self, workspace_id: UUID) -> Workspace | None:
         return self.db.get(Workspace, workspace_id)
 
