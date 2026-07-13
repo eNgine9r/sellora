@@ -1,0 +1,35 @@
+name: PR 130 Backend Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/pr130-backend-regression.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  backend-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend dependencies
+        run: python -m pip install --disable-pip-version-check -r backend/requirements.txt
+      - name: Run order regression tests
+        working-directory: backend
+        run: python -m pytest tests/test_order_number_workspace_uniqueness.py tests/test_orders.py -q
+      - name: Validate Alembic head
+        working-directory: backend
+        run: |
+          python -m alembic heads
+          test "$(python -m alembic heads | awk '{print $1}')" = "202607130021"
