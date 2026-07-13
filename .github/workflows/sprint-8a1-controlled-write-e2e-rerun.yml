@@ -126,7 +126,6 @@ jobs:
               "OWNER_PASSWORD": os.environ.get("STAGING_OWNER_PASSWORD", ""),
               "ANALYST_EMAIL": os.environ.get("STAGING_ANALYST_EMAIL", ""),
               "ANALYST_PASSWORD": os.environ.get("STAGING_ANALYST_PASSWORD", ""),
-              "WORKSPACE_ID": os.environ.get("STAGING_TEST_WORKSPACE_ID", ""),
           }
           leaks = []
           for label, value in sensitive.items():
