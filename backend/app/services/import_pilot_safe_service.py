@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.import_job import ImportJobStatus
 from app.schemas.import_center import ImportReportResponse, ImportValidationIssue, ImportValidationReport
-from app.services.import_center_service import ImportServiceError, issue
+from app.services.import_center_service import ImportServiceError, issue, map_row
 from app.services.import_durable_service import (
     DurableImportService,
     append_report_issues,
@@ -58,11 +58,54 @@ def formula_injection_issues(
     return issues
 
 
+def append_inventory_update_plan(
+    report: ImportReportResponse,
+    update_rows: list[int],
+) -> ImportReportResponse:
+    """Describe absolute inventory SET operations before execute.
+
+    Inventory import does not add opening stock. It sets the current quantities
+    to the mapped values. Existing inventory rows are therefore reported as
+    updates, not creations or silent duplicates.
+    """
+
+    if not update_rows:
+        return report
+    warnings: list[ImportValidationIssue] = []
+    for row_number in update_rows:
+        warning = issue(
+            row_number,
+            "WARNING",
+            "stock_quantity",
+            "Existing inventory will be updated using absolute quantities",
+        )
+        report.warnings_by_row.setdefault(row_number, []).append(warning)
+        warnings.append(warning)
+    report.sample_warnings.extend(warnings[: max(0, 10 - len(report.sample_warnings))])
+    report.warnings_count += len(warnings)
+    report.warning_rows = len(set(report.warnings_by_row))
+    report.updated_count = len(update_rows)
+    report.created_count = max(report.ready_to_import_rows - report.updated_count, 0)
+    report.estimated_entities_to_create = report.created_count
+    return report
+
+
 class PilotSafeImportService(DurableImportService):
     """Durable Import Center service with controlled-pilot input safety."""
 
     def __init__(self, db: Session, source_storage: ImportSourceStorage | None = None) -> None:
         super().__init__(db, source_storage=source_storage)
+
+    def _mapped_rows(
+        self,
+        workspace_id: UUID,
+        job_id: UUID,
+        sheet_name: str,
+        column_mapping: dict[str, str],
+    ) -> list[dict]:
+        job = self._job(workspace_id, job_id)
+        _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
+        return [self.validator.normalized_row(map_row(row, column_mapping)) for row in rows]
 
     def _formula_issues(
         self,
@@ -76,6 +119,26 @@ class PilotSafeImportService(DurableImportService):
         job = self._job(workspace_id, job_id)
         _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
         return formula_injection_issues(rows, safe_mapping)
+
+    def _inventory_update_rows(
+        self,
+        workspace_id: UUID,
+        job_id: UUID,
+        entity_type: str,
+        sheet_name: str,
+        column_mapping: dict[str, str],
+    ) -> list[int]:
+        if entity_type != "inventory":
+            return []
+        update_rows: list[int] = []
+        for row_number, data in enumerate(
+            self._mapped_rows(workspace_id, job_id, sheet_name, column_mapping),
+            start=2,
+        ):
+            variant = self.lookup.find_variant(workspace_id, sku=data.get("variant_sku"))
+            if variant and self.lookup.inventory_by_variant(workspace_id, variant.id):
+                update_rows.append(row_number)
+        return update_rows
 
     def validate(
         self,
@@ -134,6 +197,16 @@ class PilotSafeImportService(DurableImportService):
             column_mapping,
         )
         append_report_issues(report, unsafe)
+        append_inventory_update_plan(
+            report,
+            self._inventory_update_rows(
+                workspace_id,
+                job_id,
+                entity_type,
+                sheet_name,
+                column_mapping,
+            ),
+        )
         if unsafe:
             job = self._job(workspace_id, job_id)
             job.status = ImportJobStatus.FAILED.value
