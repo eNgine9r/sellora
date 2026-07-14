@@ -14,7 +14,7 @@ import { ImportUploadCard } from "@/features/import-center/components/import-upl
 import { SheetSelector } from "@/features/import-center/components/sheet-selector";
 import { ValidationReport } from "@/features/import-center/components/validation-report";
 import { ValidationIssuesTable } from "@/features/import-center/components/validation-issues-table";
-import { getImportCenterPilotCopy } from "@/features/import-center/import-center-pilot-copy";
+import { getImportCenterPilotCopy, importEntityLabel } from "@/features/import-center/import-center-pilot-copy";
 import { dryRunImport, executeImport, fetchImportLogs, fetchImportSheets, previewImportSheet, suggestImportMapping, uploadImportFile, validateImportMapping } from "@/services/import-center";
 import { ImportJob, ImportPreview, ImportReport, MappingSuggestion, ValidationReport as ValidationReportType } from "@/types/import-center";
 import { useAuth } from "@/hooks/use-auth";
@@ -50,15 +50,7 @@ export default function ImportCenterPage() {
   const [approvedDryRunKey, setApprovedDryRunKey] = useState<string | null>(null);
 
   useEffect(() => {
-    setJobId("");
-    setJob(null);
-    setSheetName("");
-    setMapping({});
-    setPreview(undefined);
-    setReport(undefined);
-    setDryRunReport(undefined);
-    setSuggestion(undefined);
-    setApprovedDryRunKey(null);
+    setJobId(""); setJob(null); setSheetName(""); setMapping({}); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setSuggestion(undefined); setApprovedDryRunKey(null);
   }, [workspaceId]);
 
   const sheets = useQuery({ queryKey: ["import-sheets", workspaceId, jobId], queryFn: () => fetchImportSheets(workspaceId, jobId, undefined), enabled: enabled && Boolean(jobId) });
@@ -66,20 +58,10 @@ export default function ImportCenterPage() {
   const upload = useMutation({ mutationFn: (file: File) => uploadImportFile(workspaceId, file, undefined), onSuccess: (response) => { setJobId(response.job_id); setSheetName(""); setMapping({}); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setApprovedDryRunKey(null); } });
 
   function choosePreset(value: string) {
-    setPreset(value);
-    setDryRunReport(undefined);
-    setApprovedDryRunKey(null);
-    if (value === "your_jewelry_product_catalog_v1") {
-      setEntityType("product_catalog");
-      setMapping({});
-    } else if (value === "your_jewelry_orders_history_v1") {
-      setEntityType("orders_history");
-      setMapping({});
-      setAffectInventory(false);
-    } else if (value === "your_jewelry_advertising_history_v1") {
-      setEntityType("advertising_history");
-      setMapping({});
-    }
+    setPreset(value); setDryRunReport(undefined); setApprovedDryRunKey(null);
+    if (value === "your_jewelry_product_catalog_v1") { setEntityType("product_catalog"); setMapping({}); }
+    else if (value === "your_jewelry_orders_history_v1") { setEntityType("orders_history"); setMapping({}); setAffectInventory(false); }
+    else if (value === "your_jewelry_advertising_history_v1") { setEntityType("advertising_history"); setMapping({}); }
   }
 
   const importOptions = entityType === "orders_history" ? { affect_inventory: affectInventory } : undefined;
@@ -109,7 +91,7 @@ export default function ImportCenterPage() {
       {jobId ? <section className="rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900"><p className="text-sm text-slate-500">{t("importCenter.importJob")}</p><p className="break-all font-mono text-sm">{jobId}</p></section> : null}
       <section className="grid min-w-0 max-w-full gap-3 overflow-hidden rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900 sm:grid-cols-2 lg:grid-cols-4">
         <SheetSelector sheets={sheets.data?.sheets ?? []} value={sheetName} onChange={(value) => { setSheetName(value); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setApprovedDryRunKey(null); }} />
-        <select className="w-full min-w-0 max-w-full truncate rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" value={entityType} onChange={(event) => { setEntityType(event.target.value); setMapping({}); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setApprovedDryRunKey(null); }}>{entityTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
+        <label className="grid min-w-0 gap-1 text-sm"><span className="sr-only">{pilotCopy.entityType}</span><select aria-label={pilotCopy.entityType} className="w-full min-w-0 max-w-full truncate rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" value={entityType} onChange={(event) => { setEntityType(event.target.value); setMapping({}); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setApprovedDryRunKey(null); }}>{entityTypes.map((type) => <option key={type} value={type}>{importEntityLabel(type, locale)}</option>)}</select></label>
         <button className="min-h-11 w-full min-w-0 whitespace-normal rounded bg-blue-600 px-4 py-2 font-semibold text-white" onClick={() => previewMutation.mutate()} disabled={!sheetName}>{t("actions.preview")}</button>
         <button className="min-h-11 w-full min-w-0 whitespace-normal rounded bg-indigo-600 px-4 py-2 font-semibold text-white" onClick={() => suggestMutation.mutate()} disabled={!sheetName}>{t("importCenter.suggestMapping")}</button>
       </section>
