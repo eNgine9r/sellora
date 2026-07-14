@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/staging_sprint_8c_phase_a.py"
+      - "scripts/staging_sprint_8c_phase_a_wait.py"
       - ".github/workflows/sprint-8c-phase-a.yml"
 
 permissions:
@@ -35,9 +36,9 @@ jobs:
       - name: Install QA dependency
         run: python -m pip install httpx
       - name: Compile runner
-        run: python -m py_compile scripts/staging_sprint_8c_phase_a.py
-      - name: Execute Phase A
-        run: python scripts/staging_sprint_8c_phase_a.py
+        run: python -m py_compile scripts/staging_sprint_8c_phase_a.py scripts/staging_sprint_8c_phase_a_wait.py
+      - name: Execute Phase A after runtime deployment
+        run: python scripts/staging_sprint_8c_phase_a_wait.py
       - name: Validate sanitized evidence
         if: always()
         shell: bash
