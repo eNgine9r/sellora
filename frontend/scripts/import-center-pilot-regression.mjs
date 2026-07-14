@@ -36,7 +36,7 @@ const checks = [
   ["pilot guide exists", files.guide.includes("Run validation and dry-run") && files.guide.includes("Do not use Meta Ads live sync")],
   ["dry-run required before execute", files.service.includes("Successful dry-run is required before import execution") && files.page.includes("approvedDryRunKey !== dryRunKey")],
   ["persisted dry-run signature guard", files.guard.includes("IMPORT_DRY_RUN_APPROVED_ACTION") && files.guard.includes("file_sha256") && files.guard.includes("require_matching_dry_run") && files.audit.includes("latest_action_value") && files.api.includes("guard.require_matching_dry_run") && files.guardTests.includes("test_persisted_signature_survives_new_guard_instance")],
-  ["durable source storage exists", files.durable.includes("DurableImportService") && files.storage.includes("supabase://") && files.storage.includes("assert_workspace_job_location")],
+  ["durable source storage exists", files.durable.includes("DurableImportService") && files.storage.includes('URI_SCHEME = "supabase"') && files.storage.includes('return f"{self.URI_SCHEME}://') && files.storage.includes("assert_workspace_job_location")],
   ["duplicate policy documented", /Default pilot behavior is safe skip\/warning\/reject|Default pilot policy is `SKIP`/i.test(files.report + files.contracts)],
   ["workspace-switch clears import state", files.page.includes("useEffect") && files.page.includes("setDryRunReport(undefined)") && files.security.includes("Workspace switch behavior")],
   ["ANALYST execute denial exists", files.tests.includes("test_analyst_execute_denied") && files.security.includes("ANALYST")],
