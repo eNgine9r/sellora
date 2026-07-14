@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_roles
+from app.models.import_job import ImportJobStatus
 from app.models.import_job_log import ImportJobLogStatus
 from app.models.role import RoleName
 from app.models.user import User
@@ -24,6 +25,7 @@ from app.schemas.import_center import (
     YourJewelryPresetResponse,
     SheetListResponse,
 )
+from app.services.import_atomic_execution import AtomicImportSession, persist_rolled_back_import
 from app.services.import_center_service import ImportService, ImportServiceError, MappingSuggestionService, YOUR_JEWELRY_EXCEL_V1
 from app.services.import_execution_guard import ImportExecutionGuard, ImportExecutionGuardError
 
@@ -128,21 +130,11 @@ def dry_run_import(job_id: UUID, payload: ImportValidationRequest, workspace_id:
 
 @router.post("/{job_id}/execute", response_model=ImportExecuteResponse | ImportReportResponse)
 def execute_import(job_id: UUID, payload: ImportExecuteRequest, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_roles(RoleName.OWNER)), db: Session = Depends(get_db)) -> ImportExecuteResponse | ImportReportResponse:
-    service = ImportService(db)
     guard = ImportExecutionGuard(db)
-    try:
-        if not payload.dry_run:
-            guard.require_matching_dry_run(
-                workspace_id=workspace_id,
-                job_id=job_id,
-                entity_type=payload.entity_type,
-                sheet_name=payload.sheet_name,
-                column_mapping=payload.column_mapping,
-                options=payload.options,
-            )
-        result = service.execute(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, payload.mode, current_user.id, payload.dry_run, payload.options)
-        if isinstance(result, ImportReportResponse):
-            if result.error_rows == 0:
+    if payload.dry_run:
+        try:
+            result = ImportService(db).execute(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, payload.mode, current_user.id, True, payload.options)
+            if isinstance(result, ImportReportResponse) and result.error_rows == 0:
                 guard.record_successful_dry_run(
                     workspace_id=workspace_id,
                     job_id=job_id,
@@ -154,9 +146,47 @@ def execute_import(job_id: UUID, payload: ImportExecuteRequest, workspace_id: UU
                     total_rows=result.total_rows,
                 )
             return result
-    except (ImportServiceError, ImportExecutionGuardError) as exc:
+        except (ImportServiceError, ImportExecutionGuardError) as exc:
+            raise _bad_request(exc)
+
+    try:
+        guard.require_matching_dry_run(
+            workspace_id=workspace_id,
+            job_id=job_id,
+            entity_type=payload.entity_type,
+            sheet_name=payload.sheet_name,
+            column_mapping=payload.column_mapping,
+            options=payload.options,
+        )
+    except ImportExecutionGuardError as exc:
         raise _bad_request(exc)
-    return ImportExecuteResponse(job=result)
+
+    atomic_service = ImportService(AtomicImportSession(db))
+    total_rows = 0
+    try:
+        job = atomic_service.execute(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, payload.mode, current_user.id, False, payload.options)
+        total_rows = int(job.total_rows or 0)
+        if job.status != ImportJobStatus.COMPLETED.value or int(job.failed_rows or 0) > 0:
+            raise ImportServiceError("One or more import rows failed; the import was rolled back")
+        db.commit()
+        db.refresh(job)
+        return ImportExecuteResponse(job=job)
+    except Exception as exc:
+        db.rollback()
+        reason = str(exc) if isinstance(exc, ImportServiceError) else f"{exc.__class__.__name__} during import execution"
+        try:
+            persist_rolled_back_import(
+                db,
+                workspace_id=workspace_id,
+                job_id=job_id,
+                actor_user_id=current_user.id,
+                total_rows=total_rows,
+                reason=reason,
+            )
+        except Exception:
+            db.rollback()
+        safe_error = exc if isinstance(exc, ImportServiceError) else ImportServiceError("Import execution failed and all business writes were rolled back")
+        raise _bad_request(safe_error)
 
 
 @router.get("/{job_id}/logs", response_model=list[ImportJobLogResponse], dependencies=[Depends(require_roles(RoleName.OWNER))])
