@@ -8,11 +8,15 @@ _original_check = phase_a.check
 
 
 def baseline_aware_check(result, name, condition, detail=""):
-    if name == "runtime identity deployed" and not condition:
+    legacy_health = (
+        result.get("baseline_health", {}).get("runtime_commit") is None
+        and result.get("baseline_health", {}).get("process_started_at") is None
+    )
+    if name in {"runtime identity deployed", "runtime process marker present"} and not condition:
         # The current process predates the safe runtime identity fields. That is
         # acceptable only for Phase A: Phase B must observe a new identified
         # process after the deliberate deployment marker.
-        condition = result.get("baseline_health", {}).get("runtime_commit") is None
+        condition = legacy_health
         detail = "legacy process baseline; Phase B must observe identified runtime"
     return _original_check(result, name, condition, detail)
 
