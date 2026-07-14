@@ -6,10 +6,14 @@ on:
     paths:
       - "backend/app/api/v1/import_center.py"
       - "backend/app/api/v1/workspaces.py"
+      - "backend/app/core/config.py"
       - "backend/app/repositories/audit_log_repository.py"
       - "backend/app/repositories/workspace_repository.py"
+      - "backend/app/services/import_durable_service.py"
       - "backend/app/services/import_execution_guard.py"
+      - "backend/app/services/import_source_storage.py"
       - "backend/app/services/onboarding_service.py"
+      - "backend/requirements.txt"
       - "backend/tests/imports/**"
       - "backend/tests/onboarding/**"
       - "frontend/**"
@@ -40,15 +44,19 @@ jobs:
           python -m py_compile \
             app/api/v1/import_center.py \
             app/api/v1/workspaces.py \
+            app/core/config.py \
             app/repositories/audit_log_repository.py \
             app/repositories/workspace_repository.py \
+            app/services/import_durable_service.py \
             app/services/import_execution_guard.py \
+            app/services/import_source_storage.py \
             app/services/onboarding_service.py
       - name: Run focused Sprint 8C and provenance tests
         working-directory: backend
         run: |
           python -m pytest -q \
             tests/imports/test_import_execution_guard.py \
+            tests/imports/test_import_source_storage.py \
             tests/imports/test_import_center_pilot_hardening.py \
             tests/onboarding/test_onboarding_status.py \
             tests/onboarding/test_demo_workspace_service.py
