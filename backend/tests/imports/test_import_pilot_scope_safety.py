@@ -125,7 +125,7 @@ def test_import_log_repository_never_persists_raw_source_row() -> None:
         message="Customer created",
         raw_data={
             "Name": "QA Customer",
-            "Phone": "+380000000001",
+            "Phone": "SYNTHETIC_PHONE_MARKER",
             "Address": "Synthetic address",
         },
     )
