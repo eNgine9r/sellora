@@ -1,0 +1,73 @@
+name: Sprint 8C Phase A
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/staging_sprint_8c_phase_a.py"
+      - ".github/workflows/sprint-8c-phase-a.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  phase-a:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      EXPECTED_RUNTIME_COMMIT: 169291f10a04a36fd9141963b671c9e39729f86f
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_MANAGER_EMAIL: ${{ secrets.STAGING_MANAGER_EMAIL }}
+      STAGING_MANAGER_PASSWORD: ${{ secrets.STAGING_MANAGER_PASSWORD }}
+      STAGING_ANALYST_EMAIL: ${{ secrets.STAGING_ANALYST_EMAIL }}
+      STAGING_ANALYST_PASSWORD: ${{ secrets.STAGING_ANALYST_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install QA dependency
+        run: python -m pip install httpx
+      - name: Compile runner
+        run: python -m py_compile scripts/staging_sprint_8c_phase_a.py
+      - name: Execute Phase A
+        run: python scripts/staging_sprint_8c_phase_a.py
+      - name: Validate sanitized evidence
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          path = pathlib.Path("artifacts/sprint-8c-phase-a.json")
+          if not path.exists():
+              raise SystemExit("Phase A artifact missing")
+          text = path.read_text(encoding="utf-8")
+          for name in (
+              "STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD",
+              "STAGING_MANAGER_EMAIL", "STAGING_MANAGER_PASSWORD",
+              "STAGING_ANALYST_EMAIL", "STAGING_ANALYST_PASSWORD",
+          ):
+              value = os.getenv(name, "")
+              if value and value in text:
+                  raise SystemExit(f"Credential leaked: {name}")
+          data = json.loads(text)
+          if data.get("decision") != "PASS":
+              raise SystemExit("Phase A decision is not PASS")
+          if not data.get("job_id") or not data.get("workspace_b"):
+              raise SystemExit("Phase A state is incomplete")
+          print(f"SPRINT 8C PHASE A: PASS ({len(data.get('checks', []))} checks)")
+          PY
+      - name: Upload sanitized Phase A evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8c-phase-a-${{ github.run_id }}
+          path: artifacts/sprint-8c-phase-a.json
+          if-no-files-found: error
+          retention-days: 14
