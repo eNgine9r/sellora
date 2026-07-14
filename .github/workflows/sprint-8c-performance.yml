@@ -1,0 +1,68 @@
+name: Sprint 8C Performance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/staging_sprint_8c_performance.py"
+      - ".github/workflows/sprint-8c-performance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      EXPECTED_RUNTIME_COMMIT: 96a95bca5e378d6dc6da5e6d9bddbb96d935d3b4
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install benchmark dependency
+        run: python -m pip install httpx
+      - name: Compile benchmark
+        run: python -m py_compile scripts/staging_sprint_8c_performance.py
+      - name: Execute 100, 1000 and 5000 row benchmarks
+        run: python scripts/staging_sprint_8c_performance.py
+      - name: Validate benchmark evidence
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          path = pathlib.Path("artifacts/sprint-8c-performance.json")
+          if not path.exists():
+              raise SystemExit("Performance artifact missing")
+          text = path.read_text(encoding="utf-8")
+          for name in ("STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD"):
+              value = os.getenv(name, "")
+              if value and value in text:
+                  raise SystemExit(f"Credential leaked: {name}")
+          data = json.loads(text)
+          if data.get("decision") != "PASS":
+              raise SystemExit("Performance decision is not PASS")
+          rows = [item.get("rows") for item in data.get("datasets", []) if item.get("status") == "PASS"]
+          if rows != [100, 1000, 5000]:
+              raise SystemExit(f"Incomplete benchmark matrix: {rows}")
+          if any(item.get("core_500") or item.get("timeout") or item.get("process_restarted") for item in data["datasets"]):
+              raise SystemExit("Runtime instability detected")
+          print("SPRINT 8C PERFORMANCE: PASS")
+          PY
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8c-performance-${{ github.run_id }}
+          path: artifacts/sprint-8c-performance.json
+          if-no-files-found: error
+          retention-days: 14
