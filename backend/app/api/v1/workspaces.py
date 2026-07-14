@@ -9,6 +9,7 @@ from app.dependencies.rbac import get_workspace_id
 from app.models.role import RoleName
 from app.models.user import User
 from app.models.workspace_user import WorkspaceUser
+from app.repositories.audit_log_repository import AuditLogRepository
 from app.schemas.workspace import DemoWorkspaceCreate, DemoWorkspaceDeactivateResponse, WorkspaceCreate, WorkspaceResponse, WorkspaceSettingsResponse, WorkspaceSettingsUpdate
 from app.services.workspace_service import WorkspacePermissionError, WorkspaceService, WorkspaceValidationError
 
@@ -45,6 +46,8 @@ def create_demo_workspace(payload: DemoWorkspaceCreate, current_user: User = Dep
 def deactivate_demo_workspace(workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> DemoWorkspaceDeactivateResponse:
     service = WorkspaceService(db)
     try:
+        if not AuditLogRepository(db).has_demo_workspace_provenance(workspace_id, creator_user_id=current_user.id):
+            raise WorkspaceValidationError("Only server-created Sellora demo workspaces can be deactivated through this flow")
         membership = service.deactivate_demo_workspace(workspace_id, current_user.id)
     except WorkspacePermissionError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient workspace permissions") from exc
