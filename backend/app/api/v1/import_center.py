@@ -25,11 +25,12 @@ from app.schemas.import_center import (
     SheetListResponse,
 )
 from app.services.import_center_service import ImportService, ImportServiceError, MappingSuggestionService, YOUR_JEWELRY_EXCEL_V1
+from app.services.import_execution_guard import ImportExecutionGuard, ImportExecutionGuardError
 
 router = APIRouter(prefix="/import", tags=["Import Center"])
 
 
-def _bad_request(exc: ImportServiceError) -> HTTPException:
+def _bad_request(exc: ImportServiceError | ImportExecutionGuardError) -> HTTPException:
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
@@ -97,8 +98,6 @@ def validate_import(job_id: UUID, payload: ImportValidationRequest, workspace_id
         raise _bad_request(exc)
 
 
-
-
 @router.post("/{job_id}/suggest-mapping", response_model=SuggestMappingResponse, dependencies=[Depends(require_roles(RoleName.OWNER))])
 def suggest_mapping(job_id: UUID, payload: SuggestMappingRequest, workspace_id: UUID = Depends(get_workspace_id), db: Session = Depends(get_db)) -> SuggestMappingResponse:
     try:
@@ -110,19 +109,53 @@ def suggest_mapping(job_id: UUID, payload: SuggestMappingRequest, workspace_id: 
 @router.post("/{job_id}/dry-run", response_model=ImportReportResponse)
 def dry_run_import(job_id: UUID, payload: ImportValidationRequest, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_roles(RoleName.OWNER)), db: Session = Depends(get_db)) -> ImportReportResponse:
     try:
-        return ImportService(db).dry_run(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, current_user.id, payload.options)
-    except ImportServiceError as exc:
+        report = ImportService(db).dry_run(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, current_user.id, payload.options)
+        if report.error_rows == 0:
+            ImportExecutionGuard(db).record_successful_dry_run(
+                workspace_id=workspace_id,
+                job_id=job_id,
+                entity_type=payload.entity_type,
+                sheet_name=payload.sheet_name,
+                column_mapping=payload.column_mapping,
+                options=payload.options,
+                actor_user_id=current_user.id,
+                total_rows=report.total_rows,
+            )
+        return report
+    except (ImportServiceError, ImportExecutionGuardError) as exc:
         raise _bad_request(exc)
 
 
 @router.post("/{job_id}/execute", response_model=ImportExecuteResponse | ImportReportResponse)
 def execute_import(job_id: UUID, payload: ImportExecuteRequest, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_roles(RoleName.OWNER)), db: Session = Depends(get_db)) -> ImportExecuteResponse | ImportReportResponse:
+    service = ImportService(db)
+    guard = ImportExecutionGuard(db)
     try:
-        result = ImportService(db).execute(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, payload.mode, current_user.id, payload.dry_run, payload.options)
-    except ImportServiceError as exc:
+        if not payload.dry_run:
+            guard.require_matching_dry_run(
+                workspace_id=workspace_id,
+                job_id=job_id,
+                entity_type=payload.entity_type,
+                sheet_name=payload.sheet_name,
+                column_mapping=payload.column_mapping,
+                options=payload.options,
+            )
+        result = service.execute(workspace_id, job_id, payload.entity_type, payload.sheet_name, payload.column_mapping, payload.mode, current_user.id, payload.dry_run, payload.options)
+        if isinstance(result, ImportReportResponse):
+            if result.error_rows == 0:
+                guard.record_successful_dry_run(
+                    workspace_id=workspace_id,
+                    job_id=job_id,
+                    entity_type=payload.entity_type,
+                    sheet_name=payload.sheet_name,
+                    column_mapping=payload.column_mapping,
+                    options=payload.options,
+                    actor_user_id=current_user.id,
+                    total_rows=result.total_rows,
+                )
+            return result
+    except (ImportServiceError, ImportExecutionGuardError) as exc:
         raise _bad_request(exc)
-    if isinstance(result, ImportReportResponse):
-        return result
     return ImportExecuteResponse(job=result)
 
 

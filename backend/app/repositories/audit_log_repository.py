@@ -39,6 +39,30 @@ class AuditLogRepository:
         self.db.add(audit_log)
         return audit_log
 
+    def latest_action_value(
+        self,
+        *,
+        workspace_id: UUID,
+        entity_type: str,
+        entity_id: UUID | str,
+        action: str,
+    ) -> dict[str, Any] | None:
+        """Return the newest persisted audit payload for one scoped entity action."""
+
+        stmt = (
+            select(AuditLog.new_value)
+            .where(
+                AuditLog.workspace_id == workspace_id,
+                AuditLog.entity_type == entity_type,
+                AuditLog.entity_id == str(entity_id),
+                AuditLog.action == action,
+            )
+            .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+            .limit(1)
+        )
+        value = self.db.execute(stmt).scalar_one_or_none()
+        return value if isinstance(value, dict) else None
+
     def has_demo_workspace_provenance(
         self,
         workspace_id: UUID,
