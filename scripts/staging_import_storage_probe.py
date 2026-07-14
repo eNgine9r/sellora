@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import json
 import os
-import sys
+import time
 from pathlib import Path
+from typing import Callable
 
 import httpx
 
@@ -17,6 +18,22 @@ def required(name: str) -> str:
     if not value:
         raise RuntimeError(f"Missing required input: {name}")
     return value
+
+
+def request_with_retry(operation: Callable[[], httpx.Response], attempts: int = 8) -> httpx.Response:
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            response = operation()
+            if response.status_code < 500:
+                return response
+        except (httpx.TimeoutException, httpx.NetworkError) as exc:
+            last_error = exc
+        if attempt < attempts:
+            time.sleep(min(5 * attempt, 20))
+    if last_error is not None:
+        raise last_error
+    return operation()
 
 
 def main() -> int:
@@ -35,14 +52,20 @@ def main() -> int:
     OUT.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        with httpx.Client(timeout=45.0, follow_redirects=True) as client:
-            health = client.get(f"{api}/health")
+        timeout = httpx.Timeout(connect=30.0, read=90.0, write=90.0, pool=30.0)
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+            health = request_with_retry(lambda: client.get(f"{api}/health"))
             result["health_http"] = health.status_code
             result["health"] = "PASS" if health.status_code == 200 else "FAIL"
+            if health.status_code != 200:
+                result["safe_error"] = "Backend health check failed"
+                return 1
 
-            login = client.post(
-                f"{api}/api/v1/auth/login",
-                json={"email": email, "password": password},
+            login = request_with_retry(
+                lambda: client.post(
+                    f"{api}/api/v1/auth/login",
+                    json={"email": email, "password": password},
+                )
             )
             result["login_http"] = login.status_code
             if login.status_code != 200:
@@ -59,10 +82,13 @@ def main() -> int:
                 "X-Workspace-ID": workspace_id,
             }
             content = b"Name,Phone\nQA Storage Probe,+380000000991\n"
-            upload = client.post(
-                f"{api}/api/v1/import/upload",
-                headers=headers,
-                files={"file": ("qa-storage-probe.csv", content, "text/csv")},
+            upload = request_with_retry(
+                lambda: client.post(
+                    f"{api}/api/v1/import/upload",
+                    headers=headers,
+                    files={"file": ("qa-storage-probe.csv", content, "text/csv")},
+                ),
+                attempts=3,
             )
             result["upload_http"] = upload.status_code
             if upload.status_code != 201:
@@ -74,9 +100,12 @@ def main() -> int:
             result["job_id"] = job_id
             result["upload"] = "PASS"
 
-            sheets = client.get(
-                f"{api}/api/v1/import/{job_id}/sheets",
-                headers=headers,
+            sheets = request_with_retry(
+                lambda: client.get(
+                    f"{api}/api/v1/import/{job_id}/sheets",
+                    headers=headers,
+                ),
+                attempts=3,
             )
             result["sheets_http"] = sheets.status_code
             if sheets.status_code != 200:
