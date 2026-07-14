@@ -13,6 +13,7 @@ on:
       - "backend/app/repositories/workspace_repository.py"
       - "backend/app/services/import_durable_service.py"
       - "backend/app/services/import_execution_guard.py"
+      - "backend/app/services/import_pilot_safe_service.py"
       - "backend/app/services/import_source_storage.py"
       - "backend/app/services/onboarding_service.py"
       - "backend/requirements.txt"
@@ -54,6 +55,7 @@ jobs:
             app/repositories/workspace_repository.py \
             app/services/import_durable_service.py \
             app/services/import_execution_guard.py \
+            app/services/import_pilot_safe_service.py \
             app/services/import_source_storage.py \
             app/services/onboarding_service.py
       - name: Run focused Sprint 8C and provenance tests
@@ -65,6 +67,7 @@ jobs:
             tests/imports/test_import_source_storage.py \
             tests/imports/test_import_center_pilot_hardening.py \
             tests/imports/test_import_pilot_scope_safety.py \
+            tests/imports/test_import_formula_rejection.py \
             tests/onboarding/test_onboarding_status.py \
             tests/onboarding/test_demo_workspace_service.py
 
