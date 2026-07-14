@@ -18,6 +18,14 @@ class FakeWorkspaces:
         return None
 
 
+class FakeAuditLogs:
+    def __init__(self, demo_workspace_ids=None):
+        self.demo_workspace_ids = set(demo_workspace_ids or [])
+
+    def has_demo_workspace_provenance(self, workspace_id, *, creator_user_id=None):
+        return workspace_id in self.demo_workspace_ids
+
+
 class FakeOnboarding:
     def __init__(self, *, configured=True, product=False, stock=False, lead=False, order=False):
         self.configured = configured
@@ -51,10 +59,11 @@ def _membership(workspace_id, user_id, role=RoleName.OWNER, slug="shop-a"):
     )
 
 
-def _service(membership, onboarding):
+def _service(membership, onboarding, *, demo=False):
     service = OnboardingService.__new__(OnboardingService)
     service.workspaces = FakeWorkspaces(membership)
     service.onboarding = onboarding
+    service.audit_logs = FakeAuditLogs([membership.workspace_id] if membership and demo else [])
     return service
 
 
@@ -87,10 +96,14 @@ def test_partial_workspace_status_uses_real_completion_conditions() -> None:
     assert status.suggested_next_action == OnboardingNextAction.CREATE_ORDER
 
 
-def test_completed_demo_workspace_status_is_labeled_demo() -> None:
+def test_completed_demo_workspace_status_is_labeled_by_provenance() -> None:
     workspace_id = uuid4()
     user_id = uuid4()
-    service = _service(_membership(workspace_id, user_id, RoleName.ANALYST, slug="demo-sellora-abcd"), FakeOnboarding(product=True, stock=True, lead=True, order=True))
+    service = _service(
+        _membership(workspace_id, user_id, RoleName.ANALYST, slug="ordinary-looking-slug"),
+        FakeOnboarding(product=True, stock=True, lead=True, order=True),
+        demo=True,
+    )
 
     status = service.get_status(workspace_id, user_id)
 
@@ -98,6 +111,18 @@ def test_completed_demo_workspace_status_is_labeled_demo() -> None:
     assert status.is_demo_workspace is True
     assert status.progress_percent == 100
     assert status.suggested_next_action == OnboardingNextAction.EXPLORE_DASHBOARD
+
+
+def test_demo_looking_slug_without_provenance_is_not_demo() -> None:
+    workspace_id = uuid4()
+    user_id = uuid4()
+    service = _service(
+        _membership(workspace_id, user_id, slug="demo-sellora-forged"),
+        FakeOnboarding(product=True),
+        demo=False,
+    )
+
+    assert service.get_status(workspace_id, user_id).is_demo_workspace is False
 
 
 def test_status_denies_missing_membership() -> None:
