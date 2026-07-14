@@ -68,6 +68,7 @@ jobs:
             tests/imports/test_import_center_pilot_hardening.py \
             tests/imports/test_import_pilot_scope_safety.py \
             tests/imports/test_import_formula_rejection.py \
+            tests/imports/test_import_inventory_plan.py \
             tests/onboarding/test_onboarding_status.py \
             tests/onboarding/test_demo_workspace_service.py
 
