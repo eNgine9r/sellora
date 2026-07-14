@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "backend/app/main.py"
       - "backend/app/api/v1/import_center.py"
       - "backend/app/api/v1/workspaces.py"
       - "backend/app/core/config.py"
@@ -15,6 +16,7 @@ on:
       - "backend/app/services/import_source_storage.py"
       - "backend/app/services/onboarding_service.py"
       - "backend/requirements.txt"
+      - "backend/tests/test_health_runtime_identity.py"
       - "backend/tests/imports/**"
       - "backend/tests/onboarding/**"
       - "frontend/**"
@@ -43,6 +45,7 @@ jobs:
         working-directory: backend
         run: |
           python -m py_compile \
+            app/main.py \
             app/api/v1/import_center.py \
             app/api/v1/workspaces.py \
             app/core/config.py \
@@ -57,6 +60,7 @@ jobs:
         working-directory: backend
         run: |
           python -m pytest -q \
+            tests/test_health_runtime_identity.py \
             tests/imports/test_import_execution_guard.py \
             tests/imports/test_import_source_storage.py \
             tests/imports/test_import_center_pilot_hardening.py \
