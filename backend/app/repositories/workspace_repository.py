@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import String, and_, cast, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.audit_log import AuditLog
@@ -51,7 +51,7 @@ class WorkspaceRepository:
                 and_(
                     AuditLog.workspace_id == Workspace.id,
                     AuditLog.entity_type == "Workspace",
-                    AuditLog.entity_id == func.cast(Workspace.id, type_=AuditLog.entity_id.type),
+                    AuditLog.entity_id == cast(Workspace.id, String),
                     AuditLog.action == DEMO_WORKSPACE_CREATE_ACTION,
                     AuditLog.user_id == user_id,
                 ),
