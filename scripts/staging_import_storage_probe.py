@@ -10,6 +10,7 @@ from typing import Callable
 import httpx
 
 
+# Rerun marker after activating durable storage in Render staging.
 OUT = Path("artifacts/sprint-8c-storage-readiness.json")
 
 
