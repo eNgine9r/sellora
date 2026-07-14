@@ -165,7 +165,7 @@ class ImportSourceStorage:
 
     def _content_type(self, filename: str) -> str:
         if filename.lower().endswith(".csv"):
-            return "text/csv; charset=utf-8"
+            return "text/csv"
         return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
     def _remove_empty_parents(self, directory: Path) -> None:
