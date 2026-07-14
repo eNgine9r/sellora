@@ -8,6 +8,7 @@ on:
       - "backend/app/api/v1/workspaces.py"
       - "backend/app/core/config.py"
       - "backend/app/repositories/audit_log_repository.py"
+      - "backend/app/repositories/import_center_repository.py"
       - "backend/app/repositories/workspace_repository.py"
       - "backend/app/services/import_durable_service.py"
       - "backend/app/services/import_execution_guard.py"
@@ -46,6 +47,7 @@ jobs:
             app/api/v1/workspaces.py \
             app/core/config.py \
             app/repositories/audit_log_repository.py \
+            app/repositories/import_center_repository.py \
             app/repositories/workspace_repository.py \
             app/services/import_durable_service.py \
             app/services/import_execution_guard.py \
@@ -58,6 +60,7 @@ jobs:
             tests/imports/test_import_execution_guard.py \
             tests/imports/test_import_source_storage.py \
             tests/imports/test_import_center_pilot_hardening.py \
+            tests/imports/test_import_pilot_scope_safety.py \
             tests/onboarding/test_onboarding_status.py \
             tests/onboarding/test_demo_workspace_service.py
 
