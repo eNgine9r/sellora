@@ -26,7 +26,8 @@ from app.schemas.import_center import (
     SheetListResponse,
 )
 from app.services.import_atomic_execution import AtomicImportSession, persist_rolled_back_import
-from app.services.import_center_service import ImportService, ImportServiceError, MappingSuggestionService, YOUR_JEWELRY_EXCEL_V1
+from app.services.import_center_service import ImportServiceError, MappingSuggestionService, YOUR_JEWELRY_EXCEL_V1
+from app.services.import_durable_service import DurableImportService as ImportService
 from app.services.import_execution_guard import ImportExecutionGuard, ImportExecutionGuardError
 
 router = APIRouter(prefix="/import", tags=["Import Center"])
