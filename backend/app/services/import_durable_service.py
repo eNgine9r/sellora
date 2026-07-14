@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.import_job import ImportJob, ImportJobStatus
+from app.schemas.import_center import SuggestMappingResponse
 from app.services.import_center_service import (
     IMPORT_ALLOWED_SUFFIXES,
     ExcelParserService,
@@ -16,6 +17,40 @@ from app.services.import_center_service import (
     safe_job_snapshot,
 )
 from app.services.import_source_storage import ImportSourceStorage, ImportSourceStorageError
+
+
+PILOT_UNSUPPORTED_ENTITY_TYPES = {"shipments"}
+HISTORICAL_ORDER_IGNORED_FIELDS = {
+    "tracking_number",
+    "carrier",
+    "city",
+    "warehouse",
+}
+
+
+def ensure_pilot_entity_type(entity_type: str) -> None:
+    if entity_type in PILOT_UNSUPPORTED_ENTITY_TYPES:
+        raise ImportServiceError(
+            "Shipments import is not supported in the controlled pilot; create shipment drafts separately"
+        )
+
+
+def pilot_safe_mapping(entity_type: str, mapping: dict[str, str]) -> dict[str, str]:
+    """Return the mapping that the controlled pilot is allowed to execute.
+
+    Historical order imports deliberately ignore delivery fields. This prevents
+    an old spreadsheet from creating shipment records or triggering delivery
+    side effects. Shipment import remains explicitly disabled for the pilot.
+    """
+
+    ensure_pilot_entity_type(entity_type)
+    if entity_type != "orders_history":
+        return dict(mapping)
+    return {
+        field: column
+        for field, column in mapping.items()
+        if field not in HISTORICAL_ORDER_IGNORED_FIELDS
+    }
 
 
 class DurableExcelParserService:
@@ -94,3 +129,95 @@ class DurableImportService(LocalImportService):
                 except ImportSourceStorageError:
                     pass
             raise
+
+    def suggest_mapping(
+        self,
+        workspace_id: UUID,
+        job_id: UUID,
+        sheet_name: str,
+        entity_type: str,
+    ) -> SuggestMappingResponse:
+        ensure_pilot_entity_type(entity_type)
+        response = super().suggest_mapping(workspace_id, job_id, sheet_name, entity_type)
+        if entity_type != "orders_history":
+            return response
+
+        removed_columns = [
+            response.suggested_mapping[field]
+            for field in HISTORICAL_ORDER_IGNORED_FIELDS
+            if field in response.suggested_mapping
+        ]
+        response.suggested_mapping = pilot_safe_mapping(entity_type, response.suggested_mapping)
+        response.confidence = {
+            field: confidence
+            for field, confidence in response.confidence.items()
+            if field in response.suggested_mapping
+        }
+        response.unmapped_columns = list(
+            dict.fromkeys([*response.unmapped_columns, *removed_columns])
+        )
+        return response
+
+    def validate(
+        self,
+        workspace_id: UUID,
+        job_id: UUID,
+        entity_type: str,
+        sheet_name: str,
+        column_mapping: dict[str, str],
+        actor_user_id: UUID | None,
+        options: dict | None = None,
+    ):
+        return super().validate(
+            workspace_id,
+            job_id,
+            entity_type,
+            sheet_name,
+            pilot_safe_mapping(entity_type, column_mapping),
+            actor_user_id,
+            options,
+        )
+
+    def dry_run(
+        self,
+        workspace_id: UUID,
+        job_id: UUID,
+        entity_type: str,
+        sheet_name: str,
+        column_mapping: dict[str, str],
+        actor_user_id: UUID | None = None,
+        options: dict | None = None,
+    ):
+        return super().dry_run(
+            workspace_id,
+            job_id,
+            entity_type,
+            sheet_name,
+            pilot_safe_mapping(entity_type, column_mapping),
+            actor_user_id,
+            options,
+        )
+
+    def execute(
+        self,
+        workspace_id: UUID,
+        job_id: UUID,
+        entity_type: str,
+        sheet_name: str,
+        column_mapping: dict[str, str],
+        mode: str,
+        actor_user_id: UUID | None,
+        dry_run: bool = False,
+        options: dict | None = None,
+    ):
+        return super().execute(
+            workspace_id,
+            job_id,
+            entity_type,
+            sheet_name,
+            pilot_safe_mapping(entity_type, column_mapping),
+            mode,
+            actor_user_id,
+            dry_run,
+            options,
+        )
