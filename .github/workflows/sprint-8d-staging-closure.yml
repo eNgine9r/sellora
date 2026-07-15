@@ -1,0 +1,135 @@
+name: Sprint 8D Staging Closure
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/staging_sprint_8d_core.py"
+      - "scripts/staging_sprint_8d_browser.py"
+      - ".github/workflows/sprint-8d-staging-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sellora-sprint-8d-staging-closure
+  cancel-in-progress: true
+
+jobs:
+  core-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    env:
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      EXPECTED_RUNTIME_COMMIT: 6580ff7df055ba2488725bd00f5ff9a440561bd6
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_MANAGER_EMAIL: ${{ secrets.STAGING_MANAGER_EMAIL }}
+      STAGING_MANAGER_PASSWORD: ${{ secrets.STAGING_MANAGER_PASSWORD }}
+      STAGING_ANALYST_EMAIL: ${{ secrets.STAGING_ANALYST_EMAIL }}
+      STAGING_ANALYST_PASSWORD: ${{ secrets.STAGING_ANALYST_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate secure inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, re
+          required = [
+              "STAGING_FRONTEND_URL", "STAGING_API_URL", "EXPECTED_RUNTIME_COMMIT",
+              "STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD",
+              "STAGING_MANAGER_EMAIL", "STAGING_MANAGER_PASSWORD",
+              "STAGING_ANALYST_EMAIL", "STAGING_ANALYST_PASSWORD",
+              "STAGING_TEST_WORKSPACE_ID",
+          ]
+          if any(not os.getenv(name) for name in required):
+              raise SystemExit("Missing required Sprint 8D staging input")
+          if not re.fullmatch(r"[0-9a-fA-F-]{36}", os.environ["STAGING_TEST_WORKSPACE_ID"]):
+              raise SystemExit("Invalid STAGING_TEST_WORKSPACE_ID")
+          if not re.fullmatch(r"[0-9a-f]{40}", os.environ["EXPECTED_RUNTIME_COMMIT"]):
+              raise SystemExit("Invalid EXPECTED_RUNTIME_COMMIT")
+          print("Secure input preflight: PASS")
+          PY
+      - name: Install runtime dependency
+        run: python -m pip install --upgrade httpx
+      - name: Compile core runner
+        run: python -m py_compile scripts/staging_sprint_8d_core.py
+      - name: Execute Sprint 8D core closure
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts/sprint-8d-closure
+          python scripts/staging_sprint_8d_core.py > artifacts/sprint-8d-closure/core-console.log 2>&1
+          code=$?
+          echo "$code" > artifacts/sprint-8d-closure/core-exit-code.txt
+          exit 0
+      - name: Validate sanitized core evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, pathlib, re
+          root = pathlib.Path("artifacts/sprint-8d-closure")
+          report_path = root / "core.json"
+          if not report_path.exists():
+              raise SystemExit("Sprint 8D core report missing")
+          texts = [path.read_text(encoding="utf-8", errors="replace") for path in root.glob("core*") if path.is_file()]
+          leaks = []
+          for secret in (
+              os.getenv("STAGING_OWNER_PASSWORD", ""),
+              os.getenv("STAGING_MANAGER_PASSWORD", ""),
+              os.getenv("STAGING_ANALYST_PASSWORD", ""),
+          ):
+              if secret and any(secret in text for text in texts):
+                  leaks.append("credential value")
+          patterns = [
+              re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{20,}", re.I),
+              re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
+              re.compile(r"\b(?:sk|sb_secret)-[A-Za-z0-9_-]{12,}\b", re.I),
+          ]
+          for text in texts:
+              if any(pattern.search(text) for pattern in patterns):
+                  leaks.append("token/API-key pattern")
+          if leaks:
+              raise SystemExit("Sanitization FAIL: " + ", ".join(sorted(set(leaks))))
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          required_security = (
+              "passwords_suppressed", "tokens_suppressed",
+              "authorization_headers_suppressed", "customer_pii_synthetic",
+              "provider_calls_suppressed",
+          )
+          if not all(report.get("security", {}).get(key) is True for key in required_security):
+              raise SystemExit("Security evidence flags missing")
+          print("Sanitized Sprint 8D core evidence: PASS")
+          PY
+      - name: Upload sanitized core evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8d-core-${{ github.run_id }}
+          path: artifacts/sprint-8d-closure
+          if-no-files-found: error
+          retention-days: 14
+      - name: Enforce core closure decision
+        if: always()
+        shell: bash
+        run: |
+          code="$(cat artifacts/sprint-8d-closure/core-exit-code.txt 2>/dev/null || echo 99)"
+          [ "$code" = "0" ] || exit 1
+          python - <<'PY'
+          import json
+          report = json.load(open("artifacts/sprint-8d-closure/core.json", encoding="utf-8"))
+          if report.get("decision") != "PASS_PENDING_POSTGRES_CLEANUP":
+              raise SystemExit(1)
+          print("SPRINT 8D CORE RUNTIME: PASS (POSTGRES CLEANUP PENDING)")
+          PY
