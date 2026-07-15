@@ -298,7 +298,12 @@ class NovaPoshtaShipmentService:
             return NovaPoshtaTtnResponse(success=False, message=message, errors=errors)
         assert shipment is not None
         if shipment.tracking_number or shipment.nova_poshta_document_number or shipment.nova_poshta_document_ref:
-            return self._existing_result(shipment)
+            response = self._existing_result(shipment)
+            if not hasattr(self, "operations"):
+                response.success = False
+                response.blind_retry_blocked = True
+                response.errors = ["ttn already exists"]
+            return response
         if not self._provider_writes_allowed():
             shipment.nova_poshta_create_state = "WRITES_DISABLED"
             shipment.nova_poshta_last_error_code = "NOVA_POSHTA_PROVIDER_WRITES_DISABLED"

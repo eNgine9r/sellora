@@ -214,6 +214,8 @@ class ShipmentService:
             raise ShipmentServiceError(str(exc)) from exc
 
     def _response(self, shipment: Shipment) -> ShipmentResponse:
+        if shipment.nova_poshta_manual_reconciliation_required is None:
+            shipment.nova_poshta_manual_reconciliation_required = False
         return ShipmentResponse.model_validate(shipment, from_attributes=True).model_copy(update={
             "order_number": shipment.order.order_number if shipment.order else None,
             "order_status": shipment.order.status if shipment.order else None,
