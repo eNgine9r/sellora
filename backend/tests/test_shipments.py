@@ -22,16 +22,9 @@ class FakeDb:
     def __init__(self, customer=None) -> None:
         self.customer = customer
         self.commits = 0
-        self.rollbacks = 0
 
     def commit(self) -> None:
         self.commits += 1
-
-    def rollback(self) -> None:
-        self.rollbacks += 1
-
-    def flush(self) -> None:
-        pass
 
     def refresh(self, obj) -> None:
         pass
@@ -61,9 +54,6 @@ class FakeShipmentRepo:
             if shipment.workspace_id == workspace_id and shipment.id == shipment_id and shipment.deleted_at is None:
                 return shipment
         return None
-
-    def get_for_update(self, workspace_id, shipment_id):
-        return self.get(workspace_id, shipment_id)
 
     def get_by_order(self, workspace_id, order_id):
         for shipment in self.shipments:
@@ -106,9 +96,6 @@ class FakeOrderRepo:
             return self.order
         return None
 
-    def get_for_update(self, workspace_id, order_id):
-        return self.get(workspace_id, order_id)
-
 
 class FakeAuditLogs:
     def __init__(self) -> None:
@@ -124,7 +111,7 @@ class FakeOrderService:
         self.order = order
         self.transitions = []
 
-    def change_status(self, workspace_id, order_id, payload: OrderStatusUpdate, actor_user_id, commit=True):
+    def change_status(self, workspace_id, order_id, payload: OrderStatusUpdate, actor_user_id):
         self.transitions.append(payload.status)
         self.order.status = payload.status.value
         return SimpleNamespace(id=order_id, status=payload.status.value)
@@ -271,3 +258,22 @@ def test_import_dry_run_supports_shipment_mapping_with_synthetic_data() -> None:
     assert report.is_valid
     assert suggestion.suggested_mapping["tracking_number"] == "ТТН"
     assert "shipments" in Path("app/services/import_center_service.py").read_text()
+
+
+def test_auth_session_restore_refresh_behavior_not_regressed() -> None:
+    source = Path("../frontend/src/stores/auth.store.tsx").read_text()
+
+    assert "refreshAccessToken(refreshToken)" in source
+    assert "fetchCurrentUser(tokens.access_token)" in source
+
+
+def test_shipment_create_schema_accepts_valid_draft_payload() -> None:
+    from uuid import uuid4
+    from app.models.shipment import ShipmentStatus
+    from app.schemas.shipment import ShipmentCreate
+
+    order_id = uuid4()
+    payload = ShipmentCreate.model_validate({"order_id": order_id, "status": "DRAFT", "tracking_number": None})
+
+    assert payload.order_id == order_id
+    assert payload.status == ShipmentStatus.DRAFT
