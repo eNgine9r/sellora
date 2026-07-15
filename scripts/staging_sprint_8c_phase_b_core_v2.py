@@ -91,10 +91,11 @@ class PhaseBClosureV2(base.Closure):
             readable = self.client.get(
                 f"{base.API}/api/v1/customers",
                 headers=self.headers(token=token),
+                params={"search": "QA8C Restart Customer"},
             )
             self.check(
                 f"{role} workspace membership read",
-                readable.status_code == 200,
+                readable.status_code == 200 and len(readable.json()) == 2,
                 base.safe_detail(readable),
             )
         return token
