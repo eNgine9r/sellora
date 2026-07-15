@@ -242,6 +242,9 @@ export default function OrdersPage() {
 
   useEffect(() => {
     setSelectedOrder(null);
+    setEditingOrder(null);
+    setArchivingOrder(null);
+    setIsCreateOpen(false);
   }, [workspaceId]);
 
   useEffect(() => {

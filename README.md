@@ -552,3 +552,7 @@ Sprint 8B adds a workspace-scoped onboarding status API, role-aware first-run ch
 ### Sprint 8C Import Center pilot hardening
 
 Sprint 8C documents and hardens the Import Center pilot path for `.xlsx` and `.csv` uploads. The current contract requires a successful dry-run before execution, workspace-scoped import jobs/logs, duplicate-policy review, all-or-nothing pilot expectations, synthetic templates only, and no Meta/Nova Poshta external calls during import QA. See `docs/sprint-8c-import-center-pilot-hardening.md`, `docs/import-template-contracts.md`, `docs/import-validation-error-catalog.md`, `docs/import-security-and-data-handling.md`, and `docs/pilot-import-guide.md`.
+
+### Sprint 8D Orders, Inventory and local shipments
+
+Sprint 8D hardens daily operations: order status transitions are explicit, order item edits reconcile reservation deltas, low-stock calculations use available stock, archived zero-stock variants are hidden from active inventory by default, and local shipment drafts stay provider-free. See `docs/sprint-8d-orders-inventory-shipments.md`, `docs/order-lifecycle-and-stock-effects.md`, `docs/inventory-transaction-contract.md`, `docs/local-shipment-pilot-contract.md`, and `docs/pilot-operations-guide.md`.

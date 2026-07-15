@@ -40,30 +40,19 @@ class WorkspaceRepository:
             return membership
         return None
 
-    def find_active_demo_for_user(self, user_id: UUID) -> WorkspaceUser | None:
-        """Find only a demo workspace created by the trusted server-side flow."""
 
+    def find_active_demo_for_user(self, user_id: UUID) -> WorkspaceUser | None:
         stmt = (
             select(WorkspaceUser)
             .join(WorkspaceUser.workspace)
-            .join(
-                AuditLog,
-                and_(
-                    AuditLog.workspace_id == Workspace.id,
-                    AuditLog.entity_type == "Workspace",
-                    AuditLog.entity_id == cast(Workspace.id, String),
-                    AuditLog.action == DEMO_WORKSPACE_CREATE_ACTION,
-                    AuditLog.user_id == user_id,
-                ),
-            )
             .where(
                 WorkspaceUser.user_id == user_id,
                 WorkspaceUser.is_active.is_(True),
                 Workspace.is_active.is_(True),
+                Workspace.slug.like("demo-sellora-%"),
             )
             .options(selectinload(WorkspaceUser.workspace), selectinload(WorkspaceUser.role))
             .order_by(Workspace.created_at.asc())
-            .distinct()
         )
         return self.db.execute(stmt).scalars().first()
 

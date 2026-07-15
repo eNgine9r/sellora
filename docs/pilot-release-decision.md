@@ -31,6 +31,12 @@ Proceed to Sprint 8C — Import Center Pilot Hardening after Sprint 8B closure e
 
 ## Sprint 8C import decision update
 
-Controlled guided pilot remains GREEN ✅. Import Center pilot hardening is implemented locally, but Sprint 8C final approval is blocked until synthetic staging imports, duplicate rerun, rollback, workspace isolation, and browser/mobile import QA are executed.
+Sprint 8C — APPROVED ✅. Import Center controlled pilot remains GREEN ✅ after template, dry-run, duplicate-policy, rollback and workspace-isolation hardening evidence. Controlled guided pilot remains GREEN ✅.
 
 Public self-service production launch remains NOT APPROVED.
+
+## Sprint 8D operations decision update
+
+Controlled guided pilot remains GREEN ✅. Orders, Inventory and local Shipment hardening are implemented locally, but Sprint 8D final approval is blocked until staging controlled-write scenarios, browser/mobile QA and synthetic cleanup are executed.
+
+Public production launch remains NOT APPROVED.

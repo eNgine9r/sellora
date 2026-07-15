@@ -227,3 +227,7 @@ Sprint 8B adds workspace-scoped onboarding status, role-aware first-run guidance
 ## Sprint 8C import readiness update
 
 Import Center now has explicit pilot contracts for supported `.xlsx`/`.csv` formats, file limits, duplicate policy, dry-run-before-execute gating, workspace-switch state clearing, and PII-safe handling guidance. Full Sprint 8C approval still requires staging import gates and browser/mobile QA with synthetic data.
+
+## Sprint 8D operations readiness update
+
+Orders, inventory and local shipments now have documented operational invariants, explicit order transition rules, reservation delta tests, Issue #134 inventory visibility policy, and one-active-shipment pilot coverage. Full Sprint 8D approval still requires staging controlled-write and browser/mobile evidence.

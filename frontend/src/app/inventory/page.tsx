@@ -94,7 +94,7 @@ export default function InventoryPage() {
   useEffect(() => { setInventoryPage((page) => clampPage(page, inventoryPageSize, visibleInventory.length)); }, [inventoryPageSize, visibleInventory.length]);
   useEffect(() => { setTransactionPage(1); }, [historyTypeFilter, inventoryId]);
   useEffect(() => { setTransactionPage((page) => clampPage(page, transactionPageSize, visibleTransactions.length)); }, [transactionPageSize, visibleTransactions.length]);
-  useEffect(() => { setSelectedInventory(null); setInventoryId(""); }, [workspaceId]);
+  useEffect(() => { setSelectedInventory(null); setInventoryId(""); setEditingInventory(null); setReason(""); }, [workspaceId]);
 
   function handleSelectInventory(item: Inventory) {
     setSelectedInventory(item);
@@ -139,7 +139,7 @@ export default function InventoryPage() {
           <select className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary" value={transactionType} onChange={(event) => setTransactionType(event.target.value as InventoryTransactionType)}>{TRANSACTION_TYPES.map((type) => <option key={type} value={type}>{t(`inventory.transactionTypes.${type}`)}</option>)}</select>
           <input className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary" min={1} type="number" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} />
           <input className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary" placeholder={t("inventory.reason")} value={reason} onChange={(event) => setReason(event.target.value)} />
-          <Button disabled={!canEdit || !inventoryId || transactionMutation.isPending} type="submit">{t("inventory.adjustStock")}</Button>
+          <Button disabled={!canEdit || !inventoryId || !reason.trim() || transactionMutation.isPending} type="submit">{t("inventory.adjustStock")}</Button>
         </form>
         <div className="grid min-w-0 gap-3 md:grid-cols-[1fr_auto]"><select className="min-h-10 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary" value={historyTypeFilter} onChange={(event) => setHistoryTypeFilter(event.target.value as InventoryTransactionType | "all")}><option value="all">{t("inventory.allTransactionTypes")}</option>{TRANSACTION_TYPES.map((type) => <option key={type} value={type}>{t(`inventory.transactionTypes.${type}`)}</option>)}</select></div>
         <InventoryTransactionHistory transactions={paginatedTransactions} />

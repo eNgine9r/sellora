@@ -489,3 +489,10 @@ First-run guidance and demo workspace generation are implemented for controlled 
 - Durable dry-run token persistence would require a schema change; Sprint 8C records an audit signature and revalidates on execute without adding a migration.
 - Staging import gates, 100/1,000 row benchmarks, and browser/mobile import QA remain required before full Sprint 8C approval.
 - Issue #134 remains a focused QA item for archived variants and zero-stock inventory rows.
+
+## Sprint 8D operations limitations
+
+- Real Nova Poshta TTN creation and delivery synchronization remain out of scope until Sprint 8E.
+- Finance/profit deep validation remains Sprint 8F.
+- Last-unit concurrency needs runtime PostgreSQL/staging evidence before full Sprint 8D approval.
+- Browser/mobile staging evidence and QA8D cleanup evidence remain required before final approval.

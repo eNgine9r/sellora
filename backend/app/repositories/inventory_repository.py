@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.inventory import Inventory
 from app.models.inventory_transaction import InventoryTransaction
+from app.models.product_variant import ProductVariant
 
 
 class InventoryRepository:
@@ -14,17 +15,48 @@ class InventoryRepository:
         self.db = db
 
     def list_for_workspace(self, workspace_id: UUID, low_stock_only: bool = False) -> list[Inventory]:
-        stmt: Select[tuple[Inventory]] = select(Inventory).where(Inventory.workspace_id == workspace_id, Inventory.deleted_at.is_(None)).options(selectinload(Inventory.variant))
+        stmt: Select[tuple[Inventory]] = (
+            select(Inventory)
+            .join(ProductVariant, ProductVariant.id == Inventory.product_variant_id)
+            .where(
+                Inventory.workspace_id == workspace_id,
+                Inventory.deleted_at.is_(None),
+                or_(ProductVariant.deleted_at.is_(None), Inventory.stock_quantity > 0, Inventory.reserved_quantity > 0),
+            )
+            .options(selectinload(Inventory.variant))
+        )
         if low_stock_only:
-            stmt = stmt.where(Inventory.stock_quantity <= Inventory.minimum_quantity)
+            stmt = stmt.where((Inventory.stock_quantity - Inventory.reserved_quantity) <= Inventory.minimum_quantity)
         return list(self.db.execute(stmt.order_by(Inventory.updated_at.desc())).scalars())
 
     def get(self, workspace_id: UUID, inventory_id: UUID) -> Inventory | None:
         stmt = select(Inventory).where(Inventory.workspace_id == workspace_id, Inventory.id == inventory_id, Inventory.deleted_at.is_(None)).options(selectinload(Inventory.variant))
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def get_for_update(self, workspace_id: UUID, inventory_id: UUID) -> Inventory | None:
+        stmt = (
+            select(Inventory)
+            .where(Inventory.workspace_id == workspace_id, Inventory.id == inventory_id, Inventory.deleted_at.is_(None))
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return self.db.execute(stmt).scalar_one_or_none()
+
     def get_by_variant(self, workspace_id: UUID, product_variant_id: UUID) -> Inventory | None:
         stmt = select(Inventory).where(Inventory.workspace_id == workspace_id, Inventory.product_variant_id == product_variant_id, Inventory.deleted_at.is_(None)).options(selectinload(Inventory.variant))
+        return self.db.execute(stmt).scalar_one_or_none()
+
+    def get_by_variant_for_update(self, workspace_id: UUID, product_variant_id: UUID) -> Inventory | None:
+        stmt = (
+            select(Inventory)
+            .where(
+                Inventory.workspace_id == workspace_id,
+                Inventory.product_variant_id == product_variant_id,
+                Inventory.deleted_at.is_(None),
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
         return self.db.execute(stmt).scalar_one_or_none()
 
     def create(self, inventory: Inventory) -> Inventory:

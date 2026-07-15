@@ -27,6 +27,16 @@ class OrderServiceError(ValueError):
 
 
 class OrderService:
+    allowed_status_transitions = {
+        OrderStatus.NEW: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
+        OrderStatus.CONFIRMED: {OrderStatus.SHIPPED, OrderStatus.CANCELLED},
+        OrderStatus.SHIPPED: {OrderStatus.DELIVERED, OrderStatus.RETURNED},
+        OrderStatus.DELIVERED: {OrderStatus.COMPLETED, OrderStatus.RETURNED},
+        OrderStatus.COMPLETED: {OrderStatus.RETURNED},
+        OrderStatus.RETURNED: set(),
+        OrderStatus.CANCELLED: set(),
+    }
+
     def __init__(self, db: Session) -> None:
         self.db = db
         self.orders = OrderRepository(db)
@@ -40,6 +50,10 @@ class OrderService:
 
     def get(self, workspace_id: UUID, order_id: UUID) -> Order | None:
         return self.orders.get(workspace_id, order_id)
+
+    def _get_order_for_update(self, workspace_id: UUID, order_id: UUID) -> Order | None:
+        getter = getattr(self.orders, "get_for_update", None)
+        return getter(workspace_id, order_id) if getter else self.orders.get(workspace_id, order_id)
 
     def dashboard_today(self, workspace_id: UUID) -> OrderDashboardResponse:
         orders_today, revenue_today, profit_today = self.orders.dashboard_today(workspace_id)
@@ -114,7 +128,7 @@ class OrderService:
         return order
 
     def update(self, workspace_id: UUID, order_id: UUID, payload: OrderUpdate, actor_user_id: UUID | None) -> Order | None:
-        order = self.get(workspace_id, order_id)
+        order = self._get_order_for_update(workspace_id, order_id)
         if order is None:
             return None
         old_value = snapshot(order)
@@ -164,7 +178,7 @@ class OrderService:
                 raise OrderServiceError("Not enough available stock for one or more items")
             if delta < 0 and abs(delta) > inventory.reserved_quantity:
                 raise OrderServiceError("Inventory changed. Please refresh and try again")
-        for variant_id in set(old_quantities) | set(new_quantities):
+        for variant_id in sorted(set(old_quantities) | set(new_quantities), key=str):
             inventory = inventories.get(variant_id) or self.inventory.get_by_variant(workspace_id, variant_id)
             delta = new_quantities.get(variant_id, 0) - old_quantities.get(variant_id, 0)
             if delta > 0:
@@ -200,7 +214,7 @@ class OrderService:
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="ORDER_ITEMS_UPDATE", old_value=old_value, new_value={"item_count": len(prepared_items)})
 
     def delete(self, workspace_id: UUID, order_id: UUID, actor_user_id: UUID | None) -> bool:
-        order = self.get(workspace_id, order_id)
+        order = self._get_order_for_update(workspace_id, order_id)
         if order is None:
             return False
         current_status = OrderStatus(order.status)
@@ -220,14 +234,16 @@ class OrderService:
         self.db.commit()
         return True
 
-    def change_status(self, workspace_id: UUID, order_id: UUID, payload: OrderStatusUpdate, actor_user_id: UUID | None) -> Order | None:
-        order = self.get(workspace_id, order_id)
+    def change_status(self, workspace_id: UUID, order_id: UUID, payload: OrderStatusUpdate, actor_user_id: UUID | None, commit: bool = True) -> Order | None:
+        order = self._get_order_for_update(workspace_id, order_id)
         if order is None:
             return None
         new_status = payload.status
         old_status = OrderStatus(order.status)
         if old_status == new_status:
             return order
+        if new_status not in self.allowed_status_transitions.get(old_status, set()):
+            raise OrderServiceError(f"Order status transition {old_status.value} -> {new_status.value} is not allowed")
         self._apply_transition_inventory(workspace_id, order, old_status, new_status, actor_user_id)
         old_value = snapshot(order)
         order.status = new_status.value
@@ -236,12 +252,17 @@ class OrderService:
             self._update_customer_metrics(workspace_id, order)
         self._add_status_history(order, old_status, new_status, actor_user_id, payload.note)
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action=f"STATUS_{new_status.value}", old_value=old_value, new_value=snapshot(order))
-        self.db.commit()
-        self.db.refresh(order)
+        if commit:
+            self.db.commit()
+            self.db.refresh(order)
+        else:
+            flush = getattr(self.db, "flush", None)
+            if flush:
+                flush()
         return order
 
     def _apply_transition_inventory(self, workspace_id: UUID, order: Order, old_status: OrderStatus, new_status: OrderStatus, actor_user_id: UUID | None) -> None:
-        for item in order.items:
+        for item in sorted(order.items, key=lambda value: str(value.product_variant_id)):
             inventory = self.inventory.get_by_variant(workspace_id, item.product_variant_id)
             if inventory is None:
                 raise OrderServiceError("Inventory record not found for order item")
@@ -268,6 +289,8 @@ class OrderService:
         variant = self.db.get(ProductVariant, variant_id)
         if variant is None or variant.workspace_id != workspace_id or variant.deleted_at is not None:
             raise OrderServiceError("Product variant does not exist in this workspace")
+        if variant.is_active is False or (variant.product is not None and variant.product.is_active is False):
+            raise OrderServiceError("Product variant is archived and cannot be used in new orders")
         return variant
 
     def _get_order_customer(self, workspace_id: UUID, customer_id: UUID | None, is_historical: bool) -> Customer | None:
