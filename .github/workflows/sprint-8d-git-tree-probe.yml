@@ -1,35 +1,15 @@
-name: Sprint 8D Main Tree Probe
+name: Sprint 8D Main Tree Probe — Archived
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - ".github/workflows/sprint-8d-git-tree-probe.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  tree-sha:
+  evidence-complete:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 1
-          show-progress: false
-          persist-credentials: false
-      - name: Capture current main tree SHA
-        run: |
-          mkdir -p artifacts
-          printf 'MAIN_COMMIT=%s\nMAIN_TREE=%s\n' \
-            "$(git rev-parse HEAD)" \
-            "$(git rev-parse 'HEAD^{tree}')" \
-            > artifacts/main-tree.txt
-      - name: Upload main tree evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: sellora-sprint-8d-main-tree-${{ github.run_id }}
-          path: artifacts/main-tree.txt
-          if-no-files-found: error
-          retention-days: 1
+      - run: |
+          echo "Main tree evidence captured in run 29414412067."
+          echo "No further tree probe runs are required."
