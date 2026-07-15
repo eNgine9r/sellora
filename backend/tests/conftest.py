@@ -29,7 +29,7 @@ _DELIVER_BEFORE_TEST = {
 
 @pytest.fixture(autouse=True)
 def align_legacy_order_tests_with_current_status_path(request, monkeypatch):
-    if request.module.__name__ != "tests.test_orders":
+    if request.module.__name__.split(".")[-1] != "test_orders":
         return
     if request.node.name not in _CONFIRM_BEFORE_TEST | _DELIVER_BEFORE_TEST:
         return
