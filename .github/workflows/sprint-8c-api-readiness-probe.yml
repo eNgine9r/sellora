@@ -1,0 +1,117 @@
+name: Sprint 8C API Readiness Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/sprint-8c-api-readiness-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api-readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install probe dependency
+        run: python -m pip install httpx
+      - name: Probe authenticated read endpoints
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          python - <<'PY'
+          import json
+          import os
+          import time
+          from pathlib import Path
+
+          import httpx
+
+          api = os.environ["STAGING_API_URL"].rstrip("/")
+          workspace = os.environ["STAGING_TEST_WORKSPACE_ID"]
+          phase_a_job = "e0b6cd02-4272-40cb-ad4c-9084c2a35dff"
+          result = {"decision": "FAIL", "checks": [], "runtime": {}}
+
+          def record(name, method, path, **kwargs):
+              started = time.perf_counter()
+              try:
+                  with httpx.Client(
+                      timeout=httpx.Timeout(connect=15, read=20, write=20, pool=15),
+                      follow_redirects=True,
+                      headers={"Connection": "close", "Cache-Control": "no-cache"},
+                  ) as client:
+                      response = client.request(method, f"{api}{path}", **kwargs)
+                  elapsed = round(time.perf_counter() - started, 3)
+                  result["checks"].append({"name": name, "status_code": response.status_code, "seconds": elapsed})
+                  return response
+              except Exception as exc:
+                  elapsed = round(time.perf_counter() - started, 3)
+                  result["checks"].append({"name": name, "status_code": None, "seconds": elapsed, "error_type": type(exc).__name__})
+                  return None
+
+          health = record("health", "GET", "/health")
+          if health is None or health.status_code != 200:
+              raise SystemExit("health probe failed")
+          health_body = health.json()
+          result["runtime"] = {
+              "runtime_commit": health_body.get("runtime_commit"),
+              "process_started_at": health_body.get("process_started_at"),
+          }
+
+          login = record(
+              "OWNER login",
+              "POST",
+              "/api/v1/auth/login",
+              json={"email": os.environ["STAGING_OWNER_EMAIL"], "password": os.environ["STAGING_OWNER_PASSWORD"]},
+          )
+          if login is None or login.status_code != 200:
+              raise SystemExit("OWNER login probe failed")
+          token = login.json().get("access_token")
+          if not token:
+              raise SystemExit("OWNER token absent")
+          headers = {"Authorization": f"Bearer {token}", "X-Workspace-ID": workspace}
+
+          me = record("auth me", "GET", "/api/v1/auth/me", headers=headers)
+          customers = record(
+              "restart customers read",
+              "GET",
+              "/api/v1/customers",
+              headers=headers,
+              params={"search": "QA8C Restart Customer"},
+          )
+          logs = record(
+              "Phase A logs read",
+              "GET",
+              f"/api/v1/import/{phase_a_job}/logs",
+              headers=headers,
+          )
+
+          if not all(response is not None and response.status_code == 200 for response in (me, customers, logs)):
+              raise SystemExit("authenticated readiness probe failed")
+          customers_body = customers.json()
+          logs_body = logs.json()
+          result["customer_count"] = len(customers_body) if isinstance(customers_body, list) else None
+          result["log_count"] = len(logs_body) if isinstance(logs_body, list) else None
+          result["raw_data_absent"] = bool(isinstance(logs_body, list) and all(item.get("raw_data") is None for item in logs_body))
+          result["decision"] = "PASS"
+          Path("artifacts/sprint-8c-api-readiness.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+          print(json.dumps(result, indent=2))
+          PY
+      - name: Upload sanitized readiness evidence
+        if: ${{ always() && hashFiles('artifacts/sprint-8c-api-readiness.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8c-api-readiness-${{ github.run_id }}
+          path: artifacts/sprint-8c-api-readiness.json
+          if-no-files-found: ignore
+          retention-days: 3
