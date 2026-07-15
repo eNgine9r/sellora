@@ -9,10 +9,10 @@ const checks = [
 ];
 const requiredText = [
   ["create workspace UI exists", "frontend/src/i18n/messages/uk.json", "Створити робочий простір"],
-  ["add user modal exists", "frontend/src/app/settings/team/page.tsx", "Додати користувача"],
+  ["add user modal exists", "frontend/src/i18n/messages/uk.json", "Додати користувача"],
   ["role labels OWNER/MANAGER/ANALYST exist", "frontend/src/services/workspaces.ts", "OWNER"],
   ["duplicate user Ukrainian error exists", "backend/app/services/workspace_service.py", "Користувач уже доданий до команди."],
-  ["last OWNER protection message exists", "frontend/src/app/settings/team/page.tsx", "Неможливо змінити роль або деактивувати останнього власника"],
+  ["last OWNER protection message exists", "frontend/src/i18n/messages/uk.json", "Не можна змінити або деактивувати останнього активного власника"],
   ["X-Workspace-ID usage exists in API client", "frontend/src/services/api.ts", "X-Workspace-ID"],
   ["no raw temporary_password returned in schemas", "backend/app/schemas/workspace.py", "temporary_password"],
 ];

@@ -46,6 +46,8 @@ class ShipmentService:
         order = self.orders.get(workspace_id, payload.order_id)
         if order is None:
             raise ShipmentServiceError("Order not found in this workspace")
+        if OrderStatus(order.status) in {OrderStatus.CANCELLED, OrderStatus.RETURNED}:
+            raise ShipmentServiceError("Cannot create shipment for cancelled or returned order")
         customer_id = self._validated_customer_id(workspace_id, payload.customer_id, order.customer_id)
         self._validate_tracking(workspace_id, payload.tracking_number, payload.status)
         if self.shipments.find_active_by_order(workspace_id, payload.order_id):

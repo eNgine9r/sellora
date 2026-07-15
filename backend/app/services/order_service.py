@@ -27,6 +27,15 @@ class OrderServiceError(ValueError):
 
 
 class OrderService:
+    allowed_status_transitions = {
+        OrderStatus.NEW: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
+        OrderStatus.CONFIRMED: {OrderStatus.SHIPPED, OrderStatus.CANCELLED},
+        OrderStatus.SHIPPED: {OrderStatus.DELIVERED, OrderStatus.RETURNED},
+        OrderStatus.DELIVERED: {OrderStatus.COMPLETED, OrderStatus.RETURNED},
+        OrderStatus.COMPLETED: {OrderStatus.RETURNED},
+        OrderStatus.RETURNED: set(),
+        OrderStatus.CANCELLED: set(),
+    }
     def __init__(self, db: Session) -> None:
         self.db = db
         self.orders = OrderRepository(db)
@@ -228,6 +237,8 @@ class OrderService:
         old_status = OrderStatus(order.status)
         if old_status == new_status:
             return order
+        if new_status not in self.allowed_status_transitions.get(old_status, set()):
+            raise OrderServiceError(f"Order status transition {old_status.value} -> {new_status.value} is not allowed")
         self._apply_transition_inventory(workspace_id, order, old_status, new_status, actor_user_id)
         old_value = snapshot(order)
         order.status = new_status.value
@@ -268,6 +279,8 @@ class OrderService:
         variant = self.db.get(ProductVariant, variant_id)
         if variant is None or variant.workspace_id != workspace_id or variant.deleted_at is not None:
             raise OrderServiceError("Product variant does not exist in this workspace")
+        if variant.is_active is False or (variant.product is not None and variant.product.is_active is False):
+            raise OrderServiceError("Product variant is archived and cannot be used in new orders")
         return variant
 
     def _get_order_customer(self, workspace_id: UUID, customer_id: UUID | None, is_historical: bool) -> Customer | None:

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     import_storage_path: str = Field(default="storage/imports", alias="IMPORT_STORAGE_PATH")
     import_max_file_size_mb: int = Field(default=20, alias="IMPORT_MAX_FILE_SIZE_MB")
     nova_poshta_api_url: str = Field(default="https://api.novaposhta.ua/v2.0/json/", alias="NOVA_POSHTA_API_URL")
+    staging_nova_poshta_allow_writes: bool = Field(default=False, alias="STAGING_NOVA_POSHTA_ALLOW_WRITES")
     meta_ads_mock_oauth_api_enabled: bool = Field(default=False, alias="META_ADS_MOCK_OAUTH_API_ENABLED")
     meta_live_oauth_enabled: bool = Field(default=False, alias="META_LIVE_OAUTH_ENABLED")
     meta_connections_enabled: bool = Field(default=False, alias="META_CONNECTIONS_ENABLED")

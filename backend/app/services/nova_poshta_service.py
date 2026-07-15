@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.integrations.nova_poshta_client import NovaPoshtaClient, NovaPoshtaClientError
 from app.models.integration_connection import IntegrationConnection, IntegrationProvider, IntegrationStatus
 from app.models.integration_credential import IntegrationCredential
@@ -134,11 +135,14 @@ class NovaPoshtaDirectoryService:
 
 
 class NovaPoshtaShipmentService:
-    def __init__(self, db: Session, client_factory=None) -> None:
+    _in_progress_ttn_keys: set[tuple[UUID, UUID]] = set()
+
+    def __init__(self, db: Session, client_factory=None, provider_writes_enabled: bool | None = None) -> None:
         self.db = db
         self.shipments = ShipmentRepository(db)
         self.settings = NovaPoshtaSettingsService(db, client_factory)
         self.audit_logs = AuditLogRepository(db)
+        self.provider_writes_enabled = provider_writes_enabled
 
     def create_ttn(self, workspace_id: UUID, shipment_id: UUID, actor_user_id: UUID | None) -> NovaPoshtaTtnResponse:
         connection, api_key = self.settings._require_connection(workspace_id)
@@ -150,13 +154,23 @@ class NovaPoshtaShipmentService:
             return NovaPoshtaTtnResponse(success=False, message=message, errors=errors)
         if shipment.tracking_number or shipment.nova_poshta_document_number or shipment.nova_poshta_document_ref:
             return NovaPoshtaTtnResponse(success=False, message="Nova Poshta TTN already exists for this shipment.", tracking_number=shipment.nova_poshta_document_number or shipment.tracking_number, document_ref=shipment.nova_poshta_document_ref, status=shipment.external_status, errors=["ttn already exists"])
+        if not self._provider_writes_allowed():
+            self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment_id, action="NOVA_POSHTA_TTN_BLOCKED", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": "PROVIDER_WRITES_DISABLED"})
+            self.db.commit()
+            return NovaPoshtaTtnResponse(success=False, message="Nova Poshta provider writes are disabled for this environment.", errors=["NOVA_POSHTA_PROVIDER_WRITES_DISABLED"])
+        key = (workspace_id, shipment_id)
+        if key in self._in_progress_ttn_keys:
+            return NovaPoshtaTtnResponse(success=False, message="Nova Poshta TTN creation is already in progress for this shipment.", errors=["NOVA_POSHTA_TTN_IN_PROGRESS"])
         payload = self._document_payload(shipment, connection.settings or {})
+        self._in_progress_ttn_keys.add(key)
         try:
             result = self.settings.client_factory(api_key).create_internet_document(payload)
         except Exception:
             self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment_id, action="NOVA_POSHTA_ERROR", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": "TTN_CREATE_FAILED"})
             self.db.commit()
             return NovaPoshtaTtnResponse(success=False, message="Nova Poshta TTN creation failed. Please check the API key and sender settings, then try again.", errors=["NOVA_POSHTA_TTN_FAILED"])
+        finally:
+            self._in_progress_ttn_keys.discard(key)
         tracking_number = getattr(result, "tracking_number", None)
         document_ref = getattr(result, "document_ref", None)
         external_status = getattr(result, "status", None)
@@ -194,12 +208,36 @@ class NovaPoshtaShipmentService:
             self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="NOVA_POSHTA_STATUS_UNAVAILABLE", new_value={"provider": IntegrationProvider.NOVA_POSHTA.value})
             self.db.commit()
             return NovaPoshtaStatusResponse(success=False, message="Nova Poshta status sync is unavailable. Please try again later.", tracking_number=tracking_number, status=shipment.external_status, synced_at=shipment.nova_poshta_synced_at)
+        normalized_status = self._normalize_provider_status(status)
         shipment.nova_poshta_raw_status = status
         shipment.external_status = status
+        if normalized_status is not None:
+            shipment.status = normalized_status.value
         shipment.nova_poshta_synced_at = datetime.now(UTC)
-        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="NOVA_POSHTA_STATUS_SYNCED", new_value={"status": status})
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="NOVA_POSHTA_STATUS_SYNCED", new_value={"status": status, "normalized_status": normalized_status.value if normalized_status else None})
         self.db.commit()
         return NovaPoshtaStatusResponse(success=True, message="Nova Poshta status synced.", tracking_number=tracking_number, status=status, synced_at=shipment.nova_poshta_synced_at)
+
+    def _provider_writes_allowed(self) -> bool:
+        if self.provider_writes_enabled is not None:
+            return self.provider_writes_enabled
+        return get_settings().staging_nova_poshta_allow_writes
+
+    def _normalize_provider_status(self, provider_status: str) -> ShipmentStatus | None:
+        normalized = provider_status.casefold()
+        delivered_markers = ("delivered", "отримано", "доставлено")
+        returned_markers = ("return", "повер", "відмова")
+        in_transit_markers = ("in transit", "дороз", "пряму", "відправ")
+        arrived_markers = ("arrived", "прибул", "відділен")
+        if any(marker in normalized for marker in delivered_markers):
+            return ShipmentStatus.DELIVERED
+        if any(marker in normalized for marker in returned_markers):
+            return ShipmentStatus.RETURNED
+        if any(marker in normalized for marker in in_transit_markers):
+            return ShipmentStatus.IN_TRANSIT
+        if any(marker in normalized for marker in arrived_markers):
+            return ShipmentStatus.ARRIVED
+        return None
 
     def _validate_for_ttn(self, shipment, settings: dict) -> list[str]:
         if shipment is None:

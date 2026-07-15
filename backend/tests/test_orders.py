@@ -229,6 +229,7 @@ def test_shipping_order_decreases_stock_and_reserved_quantities() -> None:
     service, inventory, customer = _service()
     order = _create_order(service, inventory, customer)
 
+    service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.CONFIRMED), actor_user_id=uuid4())
     service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED), actor_user_id=uuid4())
 
     assert inventory.reserved_quantity == 0
@@ -248,6 +249,7 @@ def test_cancelling_order_returns_reservation() -> None:
 def test_returning_order_restores_inventory_after_shipping() -> None:
     service, inventory, customer = _service()
     order = _create_order(service, inventory, customer)
+    service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.CONFIRMED), actor_user_id=uuid4())
     service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED), actor_user_id=uuid4())
 
     service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.RETURNED), actor_user_id=uuid4())
@@ -259,6 +261,9 @@ def test_completed_order_updates_customer_metrics() -> None:
     service, inventory, customer = _service()
     order = _create_order(service, inventory, customer)
 
+    service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.CONFIRMED), actor_user_id=uuid4())
+    service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED), actor_user_id=uuid4())
+    service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.DELIVERED), actor_user_id=uuid4())
     service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.COMPLETED), actor_user_id=uuid4())
 
     assert customer.total_orders == 1
@@ -297,6 +302,8 @@ def test_archive_new_order_soft_deletes_and_releases_reservation() -> None:
 def test_archive_shipped_order_is_rejected() -> None:
     service, inventory, customer = _service()
     order = _create_order(service, inventory, customer)
+    service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.CONFIRMED), actor_user_id=uuid4())
+    service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.CONFIRMED), actor_user_id=uuid4())
     service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED), actor_user_id=uuid4())
 
     try:
@@ -497,6 +504,7 @@ def test_update_order_insufficient_stock_rejects_without_partial_change() -> Non
 def test_shipped_order_rejects_item_edit_but_safe_fields_update() -> None:
     service, inventory, customer = _service()
     order = _create_order(service, inventory, customer)
+    service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.CONFIRMED), actor_user_id=uuid4())
     service.change_status(inventory.workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED), actor_user_id=uuid4())
 
     try:

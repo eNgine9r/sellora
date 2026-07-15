@@ -136,7 +136,7 @@ def _shipment_service(shipment, sender_settings_complete=True):
     payload = NovaPoshtaSettingsRequest(api_key="synthetic-credential-value", sender_city_ref="sender-city", sender_warehouse_ref="sender-wh", sender_counterparty_ref="sender", sender_contact_ref="contact", sender_phone="0000000000") if sender_settings_complete else NovaPoshtaSettingsRequest(api_key="synthetic-credential-value")
     settings.save_settings(workspace_id, payload, uuid4())
     service = NovaPoshtaShipmentService.__new__(NovaPoshtaShipmentService)
-    service.db = FakeDb(); service.settings = settings; service.audit_logs = FakeAudit(); service.shipments = SimpleNamespace(get=lambda workspace_id, shipment_id: shipment if shipment.workspace_id == workspace_id and shipment.id == shipment_id else None)
+    service.db = FakeDb(); service.settings = settings; service.audit_logs = FakeAudit(); service.provider_writes_enabled = True; service.shipments = SimpleNamespace(get=lambda workspace_id, shipment_id: shipment if shipment.workspace_id == workspace_id and shipment.id == shipment_id else None)
     return service
 
 
