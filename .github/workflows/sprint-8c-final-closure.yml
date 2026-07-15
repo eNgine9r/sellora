@@ -1,0 +1,154 @@
+name: Sprint 8C Final Closure
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/staging_sprint_8c_final_closure.py"
+      - ".github/workflows/sprint-8c-final-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sellora-sprint-8c-final-closure
+  cancel-in-progress: true
+
+jobs:
+  final-performance-browser-closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      EXPECTED_RUNTIME_COMMIT: 39c46dcf339990e491c9dfa25f1b75fad7c9289a
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_MANAGER_EMAIL: ${{ secrets.STAGING_MANAGER_EMAIL }}
+      STAGING_MANAGER_PASSWORD: ${{ secrets.STAGING_MANAGER_PASSWORD }}
+      STAGING_ANALYST_EMAIL: ${{ secrets.STAGING_ANALYST_EMAIL }}
+      STAGING_ANALYST_PASSWORD: ${{ secrets.STAGING_ANALYST_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+
+    steps:
+      - name: Checkout temporary QA branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate secure inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, re
+          required = [
+              "STAGING_FRONTEND_URL", "STAGING_API_URL",
+              "STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD",
+              "STAGING_MANAGER_EMAIL", "STAGING_MANAGER_PASSWORD",
+              "STAGING_ANALYST_EMAIL", "STAGING_ANALYST_PASSWORD",
+              "STAGING_TEST_WORKSPACE_ID", "EXPECTED_RUNTIME_COMMIT",
+          ]
+          if any(not os.getenv(name) for name in required):
+              raise SystemExit("Missing required Sprint 8C final closure input")
+          if not re.fullmatch(r"[0-9a-fA-F-]{36}", os.environ["STAGING_TEST_WORKSPACE_ID"]):
+              raise SystemExit("Invalid STAGING_TEST_WORKSPACE_ID")
+          print("Secure input preflight: PASS")
+          PY
+
+      - name: Install browser dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install httpx playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Compile final closure runner
+        run: python -m py_compile scripts/staging_sprint_8c_final_closure.py
+
+      - name: Execute final closure
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts/sprint-8c-final-closure
+          python scripts/staging_sprint_8c_final_closure.py > artifacts/sprint-8c-final-closure/console.log 2>&1
+          code=$?
+          echo "$code" > artifacts/sprint-8c-final-closure/exit-code.txt
+          exit 0
+
+      - name: Validate sanitized evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, pathlib, re
+          root = pathlib.Path("artifacts/sprint-8c-final-closure")
+          report_path = root / "sprint-8c-final-closure.json"
+          md_path = root / "sprint-8c-final-closure.md"
+          console_path = root / "console.log"
+          if not report_path.exists() or not md_path.exists():
+              raise SystemExit("Sprint 8C final closure report missing")
+          texts = [(path.name, path.read_text(encoding="utf-8", errors="replace")) for path in (report_path, md_path, console_path) if path.exists()]
+          leaks = []
+          for secret in (
+              os.getenv("STAGING_OWNER_PASSWORD", ""),
+              os.getenv("STAGING_MANAGER_PASSWORD", ""),
+              os.getenv("STAGING_ANALYST_PASSWORD", ""),
+          ):
+              if secret:
+                  for filename, text in texts:
+                      if secret in text:
+                          leaks.append(f"credential value in {filename}")
+          patterns = [
+              re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{20,}", re.I),
+              re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
+              re.compile(r"\b(?:sk|sb_secret)-[A-Za-z0-9_-]{12,}\b", re.I),
+          ]
+          for filename, text in texts:
+              for pattern in patterns:
+                  if pattern.search(text):
+                      leaks.append(f"token/API-key pattern in {filename}")
+          if leaks:
+              raise SystemExit("Sanitization FAIL: " + ", ".join(leaks))
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          security = report.get("security", {})
+          required_security = (
+              "passwords_suppressed", "tokens_suppressed",
+              "authorization_headers_suppressed", "api_keys_suppressed",
+              "raw_source_rows_suppressed",
+          )
+          if not all(security.get(key) is True for key in required_security):
+              raise SystemExit("Security evidence flags missing")
+          if report.get("decision") != "PASS":
+              print(json.dumps({"safe_error": report.get("safe_error"), "failed": [item for item in report.get("checks", []) if item.get("status") != "PASS"][:10]}, ensure_ascii=False, indent=2))
+          print("Sanitized Sprint 8C final evidence: PASS")
+          PY
+
+      - name: Upload sanitized final evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8c-final-closure-${{ github.run_id }}
+          path: artifacts/sprint-8c-final-closure
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce final closure decision
+        if: always()
+        shell: bash
+        run: |
+          code="$(cat artifacts/sprint-8c-final-closure/exit-code.txt 2>/dev/null || echo 99)"
+          [ "$code" = "0" ] || exit 1
+          python - <<'PY'
+          import json
+          report = json.load(open("artifacts/sprint-8c-final-closure/sprint-8c-final-closure.json", encoding="utf-8"))
+          if report.get("decision") != "PASS":
+              raise SystemExit(1)
+          print("SPRINT 8C FINAL PERFORMANCE/BROWSER CLOSURE: PASS")
+          PY
