@@ -8,6 +8,9 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
+
+import httpx
 
 V2_PATH = Path(__file__).with_name("staging_sprint_8c_phase_b_core_v2.py")
 spec = importlib.util.spec_from_file_location("sellora_sprint_8c_phase_b_core_v2", V2_PATH)
@@ -16,6 +19,17 @@ if spec is None or spec.loader is None:
 v2 = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = v2
 spec.loader.exec_module(v2)
+
+_original_request_retry = v2.base.request_retry
+
+
+def bounded_request_retry(operation, attempts: int = 3):
+    """Keep staging failures bounded instead of waiting on six 10-minute reads."""
+
+    return _original_request_retry(operation, attempts=min(attempts, 3))
+
+
+v2.base.request_retry = bounded_request_retry
 
 
 def parse_runtime_timestamp(value: object) -> datetime | None:
@@ -27,8 +41,47 @@ def parse_runtime_timestamp(value: object) -> datetime | None:
         return None
 
 
+def log_request(request: httpx.Request) -> None:
+    print(f"HTTP START {request.method} {request.url.path}", flush=True)
+
+
+def log_response(response: httpx.Response) -> None:
+    print(
+        f"HTTP HEADERS {response.request.method} {response.request.url.path} {response.status_code}",
+        flush=True,
+    )
+
+
 class PhaseBClosureV3(v2.PhaseBClosureV2):
-    """Require the explicitly approved main commit and a post-fix process."""
+    """Require the approved runtime and keep every staging request observable."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        old_client = self.client.client
+        old_client.close()
+        timeout = httpx.Timeout(connect=20, read=60, write=120, pool=20)
+        limits = httpx.Limits(max_connections=10, max_keepalive_connections=0)
+        self.client.client = httpx.Client(
+            timeout=timeout,
+            limits=limits,
+            follow_redirects=True,
+            headers={"Connection": "close", "Cache-Control": "no-cache"},
+            event_hooks={"request": [log_request], "response": [log_response]},
+        )
+
+    def check(self, name: str, condition: bool, detail: str = "") -> None:
+        print(
+            json.dumps(
+                {
+                    "check": name,
+                    "status": "PASS" if condition else "FAIL",
+                    "detail": detail[:200],
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+        return super().check(name, condition, detail)
 
     def wait_runtime(self) -> None:
         allowed = {
@@ -51,13 +104,7 @@ class PhaseBClosureV3(v2.PhaseBClosureV2):
         last = "unavailable"
         while time.monotonic() < deadline:
             try:
-                # Render can keep an old instance reachable through a pre-deploy
-                # keep-alive connection. Close every probe connection so the next
-                # retry resolves the currently active process.
-                response = self.client.get(
-                    f"{v2.base.API}/health",
-                    headers={"Connection": "close", "Cache-Control": "no-cache"},
-                )
+                response = self.client.get(f"{v2.base.API}/health")
                 if response.status_code == 200:
                     body = response.json()
                     last = str(body.get("runtime_commit") or "legacy").lower()
