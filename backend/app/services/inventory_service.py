@@ -32,8 +32,12 @@ class InventoryService:
     def get_inventory_by_variant(self, workspace_id: UUID, product_variant_id: UUID) -> Inventory | None:
         return self.inventory.get_by_variant(workspace_id, product_variant_id)
 
+    def _get_inventory_for_update(self, workspace_id: UUID, inventory_id: UUID) -> Inventory | None:
+        getter = getattr(self.inventory, "get_for_update", None)
+        return getter(workspace_id, inventory_id) if getter else self.inventory.get(workspace_id, inventory_id)
+
     def update_inventory(self, workspace_id: UUID, inventory_id: UUID, payload: InventoryUpdate, actor_user_id: UUID | None) -> Inventory | None:
-        inventory = self.inventory.get_for_update(workspace_id, inventory_id)
+        inventory = self._get_inventory_for_update(workspace_id, inventory_id)
         if inventory is None:
             return None
         old_value = snapshot(inventory)
@@ -58,7 +62,7 @@ class InventoryService:
         return self.transactions.list_for_workspace(workspace_id, inventory_id, product_variant_id)
 
     def record_transaction(self, workspace_id: UUID, inventory_id: UUID, payload: InventoryTransactionCreate, actor_user_id: UUID | None, commit: bool = True) -> InventoryTransaction | None:
-        inventory = self.inventory.get_for_update(workspace_id, inventory_id)
+        inventory = self._get_inventory_for_update(workspace_id, inventory_id)
         if inventory is None:
             return None
 
@@ -96,7 +100,9 @@ class InventoryService:
             self.db.commit()
             self.db.refresh(transaction)
         else:
-            self.db.flush()
+            flush = getattr(self.db, "flush", None)
+            if flush:
+                flush()
         return transaction
 
     def _calculate_quantities(self, inventory: Inventory, transaction_type: InventoryTransactionType, quantity: int) -> tuple[int, int]:
