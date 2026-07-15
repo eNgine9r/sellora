@@ -37,6 +37,16 @@ class ShipmentRepository:
         stmt = select(Shipment).where(Shipment.workspace_id == workspace_id, Shipment.id == shipment_id, Shipment.deleted_at.is_(None)).options(selectinload(Shipment.order), selectinload(Shipment.customer))
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def get_for_update(self, workspace_id: UUID, shipment_id: UUID) -> Shipment | None:
+        stmt = (
+            select(Shipment)
+            .where(Shipment.workspace_id == workspace_id, Shipment.id == shipment_id, Shipment.deleted_at.is_(None))
+            .with_for_update()
+            .execution_options(populate_existing=True)
+            .options(selectinload(Shipment.order), selectinload(Shipment.customer))
+        )
+        return self.db.execute(stmt).scalar_one_or_none()
+
     def get_by_order(self, workspace_id: UUID, order_id: UUID) -> Shipment | None:
         stmt = select(Shipment).where(Shipment.workspace_id == workspace_id, Shipment.order_id == order_id, Shipment.deleted_at.is_(None)).options(selectinload(Shipment.order), selectinload(Shipment.customer))
         return self.db.execute(stmt.order_by(Shipment.created_at.desc())).scalars().first()

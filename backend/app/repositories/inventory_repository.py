@@ -33,8 +33,30 @@ class InventoryRepository:
         stmt = select(Inventory).where(Inventory.workspace_id == workspace_id, Inventory.id == inventory_id, Inventory.deleted_at.is_(None)).options(selectinload(Inventory.variant))
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def get_for_update(self, workspace_id: UUID, inventory_id: UUID) -> Inventory | None:
+        stmt = (
+            select(Inventory)
+            .where(Inventory.workspace_id == workspace_id, Inventory.id == inventory_id, Inventory.deleted_at.is_(None))
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return self.db.execute(stmt).scalar_one_or_none()
+
     def get_by_variant(self, workspace_id: UUID, product_variant_id: UUID) -> Inventory | None:
         stmt = select(Inventory).where(Inventory.workspace_id == workspace_id, Inventory.product_variant_id == product_variant_id, Inventory.deleted_at.is_(None)).options(selectinload(Inventory.variant))
+        return self.db.execute(stmt).scalar_one_or_none()
+
+    def get_by_variant_for_update(self, workspace_id: UUID, product_variant_id: UUID) -> Inventory | None:
+        stmt = (
+            select(Inventory)
+            .where(
+                Inventory.workspace_id == workspace_id,
+                Inventory.product_variant_id == product_variant_id,
+                Inventory.deleted_at.is_(None),
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
         return self.db.execute(stmt).scalar_one_or_none()
 
     def create(self, inventory: Inventory) -> Inventory:

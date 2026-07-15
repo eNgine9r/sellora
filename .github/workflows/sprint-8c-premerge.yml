@@ -1,0 +1,161 @@
+name: Sprint 8C/8D Premerge
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/app/main.py"
+      - "backend/app/api/v1/import_center.py"
+      - "backend/app/api/v1/workspaces.py"
+      - "backend/app/api/v1/orders.py"
+      - "backend/app/api/v1/inventory.py"
+      - "backend/app/api/v1/shipments.py"
+      - "backend/app/core/config.py"
+      - "backend/app/repositories/audit_log_repository.py"
+      - "backend/app/repositories/import_center_repository.py"
+      - "backend/app/repositories/workspace_repository.py"
+      - "backend/app/repositories/order_repository.py"
+      - "backend/app/repositories/inventory_repository.py"
+      - "backend/app/repositories/shipment_repository.py"
+      - "backend/app/services/import_durable_service.py"
+      - "backend/app/services/import_execution_guard.py"
+      - "backend/app/services/import_pilot_safe_service.py"
+      - "backend/app/services/import_source_storage.py"
+      - "backend/app/services/onboarding_service.py"
+      - "backend/app/services/order_service.py"
+      - "backend/app/services/inventory_service.py"
+      - "backend/app/services/shipment_service.py"
+      - "backend/requirements.txt"
+      - "backend/tests/test_health_runtime_identity.py"
+      - "backend/tests/test_orders.py"
+      - "backend/tests/test_shipments.py"
+      - "backend/tests/imports/**"
+      - "backend/tests/onboarding/**"
+      - "backend/tests/orders/**"
+      - "backend/tests/inventory/**"
+      - "backend/tests/shipments/**"
+      - "frontend/**"
+      - "docs/sprint-8c-import-center-pilot-hardening.md"
+      - "docs/sprint-8d-orders-inventory-shipments.md"
+      - ".github/workflows/sprint-8c-premerge.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  backend-security-imports-and-operations:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend dependencies
+        working-directory: backend
+        run: python -m pip install -r requirements.txt
+      - name: Compile changed backend modules
+        working-directory: backend
+        run: |
+          python -m py_compile \
+            app/main.py \
+            app/api/v1/import_center.py \
+            app/api/v1/workspaces.py \
+            app/api/v1/orders.py \
+            app/api/v1/inventory.py \
+            app/api/v1/shipments.py \
+            app/core/config.py \
+            app/repositories/audit_log_repository.py \
+            app/repositories/import_center_repository.py \
+            app/repositories/workspace_repository.py \
+            app/repositories/order_repository.py \
+            app/repositories/inventory_repository.py \
+            app/repositories/shipment_repository.py \
+            app/services/import_durable_service.py \
+            app/services/import_execution_guard.py \
+            app/services/import_pilot_safe_service.py \
+            app/services/import_source_storage.py \
+            app/services/onboarding_service.py \
+            app/services/order_service.py \
+            app/services/inventory_service.py \
+            app/services/shipment_service.py
+      - name: Run Sprint 8C import and provenance tests
+        working-directory: backend
+        run: |
+          python -m pytest -q \
+            tests/test_health_runtime_identity.py \
+            tests/imports/test_import_execution_guard.py \
+            tests/imports/test_import_source_storage.py \
+            tests/imports/test_import_center_pilot_hardening.py \
+            tests/imports/test_import_pilot_scope_safety.py \
+            tests/imports/test_import_formula_rejection.py \
+            tests/imports/test_import_inventory_plan.py \
+            tests/imports/test_import_xlsx_content.py \
+            tests/imports/test_import_historical_value_validation.py \
+            tests/onboarding/test_onboarding_status.py \
+            tests/onboarding/test_demo_workspace_service.py
+      - name: Run Sprint 8D operational tests
+        working-directory: backend
+        shell: bash
+        run: |
+          set +e
+          mkdir -p ../artifacts/sprint-8d-premerge
+          set -o pipefail
+          python -m pytest -q --tb=short \
+            tests/test_orders.py \
+            tests/orders/test_order_lifecycle_pilot.py \
+            tests/orders/test_sprint_8d_locking_contract.py \
+            tests/inventory/test_inventory_operational_invariants.py \
+            tests/test_shipments.py \
+            tests/shipments/test_local_shipment_pilot.py \
+            2>&1 | tee ../artifacts/sprint-8d-premerge/pytest.log
+          code=${PIPESTATUS[0]}
+          echo "$code" > ../artifacts/sprint-8d-premerge/exit-code.txt
+          exit 0
+      - name: Upload Sprint 8D test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint-8d-premerge-${{ github.run_id }}
+          path: artifacts/sprint-8d-premerge
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce Sprint 8D operational tests
+        if: always()
+        shell: bash
+        run: |
+          code="$(cat artifacts/sprint-8d-premerge/exit-code.txt 2>/dev/null || echo 99)"
+          [ "$code" = "0" ] || exit 1
+
+  frontend-production-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+      - name: Production build
+        working-directory: frontend
+        run: npm run build
+      - name: Run Sprint 8C static regression
+        run: node frontend/scripts/import-center-pilot-regression.mjs
+      - name: Run Sprint 8D static regression
+        run: node frontend/scripts/orders-inventory-shipments-pilot-regression.mjs

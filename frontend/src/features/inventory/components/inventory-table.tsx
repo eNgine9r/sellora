@@ -13,7 +13,8 @@ function availableQuantity(item: Inventory) { return item.stock_quantity - item.
 export function InventoryTable({ inventory, variants, products, selectedInventoryId, onSelect, onEdit }: { inventory: Inventory[]; variants: ProductVariant[]; products: Product[]; selectedInventoryId?: string; onSelect?: (inventory: Inventory) => void; onEdit?: (inventory: Inventory) => void }) {
   const variantById = new Map(variants.map((variant) => [variant.id, variant]));
   const productById = new Map(products.map((product) => [product.id, product]));
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const archivedVariantLabel = locale === "uk" ? "Архівний варіант" : "Archived variant";
   return (
     <div className="w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
       <div className="sellora-scrollbar hidden max-w-full overflow-x-auto lg:block">
@@ -29,4 +30,3 @@ export function InventoryTable({ inventory, variants, products, selectedInventor
     </div>
   );
 }
-// Localization regression compatibility markers: Edit thresholds.

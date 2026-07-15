@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,8 +30,11 @@ class PaymentStatus(StrEnum):
 
 class Order(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "order_number", name="uq_orders_workspace_id_order_number"),
+    )
 
-    order_number: Mapped[str] = mapped_column(String(30), unique=True, index=True, nullable=False)
+    order_number: Mapped[str] = mapped_column(String(30), index=True, nullable=False)
     customer_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True)
     campaign_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("ad_campaigns.id", ondelete="SET NULL"), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(30), default=OrderStatus.NEW.value, nullable=False)

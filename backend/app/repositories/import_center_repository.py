@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session
-
-from datetime import date
 
 from app.models.ad_campaign import AdCampaign
 from app.models.ad_metric import AdMetric
@@ -36,6 +35,11 @@ class ImportJobLogRepository:
         self.db = db
 
     def create(self, log: ImportJobLog) -> ImportJobLog:
+        # Sprint 8C controlled-pilot policy: import logs retain row number,
+        # status and a safe message, but never persist raw customer/order rows.
+        # This prevents phone, address and spreadsheet formula content from
+        # appearing in API responses, database evidence or QA artifacts.
+        log.raw_data = None
         self.db.add(log); self.db.flush(); return log
 
     def list_for_job(self, workspace_id: UUID, import_job_id: UUID, status: str | None = None) -> list[ImportJobLog]:

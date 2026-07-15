@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
 import { PaginationControls, clampPage, paginateItems } from "@/components/pagination-controls";
@@ -47,6 +47,7 @@ export default function InventoryPage() {
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState("");
   const [editingInventory, setEditingInventory] = useState<Inventory | null>(null);
+  const transactionInFlight = useRef(false);
   const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const canEdit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
 
@@ -103,7 +104,13 @@ export default function InventoryPage() {
 
   function submitTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    transactionMutation.mutate();
+    if (transactionInFlight.current || transactionMutation.isPending) return;
+    transactionInFlight.current = true;
+    transactionMutation.mutate(undefined, {
+      onSettled: () => {
+        transactionInFlight.current = false;
+      },
+    });
   }
 
   return (
