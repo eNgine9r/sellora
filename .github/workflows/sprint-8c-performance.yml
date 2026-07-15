@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts/staging_sprint_8c_performance.py"
       - ".github/workflows/sprint-8c-performance.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -24,7 +25,7 @@ jobs:
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
       STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
-      PHASE_B_RUN_ID: "29395966711"
+      PHASE_B_BRANCH: qa/sprint-8c-phase-b-core-20260714
 
     steps:
       - uses: actions/checkout@v4
@@ -33,51 +34,86 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Wait for Phase B core success
+      - name: Resolve successful Phase B core dependency
+        id: phase_b
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 90); do
-            payload="$(curl -fsSL \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${PHASE_B_RUN_ID}")"
-            status="$(python -c 'import json,sys; print(json.load(sys.stdin).get("status", ""))' <<< "$payload")"
-            conclusion="$(python -c 'import json,sys; print(json.load(sys.stdin).get("conclusion") or "")' <<< "$payload")"
-            echo "Phase B dependency probe $attempt: status=$status conclusion=$conclusion"
-            if [ "$status" = "completed" ]; then
-              [ "$conclusion" = "success" ] || { echo "Phase B core is not successful" >&2; exit 1; }
-              echo "Phase B core dependency: PASS"
-              exit 0
-            fi
-            sleep 20
-          done
-          echo "Timed out waiting for Phase B core" >&2
-          exit 1
+          mkdir -p artifacts
+          payload="$(curl -fsSL --get \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            --data-urlencode "branch=${PHASE_B_BRANCH}" \
+            --data-urlencode "status=completed" \
+            --data-urlencode "per_page=50" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs")"
+          PHASE_B_PAYLOAD="$payload" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(os.environ["PHASE_B_PAYLOAD"])
+          matching = [
+              run
+              for run in payload.get("workflow_runs", [])
+              if run.get("name") == "Sprint 8C Phase B Core"
+          ]
+          matching.sort(key=lambda run: (run.get("run_number", 0), run.get("created_at", "")), reverse=True)
+          successful = [run for run in matching if run.get("conclusion") == "success"]
+          selected = successful[0] if successful else None
+          latest = matching[0] if matching else None
+          evidence = {
+              "decision": "PASS" if selected else "BLOCKED",
+              "phase_b_branch": os.environ["PHASE_B_BRANCH"],
+              "successful_run_id": selected.get("id") if selected else None,
+              "latest_run": {
+                  "id": latest.get("id"),
+                  "status": latest.get("status"),
+                  "conclusion": latest.get("conclusion"),
+              } if latest else None,
+              "reason": None if selected else "No completed successful Sprint 8C Phase B Core run exists for the QA branch",
+          }
+          Path("artifacts/sprint-8c-performance-dependency.json").write_text(
+              json.dumps(evidence, indent=2),
+              encoding="utf-8",
+          )
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"ready={'true' if selected else 'false'}\n")
+              output.write(f"run_id={selected.get('id') if selected else ''}\n")
+          print(
+              "Phase B core dependency: PASS " + str(selected.get("id"))
+              if selected
+              else "Phase B core dependency: BLOCKED"
+          )
+          PY
       - name: Install QA dependency
+        if: steps.phase_b.outputs.ready == 'true'
         run: python -m pip install httpx
       - name: Compile runner
+        if: steps.phase_b.outputs.ready == 'true'
         run: python -m py_compile scripts/staging_sprint_8c_performance.py
       - name: Execute performance matrix
+        if: steps.phase_b.outputs.ready == 'true'
         shell: bash
         run: |
           set +e
+          mkdir -p artifacts
           python scripts/staging_sprint_8c_performance.py > /tmp/sprint-8c-performance.log 2>&1
           code=$?
           cat /tmp/sprint-8c-performance.log
           echo "$code" > artifacts/sprint-8c-performance-exit-code.txt
           exit 0
       - name: Validate sanitized performance evidence
-        if: always()
+        if: steps.phase_b.outputs.ready == 'true'
         shell: bash
         run: |
           python - <<'PY'
           import json, os, pathlib, re
           path = pathlib.Path("artifacts/sprint-8c-performance.json")
           if not path.exists():
-              raise SystemExit("Performance artifact missing")
+              raise SystemExit("Performance artifact missing after performance runner execution")
           text = path.read_text(encoding="utf-8")
           for name in ("STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD"):
               value = os.getenv(name, "")
@@ -113,5 +149,9 @@ jobs:
         if: always()
         shell: bash
         run: |
+          if [ "${{ steps.phase_b.outputs.ready }}" != "true" ]; then
+            echo "Sprint 8C performance is blocked until Phase B core has a successful completed run." >&2
+            exit 1
+          fi
           code="$(cat artifacts/sprint-8c-performance-exit-code.txt 2>/dev/null || echo 99)"
           [ "$code" = "0" ]
