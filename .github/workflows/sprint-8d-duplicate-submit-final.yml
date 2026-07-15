@@ -21,6 +21,7 @@ jobs:
     env:
       STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
       STAGING_API_URL: https://sellora-api-staging.onrender.com
+      EXPECTED_RUNTIME_COMMIT: 9bf30f3140e6800b33577ef248c7f6c441201613
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
       STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
@@ -39,12 +40,14 @@ jobs:
           python - <<'PY'
           import os, re
           required = [
-              "STAGING_FRONTEND_URL", "STAGING_API_URL",
+              "STAGING_FRONTEND_URL", "STAGING_API_URL", "EXPECTED_RUNTIME_COMMIT",
               "STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD",
               "STAGING_TEST_WORKSPACE_ID",
           ]
           if any(not os.getenv(name) for name in required):
               raise SystemExit("Missing final Sprint 8D browser input")
+          if not re.fullmatch(r"[0-9a-f]{40}", os.environ["EXPECTED_RUNTIME_COMMIT"]):
+              raise SystemExit("Invalid EXPECTED_RUNTIME_COMMIT")
           if not re.fullmatch(r"[0-9a-fA-F-]{36}", os.environ["STAGING_TEST_WORKSPACE_ID"]):
               raise SystemExit("Invalid STAGING_TEST_WORKSPACE_ID")
           print("Final Sprint 8D secure input preflight: PASS")
