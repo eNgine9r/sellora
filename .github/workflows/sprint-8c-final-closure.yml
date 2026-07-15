@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/staging_sprint_8c_final_closure.py"
+      - "scripts/staging_sprint_8c_final_closure_v2.py"
       - ".github/workflows/sprint-8c-final-closure.yml"
   workflow_dispatch:
 
@@ -68,15 +69,17 @@ jobs:
           python -m pip install httpx playwright
           python -m playwright install --with-deps chromium
 
-      - name: Compile final closure runner
-        run: python -m py_compile scripts/staging_sprint_8c_final_closure.py
+      - name: Compile final closure runners
+        run: |
+          python -m py_compile scripts/staging_sprint_8c_final_closure.py
+          python -m py_compile scripts/staging_sprint_8c_final_closure_v2.py
 
       - name: Execute final closure
         shell: bash
         run: |
           set +e
           mkdir -p artifacts/sprint-8c-final-closure
-          python scripts/staging_sprint_8c_final_closure.py > artifacts/sprint-8c-final-closure/console.log 2>&1
+          python scripts/staging_sprint_8c_final_closure_v2.py > artifacts/sprint-8c-final-closure/console.log 2>&1
           code=$?
           echo "$code" > artifacts/sprint-8c-final-closure/exit-code.txt
           exit 0
