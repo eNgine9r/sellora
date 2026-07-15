@@ -1,0 +1,52 @@
+name: Sprint 8C Runtime Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/sprint-8c-runtime-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Capture sanitized runtime identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          curl -fsSL --retry 5 --retry-delay 5 --max-time 60 \
+            https://sellora-api-staging.onrender.com/health \
+            > /tmp/health.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          source = json.loads(Path("/tmp/health.json").read_text(encoding="utf-8"))
+          evidence = {
+              "status": source.get("status"),
+              "runtime_commit": source.get("runtime_commit"),
+              "process_started_at": source.get("process_started_at"),
+          }
+          if evidence["status"] != "ok":
+              raise SystemExit("Backend health is not ok")
+          if not evidence["runtime_commit"] or not evidence["process_started_at"]:
+              raise SystemExit("Runtime identity is incomplete")
+          Path("artifacts/sprint-8c-runtime-probe.json").write_text(
+              json.dumps(evidence, indent=2),
+              encoding="utf-8",
+          )
+          print(json.dumps(evidence, indent=2))
+          PY
+      - name: Upload runtime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8c-runtime-probe-${{ github.run_id }}
+          path: artifacts/sprint-8c-runtime-probe.json
+          if-no-files-found: error
+          retention-days: 3
