@@ -110,6 +110,7 @@ class PhaseBClosureV3(v2.PhaseBClosureV2):
 
         deadline = time.monotonic() + 25 * 60
         last = "unavailable"
+        rejected_observations = 0
         while time.monotonic() < deadline:
             try:
                 response = self.client.get(f"{v2.base.API}/health")
@@ -129,6 +130,21 @@ class PhaseBClosureV3(v2.PhaseBClosureV2):
                         process_started_at
                         and process_started_at >= minimum_started_at
                     )
+                    if rejected_match:
+                        rejected_observations += 1
+                        if rejected_observations >= 3:
+                            self.result["runtime"] = {
+                                "runtime_commit": last,
+                                "process_started_at": body.get("process_started_at"),
+                                "expected_commits": sorted(allowed),
+                                "rejected_baselines": sorted(rejected),
+                            }
+                            expected = ",".join(sorted(commit[:12] for commit in allowed))
+                            raise RuntimeError(
+                                f"STALE_RUNTIME: Render is {last[:12]}; deploy expected main commit {expected}"
+                            )
+                    else:
+                        rejected_observations = 0
                     if allowed_match and not rejected_match and post_fix_process:
                         self.result["runtime"] = {
                             "runtime_commit": last,
@@ -145,6 +161,8 @@ class PhaseBClosureV3(v2.PhaseBClosureV2):
                             f"matched {allowed_match[:12]}",
                         )
                         return
+            except RuntimeError:
+                raise
             except Exception:
                 last = "health-unavailable"
             time.sleep(15)
