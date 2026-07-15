@@ -18,6 +18,10 @@ jobs:
       STAGING_API_URL: https://sellora-api-staging.onrender.com
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_MANAGER_EMAIL: ${{ secrets.STAGING_MANAGER_EMAIL }}
+      STAGING_MANAGER_PASSWORD: ${{ secrets.STAGING_MANAGER_PASSWORD }}
+      STAGING_ANALYST_EMAIL: ${{ secrets.STAGING_ANALYST_EMAIL }}
+      STAGING_ANALYST_PASSWORD: ${{ secrets.STAGING_ANALYST_PASSWORD }}
       STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
     steps:
       - uses: actions/setup-python@v5
@@ -38,7 +42,8 @@ jobs:
           import httpx
 
           api = os.environ["STAGING_API_URL"].rstrip("/")
-          workspace = os.environ["STAGING_TEST_WORKSPACE_ID"]
+          workspace_a = os.environ["STAGING_TEST_WORKSPACE_ID"]
+          workspace_b = "56e8a724-782a-4494-a3a7-0bbf7deb03b7"
           phase_a_job = "e0b6cd02-4272-40cb-ad4c-9084c2a35dff"
           result = {"decision": "FAIL", "checks": [], "runtime": {}}
 
@@ -59,6 +64,23 @@ jobs:
                   result["checks"].append({"name": name, "status_code": None, "seconds": elapsed, "error_type": type(exc).__name__})
                   return None
 
+          def login(role):
+              response = record(
+                  f"{role} login",
+                  "POST",
+                  "/api/v1/auth/login",
+                  json={
+                      "email": os.environ[f"STAGING_{role}_EMAIL"],
+                      "password": os.environ[f"STAGING_{role}_PASSWORD"],
+                  },
+              )
+              if response is None or response.status_code != 200:
+                  raise SystemExit(f"{role} login probe failed")
+              token = response.json().get("access_token")
+              if not token:
+                  raise SystemExit(f"{role} token absent")
+              return token
+
           health = record("health", "GET", "/health")
           if health is None or health.status_code != 200:
               raise SystemExit("health probe failed")
@@ -68,41 +90,77 @@ jobs:
               "process_started_at": health_body.get("process_started_at"),
           }
 
-          login = record(
-              "OWNER login",
-              "POST",
-              "/api/v1/auth/login",
-              json={"email": os.environ["STAGING_OWNER_EMAIL"], "password": os.environ["STAGING_OWNER_PASSWORD"]},
-          )
-          if login is None or login.status_code != 200:
-              raise SystemExit("OWNER login probe failed")
-          token = login.json().get("access_token")
-          if not token:
-              raise SystemExit("OWNER token absent")
-          headers = {"Authorization": f"Bearer {token}", "X-Workspace-ID": workspace}
+          owner_token = login("OWNER")
+          owner_a = {"Authorization": f"Bearer {owner_token}", "X-Workspace-ID": workspace_a}
+          owner_b = {"Authorization": f"Bearer {owner_token}", "X-Workspace-ID": workspace_b}
 
-          me = record("auth me", "GET", "/api/v1/auth/me", headers=headers)
-          customers = record(
-              "restart customers read",
+          me = record("auth me", "GET", "/api/v1/auth/me", headers=owner_a)
+          customers_a = record(
+              "restart customers Workspace A",
               "GET",
               "/api/v1/customers",
-              headers=headers,
+              headers=owner_a,
               params={"search": "QA8C Restart Customer"},
           )
-          logs = record(
-              "Phase A logs read",
+          logs_a = record(
+              "Phase A logs Workspace A",
               "GET",
               f"/api/v1/import/{phase_a_job}/logs",
-              headers=headers,
+              headers=owner_a,
+          )
+          customers_b = record(
+              "restart customers Workspace B",
+              "GET",
+              "/api/v1/customers",
+              headers=owner_b,
+              params={"search": "QA8C Restart Customer"},
+          )
+          logs_b = record(
+              "Phase A logs Workspace B denied",
+              "GET",
+              f"/api/v1/import/{phase_a_job}/logs",
+              headers=owner_b,
           )
 
-          if not all(response is not None and response.status_code == 200 for response in (me, customers, logs)):
+          manager_token = login("MANAGER")
+          analyst_token = login("ANALYST")
+          manager_headers = {"Authorization": f"Bearer {manager_token}", "X-Workspace-ID": workspace_a}
+          analyst_headers = {"Authorization": f"Bearer {analyst_token}", "X-Workspace-ID": workspace_a}
+          denied_file = {"file": ("denied.csv", b"Name\nDenied\n", "text/csv")}
+          manager_upload = record(
+              "MANAGER import upload denied",
+              "POST",
+              "/api/v1/import/upload",
+              headers=manager_headers,
+              files=denied_file,
+          )
+          analyst_upload = record(
+              "ANALYST import upload denied",
+              "POST",
+              "/api/v1/import/upload",
+              headers=analyst_headers,
+              files=denied_file,
+          )
+
+          required_200 = (me, customers_a, logs_a, customers_b)
+          if not all(response is not None and response.status_code == 200 for response in required_200):
               raise SystemExit("authenticated readiness probe failed")
-          customers_body = customers.json()
-          logs_body = logs.json()
-          result["customer_count"] = len(customers_body) if isinstance(customers_body, list) else None
-          result["log_count"] = len(logs_body) if isinstance(logs_body, list) else None
-          result["raw_data_absent"] = bool(isinstance(logs_body, list) and all(item.get("raw_data") is None for item in logs_body))
+          if logs_b is None or logs_b.status_code not in {400, 404}:
+              raise SystemExit("Workspace B log isolation failed")
+          if manager_upload is None or manager_upload.status_code != 403:
+              raise SystemExit("MANAGER mutation denial failed")
+          if analyst_upload is None or analyst_upload.status_code != 403:
+              raise SystemExit("ANALYST mutation denial failed")
+
+          customers_a_body = customers_a.json()
+          customers_b_body = customers_b.json()
+          logs_a_body = logs_a.json()
+          result["customer_count_workspace_a"] = len(customers_a_body) if isinstance(customers_a_body, list) else None
+          result["customer_count_workspace_b"] = len(customers_b_body) if isinstance(customers_b_body, list) else None
+          result["log_count"] = len(logs_a_body) if isinstance(logs_a_body, list) else None
+          result["raw_data_absent"] = bool(isinstance(logs_a_body, list) and all(item.get("raw_data") is None for item in logs_a_body))
+          if result["customer_count_workspace_a"] != 2 or result["customer_count_workspace_b"] != 0 or result["log_count"] != 2 or not result["raw_data_absent"]:
+              raise SystemExit("Phase A read-only evidence mismatch")
           result["decision"] = "PASS"
           Path("artifacts/sprint-8c-api-readiness.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
           print(json.dumps(result, indent=2))
