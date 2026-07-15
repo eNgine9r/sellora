@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models.import_job import ImportJobStatus
 from app.schemas.import_center import ImportReportResponse, ImportValidationIssue, ImportValidationReport
-from app.services.import_center_service import ImportServiceError, issue, map_row
+from app.services.import_center_service import ExcelValueNormalizer, ImportServiceError, issue, map_row
 from app.services.import_durable_service import (
     DurableImportService,
     append_report_issues,
@@ -46,6 +46,38 @@ def formula_injection_issues(rows: list[dict], mapping: dict[str, str]) -> list[
             raw_value = row.get(column)
             if is_formula_injection_risk(raw_value):
                 issues.append(issue(row_number, "ERROR", field, "Formula-prefixed CSV values are not allowed", raw_value, None))
+    return issues
+
+
+def historical_order_value_issues(rows: list[dict], mapping: dict[str, str]) -> list[ImportValidationIssue]:
+    """Return strict row-level value errors not enforced by the historical importer.
+
+    Historical order dates are optional, but every non-empty mapped value must be
+    parseable. The helper is deliberately pure so validate, dry-run, execute, and
+    focused regressions all use the same rule.
+    """
+
+    date_column = mapping.get("order_date")
+    if not date_column:
+        return []
+
+    normalizer = ExcelValueNormalizer()
+    issues: list[ImportValidationIssue] = []
+    for row_number, row in enumerate(rows, start=2):
+        raw_value = row.get(date_column)
+        if raw_value in (None, ""):
+            continue
+        if normalizer.date(raw_value) is None:
+            issues.append(
+                issue(
+                    row_number,
+                    "ERROR",
+                    "order_date",
+                    "order_date must be a valid date",
+                    raw_value,
+                    None,
+                )
+            )
     return issues
 
 
@@ -104,22 +136,7 @@ class PilotSafeImportService(DurableImportService):
 
         job = self._job(workspace_id, job_id)
         _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
-        value_report = self.validator.validate(
-            entity_type,
-            safe_mapping,
-            rows,
-            workspace_id,
-            self.lookup,
-        )
-        seen = {
-            (item.row_number, item.severity, item.field, item.message)
-            for item in issues
-        }
-        for item in value_report.issues:
-            key = (item.row_number, item.severity, item.field, item.message)
-            if key not in seen:
-                issues.append(item)
-                seen.add(key)
+        issues.extend(historical_order_value_issues(rows, safe_mapping))
         return issues
 
     def _mapped_rows(self, workspace_id: UUID, job_id: UUID, sheet_name: str, column_mapping: dict[str, str]) -> list[dict]:
