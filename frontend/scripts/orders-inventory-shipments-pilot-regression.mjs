@@ -43,7 +43,7 @@ const checks = [
   ["real Nova Poshta calls remain out of scope", /No real Nova Poshta|Nova Poshta.*out of scope|provider calls = 0/i.test(files.report + files.shipment) && !/api\.novaposhta\.ua|NovaPoshtaClient|fetch\([^)]*novaposhta/i.test(files.shipmentService + files.shipmentsPage)],
   ["ANALYST mutation denial remains", /ANALYST/i.test(files.report + files.lifecycle + files.shipment) && /Read-only|mutation.*denied|denied/i.test(files.report + files.lifecycle)],
   ["workspace-switch reset is implemented", files.ordersPage.includes("setEditingOrder(null)") && files.ordersPage.includes("setIsCreateOpen(false)") && files.inventoryPage.includes("setEditingInventory(null)") && files.shipmentsPage.includes("setEditingShipment(null)") && files.shipmentsPage.includes("setInitialOrderId(undefined)")],
-  ["duplicate-submit guards remain", /isPending/.test(files.ordersPage) && /isPending/.test(files.inventoryPage) && /isPending/.test(files.shipmentsPage)],
+  ["duplicate-submit guards remain", /isPending/.test(files.ordersPage) && files.inventoryPage.includes("transactionInFlight.current") && files.inventoryPage.includes("onSettled") && /isPending/.test(files.shipmentsPage)],
   ["no new migration exists", !migrationNames.some((name) => /8d|orders.*inventory|shipment.*pilot|issue.*134/i.test(name))],
   ["no raw UUID labels introduced", !/(Workspace ID:|Order ID:|Inventory ID:|Shipment ID:|workspace_id:|order_id:|inventory_id:|shipment_id:)/.test(files.ordersPage + files.inventoryPage + files.shipmentsPage)],
   ["backend enums remain English", !/ДОСТАВЛЕНО|СКАСОВАНО|ВІДПРАВЛЕНО|НОВЕ|ПОВЕРНЕНО/.test(read("backend/app/models/order.py") + read("backend/app/models/inventory.py") + read("backend/app/models/shipment.py"))],

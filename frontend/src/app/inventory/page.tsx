@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
 import { PaginationControls, clampPage, paginateItems } from "@/components/pagination-controls";
@@ -47,6 +47,7 @@ export default function InventoryPage() {
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState("");
   const [editingInventory, setEditingInventory] = useState<Inventory | null>(null);
+  const transactionInFlight = useRef(false);
   const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const canEdit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
 
@@ -103,7 +104,13 @@ export default function InventoryPage() {
 
   function submitTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    transactionMutation.mutate();
+    if (transactionInFlight.current || transactionMutation.isPending) return;
+    transactionInFlight.current = true;
+    transactionMutation.mutate(undefined, {
+      onSettled: () => {
+        transactionInFlight.current = false;
+      },
+    });
   }
 
   return (
@@ -139,7 +146,7 @@ export default function InventoryPage() {
           <select className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary" value={transactionType} onChange={(event) => setTransactionType(event.target.value as InventoryTransactionType)}>{TRANSACTION_TYPES.map((type) => <option key={type} value={type}>{t(`inventory.transactionTypes.${type}`)}</option>)}</select>
           <input className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary" min={1} type="number" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} />
           <input className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary" placeholder={t("inventory.reason")} value={reason} onChange={(event) => setReason(event.target.value)} />
-          <Button disabled={!canEdit || !inventoryId || !reason.trim() || transactionMutation.isPending} type="submit">{t("inventory.adjustStock")}</Button>
+          <Button aria-busy={transactionMutation.isPending} disabled={!canEdit || !inventoryId || !reason.trim() || transactionMutation.isPending || transactionInFlight.current} type="submit">{t("inventory.adjustStock")}</Button>
         </form>
         <div className="grid min-w-0 gap-3 md:grid-cols-[1fr_auto]"><select className="min-h-10 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary" value={historyTypeFilter} onChange={(event) => setHistoryTypeFilter(event.target.value as InventoryTransactionType | "all")}><option value="all">{t("inventory.allTransactionTypes")}</option>{TRANSACTION_TYPES.map((type) => <option key={type} value={type}>{t(`inventory.transactionTypes.${type}`)}</option>)}</select></div>
         <InventoryTransactionHistory transactions={paginatedTransactions} />
