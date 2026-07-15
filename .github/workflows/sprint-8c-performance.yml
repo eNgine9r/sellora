@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: sellora-sprint-8c-performance
@@ -17,12 +18,13 @@ concurrency:
 jobs:
   performance:
     runs-on: ubuntu-24.04
-    timeout-minutes: 70
+    timeout-minutes: 85
     env:
       STAGING_API_URL: https://sellora-api-staging.onrender.com
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
       STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+      PHASE_B_RUN_ID: "29395966711"
 
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +33,29 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Wait for Phase B core success
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 90); do
+            payload="$(curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${PHASE_B_RUN_ID}")"
+            status="$(python -c 'import json,sys; print(json.load(sys.stdin).get("status", ""))' <<< "$payload")"
+            conclusion="$(python -c 'import json,sys; print(json.load(sys.stdin).get("conclusion") or "")' <<< "$payload")"
+            echo "Phase B dependency probe $attempt: status=$status conclusion=$conclusion"
+            if [ "$status" = "completed" ]; then
+              [ "$conclusion" = "success" ] || { echo "Phase B core is not successful" >&2; exit 1; }
+              echo "Phase B core dependency: PASS"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "Timed out waiting for Phase B core" >&2
+          exit 1
       - name: Install QA dependency
         run: python -m pip install httpx
       - name: Compile runner
