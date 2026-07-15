@@ -90,6 +90,38 @@ class PilotSafeImportService(DurableImportService):
             if workbook is not None:
                 workbook.close()
 
+    def _historical_issues(
+        self,
+        workspace_id: UUID,
+        job_id: UUID,
+        entity_type: str,
+        sheet_name: str,
+        safe_mapping: dict[str, str],
+    ) -> list[ImportValidationIssue]:
+        issues = list(super()._historical_issues(workspace_id, job_id, entity_type, sheet_name, safe_mapping))
+        if entity_type != "orders_history":
+            return issues
+
+        job = self._job(workspace_id, job_id)
+        _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
+        value_report = self.validator.validate(
+            entity_type,
+            safe_mapping,
+            rows,
+            workspace_id,
+            self.lookup,
+        )
+        seen = {
+            (item.row_number, item.severity, item.field, item.message)
+            for item in issues
+        }
+        for item in value_report.issues:
+            key = (item.row_number, item.severity, item.field, item.message)
+            if key not in seen:
+                issues.append(item)
+                seen.add(key)
+        return issues
+
     def _mapped_rows(self, workspace_id: UUID, job_id: UUID, sheet_name: str, column_mapping: dict[str, str]) -> list[dict]:
         job = self._job(workspace_id, job_id)
         _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
