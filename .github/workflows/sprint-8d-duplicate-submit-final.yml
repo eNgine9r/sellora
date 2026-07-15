@@ -1,0 +1,136 @@
+name: Sprint 8D Final Duplicate Submit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/staging_sprint_8d_duplicate_submit_final.py"
+      - ".github/workflows/sprint-8d-duplicate-submit-final.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sellora-sprint-8d-final-duplicate-submit
+  cancel-in-progress: true
+
+jobs:
+  canonical-duplicate-submit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate secure inputs
+        run: |
+          python - <<'PY'
+          import os, re
+          required = [
+              "STAGING_FRONTEND_URL", "STAGING_API_URL",
+              "STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD",
+              "STAGING_TEST_WORKSPACE_ID",
+          ]
+          if any(not os.getenv(name) for name in required):
+              raise SystemExit("Missing final Sprint 8D browser input")
+          if not re.fullmatch(r"[0-9a-fA-F-]{36}", os.environ["STAGING_TEST_WORKSPACE_ID"]):
+              raise SystemExit("Invalid STAGING_TEST_WORKSPACE_ID")
+          print("Final Sprint 8D secure input preflight: PASS")
+          PY
+
+      - name: Install browser dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install httpx playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Compile final probe
+        run: |
+          python -m py_compile \
+            scripts/staging_sprint_8d_browser_v2.py \
+            scripts/staging_sprint_8d_duplicate_submit_final.py
+
+      - name: Execute final canonical duplicate-submit proof
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts/sprint-8d-duplicate-submit
+          python scripts/staging_sprint_8d_duplicate_submit_final.py \
+            > artifacts/sprint-8d-duplicate-submit/console.log 2>&1
+          code=$?
+          echo "$code" > artifacts/sprint-8d-duplicate-submit/exit-code.txt
+          exit 0
+
+      - name: Validate sanitized evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, pathlib, re
+          root = pathlib.Path("artifacts/sprint-8d-duplicate-submit")
+          report_path = root / "duplicate-submit.json"
+          if not report_path.exists():
+              raise SystemExit("Final duplicate-submit report missing")
+          texts = [path.read_text(encoding="utf-8", errors="replace") for path in root.glob("*") if path.is_file() and path.suffix != ".png"]
+          password = os.getenv("STAGING_OWNER_PASSWORD", "")
+          if password and any(password in text for text in texts):
+              raise SystemExit("Credential value leaked into evidence")
+          patterns = [
+              re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{20,}", re.I),
+              re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
+              re.compile(r"\b(?:sk|sb_secret)-[A-Za-z0-9_-]{12,}\b", re.I),
+          ]
+          if any(pattern.search(text) for pattern in patterns for text in texts):
+              raise SystemExit("Token/API-key pattern found in evidence")
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          if report.get("security") != {
+              "passwords_suppressed": True,
+              "tokens_suppressed": True,
+              "authorization_headers_suppressed": True,
+              "customer_pii_synthetic": True,
+              "provider_calls_suppressed": True,
+          }:
+              raise SystemExit("Security evidence flags missing")
+          print("Sanitized final Sprint 8D evidence: PASS")
+          PY
+
+      - name: Upload final evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8d-final-duplicate-submit-${{ github.run_id }}
+          path: artifacts/sprint-8d-duplicate-submit
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce final decision
+        if: always()
+        shell: bash
+        run: |
+          code="$(cat artifacts/sprint-8d-duplicate-submit/exit-code.txt 2>/dev/null || echo 99)"
+          [ "$code" = "0" ] || exit 1
+          python - <<'PY'
+          import json
+          report = json.load(open("artifacts/sprint-8d-duplicate-submit/duplicate-submit.json", encoding="utf-8"))
+          if report.get("decision") != "PASS":
+              raise SystemExit(1)
+          if report.get("duplicate_submit", {}).get("inventory_post_count") != 1:
+              raise SystemExit(1)
+          cleanup = report.get("cleanup", {})
+          if cleanup.get("fixture_stock") != 0 or cleanup.get("fixture_reserved") != 0 or cleanup.get("fixture_visible") is not False:
+              raise SystemExit(1)
+          print("SPRINT 8D FINAL DUPLICATE-SUBMIT PROOF: PASS")
+          PY
