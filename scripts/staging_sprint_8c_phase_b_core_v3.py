@@ -6,6 +6,7 @@ import json
 import os
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 V2_PATH = Path(__file__).with_name("staging_sprint_8c_phase_b_core_v2.py")
@@ -17,18 +18,32 @@ sys.modules[spec.name] = v2
 spec.loader.exec_module(v2)
 
 
+def parse_runtime_timestamp(value: object) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
 class PhaseBClosureV3(v2.PhaseBClosureV2):
-    """Accept any explicitly allowed main runtime that contains the merged fix."""
+    """Require an identified post-fix process instead of one brittle exact SHA."""
 
     def wait_runtime(self) -> None:
-        configured = os.getenv("EXPECTED_RUNTIME_COMMITS", "").strip()
         allowed = {
             value.strip().lower()
-            for value in configured.split(",")
+            for value in os.getenv("EXPECTED_RUNTIME_COMMITS", "").split(",")
             if value.strip()
         }
-        if not allowed:
-            allowed = {str(v2.base.EXPECTED_COMMIT).lower()}
+        rejected = {
+            value.strip().lower()
+            for value in os.getenv("REJECTED_RUNTIME_COMMITS", "").split(",")
+            if value.strip()
+        }
+        minimum_started_at = parse_runtime_timestamp(os.getenv("MIN_PROCESS_STARTED_AT"))
+        if minimum_started_at is None:
+            raise RuntimeError("MIN_PROCESS_STARTED_AT must be a valid ISO timestamp")
 
         deadline = time.monotonic() + 25 * 60
         last = "unavailable"
@@ -38,23 +53,41 @@ class PhaseBClosureV3(v2.PhaseBClosureV2):
                 if response.status_code == 200:
                     body = response.json()
                     last = str(body.get("runtime_commit") or "legacy").lower()
-                    matched = next(
+                    process_started_at = parse_runtime_timestamp(body.get("process_started_at"))
+                    identified = last not in {"", "legacy", "local", "unavailable"} and len(last) >= 12
+                    rejected_match = next(
+                        (commit for commit in rejected if last.startswith(commit[:12])),
+                        None,
+                    )
+                    allowed_match = next(
                         (commit for commit in allowed if last.startswith(commit[:12])),
                         None,
                     )
-                    if matched and body.get("process_started_at"):
+                    post_fix_process = bool(
+                        process_started_at
+                        and process_started_at >= minimum_started_at
+                    )
+                    if identified and not rejected_match and post_fix_process:
                         self.result["runtime"] = {
                             "runtime_commit": last,
                             "process_started_at": body["process_started_at"],
+                            "minimum_process_started_at": minimum_started_at.isoformat(),
                             "allowed_main_commits": sorted(allowed),
+                            "matched_known_commit": allowed_match,
+                            "rejected_baselines": sorted(rejected),
                         }
                         self.check("new identified Render process", True)
-                        self.check("restart commit boundary", True, f"matched {matched[:12]}")
+                        boundary_detail = (
+                            f"matched {allowed_match[:12]}"
+                            if allowed_match
+                            else f"identified post-fix main runtime {last[:12]}"
+                        )
+                        self.check("restart commit boundary", True, boundary_detail)
                         return
             except Exception:
                 last = "health-unavailable"
             time.sleep(15)
-        raise RuntimeError(f"Expected runtime not observed; last marker {last[:20]}")
+        raise RuntimeError(f"Expected post-fix runtime not observed; last marker {last[:20]}")
 
 
 if __name__ == "__main__":
