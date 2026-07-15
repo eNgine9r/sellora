@@ -28,7 +28,7 @@ def parse_runtime_timestamp(value: object) -> datetime | None:
 
 
 class PhaseBClosureV3(v2.PhaseBClosureV2):
-    """Require an identified post-fix process instead of one brittle exact SHA."""
+    """Require the explicitly approved main commit and a post-fix process."""
 
     def wait_runtime(self) -> None:
         allowed = {
@@ -36,6 +36,8 @@ class PhaseBClosureV3(v2.PhaseBClosureV2):
             for value in os.getenv("EXPECTED_RUNTIME_COMMITS", "").split(",")
             if value.strip()
         }
+        if not allowed:
+            raise RuntimeError("EXPECTED_RUNTIME_COMMITS must contain an approved main commit")
         rejected = {
             value.strip().lower()
             for value in os.getenv("REJECTED_RUNTIME_COMMITS", "").split(",")
@@ -54,7 +56,6 @@ class PhaseBClosureV3(v2.PhaseBClosureV2):
                     body = response.json()
                     last = str(body.get("runtime_commit") or "legacy").lower()
                     process_started_at = parse_runtime_timestamp(body.get("process_started_at"))
-                    identified = last not in {"", "legacy", "local", "unavailable"} and len(last) >= 12
                     rejected_match = next(
                         (commit for commit in rejected if last.startswith(commit[:12])),
                         None,
@@ -67,7 +68,7 @@ class PhaseBClosureV3(v2.PhaseBClosureV2):
                         process_started_at
                         and process_started_at >= minimum_started_at
                     )
-                    if identified and not rejected_match and post_fix_process:
+                    if allowed_match and not rejected_match and post_fix_process:
                         self.result["runtime"] = {
                             "runtime_commit": last,
                             "process_started_at": body["process_started_at"],
@@ -77,17 +78,16 @@ class PhaseBClosureV3(v2.PhaseBClosureV2):
                             "rejected_baselines": sorted(rejected),
                         }
                         self.check("new identified Render process", True)
-                        boundary_detail = (
-                            f"matched {allowed_match[:12]}"
-                            if allowed_match
-                            else f"identified post-fix main runtime {last[:12]}"
+                        self.check(
+                            "restart commit boundary",
+                            True,
+                            f"matched {allowed_match[:12]}",
                         )
-                        self.check("restart commit boundary", True, boundary_detail)
                         return
             except Exception:
                 last = "health-unavailable"
             time.sleep(15)
-        raise RuntimeError(f"Expected post-fix runtime not observed; last marker {last[:20]}")
+        raise RuntimeError(f"Expected approved runtime not observed; last marker {last[:20]}")
 
 
 if __name__ == "__main__":
