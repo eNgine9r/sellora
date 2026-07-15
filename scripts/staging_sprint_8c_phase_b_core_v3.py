@@ -51,7 +51,13 @@ class PhaseBClosureV3(v2.PhaseBClosureV2):
         last = "unavailable"
         while time.monotonic() < deadline:
             try:
-                response = self.client.get(f"{v2.base.API}/health")
+                # Render can keep an old instance reachable through a pre-deploy
+                # keep-alive connection. Close every probe connection so the next
+                # retry resolves the currently active process.
+                response = self.client.get(
+                    f"{v2.base.API}/health",
+                    headers={"Connection": "close", "Cache-Control": "no-cache"},
+                )
                 if response.status_code == 200:
                     body = response.json()
                     last = str(body.get("runtime_commit") or "legacy").lower()
