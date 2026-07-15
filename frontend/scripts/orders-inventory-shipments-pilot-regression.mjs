@@ -21,6 +21,7 @@ const files = {
   shipmentTests: existsSync("backend/tests/shipments/test_local_shipment_pilot.py") ? read("backend/tests/shipments/test_local_shipment_pilot.py") : "",
   ordersPage: read("frontend/src/app/orders/page.tsx"),
   inventoryPage: read("frontend/src/app/inventory/page.tsx"),
+  inventoryTable: read("frontend/src/features/inventory/components/inventory-table.tsx"),
   shipmentsPage: read("frontend/src/app/shipments/page.tsx"),
   uk: read("frontend/src/i18n/messages/uk.json"),
   en: read("frontend/src/i18n/messages/en.json"),
@@ -50,6 +51,7 @@ const checks = [
   ["controlled pilot remains GREEN", /Controlled guided pilot remains GREEN|Controlled guided pilot.*GREEN/is.test(files.release)],
   ["localized order inventory shipment strings exist", files.uk.includes('"orders"') && files.uk.includes('"inventory"') && files.uk.includes('"shipments"') && files.en.includes('"orders"')],
   ["archived variants cannot be sold", files.orderService.includes("Product variant is archived") && files.orderTests.includes("archived_variant")],
+  ["archived stocked inventory has localized warning", files.inventoryTable.includes("data-archived-variant-warning") && files.inventoryTable.includes("Архівний варіант") && files.inventoryTable.includes("Archived variant")],
 ];
 const failed = checks.filter(([, ok]) => !ok);
 if (failed.length) {
