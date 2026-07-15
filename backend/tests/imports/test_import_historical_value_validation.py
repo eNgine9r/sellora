@@ -3,7 +3,9 @@ from __future__ import annotations
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.services.import_center_service import MappingValidationService
+import pytest
+
+from app.services.import_center_service import ImportServiceError, MappingValidationService, issue
 from app.services.import_pilot_safe_service import PilotSafeImportService
 
 
@@ -55,3 +57,27 @@ def test_historical_order_invalid_date_is_structured_non_executable_issue() -> N
     assert date_issues[0].row_number == 2
     assert date_issues[0].severity == "ERROR"
     assert date_issues[0].message == "order_date must be a valid date"
+
+
+def test_execute_rechecks_historical_values_even_for_existing_approval() -> None:
+    service = object.__new__(PilotSafeImportService)
+    service._historical_issues = lambda *_args, **_kwargs: [
+        issue(2, "ERROR", "order_date", "order_date must be a valid date")
+    ]
+    service._formula_issues = lambda *_args, **_kwargs: []
+
+    with pytest.raises(ImportServiceError, match="run dry-run again"):
+        service.execute(
+            uuid4(),
+            uuid4(),
+            "orders_history",
+            "CSV",
+            {
+                "order_date": "Order Date",
+                "variant_sku": "Variant SKU",
+                "quantity": "Quantity",
+                "unit_price": "Unit Price",
+            },
+            "create_only",
+            uuid4(),
+        )
