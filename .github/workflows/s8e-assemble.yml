@@ -1,9 +1,8 @@
 name: Assemble Sprint 8E Patch
 
 on:
-  push:
-    branches:
-      - fix/sprint-8e-durable-nova-poshta
+  pull_request:
+    branches: [main]
     paths:
       - ".s8e-service/**"
       - ".github/workflows/s8e-assemble.yml"
@@ -13,6 +12,7 @@ permissions:
 
 jobs:
   assemble:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
