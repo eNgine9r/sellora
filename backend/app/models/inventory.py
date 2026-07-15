@@ -22,4 +22,4 @@ class Inventory(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Time
 
     @property
     def is_low_stock(self) -> bool:
-        return self.stock_quantity <= self.minimum_quantity
+        return (self.stock_quantity - self.reserved_quantity) <= self.minimum_quantity

@@ -1,111 +1,75 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
-import { safeApiErrorMessage } from "@/services/api";
-import { fetchWorkspaceSettings, updateWorkspaceSettings } from "@/services/workspaces";
+import Link from "next/link";
+import { ArrowRight, Building2, Languages, PlugZap, ShieldCheck, UploadCloud, Users, Wand2 } from "lucide-react";
+import { WorkspacePage, WorkspaceHeader, CompactSummary } from "@/components/crm-workspace";
+import { Card, StatusBadge } from "@/components/ui/primitives";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 
-const cards = [
-  { titleKey: "settings.cards.importTitle", descriptionKey: "settings.cards.importDescription", href: "/settings/import", actionKey: "settings.cards.importAction", badgeKey: "navigation.importCenter" },
-  { titleKey: "settings.cards.integrationsTitle", descriptionKey: "settings.cards.integrationsDescription", href: "/settings/integrations", actionKey: "settings.cards.integrationsAction", badgeKey: "navigation.integrations" },
-  { titleKey: "settings.cards.feedbackTitle", descriptionKey: "settings.cards.feedbackDescription", href: "/settings/feedback", actionKey: "settings.cards.feedbackAction", badgeKey: "feedback.button" },
-  { titleKey: "settings.cards.novaTitle", descriptionKey: "settings.cards.novaDescription", href: "/settings/integrations", actionKey: "settings.cards.novaAction", badgeKey: "novaPoshta.title" },
+const settingsRoutes = [
+  { href: "/settings/workspace", icon: Building2, titleKey: "settings.cards.workspaceTitle", descriptionKey: "settings.cards.workspaceDescription", statusKey: "settings.status.configured", tone: "success" as const },
+  { href: "/settings/team", icon: Users, titleKey: "settings.cards.teamTitle", descriptionKey: "settings.cards.teamDescription", statusKey: "settings.status.roles", tone: "info" as const },
+  { href: "/settings/import", icon: UploadCloud, titleKey: "settings.cards.importTitle", descriptionKey: "settings.cards.importDescription", statusKey: "settings.status.available", tone: "success" as const },
+  { href: "/settings/integrations", icon: PlugZap, titleKey: "settings.cards.integrationsTitle", descriptionKey: "settings.cards.integrationsDescription", statusKey: "settings.status.requiresSetup", tone: "warning" as const },
+  { href: "/settings/feedback", icon: Wand2, titleKey: "settings.cards.feedbackTitle", descriptionKey: "settings.cards.feedbackDescription", statusKey: "settings.status.ownerManaged", tone: "neutral" as const },
 ];
 
-export default function Page() {
+export default function SettingsOverviewPage() {
   const { t } = useI18n();
-  const queryClient = useQueryClient();
-  const { currentUser, currentWorkspace, currentWorkspaceId, reloadCurrentUser, status } = useAuth();
-  const workspaceId = currentWorkspaceId ?? "";
-  const enabled = status === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
-  const canUpdateWorkspace = currentWorkspace?.role === "OWNER";
-  const [name, setName] = useState("");
-  const [currencyCode, setCurrencyCode] = useState<"UAH" | "USD">("UAH");
-  const [message, setMessage] = useState<string | null>(null);
-  const settings = useQuery({ queryKey: ["workspace-settings", workspaceId], queryFn: () => fetchWorkspaceSettings(workspaceId), enabled });
-  const saveSettings = useMutation({
-    mutationFn: () => updateWorkspaceSettings(workspaceId, { name, currency_code: currencyCode }),
-    onSuccess: async () => {
-      setMessage(t("settings.saved"));
-      queryClient.invalidateQueries({ queryKey: ["workspace-settings", workspaceId] });
-      await reloadCurrentUser();
-    },
-    onError: (error) => setMessage(safeApiErrorMessage(error, t("settings.unableSave"))),
-  });
-
-  useEffect(() => {
-    if (settings.data) {
-      setName(settings.data.name);
-      setCurrencyCode(settings.data.currency_code);
-    }
-  }, [settings.data]);
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!canUpdateWorkspace) return;
-    setMessage(null);
-    saveSettings.mutate();
-  }
+  const { currentWorkspace } = useAuth();
+  const role = currentWorkspace?.role ?? "ANALYST";
 
   return (
-    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F8F7FC] p-4 text-slate-950 sm:p-6">
-      <div className="mx-auto grid min-w-0 max-w-6xl gap-6">
-        <section className="min-w-0 rounded-[28px] bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] sm:p-8">
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-violet-600">Sellora</p>
-          <h1 className="mt-3 text-4xl font-black text-slate-950">{t("settings.title")}</h1>
-          <p className="mt-3 max-w-2xl text-slate-600">{t("settings.subtitle")}</p>
-        </section>
-        <section className="rounded-[24px] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-violet-700">{t("settings.workspace")}</span>
-              <h2 className="mt-3 text-2xl font-black text-slate-950">{t("settings.workspaceSettings")}</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{t("settings.currencyHelp")}</p>
-            </div>
-            {!canUpdateWorkspace ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">{t("settings.ownerOnly")}</span> : null}
-          </div>
-          <form className="mt-5 grid gap-4 md:grid-cols-[1fr_260px_auto]" onSubmit={submit}>
-            <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">{t("settings.workspace")}
-              <input className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 disabled:bg-slate-50" disabled={!canUpdateWorkspace} value={name} onChange={(event) => setName(event.target.value)} />
-            </label>
-            <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">{t("settings.currency")}
-              <select className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 disabled:bg-slate-50" disabled={!canUpdateWorkspace} value={currencyCode} onChange={(event) => setCurrencyCode(event.target.value as "UAH" | "USD")}>
-                <option value="UAH">UAH — Ukrainian hryvnia</option>
-                <option value="USD">USD — US dollar</option>
-              </select>
-            </label>
-            <button className="min-h-11 self-end rounded-2xl bg-violet-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canUpdateWorkspace || saveSettings.isPending} type="submit">{t("actions.saveChanges")}</button>
-          </form>
-          {message ? <p className="mt-3 rounded-lg bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700">{message}</p> : null}
-        </section>
+    <WorkspacePage>
+      <WorkspaceHeader
+        eyebrow={t("settings.label")}
+        title={t("settings.title")}
+        description={t("settings.subtitle")}
+        actions={<StatusBadge tone="info">{t(`roles.${role}`)}</StatusBadge>}
+      />
+      <CompactSummary items={[
+        { label: t("settings.summary.workspace"), value: currentWorkspace?.workspace_name ?? "—", helper: t("settings.summary.workspaceHelp") },
+        { label: t("settings.summary.role"), value: t(`roles.${role}`), helper: t("settings.summary.roleHelp") },
+        { label: t("settings.summary.imports"), value: t("settings.status.available"), helper: t("settings.summary.importsHelp") },
+        { label: t("settings.summary.integrations"), value: t("settings.status.requiresSetup"), helper: t("settings.summary.integrationsHelp") },
+      ]} />
 
-        <section className="rounded-[24px] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-blue-700">{t("language.label")}</span>
-              <h2 className="mt-3 text-2xl font-black text-slate-950">{t("language.title")}</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{t("language.description")}</p>
-            </div>
-            <LanguageSwitcher />
+      <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {settingsRoutes.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href} className="group min-w-0 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-5 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring motion-reduce:transition-none">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="grid h-11 w-11 place-items-center rounded-2xl bg-surface-selected text-primary"><Icon className="h-5 w-5" /></span>
+                  <StatusBadge tone={item.tone}>{t(item.statusKey)}</StatusBadge>
+                </div>
+                <h2 className="mt-4 text-lg font-black text-text-primary">{t(item.titleKey)}</h2>
+                <p className="mt-2 text-sm leading-6 text-text-secondary">{t(item.descriptionKey)}</p>
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-primary">{t("actions.open")}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" /></span>
+              </Link>
+            );
+          })}
+        </div>
+        <Card className="grid gap-4 self-start">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-text-muted">{t("settings.preferences.title")}</p>
+            <h2 className="mt-2 text-xl font-black text-text-primary">{t("settings.preferences.heading")}</h2>
+            <p className="mt-2 text-sm leading-6 text-text-secondary">{t("settings.preferences.description")}</p>
           </div>
-        </section>
-        <section className="grid min-w-0 gap-4 md:grid-cols-3">
-          {cards.map((card) => (
-            <article key={t(card.titleKey)} className="flex min-h-64 flex-col justify-between rounded-[24px] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-              <div className="grid min-w-0 gap-3">
-                <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-violet-700">{t(card.badgeKey)}</span>
-                <h2 className="text-2xl font-black text-slate-950">{t(card.titleKey)}</h2>
-                <p className="text-sm leading-6 text-slate-600">{t(card.descriptionKey)}</p>
-              </div>
-              <a className="mt-6 inline-flex min-h-11 items-center justify-center rounded-2xl bg-violet-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-violet-700" href={card.href}>{t(card.actionKey)}</a>
-            </article>
-          ))}
-        </section>
-      </div>
-    </main>
+          <div className="grid gap-3 rounded-3xl border border-border-subtle bg-surface-2 p-4">
+            <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-sm font-bold text-text-primary"><Languages className="h-4 w-4" />{t("language.label")}</span><LanguageSwitcher /></div>
+            <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-sm font-bold text-text-primary"><ShieldCheck className="h-4 w-4" />{t("settings.preferences.appearance")}</span><ThemeToggle /></div>
+          </div>
+          <div className="rounded-3xl border border-warning/25 bg-[var(--warning-surface)] p-4 text-sm leading-6 text-[var(--warning-foreground)]">
+            <p className="font-black">{t("settings.attention.title")}</p>
+            <p>{t("settings.attention.description")}</p>
+          </div>
+        </Card>
+      </section>
+    </WorkspacePage>
   );
 }
-// Localization regression compatibility markers: Configure Nova Poshta; Currency controls how financial values are displayed across Sellora. It does not convert historical amounts.

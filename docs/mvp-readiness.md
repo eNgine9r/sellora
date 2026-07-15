@@ -499,3 +499,34 @@ Mobile UX/PWA MVP is conditionally approved. The app now has bottom quick naviga
 Sprint 7E is conditionally approved. Backend security tests now cover endpoint inventory, OWNER/MANAGER/ANALYST guards, inactive/no-membership denial, tenant list/detail/update/archive IDOR for representative core flows, nested order/finance ownership checks, and finance aggregation scoping. A Lead assignment bug was fixed so inactive workspace memberships cannot be assigned to leads.
 
 Manual browser/mobile workspace-switch race-condition QA and broader audit-log standardization remain follow-ups. Sprint 7F runtime migration QA remains blocked separately.
+
+## Sprint 7E.1 security closure readiness
+
+- Sprint 7E and Sprint 7E.1 are approved from automated security and CI validation.
+- Request-body workspace injection is covered by create, update and nested cross-workspace negative tests.
+- Frontend deterministic install is restored through the tracked npm lockfile and clean `npm --prefix frontend ci` validation.
+- Workspace switching now cancels active React Query requests, invalidates workspace-scoped data after switching, and logout clears the private query cache.
+- Endpoint inventory primary classifications reconcile to the 153-route FastAPI inventory.
+- Sprint 7F runtime PostgreSQL migration QA remains a separate infrastructure blocker until an approved runtime environment is available.
+
+## Sprint 8A staging release gate
+
+Sprint 8A is blocked, and the pilot release decision is **RED — NO-GO**. A safe staging release-gate runner and checklist now exist, but the local validation container could not reach the Vercel frontend or Render backend because both staging URLs returned proxy `CONNECT tunnel failed, response 403`. OWNER/MANAGER/ANALYST staging credentials were not available, runtime database revision was not verified, and the synthetic core E2E order flow was not executed.
+
+Next readiness step: rerun Sprint 8A from a network with staging access and secure synthetic role credentials after Sprint 7F runtime migration compatibility is safely resolved or independently verified.
+
+## Sprint 8A.1 staging E2E closure attempt
+
+Sprint 8A.1 remains blocked and the pilot release decision remains **RED — NO-GO**. The existing runner was reused and extended for 8A.1 artifact fields, but this environment still cannot reach Vercel/Render staging URLs, secure role credentials and `STAGING_TEST_WORKSPACE_ID` are absent, runtime Alembic revision is unverified, and controlled-write E2E/browser-mobile QA did not execute.
+
+## Sprint 8B — Demo Data & First-run Experience
+
+Sprint 8B adds workspace-scoped onboarding status, role-aware first-run guidance and an isolated `Демо Sellora` workspace flow. Controlled guided pilot remains GREEN for monitored staging/pilot use; unrestricted public production launch remains not approved.
+
+## Sprint 8C import readiness update
+
+Import Center now has explicit pilot contracts for supported `.xlsx`/`.csv` formats, file limits, duplicate policy, dry-run-before-execute gating, workspace-switch state clearing, and PII-safe handling guidance. Full Sprint 8C approval still requires staging import gates and browser/mobile QA with synthetic data.
+
+## Sprint 8D operations readiness update
+
+Orders, inventory and local shipments now have documented operational invariants, explicit order transition rules, reservation delta tests, Issue #134 inventory visibility policy, and one-active-shipment pilot coverage. Full Sprint 8D approval still requires staging controlled-write and browser/mobile evidence.

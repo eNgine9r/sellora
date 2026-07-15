@@ -49,6 +49,14 @@ export async function createWorkspace(payload: CreateWorkspacePayload): Promise<
   return apiRequest<WorkspaceSummary>("/workspaces", { method: "POST", body: JSON.stringify(payload) });
 }
 
+export async function createDemoWorkspace(): Promise<WorkspaceSummary> {
+  return apiRequest<WorkspaceSummary>("/workspaces/demo", { method: "POST", body: JSON.stringify({ locale: "uk", currency_code: "UAH" }) });
+}
+
+export async function deactivateDemoWorkspace(workspaceId: string): Promise<{ workspace_id: string; is_active: boolean; message: string }> {
+  return apiRequest<{ workspace_id: string; is_active: boolean; message: string }>("/workspaces/demo/deactivate", { method: "PATCH", headers: workspaceHeaders(workspaceId) });
+}
+
 export async function fetchWorkspaceSettings(workspaceId: string): Promise<WorkspaceSettings> {
   return apiRequest<WorkspaceSettings>("/workspaces/current", { headers: workspaceHeaders(workspaceId) });
 }

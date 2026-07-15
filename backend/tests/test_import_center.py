@@ -119,7 +119,7 @@ def test_import_job_creation(tmp_path, monkeypatch) -> None:
     service.jobs = FakeJobs()
     monkeypatch.setattr("app.services.import_center_service.get_settings", lambda: SimpleNamespace(import_max_file_size_mb=1, import_storage_path=str(tmp_path)))
 
-    job = asyncio.run(service.upload(uuid4(), FakeUploadFile("safe.xlsx", b"file"), actor_user_id=uuid4()))
+    job = asyncio.run(service.upload(uuid4(), FakeUploadFile("safe.xlsx", b"PKfake-workbook"), actor_user_id=uuid4()))
     assert job.status == ImportJobStatus.UPLOADED.value
     assert Path(job.file_path).name == "safe.xlsx"
 
@@ -200,6 +200,7 @@ def test_failed_row_logging_and_workspace_isolation(tmp_path) -> None:
     service = _import_service(tmp_path)
     job = service.jobs.job
 
+    service.dry_run(job.workspace_id, job.id, "customers", "Customers", {"name": "Name", "phone": "Phone"}, actor_user_id=uuid4())
     imported = service.execute(job.workspace_id, job.id, "customers", "Customers", {"name": "Name", "phone": "Phone"}, "create_only", actor_user_id=uuid4())
 
     assert imported.processed_rows == 2
