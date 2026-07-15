@@ -30,14 +30,9 @@ class RepeatablePhaseAClient:
     def __getattr__(self, name: str):
         return getattr(self.client, name)
 
-    def post(self, url: str, *args, **kwargs) -> httpx.Response:
-        response = self.client.post(url, *args, **kwargs)
-        phase_a_execute = url.endswith(f"/api/v1/import/{base.PHASE_A_JOB}/execute")
-        if not phase_a_execute or response.status_code == 200:
-            return response
-        if response.status_code != 400 or not self.closure.owner_token:
-            return response
-
+    def _completed_phase_a_response(self, url: str, request: httpx.Request | None = None) -> httpx.Response | None:
+        if not self.closure.owner_token:
+            return None
         logs = self.client.get(
             f"{base.API}/api/v1/import/{base.PHASE_A_JOB}/logs",
             headers=self.closure.headers(),
@@ -55,18 +50,33 @@ class RepeatablePhaseAClient:
             and all(item.get("raw_data") is None for item in logs.json())
         )
         if not already_completed:
-            return response
-
+            return None
         self.closure.check(
             "restart approval evidence reusable",
             True,
-            "Phase A job was already completed by an earlier Phase B attempt",
+            "Phase A job was completed after the durable restart boundary; reusing read-only evidence",
         )
         return httpx.Response(
             200,
             json={"job": {"status": "COMPLETED"}},
-            request=response.request,
+            request=request or httpx.Request("POST", url),
         )
+
+    def post(self, url: str, *args, **kwargs) -> httpx.Response:
+        phase_a_execute = url.endswith(f"/api/v1/import/{base.PHASE_A_JOB}/execute")
+        if phase_a_execute:
+            completed = self._completed_phase_a_response(url)
+            if completed is not None:
+                return completed
+
+        response = self.client.post(url, *args, **kwargs)
+        if not phase_a_execute or response.status_code == 200:
+            return response
+        if response.status_code != 400:
+            return response
+
+        completed = self._completed_phase_a_response(url, response.request)
+        return completed or response
 
 
 class PhaseBClosureV2(base.Closure):
