@@ -159,6 +159,19 @@ class PilotSafeImportService(DurableImportService):
         return report
 
     def execute(self, workspace_id: UUID, job_id: UUID, entity_type: str, sheet_name: str, column_mapping: dict[str, str], mode: str, actor_user_id: UUID | None, dry_run: bool = False, options: dict | None = None):
-        if not dry_run and self._formula_issues(workspace_id, job_id, entity_type, sheet_name, column_mapping):
-            raise ImportServiceError("Formula-prefixed values are not allowed; correct the source file and run dry-run again")
-        return super().execute(workspace_id, job_id, entity_type, sheet_name, column_mapping, mode, actor_user_id, dry_run, options)
+        safe_mapping = pilot_safe_mapping(entity_type, column_mapping)
+        if not dry_run:
+            historical_issues = self._historical_issues(
+                workspace_id,
+                job_id,
+                entity_type,
+                sheet_name,
+                safe_mapping,
+            )
+            if historical_issues:
+                raise ImportServiceError(
+                    "Historical import contains invalid values; correct the indicated rows and run dry-run again"
+                )
+            if self._formula_issues(workspace_id, job_id, entity_type, sheet_name, safe_mapping):
+                raise ImportServiceError("Formula-prefixed values are not allowed; correct the source file and run dry-run again")
+        return super().execute(workspace_id, job_id, entity_type, sheet_name, safe_mapping, mode, actor_user_id, dry_run, options)
