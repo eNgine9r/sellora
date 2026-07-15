@@ -29,7 +29,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shipment: Shipment; workspaceId: string; onStatusChange: (status: ShipmentStatus) => void }) {
   const { t, formatStatus } = useI18n();
-  const actions = NEXT_ACTIONS[shipment.status];
+  const hasProviderDocument = Boolean(shipment.nova_poshta_document_ref || shipment.nova_poshta_document_number);
+  const actions = NEXT_ACTIONS[shipment.status].filter((status) => !(status === "CANCELLED" && hasProviderDocument));
   const trackingNumber = shipment.nova_poshta_document_number ?? shipment.tracking_number;
   return (
     <div className="grid min-w-0 gap-5">
@@ -57,7 +58,7 @@ export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shi
       </Section>
 
       <Section title={t("shipments.trackingSection")}>
-        <div className="grid gap-3 sm:grid-cols-2"><DetailRow label={t("shipments.carrier")} value={shipment.carrier} /><DetailRow label={t("shipments.trackingTtn")} value={trackingNumber} /><DetailRow label={t("novaPoshta.documentRef")} value={shipment.nova_poshta_document_ref} /><DetailRow label={t("shipments.externalStatus")} value={shipment.nova_poshta_raw_status ?? shipment.external_status} /><DetailRow label={t("shipments.lastSynced")} value={shipment.nova_poshta_synced_at ? new Date(shipment.nova_poshta_synced_at).toLocaleString() : null} /><DetailRow label={t("shipments.updated")} value={new Date(shipment.updated_at).toLocaleString()} /></div>
+        <div className="grid gap-3 sm:grid-cols-2"><DetailRow label={t("shipments.carrier")} value={shipment.carrier} /><DetailRow label={t("shipments.trackingTtn")} value={trackingNumber} /><DetailRow label={t("novaPoshta.documentRef")} value={shipment.nova_poshta_document_ref ? t("common.yes") : null} /><DetailRow label={t("shipments.externalStatus")} value={shipment.nova_poshta_raw_status ?? shipment.external_status} /><DetailRow label={t("shipments.lastSynced")} value={shipment.nova_poshta_synced_at ? new Date(shipment.nova_poshta_synced_at).toLocaleString() : null} /><DetailRow label={t("shipments.updated")} value={new Date(shipment.updated_at).toLocaleString()} /></div>
         <div className="grid gap-2 sm:grid-cols-2"><CopyTtnButton trackingNumber={trackingNumber} variant="primary" /></div>
         <TtnDocumentLimitation />
       </Section>
@@ -69,8 +70,8 @@ export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shi
 
       {shipment.notes ? <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600 dark:bg-white/[0.05] dark:text-slate-300">{shipment.notes}</p> : null}
       <NovaPoshtaShipmentPanel workspaceId={workspaceId} shipment={shipment} />
+      {hasProviderDocument ? <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100">{t("shipments.archiveNpDescription")}</p> : null}
       {actions.length ? <div className="grid gap-2 sm:grid-cols-2">{actions.map((status) => <button key={status} className="min-h-11 rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/10" onClick={() => onStatusChange(status)}>{formatStatus("shipment", status)}</button>)}</div> : <p className="text-sm text-slate-500 dark:text-slate-400">{t("shipments.noNextActions")}</p>}
     </div>
   );
 }
-// Shipment detail regression markers: Order section, Customer section, Recipient section, Nova Poshta section, Tracking / TTN section, Status section, TTN document limitation.

@@ -1,0 +1,151 @@
+                "credential_rotated": bool(payload.api_key),
+            },
+        )
+        self.db.commit()
+        return self.get_settings(workspace_id)
+
+    def test_connection(
+        self,
+        workspace_id: UUID,
+        actor_user_id: UUID | None,
+    ) -> NovaPoshtaTestConnectionResponse:
+        connection, api_key = self._require_connection(workspace_id)
+        try:
+            self.client_factory(api_key).test_connection()
+        except Exception:
+            connection.status = IntegrationStatus.ERROR.value
+            self.audit_logs.create(
+                workspace_id=workspace_id,
+                user_id=actor_user_id,
+                entity_type="IntegrationConnection",
+                entity_id=connection.id,
+                action="NOVA_POSHTA_ERROR",
+                new_value={
+                    "provider": IntegrationProvider.NOVA_POSHTA.value,
+                    "safe_error": "CONNECTION_TEST_FAILED",
+                },
+            )
+            self.db.commit()
+            return NovaPoshtaTestConnectionResponse(
+                success=False,
+                message="Nova Poshta connection failed.",
+                status=IntegrationStatus.ERROR,
+            )
+        connection.status = IntegrationStatus.CONNECTED.value
+        connection.last_sync_at = datetime.now(UTC)
+        self.audit_logs.create(
+            workspace_id=workspace_id,
+            user_id=actor_user_id,
+            entity_type="IntegrationConnection",
+            entity_id=connection.id,
+            action="NOVA_POSHTA_CONNECTION_TESTED",
+            new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "success": True},
+        )
+        self.db.commit()
+        return NovaPoshtaTestConnectionResponse(
+            success=True,
+            message="Nova Poshta connection is active.",
+            status=IntegrationStatus.CONNECTED,
+        )
+
+    def disconnect(self, workspace_id: UUID, actor_user_id: UUID | None) -> NovaPoshtaSettingsResponse:
+        connection = self.connections.get_by_provider(workspace_id, IntegrationProvider.NOVA_POSHTA.value)
+        if connection:
+            connection.status = IntegrationStatus.DISCONNECTED.value
+            connection.deleted_at = datetime.now(UTC)
+            connection.deleted_by = actor_user_id
+            for credential in connection.credentials:
+                credential.deleted_at = connection.deleted_at
+                credential.deleted_by = actor_user_id
+            self.audit_logs.create(
+                workspace_id=workspace_id,
+                user_id=actor_user_id,
+                entity_type="IntegrationConnection",
+                entity_id=connection.id,
+                action="NOVA_POSHTA_DISCONNECTED",
+                new_value={"provider": IntegrationProvider.NOVA_POSHTA.value},
+            )
+            self.db.commit()
+        return NovaPoshtaSettingsResponse(
+            status=IntegrationStatus.DISCONNECTED,
+            provider_writes_enabled=get_settings().staging_nova_poshta_allow_writes,
+        )
+
+    def _require_connection(self, workspace_id: UUID) -> tuple[IntegrationConnection, str]:
+        connection = self.connections.get_by_provider(workspace_id, IntegrationProvider.NOVA_POSHTA.value)
+        if connection is None or connection.status == IntegrationStatus.DISCONNECTED.value:
+            raise NovaPoshtaServiceError("Nova Poshta is not configured")
+        credential = self.credentials.get_active_for_connection(workspace_id, connection.id)
+        if credential is None:
+            raise NovaPoshtaServiceError("Nova Poshta API key is not configured")
+        return connection, decrypt_secret(credential.encrypted_access_token)
+
+
+class NovaPoshtaDirectoryService:
+    def __init__(self, db: Session, client_factory=None) -> None:
+        self.settings = NovaPoshtaSettingsService(db, client_factory)
+
+    def search_cities(
+        self,
+        workspace_id: UUID,
+        query: str,
+        limit: int = 20,
+    ) -> list[NovaPoshtaDirectoryItem]:
+        _connection, api_key = self.settings._require_connection(workspace_id)
+        try:
+            cities = self.settings.client_factory(api_key).search_cities(query, limit)
+        except NovaPoshtaClientError as exc:
+            raise NovaPoshtaServiceError("Nova Poshta city search is temporarily unavailable") from exc
+        return [NovaPoshtaDirectoryItem(ref=city.ref, description=city.description) for city in cities]
+
+    def search_warehouses(
+        self,
+        workspace_id: UUID,
+        city_ref: str,
+        query: str | None = None,
+        limit: int = 50,
+    ) -> list[NovaPoshtaDirectoryItem]:
+        _connection, api_key = self.settings._require_connection(workspace_id)
+        try:
+            warehouses = self.settings.client_factory(api_key).search_warehouses(city_ref, query, limit)
+        except NovaPoshtaClientError as exc:
+            raise NovaPoshtaServiceError("Nova Poshta warehouse search is temporarily unavailable") from exc
+        return [
+            NovaPoshtaDirectoryItem(ref=item.ref, description=item.description, number=item.number)
+            for item in warehouses
+        ]
+
+
+class NovaPoshtaShipmentService:
+    def __init__(
+        self,
+        db: Session,
+        client_factory=None,
+        provider_writes_enabled: bool | None = None,
+    ) -> None:
+        self.db = db
+        self.shipments = ShipmentRepository(db)
+        self.operations = NovaPoshtaOperationRepository(db)
+        self.settings = NovaPoshtaSettingsService(db, client_factory)
+        self.audit_logs = AuditLogRepository(db)
+        self.provider_writes_enabled = provider_writes_enabled
+
+    def create_ttn(
+        self,
+        workspace_id: UUID,
+        shipment_id: UUID,
+        actor_user_id: UUID | None,
+    ) -> NovaPoshtaTtnResponse:
+        connection, api_key = self.settings._require_connection(workspace_id)
+        shipment = self._get_shipment_for_update(workspace_id, shipment_id)
+        errors = self._validate_for_ttn(shipment, connection.settings or {})
+        if errors:
+            sender_fields = {
+                "sender_city_ref is required",
+                "sender_warehouse_ref is required",
+                "sender_counterparty_ref is required",
+                "sender_contact_ref is required",
+                "sender_phone is required",
+            }
+            message = (
+                "Sender settings are incomplete. Please fill sender city, warehouse, counterparty, contact person, and phone."

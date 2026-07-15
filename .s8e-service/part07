@@ -1,0 +1,26 @@
+            "RecipientsPhone": shipment.recipient_phone,
+            "RecipientName": shipment.recipient_name,
+        }
+
+    def _request_fingerprint(self, payload: dict) -> str:
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _normalize_provider_status(self, provider_status: str) -> ShipmentStatus | None:
+        normalized = provider_status.casefold().strip()
+        delivered_markers = ("delivered", "\u043e\u0442\u0440\u0438\u043c\u0430\u043d\u043e", "\u0434\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u043e", "\u0432\u0440\u0443\u0447\u0435\u043d\u043e")
+        returned_markers = ("return", "\u043f\u043e\u0432\u0435\u0440", "\u0432\u0456\u0434\u043c\u043e\u0432\u0430")
+        in_transit_markers = ("in transit", "\u0434\u043e\u0440\u043e\u0437", "\u043f\u0440\u044f\u043c\u0443", "\u0432\u0456\u0434\u043f\u0440\u0430\u0432")
+        arrived_markers = ("arrived", "\u043f\u0440\u0438\u0431\u0443\u043b", "\u0432\u0456\u0434\u0434\u0456\u043b\u0435\u043d")
+        created_markers = ("created", "\u0441\u0442\u0432\u043e\u0440\u0435\u043d\u043e", "\u043d\u043e\u0432\u0430 \u043d\u0430\u043a\u043b\u0430\u0434\u043d\u0430")
+        if any(marker in normalized for marker in delivered_markers):
+            return ShipmentStatus.DELIVERED
+        if any(marker in normalized for marker in returned_markers):
+            return ShipmentStatus.RETURNED
+        if any(marker in normalized for marker in in_transit_markers):
+            return ShipmentStatus.IN_TRANSIT
+        if any(marker in normalized for marker in arrived_markers):
+            return ShipmentStatus.ARRIVED
+        if any(marker in normalized for marker in created_markers):
+            return ShipmentStatus.CREATED
+        return None

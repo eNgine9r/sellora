@@ -2,7 +2,6 @@ import { apiRequest } from "@/services/api";
 import { NovaPoshtaActionResponse, NovaPoshtaDirectoryItem, NovaPoshtaSettings, NovaPoshtaSettingsPayload } from "@/types/integrations";
 
 function withWorkspaceContext<T>(workspaceId: string, request: () => Promise<T>) {
-  // The active workspace is attached by the shared API client. Keep this argument for a consistent service API.
   void workspaceId;
   return request();
 }
@@ -14,4 +13,5 @@ export const disconnectNovaPoshta = (workspaceId: string) => withWorkspaceContex
 export const searchNovaPoshtaCities = (workspaceId: string, q: string, limit = 20) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaDirectoryItem[]>(`/integrations/nova-poshta/cities?q=${encodeURIComponent(q)}&limit=${limit}`));
 export const searchNovaPoshtaWarehouses = (workspaceId: string, cityRef: string, q?: string, limit = 50) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaDirectoryItem[]>(`/integrations/nova-poshta/warehouses?city_ref=${encodeURIComponent(cityRef)}${q ? `&q=${encodeURIComponent(q)}` : ""}&limit=${limit}`));
 export const createNovaPoshtaTtn = (workspaceId: string, shipmentId: string) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaActionResponse>(`/shipments/${shipmentId}/nova-poshta/create-ttn`, { method: "POST" }));
+export const reconcileNovaPoshtaTtn = (workspaceId: string, shipmentId: string) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaActionResponse>(`/shipments/${shipmentId}/nova-poshta/reconcile-ttn`, { method: "POST" }));
 export const syncNovaPoshtaStatus = (workspaceId: string, shipmentId: string) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaActionResponse>(`/shipments/${shipmentId}/nova-poshta/sync-status`, { method: "POST" }));

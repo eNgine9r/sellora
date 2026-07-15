@@ -83,6 +83,9 @@ class ShipmentResponse(BaseModel):
     nova_poshta_document_number: str | None
     nova_poshta_raw_status: str | None
     nova_poshta_synced_at: datetime | None
+    nova_poshta_create_state: str | None
+    nova_poshta_manual_reconciliation_required: bool
+    nova_poshta_last_error_code: str | None
     order_number: str | None = None
     order_status: str | None = None
     order_payment_status: str | None = None

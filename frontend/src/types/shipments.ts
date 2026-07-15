@@ -29,6 +29,9 @@ export type Shipment = {
   nova_poshta_document_number: string | null;
   nova_poshta_raw_status: string | null;
   nova_poshta_synced_at: string | null;
+  nova_poshta_create_state: string | null;
+  nova_poshta_manual_reconciliation_required: boolean;
+  nova_poshta_last_error_code: string | null;
   order_number: string | null;
   order_status: string | null;
   order_payment_status: string | null;

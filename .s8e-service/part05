@@ -1,0 +1,156 @@
+            if existing is None:
+                raise
+            return existing
+        return operation
+
+    def _reconcile_operation(
+        self,
+        workspace_id: UUID,
+        shipment,
+        connection,
+        operation: NovaPoshtaOperation,
+        api_key: str,
+        actor_user_id: UUID | None,
+    ) -> NovaPoshtaTtnResponse:
+        client = self.settings.client_factory(api_key)
+        finder = getattr(client, "find_internet_document", None)
+        result = None
+        if callable(finder):
+            now = datetime.now(UTC)
+            fallback_from = now - timedelta(hours=get_settings().nova_poshta_reconciliation_window_hours)
+            date_from = operation.provider_called_at or operation.created_at or fallback_from
+            try:
+                result = finder(operation.provider_marker, date_from - timedelta(minutes=5), now)
+            except NovaPoshtaClientError:
+                result = None
+        if result is not None:
+            operation.reconciled_at = datetime.now(UTC)
+            return self._bind_provider_result(
+                shipment,
+                connection,
+                operation,
+                result,
+                actor_user_id,
+                reused=True,
+                reconciled=True,
+            )
+        self._mark_reconciliation_required(
+            shipment,
+            operation,
+            actor_user_id,
+            "NOVA_POSHTA_MANUAL_RECONCILIATION_REQUIRED",
+            commit=False,
+        )
+        operation.reconciled_at = datetime.now(UTC)
+        self.db.commit()
+        return NovaPoshtaTtnResponse(
+            success=False,
+            message=(
+                "Nova Poshta document state is ambiguous. Blind retry is blocked; verify the provider cabinet and reconcile this shipment manually."
+            ),
+            operation_state=operation.state,
+            reconciliation_attempted=True,
+            manual_reconciliation_required=True,
+            blind_retry_blocked=True,
+            errors=["NOVA_POSHTA_MANUAL_RECONCILIATION_REQUIRED"],
+        )
+
+    def _bind_provider_result(
+        self,
+        shipment,
+        connection,
+        operation: NovaPoshtaOperation,
+        result: NovaPoshtaDocumentResult,
+        actor_user_id: UUID | None,
+        *,
+        reused: bool = False,
+        reconciled: bool = False,
+    ) -> NovaPoshtaTtnResponse:
+        now = datetime.now(UTC)
+        operation.state = NovaPoshtaOperationState.PROVIDER_ACCEPTED.value
+        operation.provider_document_ref = result.document_ref
+        operation.provider_document_number = result.tracking_number
+        operation.provider_status = result.status
+        operation.provider_responded_at = operation.provider_responded_at or now
+        shipment.external_provider = IntegrationProvider.NOVA_POSHTA.value
+        shipment.external_ref = result.document_ref
+        shipment.external_status = result.status
+        shipment.nova_poshta_document_ref = result.document_ref
+        shipment.nova_poshta_document_number = result.tracking_number
+        shipment.tracking_number = result.tracking_number
+        shipment.status = ShipmentStatus.CREATED.value
+        shipment.nova_poshta_create_state = NovaPoshtaOperationState.COMPLETED.value
+        shipment.nova_poshta_manual_reconciliation_required = False
+        shipment.nova_poshta_last_error_code = None
+        operation.state = NovaPoshtaOperationState.COMPLETED.value
+        operation.completed_at = now
+        operation.last_error_code = None
+        operation.last_error_message = None
+        connection.last_sync_at = now
+        self.audit_logs.create(
+            workspace_id=shipment.workspace_id,
+            user_id=actor_user_id,
+            entity_type="Shipment",
+            entity_id=shipment.id,
+            action="NOVA_POSHTA_TTN_RECONCILED" if reconciled else "NOVA_POSHTA_TTN_CREATED",
+            new_value={
+                "tracking_number": result.tracking_number,
+                "document_ref": result.document_ref,
+                "reused_existing_result": reused,
+            },
+        )
+        try:
+            self.db.commit()
+        except SQLAlchemyError:
+            self.db.rollback()
+            self._best_effort_mark_manual_reconciliation(
+                shipment.workspace_id,
+                shipment.id,
+                actor_user_id,
+                "NOVA_POSHTA_LOCAL_PERSISTENCE_FAILED",
+            )
+            return NovaPoshtaTtnResponse(
+                success=False,
+                message="Nova Poshta accepted the document, but Sellora could not confirm local persistence. Blind retry is blocked.",
+                operation_state=NovaPoshtaOperationState.RECONCILIATION_REQUIRED.value,
+                reconciliation_attempted=False,
+                manual_reconciliation_required=True,
+                blind_retry_blocked=True,
+                errors=["NOVA_POSHTA_LOCAL_PERSISTENCE_FAILED"],
+            )
+        return NovaPoshtaTtnResponse(
+            success=True,
+            message="Nova Poshta TTN restored from provider reconciliation." if reconciled else "Nova Poshta TTN created.",
+            tracking_number=result.tracking_number,
+            document_ref=result.document_ref,
+            status=result.status,
+            operation_state=operation.state,
+            reused_existing_result=reused,
+            reconciliation_attempted=reconciled,
+        )
+
+    def _mark_reconciliation_required(
+        self,
+        shipment,
+        operation: NovaPoshtaOperation,
+        actor_user_id: UUID | None,
+        error_code: str,
+        *,
+        commit: bool = True,
+    ) -> None:
+        operation.state = NovaPoshtaOperationState.RECONCILIATION_REQUIRED.value
+        operation.last_error_code = error_code
+        operation.last_error_message = "Provider result requires reconciliation before another create attempt."
+        shipment.nova_poshta_create_state = operation.state
+        shipment.nova_poshta_manual_reconciliation_required = True
+        shipment.nova_poshta_last_error_code = error_code
+        self.audit_logs.create(
+            workspace_id=shipment.workspace_id,
+            user_id=actor_user_id,
+            entity_type="Shipment",
+            entity_id=shipment.id,
+            action="NOVA_POSHTA_RECONCILIATION_REQUIRED",
+            new_value={
+                "provider": IntegrationProvider.NOVA_POSHTA.value,
+                "safe_error": error_code,
+                "blind_retry_blocked": True,

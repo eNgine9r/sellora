@@ -1,4 +1,4 @@
-name: Sprint 8C/8D Premerge
+name: Sprint 8C/8D/8E Premerge
 
 on:
   pull_request:
@@ -11,12 +11,17 @@ on:
       - "backend/app/api/v1/inventory.py"
       - "backend/app/api/v1/shipments.py"
       - "backend/app/core/config.py"
+      - "backend/app/integrations/nova_poshta_client.py"
+      - "backend/app/models/**"
       - "backend/app/repositories/audit_log_repository.py"
       - "backend/app/repositories/import_center_repository.py"
       - "backend/app/repositories/workspace_repository.py"
       - "backend/app/repositories/order_repository.py"
       - "backend/app/repositories/inventory_repository.py"
       - "backend/app/repositories/shipment_repository.py"
+      - "backend/app/repositories/nova_poshta_operation_repository.py"
+      - "backend/app/schemas/integration.py"
+      - "backend/app/schemas/shipment.py"
       - "backend/app/services/import_durable_service.py"
       - "backend/app/services/import_execution_guard.py"
       - "backend/app/services/import_pilot_safe_service.py"
@@ -25,18 +30,23 @@ on:
       - "backend/app/services/order_service.py"
       - "backend/app/services/inventory_service.py"
       - "backend/app/services/shipment_service.py"
+      - "backend/app/services/nova_poshta_service.py"
+      - "backend/alembic/versions/**"
       - "backend/requirements.txt"
       - "backend/tests/test_health_runtime_identity.py"
       - "backend/tests/test_orders.py"
       - "backend/tests/test_shipments.py"
+      - "backend/tests/test_nova_poshta.py"
       - "backend/tests/imports/**"
       - "backend/tests/onboarding/**"
       - "backend/tests/orders/**"
       - "backend/tests/inventory/**"
       - "backend/tests/shipments/**"
+      - "backend/tests/integrations/nova_poshta/**"
       - "frontend/**"
       - "docs/sprint-8c-import-center-pilot-hardening.md"
       - "docs/sprint-8d-orders-inventory-shipments.md"
+      - "docs/sprint-8e-nova-poshta-real-validation.md"
       - ".github/workflows/sprint-8c-premerge.yml"
 
 permissions:
@@ -69,12 +79,18 @@ jobs:
             app/api/v1/inventory.py \
             app/api/v1/shipments.py \
             app/core/config.py \
+            app/integrations/nova_poshta_client.py \
+            app/models/nova_poshta_operation.py \
+            app/models/shipment.py \
             app/repositories/audit_log_repository.py \
             app/repositories/import_center_repository.py \
             app/repositories/workspace_repository.py \
             app/repositories/order_repository.py \
             app/repositories/inventory_repository.py \
             app/repositories/shipment_repository.py \
+            app/repositories/nova_poshta_operation_repository.py \
+            app/schemas/integration.py \
+            app/schemas/shipment.py \
             app/services/import_durable_service.py \
             app/services/import_execution_guard.py \
             app/services/import_pilot_safe_service.py \
@@ -82,7 +98,9 @@ jobs:
             app/services/onboarding_service.py \
             app/services/order_service.py \
             app/services/inventory_service.py \
-            app/services/shipment_service.py
+            app/services/shipment_service.py \
+            app/services/nova_poshta_service.py \
+            alembic/versions/202607150022_nova_poshta_durable_operations.py
       - name: Run Sprint 8C import and provenance tests
         working-directory: backend
         run: |
@@ -98,12 +116,12 @@ jobs:
             tests/imports/test_import_historical_value_validation.py \
             tests/onboarding/test_onboarding_status.py \
             tests/onboarding/test_demo_workspace_service.py
-      - name: Run Sprint 8D operational tests
+      - name: Run Sprint 8D and 8E operational tests
         working-directory: backend
         shell: bash
         run: |
           set +e
-          mkdir -p ../artifacts/sprint-8d-premerge
+          mkdir -p ../artifacts/sprint-8e-premerge
           set -o pipefail
           python -m pytest -q --tb=short \
             tests/test_orders.py \
@@ -112,23 +130,25 @@ jobs:
             tests/inventory/test_inventory_operational_invariants.py \
             tests/test_shipments.py \
             tests/shipments/test_local_shipment_pilot.py \
-            2>&1 | tee ../artifacts/sprint-8d-premerge/pytest.log
+            tests/test_nova_poshta.py \
+            tests/integrations/nova_poshta/test_durable_ttn_workflow.py \
+            2>&1 | tee ../artifacts/sprint-8e-premerge/pytest.log
           code=${PIPESTATUS[0]}
-          echo "$code" > ../artifacts/sprint-8d-premerge/exit-code.txt
+          echo "$code" > ../artifacts/sprint-8e-premerge/exit-code.txt
           exit 0
-      - name: Upload Sprint 8D test diagnostics
+      - name: Upload Sprint 8E test diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sprint-8d-premerge-${{ github.run_id }}
-          path: artifacts/sprint-8d-premerge
+          name: sprint-8e-premerge-${{ github.run_id }}
+          path: artifacts/sprint-8e-premerge
           if-no-files-found: error
           retention-days: 7
-      - name: Enforce Sprint 8D operational tests
+      - name: Enforce Sprint 8E operational tests
         if: always()
         shell: bash
         run: |
-          code="$(cat artifacts/sprint-8d-premerge/exit-code.txt 2>/dev/null || echo 99)"
+          code="$(cat artifacts/sprint-8e-premerge/exit-code.txt 2>/dev/null || echo 99)"
           [ "$code" = "0" ] || exit 1
 
   frontend-production-gate:
@@ -159,3 +179,5 @@ jobs:
         run: node frontend/scripts/import-center-pilot-regression.mjs
       - name: Run Sprint 8D static regression
         run: node frontend/scripts/orders-inventory-shipments-pilot-regression.mjs
+      - name: Run Sprint 8E static regression
+        run: node frontend/scripts/nova-poshta-real-validation-regression.mjs

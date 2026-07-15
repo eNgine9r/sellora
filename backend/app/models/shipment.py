@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -57,6 +57,9 @@ class Shipment(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Times
     nova_poshta_document_number: Mapped[str | None] = mapped_column(String(120), nullable=True)
     nova_poshta_raw_status: Mapped[str | None] = mapped_column(String(255), nullable=True)
     nova_poshta_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    nova_poshta_create_state: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    nova_poshta_manual_reconciliation_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    nova_poshta_last_error_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     order = relationship("Order")
     customer = relationship("Customer")

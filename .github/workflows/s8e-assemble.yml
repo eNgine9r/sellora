@@ -1,0 +1,38 @@
+name: Assemble Sprint 8E Patch
+
+on:
+  push:
+    branches:
+      - fix/sprint-8e-durable-nova-poshta
+    paths:
+      - ".s8e-service/**"
+      - ".github/workflows/s8e-assemble.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/sprint-8e-durable-nova-poshta
+          fetch-depth: 1
+      - name: Assemble durable Nova Poshta service
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .s8e-service/part* > backend/app/services/nova_poshta_service.py
+          python -m py_compile backend/app/services/nova_poshta_service.py
+          rm -rf .s8e-service .s8e-bootstrap
+          rm -f .github/workflows/s8e-assemble.yml
+      - name: Commit assembled Sprint 8E patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Implement durable Sprint 8E Nova Poshta workflow"
+          git push origin HEAD:fix/sprint-8e-durable-nova-poshta

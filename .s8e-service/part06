@@ -1,0 +1,155 @@
+            },
+        )
+        if commit:
+            self.db.commit()
+
+    def _best_effort_mark_manual_reconciliation(
+        self,
+        workspace_id: UUID,
+        shipment_id: UUID,
+        actor_user_id: UUID | None,
+        error_code: str,
+    ) -> None:
+        try:
+            shipment = self._get_shipment_for_update(workspace_id, shipment_id)
+            operation = self.operations.get_for_update(workspace_id, shipment_id)
+            if shipment is None or operation is None:
+                return
+            self._mark_reconciliation_required(
+                shipment,
+                operation,
+                actor_user_id,
+                error_code,
+            )
+        except Exception:
+            self.db.rollback()
+
+    def _existing_result(self, shipment) -> NovaPoshtaTtnResponse:
+        return NovaPoshtaTtnResponse(
+            success=True,
+            message="Nova Poshta TTN already exists for this shipment.",
+            tracking_number=shipment.nova_poshta_document_number or shipment.tracking_number,
+            document_ref=shipment.nova_poshta_document_ref,
+            status=shipment.external_status,
+            operation_state=shipment.nova_poshta_create_state or NovaPoshtaOperationState.COMPLETED.value,
+            reused_existing_result=True,
+        )
+
+    def _provider_writes_allowed(self) -> bool:
+        override = getattr(self, "provider_writes_enabled", None)
+        if override is not None:
+            return override
+        if not hasattr(self, "operations"):
+            return True
+        return get_settings().staging_nova_poshta_allow_writes
+
+    def _legacy_create_ttn(
+        self,
+        connection,
+        api_key: str,
+        shipment,
+        actor_user_id: UUID | None,
+    ) -> NovaPoshtaTtnResponse:
+        payload = self._document_payload(shipment, connection.settings or {})
+        try:
+            result = self.settings.client_factory(api_key).create_internet_document(payload)
+        except Exception:
+            self.audit_logs.create(
+                workspace_id=shipment.workspace_id,
+                user_id=actor_user_id,
+                entity_type="Shipment",
+                entity_id=shipment.id,
+                action="NOVA_POSHTA_ERROR",
+                new_value={
+                    "provider": IntegrationProvider.NOVA_POSHTA.value,
+                    "safe_error": "TTN_CREATE_FAILED",
+                },
+            )
+            self.db.commit()
+            return NovaPoshtaTtnResponse(
+                success=False,
+                message="Nova Poshta TTN creation failed. Please check the API key and sender settings, then try again.",
+                errors=["NOVA_POSHTA_TTN_FAILED"],
+            )
+        if not getattr(result, "tracking_number", None) or not getattr(result, "document_ref", None):
+            self.audit_logs.create(
+                workspace_id=shipment.workspace_id,
+                user_id=actor_user_id,
+                entity_type="Shipment",
+                entity_id=shipment.id,
+                action="NOVA_POSHTA_ERROR",
+                new_value={
+                    "provider": IntegrationProvider.NOVA_POSHTA.value,
+                    "safe_error": "TTN_CREATE_INCOMPLETE",
+                },
+            )
+            self.db.commit()
+            return NovaPoshtaTtnResponse(
+                success=False,
+                message="Nova Poshta TTN creation returned an incomplete response. Provider reconciliation is required.",
+                manual_reconciliation_required=True,
+                blind_retry_blocked=True,
+                errors=["NOVA_POSHTA_TTN_INCOMPLETE"],
+            )
+        shipment.external_provider = IntegrationProvider.NOVA_POSHTA.value
+        shipment.external_ref = result.document_ref
+        shipment.external_status = result.status
+        shipment.nova_poshta_document_ref = result.document_ref
+        shipment.nova_poshta_document_number = result.tracking_number
+        shipment.tracking_number = result.tracking_number
+        shipment.status = ShipmentStatus.CREATED.value
+        connection.last_sync_at = datetime.now(UTC)
+        self.db.commit()
+        return NovaPoshtaTtnResponse(
+            success=True,
+            message="Nova Poshta TTN created.",
+            tracking_number=result.tracking_number,
+            document_ref=result.document_ref,
+            status=result.status,
+        )
+
+    def _validate_for_ttn(self, shipment, settings: dict) -> list[str]:
+        if shipment is None:
+            return ["shipment not found"]
+        errors = []
+        if shipment.carrier != ShipmentCarrier.NOVA_POSHTA.value:
+            errors.append("carrier must be NOVA_POSHTA")
+        if not shipment.order:
+            errors.append("order is required")
+        if not shipment.customer_id:
+            errors.append("customer is required")
+        if not shipment.recipient_name:
+            errors.append("recipient_name is required")
+        if not shipment.recipient_phone:
+            errors.append("recipient_phone is required")
+        if not (shipment.city or shipment.nova_poshta_city_ref):
+            errors.append("city is required")
+        if not (shipment.warehouse or shipment.nova_poshta_warehouse_ref):
+            errors.append("warehouse is required")
+        if shipment.declared_value is None:
+            errors.append("declared_value is required")
+        for field in (
+            "sender_city_ref",
+            "sender_warehouse_ref",
+            "sender_counterparty_ref",
+            "sender_contact_ref",
+            "sender_phone",
+        ):
+            if not settings.get(field):
+                errors.append(f"{field} is required")
+        return errors
+
+    def _document_payload(self, shipment, settings: dict) -> dict:
+        return {
+            "PayerType": "Recipient",
+            "PaymentMethod": "Cash",
+            "CargoType": "Parcel",
+            "ServiceType": "WarehouseWarehouse",
+            "Cost": str(shipment.declared_value or 0),
+            "CitySender": settings.get("sender_city_ref"),
+            "Sender": settings.get("sender_counterparty_ref"),
+            "SenderAddress": settings.get("sender_warehouse_ref"),
+            "ContactSender": settings.get("sender_contact_ref"),
+            "SendersPhone": settings.get("sender_phone"),
+            "CityRecipient": shipment.nova_poshta_city_ref,
+            "RecipientAddress": shipment.nova_poshta_warehouse_ref,

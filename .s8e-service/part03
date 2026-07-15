@@ -1,0 +1,157 @@
+                if any(error in sender_fields for error in errors)
+                else "Shipment is missing required Nova Poshta fields."
+            )
+            return NovaPoshtaTtnResponse(success=False, message=message, errors=errors)
+        assert shipment is not None
+        if shipment.tracking_number or shipment.nova_poshta_document_number or shipment.nova_poshta_document_ref:
+            return self._existing_result(shipment)
+        if not self._provider_writes_allowed():
+            shipment.nova_poshta_create_state = "WRITES_DISABLED"
+            shipment.nova_poshta_last_error_code = "NOVA_POSHTA_PROVIDER_WRITES_DISABLED"
+            self.audit_logs.create(
+                workspace_id=workspace_id,
+                user_id=actor_user_id,
+                entity_type="Shipment",
+                entity_id=shipment_id,
+                action="NOVA_POSHTA_TTN_BLOCKED",
+                new_value={
+                    "provider": IntegrationProvider.NOVA_POSHTA.value,
+                    "safe_error": "PROVIDER_WRITES_DISABLED",
+                },
+            )
+            self.db.commit()
+            return NovaPoshtaTtnResponse(
+                success=False,
+                message="Nova Poshta provider writes are disabled for this environment.",
+                operation_state="WRITES_DISABLED",
+                blind_retry_blocked=True,
+                errors=["NOVA_POSHTA_PROVIDER_WRITES_DISABLED"],
+            )
+
+        # Compatibility for isolated legacy unit fakes. Production instances always own the durable repository.
+        if not hasattr(self, "operations"):
+            return self._legacy_create_ttn(connection, api_key, shipment, actor_user_id)
+
+        base_payload = self._document_payload(shipment, connection.settings or {})
+        fingerprint = self._request_fingerprint(base_payload)
+        operation = self._get_or_create_operation(
+            workspace_id,
+            shipment,
+            fingerprint,
+            actor_user_id,
+        )
+        if operation.state in {
+            NovaPoshtaOperationState.COMPLETED.value,
+            NovaPoshtaOperationState.PROVIDER_ACCEPTED.value,
+        } and operation.provider_document_number and operation.provider_document_ref:
+            return self._bind_provider_result(
+                shipment,
+                connection,
+                operation,
+                NovaPoshtaDocumentResult(
+                    tracking_number=operation.provider_document_number,
+                    document_ref=operation.provider_document_ref,
+                    status=operation.provider_status,
+                ),
+                actor_user_id,
+                reused=True,
+                reconciled=operation.state != NovaPoshtaOperationState.COMPLETED.value,
+            )
+        if operation.state in {
+            NovaPoshtaOperationState.CALLING_PROVIDER.value,
+            NovaPoshtaOperationState.RECONCILIATION_REQUIRED.value,
+        }:
+            return self._reconcile_operation(
+                workspace_id,
+                shipment,
+                connection,
+                operation,
+                api_key,
+                actor_user_id,
+            )
+
+        operation.request_fingerprint = fingerprint
+        operation.state = NovaPoshtaOperationState.CALLING_PROVIDER.value
+        operation.attempt_count += 1
+        operation.provider_called_at = datetime.now(UTC)
+        operation.last_error_code = None
+        operation.last_error_message = None
+        shipment.nova_poshta_create_state = operation.state
+        shipment.nova_poshta_manual_reconciliation_required = False
+        shipment.nova_poshta_last_error_code = None
+        self.db.commit()
+
+        payload = {**base_payload, "Description": operation.provider_marker}
+        client = self.settings.client_factory(api_key)
+        try:
+            result = client.create_internet_document(payload)
+        except NovaPoshtaClientError as exc:
+            if exc.ambiguous:
+                self._mark_reconciliation_required(
+                    shipment,
+                    operation,
+                    actor_user_id,
+                    exc.code,
+                )
+                return self._reconcile_operation(
+                    workspace_id,
+                    shipment,
+                    connection,
+                    operation,
+                    api_key,
+                    actor_user_id,
+                )
+            operation.state = NovaPoshtaOperationState.FAILED_SAFE.value
+            operation.last_error_code = exc.code
+            operation.last_error_message = "Provider explicitly rejected the request before document confirmation."
+            shipment.nova_poshta_create_state = operation.state
+            shipment.nova_poshta_last_error_code = exc.code
+            self.audit_logs.create(
+                workspace_id=workspace_id,
+                user_id=actor_user_id,
+                entity_type="Shipment",
+                entity_id=shipment.id,
+                action="NOVA_POSHTA_ERROR",
+                new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": exc.code},
+            )
+            self.db.commit()
+            return NovaPoshtaTtnResponse(
+                success=False,
+                message="Nova Poshta rejected TTN creation. Check recipient, warehouse and sender settings.",
+                operation_state=operation.state,
+                errors=[exc.code],
+            )
+        except Exception:
+            self._mark_reconciliation_required(
+                shipment,
+                operation,
+                actor_user_id,
+                "NOVA_POSHTA_PROVIDER_RESPONSE_AMBIGUOUS",
+            )
+            return self._reconcile_operation(
+                workspace_id,
+                shipment,
+                connection,
+                operation,
+                api_key,
+                actor_user_id,
+            )
+
+        if not result.tracking_number or not result.document_ref:
+            self._mark_reconciliation_required(
+                shipment,
+                operation,
+                actor_user_id,
+                "NOVA_POSHTA_TTN_INCOMPLETE",
+            )
+            return self._reconcile_operation(
+                workspace_id,
+                shipment,
+                connection,
+                operation,
+                api_key,
+                actor_user_id,
+            )
+        return self._bind_provider_result(
+            shipment,
+            connection,

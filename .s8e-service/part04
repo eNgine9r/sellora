@@ -1,0 +1,157 @@
+            operation,
+            result,
+            actor_user_id,
+        )
+
+    def reconcile_ttn(
+        self,
+        workspace_id: UUID,
+        shipment_id: UUID,
+        actor_user_id: UUID | None,
+    ) -> NovaPoshtaTtnResponse:
+        connection, api_key = self.settings._require_connection(workspace_id)
+        shipment = self._get_shipment_for_update(workspace_id, shipment_id)
+        if shipment is None:
+            raise NovaPoshtaServiceError("Shipment not found")
+        if shipment.tracking_number or shipment.nova_poshta_document_number or shipment.nova_poshta_document_ref:
+            return self._existing_result(shipment)
+        operation = self.operations.get_for_update(workspace_id, shipment_id)
+        if operation is None:
+            raise NovaPoshtaServiceError("Nova Poshta TTN operation does not exist")
+        return self._reconcile_operation(
+            workspace_id,
+            shipment,
+            connection,
+            operation,
+            api_key,
+            actor_user_id,
+        )
+
+    def sync_status(
+        self,
+        workspace_id: UUID,
+        shipment_id: UUID,
+        actor_user_id: UUID | None,
+    ) -> NovaPoshtaStatusResponse:
+        _connection, api_key = self.settings._require_connection(workspace_id)
+        shipment = self.shipments.get(workspace_id, shipment_id)
+        if shipment is None:
+            raise NovaPoshtaServiceError("Shipment not found")
+        tracking_number = shipment.nova_poshta_document_number or shipment.tracking_number
+        if not tracking_number:
+            raise NovaPoshtaServiceError("Shipment does not have a Nova Poshta tracking number")
+        try:
+            status = self.settings.client_factory(api_key).get_document_status(tracking_number)
+        except Exception:
+            self.audit_logs.create(
+                workspace_id=workspace_id,
+                user_id=actor_user_id,
+                entity_type="Shipment",
+                entity_id=shipment.id,
+                action="NOVA_POSHTA_ERROR",
+                new_value={
+                    "provider": IntegrationProvider.NOVA_POSHTA.value,
+                    "safe_error": "STATUS_SYNC_FAILED",
+                },
+            )
+            self.db.commit()
+            return NovaPoshtaStatusResponse(
+                success=False,
+                message="Nova Poshta status sync is unavailable. Please try again later.",
+                tracking_number=tracking_number,
+                status=shipment.external_status,
+                raw_status=shipment.nova_poshta_raw_status,
+                normalized_status=shipment.status,
+                synced_at=shipment.nova_poshta_synced_at,
+            )
+        if not status:
+            self.audit_logs.create(
+                workspace_id=workspace_id,
+                user_id=actor_user_id,
+                entity_type="Shipment",
+                entity_id=shipment.id,
+                action="NOVA_POSHTA_STATUS_UNAVAILABLE",
+                new_value={"provider": IntegrationProvider.NOVA_POSHTA.value},
+            )
+            self.db.commit()
+            return NovaPoshtaStatusResponse(
+                success=False,
+                message="Nova Poshta status sync is unavailable. Please try again later.",
+                tracking_number=tracking_number,
+                status=shipment.external_status,
+                raw_status=shipment.nova_poshta_raw_status,
+                normalized_status=shipment.status,
+                synced_at=shipment.nova_poshta_synced_at,
+            )
+        normalized_status = self._normalize_provider_status(status)
+        previous_normalized_status = shipment.status
+        shipment.nova_poshta_raw_status = status
+        shipment.external_status = status
+        if normalized_status is not None:
+            shipment.status = normalized_status.value
+        shipment.nova_poshta_synced_at = datetime.now(UTC)
+        self.audit_logs.create(
+            workspace_id=workspace_id,
+            user_id=actor_user_id,
+            entity_type="Shipment",
+            entity_id=shipment.id,
+            action="NOVA_POSHTA_STATUS_SYNCED",
+            new_value={
+                "raw_status": status,
+                "normalized_status": normalized_status.value if normalized_status else None,
+                "previous_normalized_status": previous_normalized_status,
+                "manual_review_required": normalized_status is None,
+            },
+        )
+        self.db.commit()
+        return NovaPoshtaStatusResponse(
+            success=True,
+            message=(
+                "Nova Poshta status synced."
+                if normalized_status is not None
+                else "Nova Poshta returned an unknown status. Previous normalized status was preserved."
+            ),
+            tracking_number=tracking_number,
+            status=status,
+            raw_status=status,
+            normalized_status=shipment.status,
+            manual_review_required=normalized_status is None,
+            synced_at=shipment.nova_poshta_synced_at,
+        )
+
+
+    def _get_shipment_for_update(self, workspace_id: UUID, shipment_id: UUID):
+        getter = getattr(self.shipments, "get_for_update", None)
+        if callable(getter):
+            return getter(workspace_id, shipment_id)
+        return self.shipments.get(workspace_id, shipment_id)
+
+    def _get_or_create_operation(
+        self,
+        workspace_id: UUID,
+        shipment,
+        fingerprint: str,
+        actor_user_id: UUID | None,
+    ) -> NovaPoshtaOperation:
+        operation = self.operations.get_for_update(workspace_id, shipment.id)
+        if operation is not None:
+            return operation
+        operation_id = uuid4()
+        operation = NovaPoshtaOperation(
+            id=operation_id,
+            workspace_id=workspace_id,
+            shipment_id=shipment.id,
+            operation_type=NovaPoshtaOperationType.CREATE_TTN.value,
+            state=NovaPoshtaOperationState.PREPARED.value,
+            idempotency_key=f"np-create-ttn:{workspace_id}:{shipment.id}",
+            request_fingerprint=fingerprint,
+            provider_marker=f"SELLORA:{operation_id}",
+            actor_user_id=actor_user_id,
+        )
+        self.operations.create(operation)
+        shipment.nova_poshta_create_state = operation.state
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            existing = self.operations.get_for_update(workspace_id, shipment.id)
