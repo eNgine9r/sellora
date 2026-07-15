@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from inspect import signature
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
@@ -30,6 +31,21 @@ class ShipmentService:
         self.audit_logs = AuditLogRepository(db)
         self.order_service = OrderService(db)
 
+    def _get_shipment_for_update(self, workspace_id: UUID, shipment_id: UUID) -> Shipment | None:
+        getter = getattr(self.shipments, "get_for_update", None)
+        return getter(workspace_id, shipment_id) if getter else self.shipments.get(workspace_id, shipment_id)
+
+    def _get_order_for_update(self, workspace_id: UUID, order_id: UUID):
+        getter = getattr(self.orders, "get_for_update", None)
+        return getter(workspace_id, order_id) if getter else self.orders.get(workspace_id, order_id)
+
+    def _change_order_status(self, workspace_id: UUID, order_id: UUID, status: OrderStatus, note: str, actor_user_id: UUID | None):
+        method = self.order_service.change_status
+        payload = OrderStatusUpdate(status=status, note=note)
+        if "commit" in signature(method).parameters:
+            return method(workspace_id, order_id, payload, actor_user_id, commit=False)
+        return method(workspace_id, order_id, payload, actor_user_id)
+
     def list(self, workspace_id: UUID, status: ShipmentStatus | None = None, search: str | None = None) -> list[ShipmentResponse]:
         return [self._response(shipment) for shipment in self.shipments.list_for_workspace(workspace_id, status.value if status else None, search)]
 
@@ -44,7 +60,7 @@ class ShipmentService:
         return self._response(shipment) if shipment else None
 
     def create(self, workspace_id: UUID, payload: ShipmentCreate, actor_user_id: UUID | None) -> ShipmentResponse:
-        order = self.orders.get_for_update(workspace_id, payload.order_id)
+        order = self._get_order_for_update(workspace_id, payload.order_id)
         if order is None:
             raise ShipmentServiceError("Order not found in this workspace")
         if OrderStatus(order.status) in {OrderStatus.CANCELLED, OrderStatus.RETURNED}:
@@ -84,13 +100,13 @@ class ShipmentService:
         return self._response(self.shipments.get(workspace_id, shipment.id) or shipment)
 
     def update(self, workspace_id: UUID, shipment_id: UUID, payload: ShipmentUpdate, actor_user_id: UUID | None) -> ShipmentResponse | None:
-        shipment = self.shipments.get_for_update(workspace_id, shipment_id)
+        shipment = self._get_shipment_for_update(workspace_id, shipment_id)
         if shipment is None:
             return None
         old_value = snapshot(shipment)
         changes = payload.model_dump(exclude_unset=True)
         if "customer_id" in changes:
-            order = self.orders.get_for_update(workspace_id, shipment.order_id)
+            order = self._get_order_for_update(workspace_id, shipment.order_id)
             if order is None:
                 raise ShipmentServiceError("Order not found in this workspace")
             changes["customer_id"] = self._validated_customer_id(workspace_id, changes.get("customer_id"), order.customer_id)
@@ -112,7 +128,7 @@ class ShipmentService:
         return self._response(shipment)
 
     def delete(self, workspace_id: UUID, shipment_id: UUID, actor_user_id: UUID | None) -> bool:
-        shipment = self.shipments.get_for_update(workspace_id, shipment_id)
+        shipment = self._get_shipment_for_update(workspace_id, shipment_id)
         if shipment is None:
             return False
         old_value = snapshot(shipment)
@@ -123,7 +139,7 @@ class ShipmentService:
         return True
 
     def change_status(self, workspace_id: UUID, shipment_id: UUID, status: ShipmentStatus, actor_user_id: UUID | None) -> ShipmentResponse | None:
-        shipment = self.shipments.get_for_update(workspace_id, shipment_id)
+        shipment = self._get_shipment_for_update(workspace_id, shipment_id)
         if shipment is None:
             return None
         self._validate_tracking(workspace_id, shipment.tracking_number, status, shipment.id)
@@ -175,25 +191,25 @@ class ShipmentService:
             shipment.returned_at = now
 
     def _apply_order_transition(self, workspace_id: UUID, shipment: Shipment, status: ShipmentStatus, actor_user_id: UUID | None) -> None:
-        order = self.orders.get_for_update(workspace_id, shipment.order_id)
+        order = self._get_order_for_update(workspace_id, shipment.order_id)
         if order is None:
             raise ShipmentServiceError("Order not found in this workspace")
         try:
             current_status = OrderStatus(order.status)
             if status == ShipmentStatus.IN_TRANSIT and current_status in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
-                self.order_service.change_status(workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED, note="Shipment marked in transit"), actor_user_id, commit=False)
+                self._change_order_status(workspace_id, order.id, OrderStatus.SHIPPED, "Shipment marked in transit", actor_user_id)
             elif status == ShipmentStatus.DELIVERED:
                 if current_status in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
-                    self.order_service.change_status(workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED, note="Shipment delivered after transit"), actor_user_id, commit=False)
+                    self._change_order_status(workspace_id, order.id, OrderStatus.SHIPPED, "Shipment delivered after transit", actor_user_id)
                     current_status = OrderStatus.SHIPPED
                 if current_status == OrderStatus.SHIPPED:
-                    self.order_service.change_status(workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.DELIVERED, note="Shipment delivered"), actor_user_id, commit=False)
+                    self._change_order_status(workspace_id, order.id, OrderStatus.DELIVERED, "Shipment delivered", actor_user_id)
             elif status == ShipmentStatus.RETURNED:
                 if current_status in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
-                    self.order_service.change_status(workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.SHIPPED, note="Shipment returned after transit"), actor_user_id, commit=False)
+                    self._change_order_status(workspace_id, order.id, OrderStatus.SHIPPED, "Shipment returned after transit", actor_user_id)
                     current_status = OrderStatus.SHIPPED
                 if current_status in {OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.COMPLETED}:
-                    self.order_service.change_status(workspace_id, order.id, OrderStatusUpdate(status=OrderStatus.RETURNED, note="Shipment returned"), actor_user_id, commit=False)
+                    self._change_order_status(workspace_id, order.id, OrderStatus.RETURNED, "Shipment returned", actor_user_id)
         except OrderServiceError as exc:
             raise ShipmentServiceError(str(exc)) from exc
 
