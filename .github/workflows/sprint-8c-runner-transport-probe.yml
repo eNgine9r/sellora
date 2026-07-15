@@ -1,0 +1,56 @@
+name: Sprint 8C Runner Transport Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/sprint-8c-runner-transport-probe.yml"
+      - "scripts/staging_sprint_8c_phase_b_core_v3.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  transport-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install httpx
+      - name: Probe runner transport
+        run: |
+          python - <<'PY'
+          import importlib.util
+          import pathlib
+          import sys
+          import time
+
+          path = pathlib.Path("scripts/staging_sprint_8c_phase_b_core_v3.py")
+          spec = importlib.util.spec_from_file_location("phase_b_v3_transport_probe", path)
+          if spec is None or spec.loader is None:
+              raise SystemExit("runner import unavailable")
+          module = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = module
+          spec.loader.exec_module(module)
+          started = time.perf_counter()
+          response = module.StatelessHttpClient().get("https://sellora-api-staging.onrender.com/health")
+          elapsed = round(time.perf_counter() - started, 3)
+          body = response.json()
+          if response.status_code != 200 or body.get("status") != "ok":
+              raise SystemExit("runner transport health failed")
+          print({
+              "status_code": response.status_code,
+              "seconds": elapsed,
+              "runtime_commit": body.get("runtime_commit"),
+              "process_started_at": body.get("process_started_at"),
+          })
+          PY
