@@ -1,0 +1,84 @@
+name: Sprint 8C Restart Boundary Prepare
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/staging_import_restart_prepare.py"
+      - ".github/workflows/sprint-8c-restart-prepare.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  restart-boundary-prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install probe dependency
+        run: python -m pip install httpx
+      - name: Compile prepare probe
+        run: python -m py_compile scripts/staging_import_restart_prepare.py
+      - name: Execute restart-boundary prepare
+        shell: bash
+        run: |
+          set +e
+          python scripts/staging_import_restart_prepare.py > /tmp/sprint-8c-restart-prepare.log 2>&1
+          code=$?
+          cat /tmp/sprint-8c-restart-prepare.log
+          echo "$code" > artifacts/sprint-8c-restart-prepare-exit-code.txt
+          exit 0
+      - name: Validate sanitized evidence
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          report_path = pathlib.Path("artifacts/sprint-8c-restart-prepare.json")
+          if not report_path.exists():
+              raise SystemExit("Restart prepare report missing")
+          text = report_path.read_text(encoding="utf-8")
+          for value in (os.getenv("STAGING_OWNER_EMAIL", ""), os.getenv("STAGING_OWNER_PASSWORD", "")):
+              if value and value in text:
+                  raise SystemExit("Credential leaked into restart prepare artifact")
+          report = json.loads(text)
+          print(json.dumps(report, indent=2, ensure_ascii=False))
+          PY
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8c-restart-prepare-${{ github.run_id }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce prepare decision
+        if: always()
+        shell: bash
+        run: |
+          code="$(cat artifacts/sprint-8c-restart-prepare-exit-code.txt 2>/dev/null || echo 99)"
+          if [ "$code" != "0" ]; then
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          report = json.load(open("artifacts/sprint-8c-restart-prepare.json", encoding="utf-8"))
+          required = ("health", "login", "upload", "sheets", "dry_run")
+          if any(report.get(key) != "PASS" for key in required):
+              raise SystemExit(1)
+          if report.get("error_rows") not in (0, None):
+              raise SystemExit(1)
+          print("SPRINT 8C RESTART BOUNDARY PREPARE: PASS")
+          PY
