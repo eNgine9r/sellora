@@ -33,12 +33,14 @@ class InventoryService:
         return self.inventory.get_by_variant(workspace_id, product_variant_id)
 
     def update_inventory(self, workspace_id: UUID, inventory_id: UUID, payload: InventoryUpdate, actor_user_id: UUID | None) -> Inventory | None:
-        inventory = self.get_inventory(workspace_id, inventory_id)
+        inventory = self.inventory.get_for_update(workspace_id, inventory_id)
         if inventory is None:
             return None
         old_value = snapshot(inventory)
         for field, value in payload.model_dump(exclude_unset=True).items():
             setattr(inventory, field, value)
+        if inventory.stock_quantity < inventory.reserved_quantity:
+            raise InventoryServiceError("Stock quantity cannot be lower than reserved quantity")
         self.audit_logs.create(
             workspace_id=workspace_id,
             user_id=actor_user_id,
@@ -56,7 +58,7 @@ class InventoryService:
         return self.transactions.list_for_workspace(workspace_id, inventory_id, product_variant_id)
 
     def record_transaction(self, workspace_id: UUID, inventory_id: UUID, payload: InventoryTransactionCreate, actor_user_id: UUID | None, commit: bool = True) -> InventoryTransaction | None:
-        inventory = self.get_inventory(workspace_id, inventory_id)
+        inventory = self.inventory.get_for_update(workspace_id, inventory_id)
         if inventory is None:
             return None
 
@@ -93,6 +95,8 @@ class InventoryService:
         if commit:
             self.db.commit()
             self.db.refresh(transaction)
+        else:
+            self.db.flush()
         return transaction
 
     def _calculate_quantities(self, inventory: Inventory, transaction_type: InventoryTransactionType, quantity: int) -> tuple[int, int]:
