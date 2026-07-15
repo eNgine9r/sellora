@@ -25,6 +25,16 @@ class OrderRepository:
         stmt = select(Order).where(Order.workspace_id == workspace_id, Order.id == order_id, Order.deleted_at.is_(None)).options(selectinload(Order.items), selectinload(Order.status_history), selectinload(Order.customer))
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def get_for_update(self, workspace_id: UUID, order_id: UUID) -> Order | None:
+        stmt = (
+            select(Order)
+            .where(Order.workspace_id == workspace_id, Order.id == order_id, Order.deleted_at.is_(None))
+            .with_for_update()
+            .execution_options(populate_existing=True)
+            .options(selectinload(Order.items), selectinload(Order.status_history), selectinload(Order.customer))
+        )
+        return self.db.execute(stmt).scalar_one_or_none()
+
     def create(self, order: Order) -> Order:
         self.db.add(order)
         self.db.flush()
