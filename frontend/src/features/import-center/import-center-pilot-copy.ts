@@ -15,6 +15,11 @@ const copy = {
     error: "Помилка",
     warning: "Попередження",
     downloadErrorCsv: "Завантажити CSV з помилками",
+    executeConfirmTitle: "Підтвердити імпорт",
+    executeConfirmDescription:
+      "Sellora створить або оновить сутності відповідно до підтвердженого dry-run. Перевірте робочий простір, мапінг і підсумок перед виконанням.",
+    executeConfirmAction: "Виконати імпорт",
+    executeError: "Не вдалося виконати імпорт. Перевірте dry-run і повторіть спробу.",
     fallbackError: "Некоректне значення. Перевірте вказаний рядок і колонку.",
     fallbackWarning: "Перевірте значення у вказаному рядку.",
   },
@@ -30,6 +35,11 @@ const copy = {
     error: "Error",
     warning: "Warning",
     downloadErrorCsv: "Download error CSV",
+    executeConfirmTitle: "Confirm import",
+    executeConfirmDescription:
+      "Sellora will create or update entities according to the approved dry-run. Review the workspace, mapping, and summary before execution.",
+    executeConfirmAction: "Execute import",
+    executeError: "The import could not be executed. Review the dry-run and try again.",
     fallbackError: "Invalid value. Check the indicated row and column.",
     fallbackWarning: "Review the value in the indicated row.",
   },
