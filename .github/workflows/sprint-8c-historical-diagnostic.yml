@@ -27,12 +27,24 @@ jobs:
       - name: Install backend dependencies
         working-directory: backend
         run: python -m pip install -r requirements.txt
-      - name: Run focused diagnostic
+      - name: Run full Sprint 8C backend diagnostic
         working-directory: backend
         shell: bash
         run: |
           set +e
-          python -m pytest -vv tests/imports/test_import_historical_value_validation.py > ../historical-diagnostic.txt 2>&1
+          python -m pytest -vv --maxfail=1 \
+            tests/test_health_runtime_identity.py \
+            tests/imports/test_import_execution_guard.py \
+            tests/imports/test_import_source_storage.py \
+            tests/imports/test_import_center_pilot_hardening.py \
+            tests/imports/test_import_pilot_scope_safety.py \
+            tests/imports/test_import_formula_rejection.py \
+            tests/imports/test_import_inventory_plan.py \
+            tests/imports/test_import_xlsx_content.py \
+            tests/imports/test_import_historical_value_validation.py \
+            tests/onboarding/test_onboarding_status.py \
+            tests/onboarding/test_demo_workspace_service.py \
+            > ../historical-diagnostic.txt 2>&1
           code=$?
           echo "$code" > ../historical-diagnostic-exit.txt
           exit 0
