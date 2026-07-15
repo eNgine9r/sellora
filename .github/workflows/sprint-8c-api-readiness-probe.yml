@@ -29,7 +29,7 @@ jobs:
           python-version: "3.12"
       - name: Install probe dependency
         run: python -m pip install httpx
-      - name: Probe authenticated read endpoints
+      - name: Probe authenticated API and durable upload
         shell: bash
         run: |
           mkdir -p artifacts
@@ -96,29 +96,19 @@ jobs:
 
           me = record("auth me", "GET", "/api/v1/auth/me", headers=owner_a)
           customers_a = record(
-              "restart customers Workspace A",
-              "GET",
-              "/api/v1/customers",
-              headers=owner_a,
-              params={"search": "QA8C Restart Customer"},
+              "restart customers Workspace A", "GET", "/api/v1/customers",
+              headers=owner_a, params={"search": "QA8C Restart Customer"},
           )
           logs_a = record(
-              "Phase A logs Workspace A",
-              "GET",
-              f"/api/v1/import/{phase_a_job}/logs",
+              "Phase A logs Workspace A", "GET", f"/api/v1/import/{phase_a_job}/logs",
               headers=owner_a,
           )
           customers_b = record(
-              "restart customers Workspace B",
-              "GET",
-              "/api/v1/customers",
-              headers=owner_b,
-              params={"search": "QA8C Restart Customer"},
+              "restart customers Workspace B", "GET", "/api/v1/customers",
+              headers=owner_b, params={"search": "QA8C Restart Customer"},
           )
           logs_b = record(
-              "Phase A logs Workspace B denied",
-              "GET",
-              f"/api/v1/import/{phase_a_job}/logs",
+              "Phase A logs Workspace B denied", "GET", f"/api/v1/import/{phase_a_job}/logs",
               headers=owner_b,
           )
 
@@ -128,19 +118,33 @@ jobs:
           analyst_headers = {"Authorization": f"Bearer {analyst_token}", "X-Workspace-ID": workspace_a}
           denied_file = {"file": ("denied.csv", b"Name\nDenied\n", "text/csv")}
           manager_upload = record(
-              "MANAGER import upload denied",
-              "POST",
-              "/api/v1/import/upload",
-              headers=manager_headers,
-              files=denied_file,
+              "MANAGER import upload denied", "POST", "/api/v1/import/upload",
+              headers=manager_headers, files=denied_file,
           )
           analyst_upload = record(
-              "ANALYST import upload denied",
+              "ANALYST import upload denied", "POST", "/api/v1/import/upload",
+              headers=analyst_headers, files=denied_file,
+          )
+
+          run_id = os.environ.get("GITHUB_RUN_ID", "manual")
+          owner_upload = record(
+              "OWNER durable upload",
               "POST",
               "/api/v1/import/upload",
-              headers=analyst_headers,
-              files=denied_file,
+              headers=owner_a,
+              files={"file": (f"qa8c-readiness-{run_id}.csv", b"Name\nSynthetic Readiness\n", "text/csv")},
           )
+          upload_job_id = None
+          sheets = None
+          if owner_upload is not None and owner_upload.status_code == 201:
+              upload_job_id = owner_upload.json().get("job_id")
+              if upload_job_id:
+                  sheets = record(
+                      "OWNER durable sheets",
+                      "GET",
+                      f"/api/v1/import/{upload_job_id}/sheets",
+                      headers=owner_a,
+                  )
 
           required_200 = (me, customers_a, logs_a, customers_b)
           if not all(response is not None and response.status_code == 200 for response in required_200):
@@ -151,6 +155,10 @@ jobs:
               raise SystemExit("MANAGER mutation denial failed")
           if analyst_upload is None or analyst_upload.status_code != 403:
               raise SystemExit("ANALYST mutation denial failed")
+          if owner_upload is None or owner_upload.status_code != 201 or not upload_job_id:
+              raise SystemExit("OWNER durable upload failed")
+          if sheets is None or sheets.status_code != 200 or sheets.json().get("sheets") != ["CSV"]:
+              raise SystemExit("OWNER durable source read failed")
 
           customers_a_body = customers_a.json()
           customers_b_body = customers_b.json()
@@ -159,6 +167,7 @@ jobs:
           result["customer_count_workspace_b"] = len(customers_b_body) if isinstance(customers_b_body, list) else None
           result["log_count"] = len(logs_a_body) if isinstance(logs_a_body, list) else None
           result["raw_data_absent"] = bool(isinstance(logs_a_body, list) and all(item.get("raw_data") is None for item in logs_a_body))
+          result["durable_upload"] = {"created": True, "sheets": ["CSV"]}
           if result["customer_count_workspace_a"] != 2 or result["customer_count_workspace_b"] != 0 or result["log_count"] != 2 or not result["raw_data_absent"]:
               raise SystemExit("Phase A read-only evidence mismatch")
           result["decision"] = "PASS"
