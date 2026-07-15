@@ -47,16 +47,25 @@ jobs:
           python -m py_compile scripts/staging_sprint_8c_phase_b_core_v2.py
           python -m py_compile scripts/staging_sprint_8c_phase_b_core_v3.py
       - name: Execute Phase B core
-        run: python scripts/staging_sprint_8c_phase_b_core_v3.py
+        id: phase_b_execution
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts
+          python scripts/staging_sprint_8c_phase_b_core_v3.py > /tmp/sprint-8c-phase-b-core.log 2>&1
+          code=$?
+          cat /tmp/sprint-8c-phase-b-core.log
+          echo "$code" > artifacts/sprint-8c-phase-b-core-exit-code.txt
+          exit 0
       - name: Validate sanitized evidence
-        if: always()
+        if: ${{ !cancelled() }}
         shell: bash
         run: |
           python - <<'PY'
           import json, os, pathlib
           path = pathlib.Path("artifacts/sprint-8c-phase-b-core.json")
           if not path.exists():
-              raise SystemExit("Phase B artifact missing")
+              raise SystemExit("Phase B artifact missing after runner execution")
           text = path.read_text(encoding="utf-8")
           for name in (
               "STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD",
@@ -71,18 +80,34 @@ jobs:
               if marker in lowered:
                   raise SystemExit(f"Unsafe artifact marker: {marker}")
           data = json.loads(text)
-          if data.get("decision") != "PASS":
-              raise SystemExit("Phase B core decision is not PASS")
-          failed = [item for item in data.get("checks", []) if item.get("status") != "PASS"]
-          if failed:
-              raise SystemExit(f"Failed checks remain: {len(failed)}")
-          print(f"SPRINT 8C PHASE B CORE: PASS ({len(data.get('checks', []))} checks)")
+          if not isinstance(data.get("checks"), list):
+              raise SystemExit("Phase B evidence has invalid structure")
+          print(f"Sprint 8C Phase B evidence sanitized: {data.get('decision')} ({len(data.get('checks', []))} checks)")
           PY
       - name: Upload sanitized Phase B evidence
-        if: always()
+        if: ${{ always() && hashFiles('artifacts/sprint-8c-phase-b-core.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: sellora-sprint-8c-phase-b-core-${{ github.run_id }}
           path: artifacts/sprint-8c-phase-b-core.json
-          if-no-files-found: error
+          if-no-files-found: ignore
           retention-days: 14
+      - name: Enforce Phase B decision
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          code="$(cat artifacts/sprint-8c-phase-b-core-exit-code.txt 2>/dev/null || echo 99)"
+          python - "$code" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          code = int(sys.argv[1])
+          path = pathlib.Path("artifacts/sprint-8c-phase-b-core.json")
+          data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+          failed = [item for item in data.get("checks", []) if item.get("status") != "PASS"]
+          if code != 0 or data.get("decision") != "PASS" or failed:
+              reason = data.get("safe_error") or "Phase B core decision is not PASS"
+              raise SystemExit(reason)
+          print(f"SPRINT 8C PHASE B CORE: PASS ({len(data.get('checks', []))} checks)")
+          PY
