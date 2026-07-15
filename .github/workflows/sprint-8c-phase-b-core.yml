@@ -76,3 +76,5 @@ jobs:
           path: artifacts/sprint-8c-phase-b-core.json
           if-no-files-found: error
           retention-days: 14
+
+# Retry after Render deployment propagation was allowed to complete.
