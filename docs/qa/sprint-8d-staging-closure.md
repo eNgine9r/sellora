@@ -4,7 +4,7 @@
 
 `HOLD — canonical duplicate-submit proof pending`
 
-This document records sanitized staging evidence for Sprint 8D. It also acts as a docs-only deployment trigger so the canonical Vercel staging alias receives the merged inventory duplicate-submit guard from PR #169.
+This document records sanitized staging evidence for Sprint 8D. The deployment retry commit contains no frontend or backend source changes; it exists only to publish the already merged PR #169 submit lock through the canonical Vercel staging alias after the previous production build was rate-limited.
 
 ## Included product commits
 
@@ -64,6 +64,10 @@ The merged PR #169 frontend bundle must be visible through the canonical staging
 - one stock side effect.
 
 Sprint 8D remains on HOLD until that proof passes.
+
+## Deployment retry
+
+Canonical deployment retry requested after the Vercel build-rate window elapsed. This marker does not change application behavior.
 
 ## Scope boundary
 
