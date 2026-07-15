@@ -18,6 +18,7 @@ from app.models.integration_credential import IntegrationCredential
 from app.models.import_job_log import ImportJobLog, ImportJobLogStatus
 from app.models.inventory import Inventory
 from app.models.inventory_transaction import InventoryTransaction, InventoryTransactionType
+from app.models.nova_poshta_operation import NovaPoshtaOperation, NovaPoshtaOperationState, NovaPoshtaOperationType
 from app.models.product_image import ProductImage
 from app.models.order import Order, OrderStatus, PaymentStatus
 from app.models.order_item import OrderItem
@@ -30,4 +31,4 @@ from app.models.workspace import Workspace
 from app.models.workspace_user import WorkspaceUser
 from app.models.meta_ad_connection import MetaAdConnection, MetaAdConnectionStatus
 
-__all__ = ["FinanceAdjustment", "FinanceAdjustmentCategory", "FinanceAdjustmentSource", "FinanceAdjustmentType", "AdCampaign", "AdCampaignBudgetType", "AdCampaignObjective", "AdCampaignPlatform", "AdCampaignStatus", "AdMetric", "MetaAdConnection", "MetaAdConnectionStatus", "Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "ImportJob", "ImportJobLog", "ImportJobLogStatus", "ImportJobStatus", "IntegrationConnection", "IntegrationCredential", "IntegrationProvider", "IntegrationStatus", "LeadStatus", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "PilotFeedback", "PilotFeedbackCategory", "PilotFeedbackStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "Shipment", "ShipmentCarrier", "ShipmentStatus", "User", "Workspace", "WorkspaceUser"]
+__all__ = ["FinanceAdjustment", "FinanceAdjustmentCategory", "FinanceAdjustmentSource", "FinanceAdjustmentType", "AdCampaign", "AdCampaignBudgetType", "AdCampaignObjective", "AdCampaignPlatform", "AdCampaignStatus", "AdMetric", "MetaAdConnection", "MetaAdConnectionStatus", "Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "ImportJob", "ImportJobLog", "ImportJobLogStatus", "ImportJobStatus", "IntegrationConnection", "IntegrationCredential", "IntegrationProvider", "IntegrationStatus", "LeadStatus", "NovaPoshtaOperation", "NovaPoshtaOperationState", "NovaPoshtaOperationType", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "PilotFeedback", "PilotFeedbackCategory", "PilotFeedbackStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "Shipment", "ShipmentCarrier", "ShipmentStatus", "User", "Workspace", "WorkspaceUser"]

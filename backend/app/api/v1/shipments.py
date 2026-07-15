@@ -100,6 +100,14 @@ def mark_returned(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_
 
 @router.post("/{shipment_id}/cancel", response_model=ShipmentResponse)
 def cancel(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> ShipmentResponse:
+    shipment = ShipmentService(db).get(workspace_id, shipment_id)
+    if shipment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shipment not found")
+    if shipment.nova_poshta_document_ref or shipment.nova_poshta_document_number:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Provider cancellation is not supported. Complete the confirmed Nova Poshta/manual cleanup process before changing the local shipment state.",
+        )
     return _mark_status(shipment_id, ShipmentStatus.CANCELLED, workspace_id, current_user, db)
 
 
@@ -107,6 +115,14 @@ def cancel(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), cu
 def create_nova_poshta_ttn(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> NovaPoshtaTtnResponse:
     try:
         return NovaPoshtaShipmentService(db).create_ttn(workspace_id, shipment_id, current_user.id)
+    except NovaPoshtaServiceError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.post("/{shipment_id}/nova-poshta/reconcile-ttn", response_model=NovaPoshtaTtnResponse)
+def reconcile_nova_poshta_ttn(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> NovaPoshtaTtnResponse:
+    try:
+        return NovaPoshtaShipmentService(db).reconcile_ttn(workspace_id, shipment_id, current_user.id)
     except NovaPoshtaServiceError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 

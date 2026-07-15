@@ -27,6 +27,8 @@ class NovaPoshtaSettingsResponse(BaseModel):
     sender_counterparty_ref: str | None = None
     sender_contact_ref: str | None = None
     sender_phone: str | None = None
+    provider_writes_enabled: bool = False
+    sender_configured: bool = False
 
 
 class NovaPoshtaTestConnectionResponse(BaseModel):
@@ -47,6 +49,11 @@ class NovaPoshtaTtnResponse(BaseModel):
     tracking_number: str | None = None
     document_ref: str | None = None
     status: str | None = None
+    operation_state: str | None = None
+    reused_existing_result: bool = False
+    reconciliation_attempted: bool = False
+    manual_reconciliation_required: bool = False
+    blind_retry_blocked: bool = False
     errors: list[str] = Field(default_factory=list)
 
 
@@ -55,4 +62,7 @@ class NovaPoshtaStatusResponse(BaseModel):
     message: str
     tracking_number: str | None = None
     status: str | None = None
+    raw_status: str | None = None
+    normalized_status: str | None = None
+    manual_review_required: bool = False
     synced_at: datetime | None = None
