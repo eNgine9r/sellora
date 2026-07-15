@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 55
     env:
       STAGING_API_URL: https://sellora-api-staging.onrender.com
-      EXPECTED_RUNTIME_COMMIT: 96a95bca5e378d6dc6da5e6d9bddbb96d935d3b4
+      EXPECTED_RUNTIME_COMMIT: 4515b6b7dc3b42fb80e9a9466c95b128a37947f8
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
       STAGING_MANAGER_EMAIL: ${{ secrets.STAGING_MANAGER_EMAIL }}
