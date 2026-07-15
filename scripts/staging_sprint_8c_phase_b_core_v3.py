@@ -8,7 +8,6 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import httpx
 
@@ -24,7 +23,7 @@ _original_request_retry = v2.base.request_retry
 
 
 def bounded_request_retry(operation, attempts: int = 3):
-    """Keep staging failures bounded instead of waiting on six 10-minute reads."""
+    """Keep staging failures bounded instead of waiting on six long reads."""
 
     return _original_request_retry(operation, attempts=min(attempts, 3))
 
@@ -41,33 +40,42 @@ def parse_runtime_timestamp(value: object) -> datetime | None:
         return None
 
 
-def log_request(request: httpx.Request) -> None:
-    print(f"HTTP START {request.method} {request.url.path}", flush=True)
+class StatelessHttpClient:
+    """Create one isolated connection per request, matching the green readiness probe."""
 
+    def __init__(self) -> None:
+        self.timeout = httpx.Timeout(connect=15, read=30, write=60, pool=15)
 
-def log_response(response: httpx.Response) -> None:
-    print(
-        f"HTTP HEADERS {response.request.method} {response.request.url.path} {response.status_code}",
-        flush=True,
-    )
+    def request(self, method: str, url: str, **kwargs) -> httpx.Response:
+        path = httpx.URL(url).path
+        print(f"HTTP START {method.upper()} {path}", flush=True)
+        with httpx.Client(
+            timeout=self.timeout,
+            follow_redirects=True,
+            headers={"Connection": "close", "Cache-Control": "no-cache"},
+        ) as client:
+            response = client.request(method, url, **kwargs)
+        print(f"HTTP DONE {method.upper()} {path} {response.status_code}", flush=True)
+        return response
+
+    def get(self, url: str, **kwargs) -> httpx.Response:
+        return self.request("GET", url, **kwargs)
+
+    def post(self, url: str, **kwargs) -> httpx.Response:
+        return self.request("POST", url, **kwargs)
+
+    def close(self) -> None:
+        return None
 
 
 class PhaseBClosureV3(v2.PhaseBClosureV2):
-    """Require the approved runtime and keep every staging request observable."""
+    """Require the approved runtime and keep every staging request isolated."""
 
     def __init__(self) -> None:
         super().__init__()
         old_client = self.client.client
         old_client.close()
-        timeout = httpx.Timeout(connect=20, read=60, write=120, pool=20)
-        limits = httpx.Limits(max_connections=10, max_keepalive_connections=0)
-        self.client.client = httpx.Client(
-            timeout=timeout,
-            limits=limits,
-            follow_redirects=True,
-            headers={"Connection": "close", "Cache-Control": "no-cache"},
-            event_hooks={"request": [log_request], "response": [log_response]},
-        )
+        self.client.client = StatelessHttpClient()
 
     def check(self, name: str, condition: bool, detail: str = "") -> None:
         print(
