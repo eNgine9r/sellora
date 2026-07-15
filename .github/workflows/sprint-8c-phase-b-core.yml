@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts/staging_sprint_8c_phase_b_core.py"
       - "scripts/staging_sprint_8c_phase_b_core_v2.py"
+      - "scripts/staging_sprint_8c_phase_b_core_v3.py"
       - ".github/workflows/sprint-8c-phase-b-core.yml"
   workflow_dispatch:
 
@@ -22,7 +23,7 @@ jobs:
     timeout-minutes: 55
     env:
       STAGING_API_URL: https://sellora-api-staging.onrender.com
-      EXPECTED_RUNTIME_COMMIT: ff5e05ee6a4f3b4d2a1a87047cbf3d6e65189ee3
+      EXPECTED_RUNTIME_COMMITS: 4515b6b7dc3b42fb80e9a9466c95b128a37947f8,ff5e05ee6a4f3b4d2a1a87047cbf3d6e65189ee3
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
       STAGING_MANAGER_EMAIL: ${{ secrets.STAGING_MANAGER_EMAIL }}
@@ -44,8 +45,9 @@ jobs:
         run: |
           python -m py_compile scripts/staging_sprint_8c_phase_b_core.py
           python -m py_compile scripts/staging_sprint_8c_phase_b_core_v2.py
+          python -m py_compile scripts/staging_sprint_8c_phase_b_core_v3.py
       - name: Execute Phase B core
-        run: python scripts/staging_sprint_8c_phase_b_core_v2.py
+        run: python scripts/staging_sprint_8c_phase_b_core_v3.py
       - name: Validate sanitized evidence
         if: always()
         shell: bash
