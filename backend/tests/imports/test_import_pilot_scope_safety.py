@@ -13,6 +13,7 @@ from app.services.import_durable_service import (
     historical_status_issues,
     pilot_safe_mapping,
 )
+from app.services.import_pilot_safe_service import historical_order_value_issues
 from app.schemas.import_center import ImportReportResponse
 
 
@@ -85,6 +86,62 @@ def test_unknown_historical_order_and_payment_statuses_are_errors() -> None:
     assert {item.field for item in issues} == {"order_status", "payment_status"}
     assert {item.row_number for item in issues} == {2}
     assert all(item.severity == "ERROR" for item in issues)
+
+
+def test_invalid_non_empty_historical_order_date_is_an_error() -> None:
+    issues = historical_order_value_issues(
+        [{"Order Date": "not-a-date"}],
+        {"order_date": "Order Date"},
+    )
+
+    assert len(issues) == 1
+    assert issues[0].row_number == 2
+    assert issues[0].field == "order_date"
+    assert issues[0].severity == "ERROR"
+    assert issues[0].raw_value == "not-a-date"
+
+
+def test_valid_or_empty_historical_order_dates_are_allowed() -> None:
+    issues = historical_order_value_issues(
+        [
+            {"Order Date": "2026-07-01"},
+            {"Order Date": "01.07.2026"},
+            {"Order Date": ""},
+            {"Order Date": None},
+        ],
+        {"order_date": "Order Date"},
+    )
+
+    assert issues == []
+
+
+def test_strict_historical_date_error_makes_dry_run_non_executable() -> None:
+    report = ImportReportResponse(
+        job_id="00000000-0000-0000-0000-000000000001",
+        entity_type="orders_history",
+        sheet_name="CSV",
+        total_rows=1,
+        valid_rows=1,
+        invalid_rows=0,
+        warning_rows=0,
+        error_rows=0,
+        skipped_rows=0,
+        duplicate_rows=0,
+        ready_to_import_rows=1,
+        estimated_entities_to_create=1,
+    )
+    issues = historical_order_value_issues(
+        [{"Order Date": "not-a-date"}],
+        {"order_date": "Order Date"},
+    )
+
+    append_report_issues(report, issues)
+
+    assert report.error_rows == 1
+    assert report.invalid_rows == 1
+    assert report.valid_rows == 0
+    assert report.ready_to_import_rows == 0
+    assert report.estimated_entities_to_create == 0
 
 
 def test_strict_status_errors_make_dry_run_non_executable() -> None:
