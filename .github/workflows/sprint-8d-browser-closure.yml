@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/staging_sprint_8d_browser_v2.py"
+      - "scripts/staging_sprint_8d_browser_v3.py"
       - ".github/workflows/sprint-8d-browser-closure.yml"
   workflow_dispatch:
 
@@ -20,7 +21,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
-      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      STAGING_FRONTEND_URL: https://sellora-web-staging-ng75ksdo0-engine9rs-projects.vercel.app
       STAGING_API_URL: https://sellora-api-staging.onrender.com
       EXPECTED_RUNTIME_COMMIT: 9bf30f3140e6800b33577ef248c7f6c441201613
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
@@ -64,14 +65,17 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Compile browser runner
-        run: python -m py_compile scripts/staging_sprint_8d_browser_v2.py
+        run: |
+          python -m py_compile \
+            scripts/staging_sprint_8d_browser_v2.py \
+            scripts/staging_sprint_8d_browser_v3.py
 
       - name: Execute Sprint 8D browser closure
         shell: bash
         run: |
           set +e
           mkdir -p artifacts/sprint-8d-browser
-          python scripts/staging_sprint_8d_browser_v2.py > artifacts/sprint-8d-browser/browser-console.log 2>&1
+          python scripts/staging_sprint_8d_browser_v3.py > artifacts/sprint-8d-browser/browser-console.log 2>&1
           code=$?
           echo "$code" > artifacts/sprint-8d-browser/browser-exit-code.txt
           exit 0
