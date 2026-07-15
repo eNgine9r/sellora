@@ -100,14 +100,36 @@ jobs:
             tests/onboarding/test_demo_workspace_service.py
       - name: Run Sprint 8D operational tests
         working-directory: backend
+        shell: bash
         run: |
-          python -m pytest -q \
+          set +e
+          mkdir -p ../artifacts/sprint-8d-premerge
+          set -o pipefail
+          python -m pytest -q --tb=short \
             tests/test_orders.py \
             tests/orders/test_order_lifecycle_pilot.py \
             tests/orders/test_sprint_8d_locking_contract.py \
             tests/inventory/test_inventory_operational_invariants.py \
             tests/test_shipments.py \
-            tests/shipments/test_local_shipment_pilot.py
+            tests/shipments/test_local_shipment_pilot.py \
+            2>&1 | tee ../artifacts/sprint-8d-premerge/pytest.log
+          code=${PIPESTATUS[0]}
+          echo "$code" > ../artifacts/sprint-8d-premerge/exit-code.txt
+          exit 0
+      - name: Upload Sprint 8D test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint-8d-premerge-${{ github.run_id }}
+          path: artifacts/sprint-8d-premerge
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce Sprint 8D operational tests
+        if: always()
+        shell: bash
+        run: |
+          code="$(cat artifacts/sprint-8d-premerge/exit-code.txt 2>/dev/null || echo 99)"
+          [ "$code" = "0" ] || exit 1
 
   frontend-production-gate:
     runs-on: ubuntu-24.04
