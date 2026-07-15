@@ -1,94 +1,106 @@
 # Sellora Known Limitations for Pilot Users
 
-Sellora is ready for guided MVP pilot testing, but the following limitations must be communicated honestly before users rely on it for daily operations.
+Sellora is approved for a controlled guided MVP pilot. The following limitations remain and must be communicated before pilot shops rely on the platform for daily operations.
 
-## Not automated yet
+## External integrations not fully active
 
-- Instagram Direct API is not connected yet.
-- Meta Ads API is not connected yet.
-- Billing/subscriptions are not implemented yet.
-- Advanced AI insights and predictive analytics are not implemented yet.
-- AI Direct parser is not implemented yet.
+- Instagram Direct API ingestion is not connected.
+- Meta Ads live OAuth, token storage, automatic synchronization and Conversions API are not active.
+- Manual entry and CSV remain the supported advertising data sources.
+- Nova Poshta real TTN creation and production status behavior require a separate controlled validation with a shop-owned credential.
+- Nova Poshta background status synchronization is not enabled.
+- Printable/downloadable TTN documents are not implemented.
 
-## Integrations and imports
+## Commercial and onboarding scope
 
-- Nova Poshta production TTN behavior may need final validation with real API settings.
-- Some reports depend on imported or manually entered data.
-- Import dry-run should be tested with copied/safe spreadsheet data before importing operational data.
-- Feedback attachments/screenshots are not supported yet.
+- Billing and subscriptions are not implemented.
+- Unrestricted public self-service onboarding is not approved.
+- Email invitations and password reset remain incomplete or outside the currently approved pilot scope.
+- Organization-level super-admin capabilities are not part of the MVP pilot.
 
-## Feedback/privacy boundaries
+## AI and automation scope
 
-- Do not include passwords, API keys, tokens, private spreadsheets, raw customer lists, full authorization headers, or workspace IDs in feedback messages.
-- Pilot feedback is workspace-scoped and intended for product triage, not for storing support evidence with sensitive data.
+- AI Direct parsing is not implemented.
+- Predictive analytics and advanced AI recommendations are not implemented.
+- Advertising guidance is deterministic and based on manual/imported data, not live Meta recommendations.
 
-## Product scope
+## Data and import boundaries
 
-- Sellora currently focuses on CRM, products, inventory, orders, shipments, manual advertising metrics, imports and analytics.
-- Full self-serve onboarding, billing, team administration and automated external API ingestion are planned after pilot validation.
+- Reports depend on the completeness of operational, manual and imported data.
+- Import dry-run should be used before executing imports.
+- Real business files must be sanitized before QA or support sharing.
+- Passwords, tokens, API keys, full authorization headers, private customer exports and private spreadsheets must not be placed in feedback, screenshots, logs or issue comments.
+- Deep advertising CSV import behavior remains a dedicated follow-up beyond the Sprint 8A.1 route/browser smoke.
 
-## Sprint 3.0 Nova Poshta validation limitations
+## Inventory follow-up
 
-- Nova Poshta status sync is available as a manual action where a TTN exists, but automated background synchronization is not yet enabled.
-- Nova Poshta TTN cancellation is not fully production-validated and should be treated as manual operational follow-up until a dedicated cancellation workflow is added.
-- Sender counterparty and contact person refs may still need to be sourced from the shop’s Nova Poshta account; Sellora validates that they are present before TTN creation but does not yet browse all account sender entities.
-- Production validation must use the staging checklist and a controlled test order because real TTN creation may create real records in the Nova Poshta account.
+Issue #134 tracks an edge case where archiving a product variant may leave a visible zero-stock inventory row.
 
-## Sprint 3.1 — Shipment / TTN limitations
+Current impact:
 
-- Printable or downloadable Nova Poshta TTN documents are not implemented yet. Pilot users should copy the TTN number from Sellora and use the Nova Poshta cabinet for printing.
-- Delivery status sync depends on Nova Poshta API availability and requires an existing TTN; when unavailable, Sellora shows a safe localized message instead of raw third-party payloads.
-- TTN creation does not automatically complete an order. Order status and shipment status are intentionally kept separate.
+- stock can be returned to zero;
+- order reservation and inventory calculations passed the controlled-write E2E;
+- the issue affects cleanup/visibility semantics rather than the verified commerce flow;
+- it does not block the controlled pilot, but should be resolved before broader rollout.
 
-## Sprint 3.2 — Staging validation limitations
+## Shipment limitations
 
-- Real Nova Poshta staging validation still requires a controlled shop-owned credential and may create records in the Nova Poshta account if TTN creation is executed.
-- Automated tests continue to use mocked Nova Poshta clients; no real Nova Poshta API calls are made in CI/regression scripts.
-- Printable/downloadable TTN documents remain out of scope; copy the TTN and use the Nova Poshta cabinet for document workflows.
+- Shipment drafts are pilot-ready.
+- Real Nova Poshta provider actions were intentionally not called during Sprint 8A.1.
+- TTN creation does not automatically complete an order; shipment and order statuses remain separate.
+- TTN cancellation is not fully production-validated.
+- Pilot users should use the Nova Poshta cabinet for printing until document generation is implemented.
 
-## Sprint 3.2.1 — Remaining validation blockers
+## PWA and mobile limitations
 
-- Real Nova Poshta staging validation cannot be marked complete until a controlled shop-owned API key is provided and the manual checklist is executed in staging.
-- Frontend lint is not configured for non-interactive CI yet; `next lint` opens the Next.js ESLint setup prompt.
-- Dependency installation can still fail in environments where the Python/npm registry proxy returns `403 Forbidden`; CI should use an approved registry mirror or dependency cache.
+- Browser/mobile QA passed at 375 × 812, 390 × 844, 430 × 932 and 768 × 1024.
+- PWA installation on real iOS and Android devices remains a separate device-level validation.
+- Offline caching of private CRM, finance, customer, order, workspace or token data is intentionally not enabled.
 
-## Sprint 4.0 — Advertising and Meta Ads limitations
+## Security and audit limitations
 
-- Automatic Meta Ads OAuth, token refresh, ad account selection and daily insights sync are not active yet.
-- Campaign/adset/ad external ID mapping is documented for future additive schema work; current MVP campaign rows remain manual/import oriented.
-- Manual advertising import is the supported pilot path and must not be mixed with fake Meta API data.
-- Nova Poshta real-key staging validation remains a release blocker for enabling delivery workflow, but it does not block Sprint 4.0 advertising foundation work.
+- Role authentication and representative tenant-isolation checks passed.
+- Workspace A/B stale-data checks passed in browser QA.
+- Audit logging is not yet standardized for every critical mutation.
+- Pilot access should remain controlled, with explicit workspace memberships and least-privilege roles.
+- Synthetic credentials used for QA should be rotated or removed after the testing window.
 
-## Sprint 4.0.1 — Remaining advertising validation blockers
+## Staging and deployment operational notes
 
-- Manual browser-based staging QA for `/advertising`, `/settings/integrations`, Dashboard, Analytics and Import Center still requires staging access and synthetic advertising data.
-- `next lint` still uses the deprecated interactive Next.js setup flow; migrate to ESLint CLI configuration in a dedicated tooling task.
-- npm still reports environment proxy config warnings; CI should keep using approved dependency caches or registry access to avoid another dependency-restore outage.
+Sprint 8A.1 resolved a Render incident where the Docker image could not locate Alembic revision `202607130021`.
 
-## Sprint 4.1 Advertising Limitations
+The backend image now verifies the expected Alembic revision during build and startup. Runtime and packaged head both matched `202607130021` in the approved deployment.
 
-- Manual browser-based staging QA still needs to be completed with synthetic advertising data before pilot approval.
-- Real Meta Ads API sync is not active; the integration card is a readiness placeholder only.
-- Campaign attribution is optional and not yet a full lead/order-to-campaign relation.
-- Gross profit is documented as a business metric, but the current advertising import path focuses on spend, messages, leads, orders, revenue, and net profit unless a future schema explicitly adds gross-profit advertising fields.
+Future deployment rules:
 
-## Sprint 4.2 Advertising Pilot Limitations
+1. deploy from the approved `main` branch;
+2. keep Render root directory and Docker build context aligned;
+3. fail the image build when the expected revision is absent;
+4. verify `/health` before browser or controlled-write QA;
+5. rerun the same Sprint 8A.1 gate after migration, auth, tenant-isolation or core-flow changes.
 
-- The committed advertising templates are synthetic and safe for QA, but they do not prove a real store export will be clean; pilot stores must sanitize real business files before import.
-- Browser-based staging QA with the CSV template still needs to be executed in the actual staging environment.
-- Automatic Meta Ads sync, token refresh, ad account selection, and real campaign/ad attribution remain future work.
+## Sprint 8A.1 closure status
 
-## Sprint 4.2.1 Validation Limitations
+The following former blockers are closed:
 
-- The CSV template CI/build validation can pass locally, but browser-based staging import still requires deployed staging access and a synthetic QA workspace.
-- The project still uses deprecated interactive `next lint`; lint should be migrated to an explicit ESLint CLI setup in a separate tooling task.
-- Committed advertising templates must remain CSV-only; do not reintroduce binary `.xlsx` template files into tracked docs or public assets.
+- staging frontend access;
+- backend health access;
+- synthetic OWNER/MANAGER/ANALYST credentials;
+- dedicated QA workspace;
+- runtime Alembic verification;
+- read-only gate;
+- controlled-write E2E;
+- browser/mobile QA;
+- console/network review;
+- workspace switching and stale-data validation.
 
-## Sprint 4.2.2 Manual Staging Blocker
+Final result:
 
-- Manual browser staging QA for the advertising CSV import flow is still blocked until staging frontend/backend access, credentials, and a controlled QA workspace are provided.
-- CSV dry-run, execute import, duplicate behavior, `/advertising`, Dashboard, Analytics, mobile, and theme checks are not approved from local validation alone.
-- Advertising import should remain marked not pilot-ready until the deployed staging flow is completed with synthetic data.
+```text
+Sprint 8A.1: APPROVED
+Release decision: GREEN
+Pilot scope: controlled and guided
+```
 
 ## Sprint 4.2.3 Staging Access Limitation
 

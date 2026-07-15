@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -36,6 +37,12 @@ def create_order(payload: OrderCreate, workspace_id: UUID = Depends(get_workspac
         return OrderService(db).create(workspace_id, payload, current_user.id)
     except OrderServiceError as exc:
         raise _bad_request(exc)
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Order number conflict in this workspace. Please retry.",
+        ) from exc
 
 
 @router.get("/{order_id}", response_model=OrderResponse, dependencies=[Depends(require_min_role(RoleName.ANALYST))])

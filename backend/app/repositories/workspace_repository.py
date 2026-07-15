@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select, func
+from sqlalchemy import String, and_, cast, func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.audit_log import AuditLog
 from app.models.role import Role, RoleName
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_user import WorkspaceUser
+from app.repositories.audit_log_repository import DEMO_WORKSPACE_CREATE_ACTION
 
 
 class WorkspaceRepository:
