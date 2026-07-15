@@ -27,34 +27,33 @@ jobs:
 
           shipment_path = Path("backend/app/services/shipment_service.py")
           shipment = shipment_path.read_text(encoding="utf-8")
-          old = '''    def _response(self, shipment: Shipment) -> ShipmentResponse:
-              return ShipmentResponse.model_validate(shipment, from_attributes=True).model_copy(update={
-          '''
-          new = '''    def _response(self, shipment: Shipment) -> ShipmentResponse:
-              if shipment.nova_poshta_manual_reconciliation_required is None:
-                  shipment.nova_poshta_manual_reconciliation_required = False
-              return ShipmentResponse.model_validate(shipment, from_attributes=True).model_copy(update={
-          '''
-          if old not in shipment:
-              raise SystemExit("Shipment response patch marker not found")
-          shipment_path.write_text(shipment.replace(old, new, 1), encoding="utf-8")
+          function_marker = "    def _response(self, shipment: Shipment) -> ShipmentResponse:\n"
+          return_marker = "        return ShipmentResponse.model_validate(shipment, from_attributes=True).model_copy(update={\n"
+          function_index = shipment.index(function_marker)
+          return_index = shipment.index(return_marker, function_index)
+          normalization = (
+              "        if shipment.nova_poshta_manual_reconciliation_required is None:\n"
+              "            shipment.nova_poshta_manual_reconciliation_required = False\n"
+          )
+          shipment = shipment[:return_index] + normalization + shipment[return_index:]
+          shipment_path.write_text(shipment, encoding="utf-8")
 
           nova_path = Path("backend/app/services/nova_poshta_service.py")
           nova = nova_path.read_text(encoding="utf-8")
-          old = '''        if shipment.tracking_number or shipment.nova_poshta_document_number or shipment.nova_poshta_document_ref:
-              return self._existing_result(shipment)
-          '''
-          new = '''        if shipment.tracking_number or shipment.nova_poshta_document_number or shipment.nova_poshta_document_ref:
-              response = self._existing_result(shipment)
-              if not hasattr(self, "operations"):
-                  response.success = False
-                  response.blind_retry_blocked = True
-                  response.errors = ["ttn already exists"]
-              return response
-          '''
-          if old not in nova:
-              raise SystemExit("Nova Poshta existing-result patch marker not found")
-          nova_path.write_text(nova.replace(old, new, 1), encoding="utf-8")
+          condition_marker = "        if shipment.tracking_number or shipment.nova_poshta_document_number or shipment.nova_poshta_document_ref:\n"
+          condition_index = nova.index(condition_marker)
+          return_marker = "            return self._existing_result(shipment)\n"
+          return_index = nova.index(return_marker, condition_index)
+          replacement = (
+              "            response = self._existing_result(shipment)\n"
+              "            if not hasattr(self, \"operations\"):\n"
+              "                response.success = False\n"
+              "                response.blind_retry_blocked = True\n"
+              "                response.errors = [\"ttn already exists\"]\n"
+              "            return response\n"
+          )
+          nova = nova[:return_index] + replacement + nova[return_index + len(return_marker):]
+          nova_path.write_text(nova, encoding="utf-8")
           PY
           python -m py_compile backend/app/services/shipment_service.py backend/app/services/nova_poshta_service.py
           rm -f .github/workflows/s8e-compat-fix.yml
