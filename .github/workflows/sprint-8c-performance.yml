@@ -1,0 +1,92 @@
+name: Sprint 8C Performance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/staging_sprint_8c_performance.py"
+      - ".github/workflows/sprint-8c-performance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sellora-sprint-8c-performance
+  cancel-in-progress: true
+
+jobs:
+  performance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    env:
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install QA dependency
+        run: python -m pip install httpx
+      - name: Compile runner
+        run: python -m py_compile scripts/staging_sprint_8c_performance.py
+      - name: Execute performance matrix
+        shell: bash
+        run: |
+          set +e
+          python scripts/staging_sprint_8c_performance.py > /tmp/sprint-8c-performance.log 2>&1
+          code=$?
+          cat /tmp/sprint-8c-performance.log
+          echo "$code" > artifacts/sprint-8c-performance-exit-code.txt
+          exit 0
+      - name: Validate sanitized performance evidence
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, re
+          path = pathlib.Path("artifacts/sprint-8c-performance.json")
+          if not path.exists():
+              raise SystemExit("Performance artifact missing")
+          text = path.read_text(encoding="utf-8")
+          for name in ("STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD"):
+              value = os.getenv(name, "")
+              if value and value in text:
+                  raise SystemExit(f"Credential leaked: {name}")
+          for pattern in (
+              r"Bearer\s+[A-Za-z0-9._~+/=-]{20,}",
+              r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b",
+              r"38067\d{7}",
+              r"qa8c_perf_",
+          ):
+              if re.search(pattern, text, re.I):
+                  raise SystemExit("Raw credential or source-row marker found in performance artifact")
+          data = json.loads(text)
+          if data.get("decision") != "PASS":
+              raise SystemExit("Sprint 8C performance decision is not PASS")
+          datasets = data.get("datasets", [])
+          if [item.get("rows") for item in datasets] != [100, 1000, 5000]:
+              raise SystemExit("Performance dataset matrix is incomplete")
+          if any(item.get("status") != "PASS" for item in datasets):
+              raise SystemExit("Performance dataset failure remains")
+          print("SPRINT 8C PERFORMANCE: PASS")
+          PY
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8c-performance-${{ github.run_id }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 14
+      - name: Enforce performance decision
+        if: always()
+        shell: bash
+        run: |
+          code="$(cat artifacts/sprint-8c-performance-exit-code.txt 2>/dev/null || echo 99)"
+          [ "$code" = "0" ]
