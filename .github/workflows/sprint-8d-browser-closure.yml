@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts/staging_sprint_8d_browser_v2.py"
       - "scripts/staging_sprint_8d_browser_v3.py"
+      - "scripts/staging_sprint_8d_browser_v4.py"
       - ".github/workflows/sprint-8d-browser-closure.yml"
   workflow_dispatch:
 
@@ -21,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
-      STAGING_FRONTEND_URL: https://sellora-web-staging-ng75ksdo0-engine9rs-projects.vercel.app
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
       STAGING_API_URL: https://sellora-api-staging.onrender.com
       EXPECTED_RUNTIME_COMMIT: 9bf30f3140e6800b33577ef248c7f6c441201613
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
@@ -68,14 +69,15 @@ jobs:
         run: |
           python -m py_compile \
             scripts/staging_sprint_8d_browser_v2.py \
-            scripts/staging_sprint_8d_browser_v3.py
+            scripts/staging_sprint_8d_browser_v3.py \
+            scripts/staging_sprint_8d_browser_v4.py
 
       - name: Execute Sprint 8D browser closure
         shell: bash
         run: |
           set +e
           mkdir -p artifacts/sprint-8d-browser
-          python scripts/staging_sprint_8d_browser_v3.py > artifacts/sprint-8d-browser/browser-console.log 2>&1
+          python scripts/staging_sprint_8d_browser_v4.py > artifacts/sprint-8d-browser/browser-console.log 2>&1
           code=$?
           echo "$code" > artifacts/sprint-8d-browser/browser-exit-code.txt
           exit 0
@@ -128,7 +130,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Enforce browser closure decision
+      - name: Enforce canonical UI closure decision
         if: always()
         shell: bash
         run: |
@@ -137,7 +139,7 @@ jobs:
           python - <<'PY'
           import json
           report = json.load(open("artifacts/sprint-8d-browser/browser.json", encoding="utf-8"))
-          if report.get("decision") != "PASS_PENDING_POSTGRES_CLEANUP":
+          if report.get("decision") != "PASS_PENDING_DUPLICATE_AND_POSTGRES_CLEANUP":
               raise SystemExit(1)
-          print("SPRINT 8D BROWSER/MOBILE: PASS (POSTGRES CLEANUP PENDING)")
+          print("SPRINT 8D CANONICAL UI: PASS (DUPLICATE PROBE + POSTGRES CLEANUP PENDING)")
           PY
