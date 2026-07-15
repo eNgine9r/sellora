@@ -15,10 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: main
+          fetch-depth: 1
+          show-progress: false
           persist-credentials: false
       - name: Print current main tree SHA
         run: |
-          git fetch --no-tags origin main
-          echo "MAIN_COMMIT=$(git rev-parse origin/main)"
-          echo "MAIN_TREE=$(git rev-parse 'origin/main^{tree}')"
+          echo "MAIN_COMMIT=$(git rev-parse HEAD)"
+          echo "MAIN_TREE=$(git rev-parse 'HEAD^{tree}')"
