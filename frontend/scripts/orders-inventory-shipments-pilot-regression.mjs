@@ -32,7 +32,7 @@ const checks = [
   ["reservation, deduction and release semantics documented", /Order creation.*reserved|Order creation/i.test(files.lifecycle) && files.lifecycle.includes("SHIPPED") && files.lifecycle.includes("CANCELLED")],
   ["order edit delta behavior documented", files.lifecycle.includes("Reservation delta") && files.orderService.includes("new_quantities.get(variant_id, 0) - old_quantities.get(variant_id, 0)")],
   ["inventory mutations use PostgreSQL row locks", files.inventoryRepo.includes("def get_for_update") && files.inventoryRepo.includes("def get_by_variant_for_update") && files.inventoryRepo.includes(".with_for_update()") && files.inventoryRepo.includes("populate_existing=True")],
-  ["order lifecycle mutations lock order rows", files.orderRepo.includes("def get_for_update") && files.orderRepo.includes(".with_for_update()") && files.orderService.includes("self.orders.get_for_update")],
+  ["order lifecycle mutations lock order rows", files.orderRepo.includes("def get_for_update") && files.orderRepo.includes(".with_for_update()") && files.orderService.includes("_get_order_for_update")],
   ["inventory invariants are enforced", files.inventoryService.includes("stock_quantity < inventory.reserved_quantity") && files.inventoryService.includes("Cannot reserve more than available stock")],
   ["shipment-order-stock mutation shares outer transaction", files.orderService.includes("commit: bool = True") && files.shipmentService.includes("commit=False") && files.shipmentService.includes("self.db.commit()")],
   ["locking contract tests exist", files.lockingTests.includes("test_inventory_mutations_use_postgresql_row_locks") && files.lockingTests.includes("test_shipment_order_inventory_side_effects_share_one_commit_boundary")],
