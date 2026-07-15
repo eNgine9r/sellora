@@ -1,0 +1,51 @@
+name: Sprint 8C Historical Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/app/services/import_pilot_safe_service.py"
+      - "backend/tests/imports/test_import_historical_value_validation.py"
+      - ".github/workflows/sprint-8c-historical-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused-diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend dependencies
+        working-directory: backend
+        run: python -m pip install -r requirements.txt
+      - name: Run focused diagnostic
+        working-directory: backend
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -vv tests/imports/test_import_historical_value_validation.py > ../historical-diagnostic.txt 2>&1
+          code=$?
+          echo "$code" > ../historical-diagnostic-exit.txt
+          exit 0
+      - name: Upload diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint-8c-historical-diagnostic-${{ github.run_id }}
+          path: |
+            historical-diagnostic.txt
+            historical-diagnostic-exit.txt
+          if-no-files-found: error
+          retention-days: 2
+      - name: Enforce diagnostic result
+        if: always()
+        run: test "$(cat historical-diagnostic-exit.txt 2>/dev/null || echo 99)" = "0"
