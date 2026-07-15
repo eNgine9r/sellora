@@ -1,0 +1,24 @@
+name: Sprint 8D Main Tree Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/sprint-8d-git-tree-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  tree-sha:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Print current main tree SHA
+        run: |
+          git fetch --no-tags origin main
+          echo "MAIN_COMMIT=$(git rev-parse origin/main)"
+          echo "MAIN_TREE=$(git rev-parse 'origin/main^{tree}')"
