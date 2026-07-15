@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models.import_job import ImportJobStatus
 from app.schemas.import_center import ImportReportResponse, ImportValidationIssue, ImportValidationReport
-from app.services.import_center_service import ImportServiceError, issue, map_row
+from app.services.import_center_service import ExcelValueNormalizer, ImportServiceError, issue, map_row
 from app.services.import_durable_service import (
     DurableImportService,
     append_report_issues,
@@ -46,6 +46,33 @@ def formula_injection_issues(rows: list[dict], mapping: dict[str, str]) -> list[
             raw_value = row.get(column)
             if is_formula_injection_risk(raw_value):
                 issues.append(issue(row_number, "ERROR", field, "Formula-prefixed CSV values are not allowed", raw_value, None))
+    return issues
+
+
+def historical_order_value_issues(rows: list[dict], mapping: dict[str, str]) -> list[ImportValidationIssue]:
+    """Reject non-empty historical order values that cannot be normalized safely."""
+
+    date_column = mapping.get("order_date")
+    if not date_column:
+        return []
+
+    normalizer = ExcelValueNormalizer()
+    issues: list[ImportValidationIssue] = []
+    for row_number, row in enumerate(rows, start=2):
+        raw_value = row.get(date_column)
+        if raw_value in (None, ""):
+            continue
+        if normalizer.date(raw_value) is None:
+            issues.append(
+                issue(
+                    row_number,
+                    "ERROR",
+                    "order_date",
+                    "order_date must be a valid date",
+                    raw_value,
+                    None,
+                )
+            )
     return issues
 
 
@@ -90,16 +117,29 @@ class PilotSafeImportService(DurableImportService):
             if workbook is not None:
                 workbook.close()
 
-    def _mapped_rows(self, workspace_id: UUID, job_id: UUID, sheet_name: str, column_mapping: dict[str, str]) -> list[dict]:
+    def _source_rows(self, workspace_id: UUID, job_id: UUID, sheet_name: str) -> list[dict]:
         job = self._job(workspace_id, job_id)
         _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
-        return [self.validator.normalized_row(map_row(row, column_mapping)) for row in rows]
+        return rows
+
+    def _mapped_rows(self, workspace_id: UUID, job_id: UUID, sheet_name: str, column_mapping: dict[str, str]) -> list[dict]:
+        return [self.validator.normalized_row(map_row(row, column_mapping)) for row in self._source_rows(workspace_id, job_id, sheet_name)]
 
     def _formula_issues(self, workspace_id: UUID, job_id: UUID, entity_type: str, sheet_name: str, column_mapping: dict[str, str]) -> list[ImportValidationIssue]:
         safe_mapping = pilot_safe_mapping(entity_type, column_mapping)
-        job = self._job(workspace_id, job_id)
-        _columns, rows = self.parser.read_rows(job.file_path, sheet_name)
-        return formula_injection_issues(rows, safe_mapping)
+        return formula_injection_issues(self._source_rows(workspace_id, job_id, sheet_name), safe_mapping)
+
+    def _historical_value_issues(self, workspace_id: UUID, job_id: UUID, entity_type: str, sheet_name: str, column_mapping: dict[str, str]) -> list[ImportValidationIssue]:
+        if entity_type != "orders_history":
+            return []
+        safe_mapping = pilot_safe_mapping(entity_type, column_mapping)
+        return historical_order_value_issues(self._source_rows(workspace_id, job_id, sheet_name), safe_mapping)
+
+    def _input_safety_issues(self, workspace_id: UUID, job_id: UUID, entity_type: str, sheet_name: str, column_mapping: dict[str, str]) -> list[ImportValidationIssue]:
+        return [
+            *self._formula_issues(workspace_id, job_id, entity_type, sheet_name, column_mapping),
+            *self._historical_value_issues(workspace_id, job_id, entity_type, sheet_name, column_mapping),
+        ]
 
     def _inventory_update_rows(self, workspace_id: UUID, job_id: UUID, entity_type: str, sheet_name: str, column_mapping: dict[str, str]) -> list[int]:
         if entity_type != "inventory":
@@ -113,11 +153,11 @@ class PilotSafeImportService(DurableImportService):
 
     def validate(self, workspace_id: UUID, job_id: UUID, entity_type: str, sheet_name: str, column_mapping: dict[str, str], actor_user_id: UUID | None, options: dict | None = None) -> ImportValidationReport:
         report = super().validate(workspace_id, job_id, entity_type, sheet_name, column_mapping, actor_user_id, options)
-        return append_validation_issues(report, self._formula_issues(workspace_id, job_id, entity_type, sheet_name, column_mapping))
+        return append_validation_issues(report, self._input_safety_issues(workspace_id, job_id, entity_type, sheet_name, column_mapping))
 
     def dry_run(self, workspace_id: UUID, job_id: UUID, entity_type: str, sheet_name: str, column_mapping: dict[str, str], actor_user_id: UUID | None = None, options: dict | None = None) -> ImportReportResponse:
         report = super().dry_run(workspace_id, job_id, entity_type, sheet_name, column_mapping, actor_user_id, options)
-        unsafe = self._formula_issues(workspace_id, job_id, entity_type, sheet_name, column_mapping)
+        unsafe = self._input_safety_issues(workspace_id, job_id, entity_type, sheet_name, column_mapping)
         append_report_issues(report, unsafe)
         append_inventory_update_plan(report, self._inventory_update_rows(workspace_id, job_id, entity_type, sheet_name, column_mapping))
         if unsafe:
@@ -127,6 +167,6 @@ class PilotSafeImportService(DurableImportService):
         return report
 
     def execute(self, workspace_id: UUID, job_id: UUID, entity_type: str, sheet_name: str, column_mapping: dict[str, str], mode: str, actor_user_id: UUID | None, dry_run: bool = False, options: dict | None = None):
-        if not dry_run and self._formula_issues(workspace_id, job_id, entity_type, sheet_name, column_mapping):
-            raise ImportServiceError("Formula-prefixed values are not allowed; correct the source file and run dry-run again")
+        if not dry_run and self._input_safety_issues(workspace_id, job_id, entity_type, sheet_name, column_mapping):
+            raise ImportServiceError("Unsafe import values are not allowed; correct the source file and run dry-run again")
         return super().execute(workspace_id, job_id, entity_type, sheet_name, column_mapping, mode, actor_user_id, dry_run, options)
