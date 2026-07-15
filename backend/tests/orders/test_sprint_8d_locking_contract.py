@@ -23,7 +23,8 @@ def test_order_mutations_lock_order_and_allow_outer_transaction_control() -> Non
     assert "def get_for_update" in repository
     assert ".with_for_update()" in repository
     assert "commit: bool = True" in service
-    assert "self.db.flush()" in service
+    assert 'flush = getattr(self.db, "flush", None)' in service
+    assert "flush()" in service
     assert "sorted(order.items" in service
 
 
@@ -33,7 +34,7 @@ def test_shipment_order_inventory_side_effects_share_one_commit_boundary() -> No
 
     assert "def get_for_update" in repository
     assert ".with_for_update()" in repository
+    assert "method = self.order_service.change_status" in service
     assert "commit=False" in service
-    assert "self.order_service.change_status" in service
     assert "self.db.commit()" in service
     assert "IntegrityError" in service
