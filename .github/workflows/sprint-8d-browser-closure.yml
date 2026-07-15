@@ -7,6 +7,7 @@ on:
       - "scripts/staging_sprint_8d_browser_v2.py"
       - "scripts/staging_sprint_8d_browser_v3.py"
       - "scripts/staging_sprint_8d_browser_v4.py"
+      - "scripts/staging_sprint_8d_mobile_switch_v5.py"
       - ".github/workflows/sprint-8d-browser-closure.yml"
   workflow_dispatch:
 
@@ -20,7 +21,7 @@ concurrency:
 jobs:
   browser-mobile:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 45
     env:
       STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
       STAGING_API_URL: https://sellora-api-staging.onrender.com
@@ -70,14 +71,15 @@ jobs:
           python -m py_compile \
             scripts/staging_sprint_8d_browser_v2.py \
             scripts/staging_sprint_8d_browser_v3.py \
-            scripts/staging_sprint_8d_browser_v4.py
+            scripts/staging_sprint_8d_browser_v4.py \
+            scripts/staging_sprint_8d_mobile_switch_v5.py
 
-      - name: Execute Sprint 8D browser closure
+      - name: Execute Sprint 8D workspace-switch probe
         shell: bash
         run: |
           set +e
           mkdir -p artifacts/sprint-8d-browser
-          python scripts/staging_sprint_8d_browser_v4.py > artifacts/sprint-8d-browser/browser-console.log 2>&1
+          python scripts/staging_sprint_8d_mobile_switch_v5.py > artifacts/sprint-8d-browser/browser-console.log 2>&1
           code=$?
           echo "$code" > artifacts/sprint-8d-browser/browser-exit-code.txt
           exit 0
@@ -118,19 +120,19 @@ jobs:
           )
           if not all(report.get("security", {}).get(key) is True for key in required_security):
               raise SystemExit("Security evidence flags missing")
-          print("Sanitized Sprint 8D browser evidence: PASS")
+          print("Sanitized Sprint 8D workspace-switch evidence: PASS")
           PY
 
       - name: Upload sanitized browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sellora-sprint-8d-browser-${{ github.run_id }}
+          name: sellora-sprint-8d-workspace-switch-${{ github.run_id }}
           path: artifacts/sprint-8d-browser
           if-no-files-found: error
           retention-days: 14
 
-      - name: Enforce canonical UI closure decision
+      - name: Enforce workspace-switch decision
         if: always()
         shell: bash
         run: |
@@ -141,5 +143,9 @@ jobs:
           report = json.load(open("artifacts/sprint-8d-browser/browser.json", encoding="utf-8"))
           if report.get("decision") != "PASS_PENDING_DUPLICATE_AND_POSTGRES_CLEANUP":
               raise SystemExit(1)
-          print("SPRINT 8D CANONICAL UI: PASS (DUPLICATE PROBE + POSTGRES CLEANUP PENDING)")
+          failed = [item for item in report.get("checks", []) if item.get("status") != "PASS"]
+          blockers = [item for item in report.get("findings", []) if item.get("severity") == "BLOCKER"]
+          if failed or blockers:
+              raise SystemExit(1)
+          print("SPRINT 8D WORKSPACE SWITCH: PASS (DUPLICATE PROBE + POSTGRES CLEANUP PENDING)")
           PY
