@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { WorkspacePage, WorkspaceHeader } from "@/components/crm-workspace";
 import { Card } from "@/components/ui/primitives";
+import { ConfirmationDialog } from "@/components/ui/overlay";
 import { useEffect, useMemo, useState } from "react";
 import { ColumnMappingForm } from "@/features/import-center/components/column-mapping-form";
 import { ImportReportPanel } from "@/features/import-center/components/import-report-panel";
@@ -46,6 +47,8 @@ export default function ImportCenterPage() {
   const [dryRunReport, setDryRunReport] = useState<ImportReport | undefined>();
   const [suggestion, setSuggestion] = useState<MappingSuggestion | undefined>();
   const [affectInventory, setAffectInventory] = useState(false);
+  const [executeConfirmationOpen, setExecuteConfirmationOpen] = useState(false);
+  const [executeError, setExecuteError] = useState<string | null>(null);
   const dryRunKey = useMemo(() => JSON.stringify({ workspaceId, jobId, entityType, sheetName, mapping, importOptions: entityType === "orders_history" ? { affect_inventory: affectInventory } : undefined }), [workspaceId, jobId, entityType, sheetName, mapping, affectInventory]);
   const [approvedDryRunKey, setApprovedDryRunKey] = useState<string | null>(null);
 
@@ -59,16 +62,20 @@ export default function ImportCenterPage() {
     setDryRunReport(undefined);
     setSuggestion(undefined);
     setApprovedDryRunKey(null);
+    setExecuteConfirmationOpen(false);
+    setExecuteError(null);
   }, [workspaceId]);
 
   const sheets = useQuery({ queryKey: ["import-sheets", workspaceId, jobId], queryFn: () => fetchImportSheets(workspaceId, jobId, undefined), enabled: enabled && Boolean(jobId) });
   const logs = useQuery({ queryKey: ["import-logs", workspaceId, jobId], queryFn: () => fetchImportLogs(workspaceId, jobId, undefined), enabled: enabled && Boolean(jobId) });
-  const upload = useMutation({ mutationFn: (file: File) => uploadImportFile(workspaceId, file, undefined), onSuccess: (response) => { setJobId(response.job_id); setSheetName(""); setMapping({}); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setApprovedDryRunKey(null); } });
+  const upload = useMutation({ mutationFn: (file: File) => uploadImportFile(workspaceId, file, undefined), onSuccess: (response) => { setJobId(response.job_id); setSheetName(""); setMapping({}); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setApprovedDryRunKey(null); setExecuteConfirmationOpen(false); setExecuteError(null); } });
 
   function choosePreset(value: string) {
     setPreset(value);
     setDryRunReport(undefined);
     setApprovedDryRunKey(null);
+    setExecuteConfirmationOpen(false);
+    setExecuteError(null);
     if (value === "your_jewelry_product_catalog_v1") {
       setEntityType("product_catalog");
       setMapping({});
@@ -86,8 +93,18 @@ export default function ImportCenterPage() {
   const previewMutation = useMutation({ mutationFn: () => previewImportSheet(workspaceId, jobId, sheetName, 20, undefined), onSuccess: setPreview });
   const suggestMutation = useMutation({ mutationFn: () => suggestImportMapping(workspaceId, jobId, sheetName, entityType, undefined), onSuccess: (response) => { setSuggestion(response); setMapping(response.suggested_mapping); } });
   const validateMutation = useMutation({ mutationFn: () => validateImportMapping(workspaceId, jobId, entityType, sheetName, mapping, undefined, importOptions), onSuccess: setReport });
-  const dryRunMutation = useMutation({ mutationFn: () => dryRunImport(workspaceId, jobId, entityType, sheetName, mapping, undefined, importOptions), onSuccess: (response) => { setDryRunReport(response); setApprovedDryRunKey(dryRunKey); } });
-  const executeMutation = useMutation({ mutationFn: () => executeImport(workspaceId, jobId, entityType, sheetName, mapping, undefined, importOptions), onSuccess: (response) => { setJob(response.job); queryClient.invalidateQueries({ queryKey: ["import-logs", workspaceId, jobId] }); } });
+  const dryRunMutation = useMutation({ mutationFn: () => dryRunImport(workspaceId, jobId, entityType, sheetName, mapping, undefined, importOptions), onSuccess: (response) => { setDryRunReport(response); setApprovedDryRunKey(dryRunKey); setExecuteConfirmationOpen(false); setExecuteError(null); } });
+  const executeMutation = useMutation({
+    mutationFn: () => executeImport(workspaceId, jobId, entityType, sheetName, mapping, undefined, importOptions),
+    onSuccess: (response) => {
+      setJob(response.job);
+      setExecuteConfirmationOpen(false);
+      setExecuteError(null);
+      queryClient.invalidateQueries({ queryKey: ["import-logs", workspaceId, jobId] });
+    },
+    onError: (error) => setExecuteError(error instanceof Error ? error.message : pilotCopy.executeError),
+  });
+  const executeReady = Boolean(dryRunReport && dryRunReport.error_rows === 0 && approvedDryRunKey === dryRunKey);
 
   return (
     <WorkspacePage>
@@ -101,25 +118,35 @@ export default function ImportCenterPage() {
           </select>
         </label>
         {preset === "your_jewelry_product_catalog_v1" ? <div className="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-400/10 dark:text-blue-100"><p className="font-bold">{t("importCenter.productCatalog")}</p><p>{t("importCenter.productCatalogHelp")}</p><p className="mt-2">{t("importHelp.productColumns")}</p></div> : null}
-        {preset === "your_jewelry_orders_history_v1" ? <div className="mt-3 grid gap-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-400/10 dark:text-amber-100"><p className="font-bold">{t("importCenter.ordersHistory")}</p><p>{pilotCopy.ordersHistoryHelp}</p><label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={affectInventory} onChange={(event) => { setAffectInventory(event.target.checked); setDryRunReport(undefined); setApprovedDryRunKey(null); }} /> {t("importCenter.affectInventory")}</label>{affectInventory ? <p className="rounded-lg bg-white p-2 text-red-700 dark:bg-slate-950 dark:text-red-300">{t("importCenter.affectInventoryWarning")}</p> : null}</div> : null}
+        {preset === "your_jewelry_orders_history_v1" ? <div className="mt-3 grid gap-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-400/10 dark:text-amber-100"><p className="font-bold">{t("importCenter.ordersHistory")}</p><p>{pilotCopy.ordersHistoryHelp}</p><label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={affectInventory} onChange={(event) => { setAffectInventory(event.target.checked); setDryRunReport(undefined); setApprovedDryRunKey(null); setExecuteConfirmationOpen(false); }} /> {t("importCenter.affectInventory")}</label>{affectInventory ? <p className="rounded-lg bg-white p-2 text-red-700 dark:bg-slate-950 dark:text-red-300">{t("importCenter.affectInventoryWarning")}</p> : null}</div> : null}
         {preset === "your_jewelry_advertising_history_v1" ? <div className="mt-3 grid gap-2 rounded-lg bg-purple-50 p-3 text-sm text-purple-900 dark:bg-purple-400/10 dark:text-purple-100"><p className="font-bold">{t("importCenter.templateTitle")}</p><p>{t("importCenter.advertisingHistoryHelp")}</p><p>{t("importCenter.templateHelp")}</p><p className="font-semibold">{t("importCenter.requiredColumns")}</p><p>{t("importCenter.optionalColumns")}</p><p>{t("importCenter.duplicateHint")}</p><div className="flex flex-wrap gap-2"><a className="rounded-lg bg-purple-700 px-3 py-2 font-bold text-white" href="/templates/advertising-import-template.csv" download>{t("importCenter.downloadTemplate")}</a><a className="rounded-lg border border-purple-200 bg-white px-3 py-2 font-bold text-purple-800 dark:bg-slate-950 dark:text-purple-100" href="/advertising">{t("importCenter.afterImport")}</a></div></div> : null}
       </Card>
       <ImportUploadCard onUpload={(file) => upload.mutate(file)} isUploading={upload.isPending} />
       <ImportSummaryCard job={job} />
       {jobId ? <section className="rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900"><p className="text-sm text-slate-500">{t("importCenter.importJob")}</p><p className="break-all font-mono text-sm">{jobId}</p></section> : null}
       <section className="grid min-w-0 max-w-full gap-3 overflow-hidden rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900 sm:grid-cols-2 lg:grid-cols-4">
-        <SheetSelector sheets={sheets.data?.sheets ?? []} value={sheetName} onChange={(value) => { setSheetName(value); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setApprovedDryRunKey(null); }} />
-        <select className="w-full min-w-0 max-w-full truncate rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" value={entityType} onChange={(event) => { setEntityType(event.target.value); setMapping({}); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setApprovedDryRunKey(null); }}>{entityTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
+        <SheetSelector sheets={sheets.data?.sheets ?? []} value={sheetName} onChange={(value) => { setSheetName(value); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setApprovedDryRunKey(null); setExecuteConfirmationOpen(false); }} />
+        <select className="w-full min-w-0 max-w-full truncate rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" value={entityType} onChange={(event) => { setEntityType(event.target.value); setMapping({}); setPreview(undefined); setReport(undefined); setDryRunReport(undefined); setApprovedDryRunKey(null); setExecuteConfirmationOpen(false); }}>{entityTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select>
         <button className="min-h-11 w-full min-w-0 whitespace-normal rounded bg-blue-600 px-4 py-2 font-semibold text-white" onClick={() => previewMutation.mutate()} disabled={!sheetName}>{t("actions.preview")}</button>
         <button className="min-h-11 w-full min-w-0 whitespace-normal rounded bg-indigo-600 px-4 py-2 font-semibold text-white" onClick={() => suggestMutation.mutate()} disabled={!sheetName}>{t("importCenter.suggestMapping")}</button>
       </section>
       <ImportPreviewTable preview={preview} />
-      {preview ? <ColumnMappingForm entityType={entityType} columns={preview.columns} mapping={mapping} onChange={(value) => { setMapping(value); setDryRunReport(undefined); setApprovedDryRunKey(null); }} /> : null}
+      {preview ? <ColumnMappingForm entityType={entityType} columns={preview.columns} mapping={mapping} onChange={(value) => { setMapping(value); setDryRunReport(undefined); setApprovedDryRunKey(null); setExecuteConfirmationOpen(false); }} /> : null}
       <section className="flex min-w-0 max-w-full flex-wrap gap-3 overflow-hidden">
         <button className="min-h-11 w-full min-w-0 whitespace-normal rounded bg-emerald-600 px-4 py-2 font-semibold text-white sm:w-auto" onClick={() => validateMutation.mutate()} disabled={!preview}>{t("importCenter.validate")}</button>
         <button className="min-h-11 w-full min-w-0 whitespace-normal rounded bg-amber-600 px-4 py-2 font-semibold text-white sm:w-auto" onClick={() => dryRunMutation.mutate()} disabled={!preview}>{t("importCenter.dryRun")}</button>
-        <button className="min-h-11 w-full min-w-0 whitespace-normal rounded bg-slate-900 px-4 py-2 font-semibold text-white dark:bg-slate-100 dark:text-slate-950 sm:w-auto" onClick={() => executeMutation.mutate()} disabled={!dryRunReport || dryRunReport.error_rows > 0 || approvedDryRunKey !== dryRunKey || executeMutation.isPending}>{t("importCenter.executeImport")}</button>
+        <button data-import-execute-trigger className="min-h-11 w-full min-w-0 whitespace-normal rounded bg-slate-900 px-4 py-2 font-semibold text-white dark:bg-slate-100 dark:text-slate-950 sm:w-auto" onClick={() => { setExecuteError(null); setExecuteConfirmationOpen(true); }} disabled={!executeReady || executeMutation.isPending}>{t("importCenter.executeImport")}</button>
       </section>
+      <ConfirmationDialog
+        open={executeConfirmationOpen}
+        title={pilotCopy.executeConfirmTitle}
+        description={pilotCopy.executeConfirmDescription}
+        actionLabel={pilotCopy.executeConfirmAction}
+        isSubmitting={executeMutation.isPending}
+        error={executeError}
+        onCancel={() => { if (!executeMutation.isPending) { setExecuteConfirmationOpen(false); setExecuteError(null); } }}
+        onConfirm={() => { if (executeReady && !executeMutation.isPending) executeMutation.mutate(); }}
+      />
       {suggestion ? <section className="rounded-xl bg-white p-4 text-sm shadow-sm dark:bg-slate-900"><h2 className="font-semibold">{t("importCenter.suggestedMapping")}</h2><p>{Object.keys(suggestion.suggested_mapping).length} {t("importCenter.fieldsMapped")}. {t("importCenter.missingRequired")}: {suggestion.required_fields_missing.join(", ") || t("common.none")}</p></section> : null}
       <ValidationReport report={report} />
       <ValidationIssuesTable issues={report?.issues ?? []} />
