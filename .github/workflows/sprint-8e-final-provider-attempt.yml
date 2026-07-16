@@ -50,27 +50,48 @@ jobs:
       - name: Compile final provider runner
         run: python -m py_compile qa/sprint_8e_final_provider_attempt.py
 
-      - name: Warm and verify Render runtime
+      - name: Poll and verify exact Render runtime
+        shell: bash
         run: |
-          curl -fsSL --retry 10 --retry-all-errors --retry-delay 10 --max-time 120 \
-            "$STAGING_API_URL/health" >/tmp/qa8e-health.json
-          python - <<'PY'
+          set +e
+          mkdir -p artifacts/sprint-8e
+          : > artifacts/sprint-8e/runtime-poll.jsonl
+          for attempt in $(seq 1 36); do
+            if curl -fsSL --retry 2 --retry-all-errors --retry-delay 5 --max-time 90 \
+              "$STAGING_API_URL/health" >/tmp/qa8e-health.json; then
+              python - "$attempt" <<'PY'
           import json
           import os
+          import sys
+          from datetime import UTC, datetime
           from pathlib import Path
+
+          attempt = int(sys.argv[1])
           health = json.loads(Path('/tmp/qa8e-health.json').read_text(encoding='utf-8'))
           commit = str(health.get('runtime_commit') or '').lower()
           expected = os.environ['EXPECTED_RUNTIME_COMMIT'].lower()
-          print(json.dumps({
+          snapshot = {
+              'attempt': attempt,
+              'checked_at': datetime.now(UTC).isoformat(),
               'status': health.get('status'),
               'runtime_commit': commit,
               'process_started_at': health.get('process_started_at'),
-          }, indent=2))
-          if health.get('status') != 'ok':
-              raise SystemExit('Backend health is not ok')
-          if not commit.startswith(expected[:12]):
-              raise SystemExit(f'Render runtime is stale: {commit}')
+              'expected_match': health.get('status') == 'ok' and commit.startswith(expected[:12]),
+          }
+          with Path('artifacts/sprint-8e/runtime-poll.jsonl').open('a', encoding='utf-8') as stream:
+              stream.write(json.dumps(snapshot) + '\n')
+          print(json.dumps(snapshot, indent=2))
+          raise SystemExit(0 if snapshot['expected_match'] else 1)
           PY
+              if [ "$?" = "0" ]; then
+                cp /tmp/qa8e-health.json artifacts/sprint-8e/runtime-health.json
+                exit 0
+              fi
+            fi
+            sleep 20
+          done
+          echo "Exact Render runtime was not observed" >&2
+          exit 1
 
       - name: Execute one-time final provider attempt
         shell: bash
@@ -106,14 +127,16 @@ jobs:
           PY
 
       - name: Upload sanitized final evidence
-        if: always() && hashFiles('artifacts/sprint-8e/final-provider-attempt.json') != ''
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: sellora-sprint-8e-final-provider-attempt-${{ github.run_id }}
           path: |
+            artifacts/sprint-8e/runtime-poll.jsonl
+            artifacts/sprint-8e/runtime-health.json
             artifacts/sprint-8e/final-provider-attempt.json
             artifacts/sprint-8e/final-provider-attempt-exit-code.txt
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Enforce final provider decision
@@ -123,7 +146,10 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          report = json.loads(Path('artifacts/sprint-8e/final-provider-attempt.json').read_text(encoding='utf-8'))
+          path = Path('artifacts/sprint-8e/final-provider-attempt.json')
+          if not path.exists():
+              raise SystemExit('Sprint 8E final provider report missing')
+          report = json.loads(path.read_text(encoding='utf-8'))
           if report.get('decision') != 'PASS_PENDING_RESTART_AND_CLEANUP':
               raise SystemExit(f"Sprint 8E final provider decision: {report.get('decision')}")
           if report.get('provider_document_expected') != 1:
