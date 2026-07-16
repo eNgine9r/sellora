@@ -22,7 +22,7 @@ jobs:
     env:
       STAGING_API_URL: https://sellora-api-staging.onrender.com
       STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
-      EXPECTED_RUNTIME_COMMIT: 15f9b91a4df6f62d40729afc00120d9634b5de89
+      EXPECTED_RUNTIME_COMMIT: e865457dfb38665e685aa8c61d8d4eddbe28dcca
       QA8E_WORKSPACE_ID: 5ae30ca3-a4d7-4cc1-8bba-335f2b8c1ef4
       STAGING_OWNER_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'EMAIL')] }}
       STAGING_OWNER_PASSWORD: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'PASSWORD')] }}
