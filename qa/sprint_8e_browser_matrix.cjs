@@ -124,14 +124,16 @@ async function main() {
         });
         await page.waitForTimeout(500);
         const loginState = await pageState(page);
+        const emailInput = page.locator('input[type="email"]');
+        const passwordInput = page.locator('input[type="password"]');
         addCheck(result, "login page HTTP 200", loginResponse?.status() === 200, { status: loginResponse?.status() });
-        addCheck(result, "login form visible", await page.getByLabel("Email").isVisible() && await page.getByLabel("Пароль").isVisible());
+        addCheck(result, "login form visible", await emailInput.isVisible() && await passwordInput.isVisible());
         addCheck(result, "login page has no horizontal overflow", loginState.layout.documentWidth <= loginState.layout.viewportWidth + 4, loginState.layout);
         addCheck(result, "login page has no fatal marker", loginState.fatalMarkers.length === 0, { markers: loginState.fatalMarkers });
         await page.screenshot({ path: path.join(OUT_DIR, `${viewport.name}-login.png`), fullPage: true });
 
-        await page.getByLabel("Email").fill(OWNER_EMAIL);
-        await page.getByLabel("Пароль").fill(OWNER_PASSWORD);
+        await emailInput.fill(OWNER_EMAIL);
+        await passwordInput.fill(OWNER_PASSWORD);
         await page.getByRole("button", { name: /Увійти|Sign in/i }).click();
         await page.waitForURL((url) => !url.pathname.endsWith("/login"), { timeout: 60_000 });
         await page.waitForLoadState("domcontentloaded");
