@@ -1002,6 +1002,7 @@ class NovaPoshtaShipmentService:
         shipment.tracking_number = result.tracking_number
         shipment.status = ShipmentStatus.CREATED.value
         connection.last_sync_at = datetime.now(UTC)
+        connection.provider_connection_verified_at = connection.last_sync_at
         self.db.commit()
         return NovaPoshtaTtnResponse(
             success=True,
