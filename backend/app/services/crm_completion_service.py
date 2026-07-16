@@ -239,6 +239,10 @@ class CustomerCrmService:
 
         old_value = snapshot(address)
         values = payload.model_dump(exclude_unset=True)
+        if "nova_poshta_city_ref" in values and values.get("nova_poshta_city_ref") != address.nova_poshta_city_ref:
+            values.setdefault("address_line1", None)
+            values["nova_poshta_warehouse_ref"] = None
+            values["warehouse_number"] = None
         if values.get("is_default") is True:
             self.customer_crm.clear_default_addresses(workspace_id, customer_id, address.id)
         for field, value in values.items():
