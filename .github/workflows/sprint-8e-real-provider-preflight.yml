@@ -52,6 +52,23 @@ jobs:
       - name: Compile preflight runner
         run: python -m py_compile qa/sprint_8e_real_provider_preflight.py
 
+      - name: Warm Render runtime
+        run: |
+          curl -fsSL --retry 8 --retry-all-errors --retry-delay 10 --max-time 90 \
+            "$STAGING_API_URL/health" >/tmp/qa8e-health.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          health = json.loads(Path('/tmp/qa8e-health.json').read_text(encoding='utf-8'))
+          if health.get('status') != 'ok':
+              raise SystemExit('Backend health is not ok')
+          print(json.dumps({
+              'status': health.get('status'),
+              'runtime_commit': health.get('runtime_commit'),
+              'process_started_at': health.get('process_started_at'),
+          }, indent=2))
+          PY
+
       - name: Execute real-provider preflight without provider writes
         shell: bash
         run: |
