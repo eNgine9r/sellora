@@ -21,7 +21,7 @@ jobs:
     env:
       STAGING_API_URL: https://sellora-api-staging.onrender.com
       STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
-      EXPECTED_RUNTIME_COMMIT: 9b982cc77ce52ee89a4058fa0f2dda04e2199178
+      EXPECTED_RUNTIME_COMMIT: a1e075677fa104f83cd4a4760386ed58f4e9488f
       QA8E_WORKSPACE_ID: 5ae30ca3-a4d7-4cc1-8bba-335f2b8c1ef4
       NOVA_POSHTA_API_URL: https://api.novaposhta.ua/v2.0/json/
       STAGING_OWNER_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'EMAIL')] }}
