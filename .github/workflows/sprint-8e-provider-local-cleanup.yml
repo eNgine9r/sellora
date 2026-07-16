@@ -1,0 +1,131 @@
+name: Sprint 8E Provider and Local Cleanup
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "qa/sprint_8e_provider_local_cleanup.py"
+      - ".github/workflows/sprint-8e-provider-local-cleanup.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sprint-8e-provider-local-cleanup
+  cancel-in-progress: false
+
+jobs:
+  provider-local-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      EXPECTED_RUNTIME_COMMIT: 1f74145819ec6d3d70dd010c8dd4956ae560f287
+      QA8E_WORKSPACE_ID: 5ae30ca3-a4d7-4cc1-8bba-335f2b8c1ef4
+      NOVA_POSHTA_API_URL: https://api.novaposhta.ua/v2.0/json/
+      STAGING_OWNER_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'EMAIL')] }}
+      STAGING_OWNER_PASSWORD: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'PASSWORD')] }}
+      STAGING_MANAGER_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'MANAGER', 'EMAIL')] }}
+      STAGING_MANAGER_PASSWORD: ${{ secrets[format('STAGING_{0}_{1}', 'MANAGER', 'PASSWORD')] }}
+      STAGING_NOVA_POSHTA_API_KEY: ${{ secrets[format('STAGING_NOVA_POSHTA_{0}', 'API_KEY')] }}
+
+    steps:
+      - name: Checkout one-shot cleanup branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned dependency
+        run: python -m pip install --disable-pip-version-check httpx==0.28.1
+
+      - name: Compile cleanup runner
+        run: python -m py_compile qa/sprint_8e_provider_local_cleanup.py
+
+      - name: Verify exact post-restart runtime
+        run: |
+          curl -fsSL --retry 8 --retry-all-errors --retry-delay 10 --max-time 120 \
+            "$STAGING_API_URL/health" > /tmp/qa8e-health.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          health = json.loads(Path('/tmp/qa8e-health.json').read_text(encoding='utf-8'))
+          commit = str(health.get('runtime_commit') or '').lower()
+          expected = os.environ['EXPECTED_RUNTIME_COMMIT'].lower()
+          print(json.dumps({
+              'status': health.get('status'),
+              'runtime_commit': commit,
+              'process_started_at': health.get('process_started_at'),
+          }, indent=2))
+          if health.get('status') != 'ok' or not commit.startswith(expected[:12]):
+              raise SystemExit('Unexpected post-restart runtime')
+          PY
+
+      - name: Execute provider and local cleanup
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts/sprint-8e
+          python qa/sprint_8e_provider_local_cleanup.py
+          code=$?
+          echo "$code" > artifacts/sprint-8e/provider-local-cleanup-exit-code.txt
+          exit 0
+
+      - name: Validate sanitized cleanup evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('artifacts/sprint-8e/provider-local-cleanup.json').read_text(encoding='utf-8'))
+          network = report.get('network') or {}
+          print(json.dumps({
+              'decision': report.get('decision'),
+              'check_count': len(report.get('checks', [])),
+              'provider_document_deleted': report.get('provider_document_deleted'),
+              'local_fixtures_archived': report.get('local_fixtures_archived'),
+              'provider_delete_requests': network.get('provider_delete_requests'),
+              'local_delete_requests': network.get('local_delete_requests'),
+              'provider_delete_errors': report.get('provider_delete_errors'),
+              'provider_writes_disable_required': report.get('provider_writes_disable_required'),
+              'safe_error': report.get('safe_error'),
+          }, indent=2))
+          if int(network.get('provider_delete_requests') or 0) > 1:
+              raise SystemExit('Provider delete budget exceeded')
+          PY
+
+      - name: Upload cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8e-provider-local-cleanup-${{ github.run_id }}
+          path: |
+            artifacts/sprint-8e/provider-local-cleanup.json
+            artifacts/sprint-8e/provider-local-cleanup-exit-code.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce cleanup decision
+        if: always()
+        run: |
+          code="$(cat artifacts/sprint-8e/provider-local-cleanup-exit-code.txt 2>/dev/null || echo 99)"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('artifacts/sprint-8e/provider-local-cleanup.json').read_text(encoding='utf-8'))
+          network = report.get('network') or {}
+          if report.get('decision') != 'PASS_PENDING_PROVIDER_WRITES_DISABLE':
+              raise SystemExit(f"Cleanup decision: {report.get('decision')}")
+          if report.get('provider_document_deleted') is not True:
+              raise SystemExit('Provider document delete not confirmed')
+          if report.get('local_fixtures_archived') is not True:
+              raise SystemExit('Local fixture cleanup not confirmed')
+          if network.get('provider_delete_requests') != 1:
+              raise SystemExit('Expected exactly one provider delete request')
+          if report.get('provider_writes_disable_required') is not True:
+              raise SystemExit('Final write-disable boundary not armed')
+          PY
+          test "$code" = "0"
