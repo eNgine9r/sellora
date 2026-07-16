@@ -1,0 +1,191 @@
+name: Sprint 8E Final Orphan Cleanup
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/sprint-8e-final-orphan-cleanup.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sprint-8e-final-orphan-cleanup
+  cancel-in-progress: false
+
+jobs:
+  final-orphan-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      EXPECTED_RUNTIME_COMMIT: 8889adc004c78a12af8d98f9abae87267b352a53
+      QA8E_WORKSPACE_ID: 5ae30ca3-a4d7-4cc1-8bba-335f2b8c1ef4
+      STAGING_OWNER_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'EMAIL')] }}
+      STAGING_OWNER_PASSWORD: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'PASSWORD')] }}
+      STAGING_MANAGER_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'MANAGER', 'EMAIL')] }}
+      STAGING_MANAGER_PASSWORD: ${{ secrets[format('STAGING_{0}_{1}', 'MANAGER', 'PASSWORD')] }}
+
+    steps:
+      - name: Execute exact local-only cleanup
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+          from datetime import UTC, datetime
+          from pathlib import Path
+
+          API_ROOT = os.environ['STAGING_API_URL'].rstrip('/')
+          API = API_ROOT + '/api/v1'
+          WORKSPACE = os.environ['QA8E_WORKSPACE_ID']
+          EXPECTED = os.environ['EXPECTED_RUNTIME_COMMIT'].lower()
+
+          SHIPMENT_ID = '8f7bf10c-d31a-43ad-bdb9-ef7029ef729a'
+          ORDER_ID = '35cd4c0b-8e24-4540-832a-312c2e7c09f3'
+          CUSTOMER_ID = '7685e227-d00b-4408-83de-60c61ddd7d46'
+          PRODUCT_ID = '3cec4477-bbae-4d29-9ecf-095ff07f8181'
+          VARIANT_ID = 'd5cb8322-24de-4813-a80b-f5a5c7326548'
+          PREFIX = 'QA8E-20260716103827'
+
+          checks = []
+          network = {'requests': 0, 'local_delete_requests': 0, 'provider_requests': 0, 'http_5xx': 0}
+
+          def check(name, ok, detail=None):
+              item = {'name': name, 'status': 'PASS' if ok else 'FAIL'}
+              if detail is not None:
+                  item['detail'] = detail
+              checks.append(item)
+              print(json.dumps(item, ensure_ascii=False))
+              if not ok:
+                  raise RuntimeError(name)
+
+          def request(method, url, body=None, headers=None, expected=(200,)):
+              data = json.dumps(body).encode('utf-8') if body is not None else None
+              req = urllib.request.Request(
+                  url,
+                  data=data,
+                  headers={'Accept': 'application/json', 'Content-Type': 'application/json', **(headers or {})},
+                  method=method,
+              )
+              network['requests'] += 1
+              if method == 'DELETE':
+                  network['local_delete_requests'] += 1
+              try:
+                  with urllib.request.urlopen(req, timeout=90) as response:
+                      raw = response.read().decode('utf-8')
+                      payload = json.loads(raw) if raw else {}
+                      status = response.status
+              except urllib.error.HTTPError as exc:
+                  status = exc.code
+                  raw = exc.read().decode('utf-8', errors='replace')
+                  try:
+                      payload = json.loads(raw) if raw else {}
+                  except Exception:
+                      payload = {'message': raw[:300]}
+              if status >= 500:
+                  network['http_5xx'] += 1
+              if status not in expected:
+                  raise RuntimeError(f'Unexpected HTTP {status} for {method} {url}')
+              return status, payload
+
+          def login(email_env, password_env):
+              _, tokens = request('POST', f'{API}/auth/login', {
+                  'email': os.environ[email_env],
+                  'password': os.environ[password_env],
+              })
+              token = str(tokens.get('access_token') or '')
+              check(f'{email_env} login succeeded', bool(token))
+              return token
+
+          health_status, health = request('GET', f'{API_ROOT}/health')
+          runtime_commit = str(health.get('runtime_commit') or '').lower()
+          check(
+              'exact safe runtime active',
+              health_status == 200 and health.get('status') == 'ok' and runtime_commit.startswith(EXPECTED[:12]),
+              {'runtime_commit': runtime_commit, 'process_started_at': health.get('process_started_at')},
+          )
+
+          owner = login('STAGING_OWNER_EMAIL', 'STAGING_OWNER_PASSWORD')
+          manager = login('STAGING_MANAGER_EMAIL', 'STAGING_MANAGER_PASSWORD')
+          owner_headers = {'Authorization': f'Bearer {owner}', 'X-Workspace-ID': WORKSPACE, 'Cache-Control': 'no-cache'}
+          manager_headers = {'Authorization': f'Bearer {manager}', 'X-Workspace-ID': WORKSPACE, 'Cache-Control': 'no-cache'}
+
+          _, settings = request('GET', f'{API}/integrations/nova-poshta/settings', headers=owner_headers)
+          check('provider writes disabled before orphan cleanup', settings.get('provider_writes_enabled') is False)
+
+          _, shipment = request('GET', f'{API}/shipments/{SHIPMENT_ID}', headers=owner_headers)
+          no_provider_document = not any([
+              shipment.get('tracking_number'),
+              shipment.get('nova_poshta_document_ref'),
+              shipment.get('nova_poshta_document_number'),
+          ])
+          check(
+              'exact failed-safe shipment selected',
+              shipment.get('status') == 'DRAFT'
+              and shipment.get('nova_poshta_create_state') == 'FAILED_SAFE'
+              and shipment.get('nova_poshta_manual_reconciliation_required') is False
+              and no_provider_document
+              and str(shipment.get('notes') or '').startswith(PREFIX),
+              {
+                  'shipment_status': shipment.get('status'),
+                  'operation_state': shipment.get('nova_poshta_create_state'),
+                  'has_provider_document': not no_provider_document,
+              },
+          )
+
+          _, order = request('GET', f'{API}/orders/{ORDER_ID}', headers=owner_headers)
+          check(
+              'exact NEW synthetic order selected',
+              order.get('status') == 'NEW'
+              and order.get('payment_status') == 'PENDING'
+              and str(order.get('notes') or '').startswith(PREFIX),
+              {'status': order.get('status'), 'payment_status': order.get('payment_status')},
+          )
+
+          for path in (
+              f'/shipments/{SHIPMENT_ID}',
+              f'/orders/{ORDER_ID}',
+              f'/products/variants/{VARIANT_ID}',
+              f'/products/{PRODUCT_ID}',
+              f'/customers/{CUSTOMER_ID}',
+          ):
+              request('DELETE', API + path, headers=manager_headers, expected=(204,))
+
+          for label, path in (
+              ('shipment', f'/shipments/{SHIPMENT_ID}'),
+              ('order', f'/orders/{ORDER_ID}'),
+              ('product', f'/products/{PRODUCT_ID}'),
+              ('customer', f'/customers/{CUSTOMER_ID}'),
+          ):
+              status, _ = request('GET', API + path, headers=owner_headers, expected=(404,))
+              check(f'{label} archived', status == 404)
+
+          check('five local deletes executed', network['local_delete_requests'] == 5, network)
+          check('no provider request executed', network['provider_requests'] == 0, network)
+          check('no HTTP 5xx occurred', network['http_5xx'] == 0, network)
+
+          report = {
+              'decision': 'PASS_FINAL_ORPHAN_CLEANUP',
+              'checks': checks,
+              'network': network,
+              'provider_document_expected': 0,
+              'generated_at': datetime.now(UTC).isoformat(),
+          }
+          Path('artifacts/sprint-8e').mkdir(parents=True, exist_ok=True)
+          Path('artifacts/sprint-8e/final-orphan-cleanup.json').write_text(
+              json.dumps(report, indent=2), encoding='utf-8'
+          )
+          print(json.dumps(report, indent=2))
+          PY
+
+      - name: Upload sanitized orphan-cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8e-final-orphan-cleanup-${{ github.run_id }}
+          path: artifacts/sprint-8e/final-orphan-cleanup.json
+          if-no-files-found: error
+          retention-days: 7
