@@ -27,6 +27,14 @@ const fatalMarkers = [
   "This page could not be found",
   "404: This page could not be found",
 ];
+const loadingMarkers = [
+  "Завантаження панелі",
+  "Завантаження замовлень",
+  "Завантаження відправлень",
+  "Завантажуємо відправлення",
+  "Завантаження реклами",
+  "dashboard.loading.inventory",
+];
 
 function safeMessage(value) {
   return String(value || "")
@@ -54,8 +62,23 @@ async function pageState(page) {
     bodyText,
     layout,
     fatalMarkers: fatalMarkers.filter((marker) => bodyText.includes(marker)),
+    loadingMarkers: loadingMarkers.filter((marker) => bodyText.includes(marker)),
     currentUrl: page.url(),
   };
+}
+
+async function waitForSettledRoute(page) {
+  await page.waitForLoadState("networkidle", { timeout: 30_000 }).catch(() => undefined);
+  const settled = await page
+    .waitForFunction(
+      (markers) => !markers.some((marker) => document.body?.innerText.includes(marker)),
+      loadingMarkers,
+      { timeout: 30_000 },
+    )
+    .then(() => true)
+    .catch(() => false);
+  await page.waitForTimeout(300);
+  return settled;
 }
 
 async function redactVisibleSecrets(page) {
@@ -148,16 +171,18 @@ async function main() {
             waitUntil: "domcontentloaded",
             timeout: 90_000,
           });
-          await page.waitForTimeout(1_000);
+          const settled = await waitForSettledRoute(page);
           const state = await pageState(page);
           const routeOk = response && response.status() >= 200 && response.status() < 400;
           const remainedAuthenticated = !new URL(state.currentUrl).pathname.endsWith("/login");
           const noOverflow = state.layout.documentWidth <= state.layout.viewportWidth + 4;
           const noFatal = state.fatalMarkers.length === 0;
+          const noLoadingMarkers = state.loadingMarkers.length === 0;
 
           addCheck(routeResult, "HTTP success", Boolean(routeOk), { status: response?.status() });
           addCheck(routeResult, "authenticated route retained", remainedAuthenticated, { current_url: state.currentUrl });
           addCheck(routeResult, "main region present", state.layout.mainPresent, state.layout);
+          addCheck(routeResult, "route loading state settled", settled && noLoadingMarkers, { markers: state.loadingMarkers });
           addCheck(routeResult, "no horizontal overflow", noOverflow, state.layout);
           addCheck(routeResult, "no fatal marker", noFatal, { markers: state.fatalMarkers });
 
@@ -170,6 +195,7 @@ async function main() {
         }
 
         addCheck(result, "no page runtime errors", result.page_errors.length === 0, result.page_errors);
+        addCheck(result, "no console errors", result.console_errors.length === 0, result.console_errors);
         addCheck(result, "no HTTP 5xx responses", result.http_5xx.length === 0, result.http_5xx);
       } catch (error) {
         addCheck(result, "viewport execution completed", false, { error: safeMessage(error.message) });
