@@ -2,7 +2,7 @@ from uuid import UUID
 
 from enum import StrEnum
 
-from sqlalchemy import Boolean, ForeignKey, String, Text
+from sqlalchemy import Boolean, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,6 +20,15 @@ class DeliveryProvider(StrEnum):
 
 class CustomerAddress(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "customer_addresses"
+    __table_args__ = (
+        Index(
+            "uq_customer_addresses_one_active_default",
+            "workspace_id",
+            "customer_id",
+            unique=True,
+            postgresql_where=text("is_default = true AND deleted_at IS NULL"),
+        ),
+    )
 
     customer_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)
     label: Mapped[str | None] = mapped_column(String(100), nullable=True)

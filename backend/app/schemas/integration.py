@@ -43,6 +43,7 @@ class NovaPoshtaTestConnectionResponse(BaseModel):
     success: bool
     message: str
     status: IntegrationStatus
+    errors: list[str] = Field(default_factory=list)
 
 
 class NovaPoshtaDirectoryItem(BaseModel):

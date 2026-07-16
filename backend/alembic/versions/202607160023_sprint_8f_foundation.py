@@ -41,13 +41,6 @@ def upgrade() -> None:
     op.add_column("customer_addresses", sa.Column("nova_poshta_city_ref", sa.String(length=120), nullable=True))
     op.add_column("customer_addresses", sa.Column("nova_poshta_warehouse_ref", sa.String(length=120), nullable=True))
     op.add_column("customer_addresses", sa.Column("warehouse_number", sa.String(length=40), nullable=True))
-    op.create_index(
-        "uq_customer_addresses_one_active_default",
-        "customer_addresses",
-        ["workspace_id", "customer_id"],
-        unique=True,
-        postgresql_where=sa.text("is_default = true AND deleted_at IS NULL"),
-    )
     op.add_column("integration_connections", sa.Column("provider_writes_allowed", sa.Boolean(), nullable=False, server_default=sa.false()))
     op.add_column("integration_connections", sa.Column("provider_connection_verified_at", sa.DateTime(timezone=True), nullable=True))
 
@@ -59,6 +52,33 @@ def upgrade() -> None:
             normalized = _normalize_phone(row[phone_column])
             if normalized != row[phone_column]:
                 bind.execute(sa.text(f"UPDATE {table} SET {phone_column} = :phone WHERE id = :id"), {"phone": normalized, "id": row["id"]})
+
+    bind.execute(sa.text("""
+        WITH ranked_defaults AS (
+            SELECT
+                id,
+                row_number() OVER (
+                    PARTITION BY workspace_id, customer_id
+                    ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
+                ) AS default_rank
+            FROM customer_addresses
+            WHERE is_default = true
+              AND deleted_at IS NULL
+        )
+        UPDATE customer_addresses AS address
+        SET is_default = false
+        FROM ranked_defaults
+        WHERE address.id = ranked_defaults.id
+          AND ranked_defaults.default_rank > 1
+    """))
+
+    op.create_index(
+        "uq_customer_addresses_one_active_default",
+        "customer_addresses",
+        ["workspace_id", "customer_id"],
+        unique=True,
+        postgresql_where=sa.text("is_default = true AND deleted_at IS NULL"),
+    )
 
 
 def downgrade() -> None:

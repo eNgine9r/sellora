@@ -19,6 +19,7 @@ Scope: PR 1 foundation for validation, addresses, and Nova Poshta provider write
 
 - Existing frontend query/service structure remains unchanged in this foundation PR.
 - The fulfillment wizard and query-key lifecycle are intentionally deferred to the Sprint 8F UI PR.
+- Future wizard city-change behavior must clear warehouse selection in local form state, require the user to select a new warehouse, and submit city ref + warehouse ref + warehouse description atomically; incomplete destination state must not be persisted.
 
 ## Existing submit locks
 
@@ -59,12 +60,13 @@ Scope: PR 1 foundation for validation, addresses, and Nova Poshta provider write
 - Ukrainian phone normalization has one backend source of truth in `app.utils.phone`.
 - Customer, customer address, and shipment schemas normalize supplied phone values without backfilling ambiguous historical values.
 - Nova Poshta address refs can be persisted on customer addresses.
-- One active default address is enforced with a partial unique index where supported by PostgreSQL.
+- One active default address is enforced with a PostgreSQL partial unique index after repairing duplicate active defaults with a set-based `row_number()` CTE.
 - Provider write permission is stored on the Nova Poshta integration connection and defaults to disabled.
 - Effective provider writes require environment capability, connected credential, sender settings, verified connection, and workspace permission.
 
 ## Deferred work
 
+- Real PostgreSQL migration execution evidence is required in CI/staging or a local PostgreSQL service; this container does not expose a PostgreSQL server.
 - `OrderFulfillmentService`, `order_fulfillment_operations`, and orchestration endpoint.
 - Inventory row locking inside fulfillment.
 - Canonical directory verification before provider document creation.
