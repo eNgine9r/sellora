@@ -1,0 +1,253 @@
+name: Sprint 8E Disable Provider Writes
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/sprint-8e-disable-provider-writes.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sprint-8e-disable-provider-writes
+  cancel-in-progress: false
+
+jobs:
+  disable-provider-writes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      TARGET_SERVICE_NAME: sellora-api-staging
+      TARGET_COMMIT: 8889adc004c78a12af8d98f9abae87267b352a53
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      QA8E_WORKSPACE_ID: 5ae30ca3-a4d7-4cc1-8bba-335f2b8c1ef4
+      STAGING_OWNER_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'EMAIL')] }}
+      STAGING_OWNER_PASSWORD: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'PASSWORD')] }}
+
+    steps:
+      - name: Guard required secrets
+        shell: bash
+        run: |
+          mkdir -p artifacts/sprint-8e
+          test -n "$RENDER_API_KEY"
+          test -n "$STAGING_OWNER_EMAIL"
+          test -n "$STAGING_OWNER_PASSWORD"
+
+      - name: Disable provider writes and trigger exact deploy
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          from datetime import UTC, datetime
+          from pathlib import Path
+
+          token = os.environ['RENDER_API_KEY']
+          target_name = os.environ['TARGET_SERVICE_NAME']
+          target_commit = os.environ['TARGET_COMMIT']
+          api_root = os.environ['STAGING_API_URL'].rstrip('/')
+          headers = {
+              'Accept': 'application/json',
+              'Authorization': f'Bearer {token}',
+              'Content-Type': 'application/json',
+          }
+
+          def call(method: str, url: str, body=None, request_headers=None):
+              data = json.dumps(body).encode('utf-8') if body is not None else None
+              req = urllib.request.Request(
+                  url,
+                  data=data,
+                  headers=request_headers or headers,
+                  method=method,
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=90) as response:
+                      raw = response.read().decode('utf-8')
+                      payload = json.loads(raw) if raw else {}
+                      return response.status, payload
+              except urllib.error.HTTPError as exc:
+                  response_body = exc.read().decode('utf-8', errors='replace')[:500]
+                  raise RuntimeError(f'HTTP {exc.code}: {response_body}') from exc
+
+          _, health_before = call('GET', f'{api_root}/health', request_headers={'Accept': 'application/json'})
+          before_started_at = str(health_before.get('process_started_at') or '')
+
+          _, payload = call('GET', 'https://api.render.com/v1/services?limit=100')
+          candidates = []
+          for entry in payload if isinstance(payload, list) else []:
+              service = entry.get('service', entry) if isinstance(entry, dict) else {}
+              if service.get('name') == target_name:
+                  candidates.append(service)
+          if len(candidates) != 1:
+              raise RuntimeError(f'Expected one Render service named {target_name}; found {len(candidates)}')
+          service_id = str(candidates[0].get('id') or '')
+          if not service_id:
+              raise RuntimeError('Resolved Render service has no ID')
+
+          env_key = urllib.parse.quote('STAGING_NOVA_POSHTA_ALLOW_WRITES', safe='')
+          env_status, _ = call(
+              'PUT',
+              f'https://api.render.com/v1/services/{service_id}/env-vars/{env_key}',
+              {'value': 'false'},
+          )
+          if env_status != 200:
+              raise RuntimeError(f'Unexpected env update status {env_status}')
+
+          deploy_status, deploy = call(
+              'POST',
+              f'https://api.render.com/v1/services/{service_id}/deploys',
+              {'commitId': target_commit, 'clearCache': 'do_not_clear'},
+          )
+          if deploy_status not in (201, 202):
+              raise RuntimeError(f'Unexpected deploy status {deploy_status}')
+          deploy_id = str(deploy.get('id') or '') if isinstance(deploy, dict) else ''
+
+          report = {
+              'decision': 'DEPLOY_TRIGGERED_WITH_WRITES_DISABLED',
+              'target_commit': target_commit,
+              'env_update_http_status': env_status,
+              'deploy_http_status': deploy_status,
+              'service_id_sha256_prefix': hashlib.sha256(service_id.encode()).hexdigest()[:16],
+              'deploy_id_sha256_prefix': hashlib.sha256(deploy_id.encode()).hexdigest()[:16] if deploy_id else None,
+              'previous_process_started_at': before_started_at,
+              'triggered_at': datetime.now(UTC).isoformat(),
+          }
+          Path('artifacts/sprint-8e/provider-writes-disable-trigger.json').write_text(
+              json.dumps(report, indent=2), encoding='utf-8'
+          )
+          print(json.dumps(report, indent=2))
+          PY
+
+      - name: Poll for restarted runtime
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.request
+          from datetime import UTC, datetime
+          from pathlib import Path
+
+          report_path = Path('artifacts/sprint-8e/provider-writes-disable-trigger.json')
+          report = json.loads(report_path.read_text(encoding='utf-8'))
+          before = str(report.get('previous_process_started_at') or '')
+          expected = os.environ['TARGET_COMMIT'].lower()
+          api_root = os.environ['STAGING_API_URL'].rstrip('/')
+          history = []
+
+          for attempt in range(1, 49):
+              try:
+                  req = urllib.request.Request(f'{api_root}/health', headers={'Accept': 'application/json'})
+                  with urllib.request.urlopen(req, timeout=90) as response:
+                      health = json.loads(response.read().decode('utf-8'))
+                  commit = str(health.get('runtime_commit') or '').lower()
+                  started_at = str(health.get('process_started_at') or '')
+                  ok = (
+                      health.get('status') == 'ok'
+                      and commit.startswith(expected[:12])
+                      and bool(started_at)
+                      and started_at != before
+                  )
+                  history.append({
+                      'attempt': attempt,
+                      'checked_at': datetime.now(UTC).isoformat(),
+                      'runtime_commit': commit,
+                      'process_started_at': started_at,
+                      'restart_match': ok,
+                  })
+                  if ok:
+                      Path('artifacts/sprint-8e/provider-writes-disabled-health.json').write_text(
+                          json.dumps(health, indent=2), encoding='utf-8'
+                      )
+                      break
+              except Exception as exc:
+                  history.append({
+                      'attempt': attempt,
+                      'checked_at': datetime.now(UTC).isoformat(),
+                      'error_type': type(exc).__name__,
+                  })
+              time.sleep(15)
+          else:
+              raise SystemExit('Render restart with writes disabled was not observed')
+
+          Path('artifacts/sprint-8e/provider-writes-disable-poll.json').write_text(
+              json.dumps(history, indent=2), encoding='utf-8'
+          )
+          PY
+
+      - name: Verify Sellora reports provider writes disabled
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+          from datetime import UTC, datetime
+          from pathlib import Path
+
+          api = os.environ['STAGING_API_URL'].rstrip('/') + '/api/v1'
+
+          def request(method, url, body=None, headers=None):
+              data = json.dumps(body).encode('utf-8') if body is not None else None
+              req = urllib.request.Request(
+                  url,
+                  data=data,
+                  headers={'Accept': 'application/json', 'Content-Type': 'application/json', **(headers or {})},
+                  method=method,
+              )
+              with urllib.request.urlopen(req, timeout=90) as response:
+                  raw = response.read().decode('utf-8')
+                  return response.status, json.loads(raw) if raw else {}
+
+          _, tokens = request('POST', f'{api}/auth/login', {
+              'email': os.environ['STAGING_OWNER_EMAIL'],
+              'password': os.environ['STAGING_OWNER_PASSWORD'],
+          })
+          access_token = str(tokens.get('access_token') or '')
+          if not access_token:
+              raise SystemExit('OWNER login did not return an access token')
+
+          _, settings = request(
+              'GET',
+              f'{api}/integrations/nova-poshta/settings',
+              headers={
+                  'Authorization': f'Bearer {access_token}',
+                  'X-Workspace-ID': os.environ['QA8E_WORKSPACE_ID'],
+                  'Cache-Control': 'no-cache',
+              },
+          )
+          writes_enabled = settings.get('provider_writes_enabled')
+          result = {
+              'decision': 'PASS_PENDING_FINAL_REGRESSION' if writes_enabled is False else 'FAIL',
+              'provider_status': settings.get('status'),
+              'provider_writes_enabled': writes_enabled,
+              'sender_configured': settings.get('sender_configured'),
+              'verified_at': datetime.now(UTC).isoformat(),
+          }
+          Path('artifacts/sprint-8e/provider-writes-disabled.json').write_text(
+              json.dumps(result, indent=2), encoding='utf-8'
+          )
+          print(json.dumps(result, indent=2))
+          if result['decision'] != 'PASS_PENDING_FINAL_REGRESSION':
+              raise SystemExit('Provider writes remain enabled')
+          PY
+
+      - name: Upload sanitized shutdown evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8e-provider-writes-disabled-${{ github.run_id }}
+          path: |
+            artifacts/sprint-8e/provider-writes-disable-trigger.json
+            artifacts/sprint-8e/provider-writes-disable-poll.json
+            artifacts/sprint-8e/provider-writes-disabled-health.json
+            artifacts/sprint-8e/provider-writes-disabled.json
+          if-no-files-found: warn
+          retention-days: 7
