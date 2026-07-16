@@ -1,11 +1,21 @@
 from uuid import UUID
 
+from enum import StrEnum
+
 from sqlalchemy import Boolean, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from app.database.mixins import SoftDeleteMixin, WorkspaceScopedMixin
+
+
+class DeliveryProvider(StrEnum):
+    NOVA_POSHTA = "NOVA_POSHTA"
+    UKRPOSHTA = "UKRPOSHTA"
+    MEEST = "MEEST"
+    ROZETKA_DELIVERY = "ROZETKA_DELIVERY"
+    OTHER = "OTHER"
 
 
 class CustomerAddress(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, TimestampMixin, Base):
@@ -23,5 +33,9 @@ class CustomerAddress(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin
     country: Mapped[str | None] = mapped_column(String(120), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    delivery_provider: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    nova_poshta_city_ref: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    nova_poshta_warehouse_ref: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    warehouse_number: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
     customer = relationship("Customer", back_populates="addresses")

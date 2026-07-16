@@ -249,3 +249,35 @@ def test_cross_workspace_ttn_access_uses_workspace_scoped_connection_and_shipmen
 
     with pytest.raises(ValueError, match="Nova Poshta is not configured"):
         service.create_ttn(uuid4(), shipment.id, uuid4())
+
+
+def test_settings_write_gate_requires_environment_workspace_permission_sender_and_verification(monkeypatch) -> None:
+    service = _settings_service(); workspace_id = uuid4()
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    response = service.save_settings(
+        workspace_id,
+        NovaPoshtaSettingsRequest(api_key="synthetic-credential-value", sender_city_ref="sender-city", sender_warehouse_ref="sender-wh", sender_counterparty_ref="sender", sender_contact_ref="contact", sender_phone="380671234567"),
+        uuid4(),
+    )
+    assert not response.provider_writes_enabled
+    assert response.workspace_permission is False
+    assert "CONNECTION_NOT_VERIFIED" in response.write_blockers
+    service.test_connection(workspace_id, uuid4())
+    response = service.get_settings(workspace_id)
+    assert "WORKSPACE_PERMISSION_DISABLED" in response.write_blockers
+    assert not response.provider_writes_enabled
+    response = service.set_write_permission(workspace_id, __import__("app.schemas.integration", fromlist=["NovaPoshtaWritePermissionRequest"]).NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+    assert response.workspace_permission is True
+    assert response.provider_writes_enabled is True
+    assert service.audit_logs.records[-1]["action"] == "NOVA_POSHTA_PROVIDER_WRITES_ENABLED"
+
+
+def test_provider_writes_disabled_by_workspace_permission_blocks_durable_ttn(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="+380671234567", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
+    service = _shipment_service(shipment)
+    service.operations = SimpleNamespace(get_for_update=lambda *args: None)
+    response = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
+    assert not response.success
+    assert response.errors == ["NOVA_POSHTA_PROVIDER_WRITES_DISABLED"]

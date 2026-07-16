@@ -169,3 +169,36 @@ def test_customer_create_schema_accepts_valid_payload() -> None:
 
     assert payload.name == "Test Customer"
     assert payload.phone is None
+
+
+def test_customer_address_phone_is_normalized_and_city_change_clears_warehouse() -> None:
+    service, customer, _tag = _customer_service()
+    address = service.add_address(
+        customer.workspace_id,
+        customer.id,
+        CustomerAddressCreate(
+            address_line1="Відділення №1",
+            phone="067 123 45 67",
+            delivery_provider="NOVA_POSHTA",
+            nova_poshta_city_ref="city-old",
+            nova_poshta_warehouse_ref="wh-old",
+            warehouse_number="1",
+        ),
+        actor_user_id=uuid4(),
+    )
+
+    assert address.phone == "+380671234567"
+
+    updated = service.update_address(
+        customer.workspace_id,
+        customer.id,
+        address.id,
+        __import__("app.schemas.crm_completion", fromlist=["CustomerAddressUpdate"]).CustomerAddressUpdate(nova_poshta_city_ref="city-new"),
+        actor_user_id=uuid4(),
+    )
+
+    assert updated is not None
+    assert updated.nova_poshta_city_ref == "city-new"
+    assert updated.nova_poshta_warehouse_ref is None
+    assert updated.warehouse_number is None
+    assert updated.address_line1 is None

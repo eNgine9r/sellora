@@ -15,6 +15,10 @@ class NovaPoshtaSettingsRequest(BaseModel):
     sender_phone: str | None = None
 
 
+class NovaPoshtaWritePermissionRequest(BaseModel):
+    allowed: bool
+
+
 class NovaPoshtaSettingsResponse(BaseModel):
     provider: str = "NOVA_POSHTA"
     status: IntegrationStatus
@@ -27,8 +31,12 @@ class NovaPoshtaSettingsResponse(BaseModel):
     sender_counterparty_ref: str | None = None
     sender_contact_ref: str | None = None
     sender_phone: str | None = None
+    environment_capability: bool = False
+    workspace_permission: bool = False
     provider_writes_enabled: bool = False
     sender_configured: bool = False
+    connection_verified: bool = False
+    write_blockers: list[str] = Field(default_factory=list)
 
 
 class NovaPoshtaTestConnectionResponse(BaseModel):
