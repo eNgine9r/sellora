@@ -1,0 +1,116 @@
+name: Sprint 8E Force Render Restart Deploy
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/sprint-8e-render-force-restart.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sprint-8e-force-render-restart-deploy
+  cancel-in-progress: false
+
+jobs:
+  force-render-restart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      TARGET_SERVICE_NAME: sellora-api-staging
+      TARGET_COMMIT: 8889adc004c78a12af8d98f9abae87267b352a53
+
+    steps:
+      - name: Guard Render API credential
+        shell: bash
+        run: |
+          mkdir -p artifacts/sprint-8e
+          if [ -z "$RENDER_API_KEY" ]; then
+            printf '%s\n' '{"decision":"BLOCKED_RENDER_API_KEY_MISSING"}' \
+              > artifacts/sprint-8e/render-force-restart.json
+            echo "RENDER_API_KEY is not configured" >&2
+            exit 1
+          fi
+
+      - name: Resolve service and trigger exact commit deploy
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+          from datetime import UTC, datetime
+          from pathlib import Path
+
+          token = os.environ['RENDER_API_KEY']
+          target_name = os.environ['TARGET_SERVICE_NAME']
+          target_commit = os.environ['TARGET_COMMIT']
+          headers = {
+              'Accept': 'application/json',
+              'Authorization': f'Bearer {token}',
+              'Content-Type': 'application/json',
+          }
+
+          def call(method: str, url: str, body=None):
+              data = json.dumps(body).encode('utf-8') if body is not None else None
+              req = urllib.request.Request(url, data=data, headers=headers, method=method)
+              try:
+                  with urllib.request.urlopen(req, timeout=60) as response:
+                      payload = json.loads(response.read().decode('utf-8'))
+                      return response.status, payload
+              except urllib.error.HTTPError as exc:
+                  response_body = exc.read().decode('utf-8', errors='replace')[:500]
+                  raise RuntimeError(f'Render API HTTP {exc.code}: {response_body}') from exc
+
+          status, payload = call('GET', 'https://api.render.com/v1/services?limit=100')
+          candidates = []
+          for entry in payload if isinstance(payload, list) else []:
+              service = entry.get('service', entry) if isinstance(entry, dict) else {}
+              if service.get('name') == target_name:
+                  candidates.append(service)
+          if len(candidates) != 1:
+              raise RuntimeError(f'Expected one Render service named {target_name}; found {len(candidates)}')
+          service = candidates[0]
+          service_id = str(service.get('id') or '')
+          if not service_id:
+              raise RuntimeError('Resolved Render service has no ID')
+
+          deploy_status, deploy = call(
+              'POST',
+              f'https://api.render.com/v1/services/{service_id}/deploys',
+              {
+                  'commitId': target_commit,
+                  'clearCache': 'do_not_clear',
+              },
+          )
+          deploy_id = str(deploy.get('id') or '') if isinstance(deploy, dict) else ''
+          report = {
+              'decision': 'DEPLOY_TRIGGERED' if deploy_status in (201, 202) else 'FAIL',
+              'service_name': target_name,
+              'service_id_sha256_prefix': hashlib.sha256(service_id.encode()).hexdigest()[:16],
+              'target_commit': target_commit,
+              'deploy_http_status': deploy_status,
+              'deploy_id_sha256_prefix': hashlib.sha256(deploy_id.encode()).hexdigest()[:16] if deploy_id else None,
+              'deploy_status': deploy.get('status') if isinstance(deploy, dict) else None,
+              'triggered_at': datetime.now(UTC).isoformat(),
+          }
+          Path('artifacts/sprint-8e/render-force-restart.json').write_text(
+              json.dumps(report, indent=2), encoding='utf-8'
+          )
+          print(json.dumps(report, indent=2))
+          if report['decision'] != 'DEPLOY_TRIGGERED':
+              raise SystemExit('Render deployment was not accepted')
+          PY
+
+      - name: Upload sanitized deploy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8e-render-force-restart-${{ github.run_id }}
+          path: artifacts/sprint-8e/render-force-restart.json
+          if-no-files-found: warn
+          retention-days: 7
