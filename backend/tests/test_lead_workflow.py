@@ -142,7 +142,7 @@ def test_customer_creation_writes_customer_audit_log() -> None:
     service.audit_logs = FakeAuditLogs()
     workspace_id = uuid4()
 
-    customer = service.create(workspace_id, CustomerCreate(name="Customer", phone="555"), actor_user_id=uuid4())
+    customer = service.create(workspace_id, CustomerCreate(name="Customer", phone="0671234567"), actor_user_id=uuid4())
 
     assert customer.workspace_id == workspace_id
     assert service.audit_logs.records[-1]["entity_type"] == "Customer"

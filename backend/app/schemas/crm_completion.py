@@ -1,7 +1,10 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.models.customer_address import DeliveryProvider
+from app.utils.phone import PhoneNormalizationError, normalize_ua_phone
 
 from app.models.attachment import AttachmentEntityType
 
@@ -53,7 +56,17 @@ class CustomerNoteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CustomerAddressCreate(BaseModel):
+class CustomerAddressPhoneMixin(BaseModel):
+    @field_validator("phone", mode="before", check_fields=False)
+    @classmethod
+    def normalize_phone(cls, value):
+        try:
+            return normalize_ua_phone(value)
+        except PhoneNormalizationError as exc:
+            raise ValueError("INVALID_UA_PHONE") from exc
+
+
+class CustomerAddressCreate(CustomerAddressPhoneMixin):
     label: str | None = Field(default=None, max_length=100)
     recipient_name: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
@@ -65,9 +78,13 @@ class CustomerAddressCreate(BaseModel):
     country: str | None = Field(default=None, max_length=120)
     notes: str | None = None
     is_default: bool = False
+    delivery_provider: DeliveryProvider | None = None
+    nova_poshta_city_ref: str | None = Field(default=None, max_length=120)
+    nova_poshta_warehouse_ref: str | None = Field(default=None, max_length=120)
+    warehouse_number: str | None = Field(default=None, max_length=40)
 
 
-class CustomerAddressUpdate(BaseModel):
+class CustomerAddressUpdate(CustomerAddressPhoneMixin):
     label: str | None = Field(default=None, max_length=100)
     recipient_name: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
@@ -79,6 +96,10 @@ class CustomerAddressUpdate(BaseModel):
     country: str | None = Field(default=None, max_length=120)
     notes: str | None = None
     is_default: bool | None = None
+    delivery_provider: DeliveryProvider | None = None
+    nova_poshta_city_ref: str | None = Field(default=None, max_length=120)
+    nova_poshta_warehouse_ref: str | None = Field(default=None, max_length=120)
+    warehouse_number: str | None = Field(default=None, max_length=40)
 
 
 class CustomerAddressResponse(BaseModel):
@@ -96,6 +117,10 @@ class CustomerAddressResponse(BaseModel):
     country: str | None
     notes: str | None
     is_default: bool
+    delivery_provider: DeliveryProvider | None
+    nova_poshta_city_ref: str | None
+    nova_poshta_warehouse_ref: str | None
+    warehouse_number: str | None
     created_at: datetime
     updated_at: datetime
 
