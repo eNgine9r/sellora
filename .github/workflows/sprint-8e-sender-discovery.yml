@@ -1,0 +1,88 @@
+name: Sprint 8E Sender Discovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "qa/sprint_8e_sender_discovery.py"
+      - ".github/workflows/sprint-8e-sender-discovery.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  sender-discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NOVA_POSHTA_API_URL: https://api.novaposhta.ua/v2.0/json/
+      STAGING_NOVA_POSHTA_API_KEY: ${{ secrets[format('STAGING_NOVA_POSHTA_{0}', 'API_KEY')] }}
+
+    steps:
+      - name: Checkout QA branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned dependency
+        run: python -m pip install --disable-pip-version-check httpx==0.28.1
+
+      - name: Compile discovery runner
+        run: python -m py_compile qa/sprint_8e_sender_discovery.py
+
+      - name: Execute read-only sender discovery
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts/sprint-8e
+          python qa/sprint_8e_sender_discovery.py
+          code=$?
+          echo "$code" > artifacts/sprint-8e/sender-discovery-exit-code.txt
+          exit 0
+
+      - name: Validate sanitized discovery
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('artifacts/sprint-8e/sender-discovery.json').read_text(encoding='utf-8'))
+          print(json.dumps({
+              'decision': report.get('decision'),
+              'counterparty_count': report.get('counterparty_count'),
+              'usable_tuple_count': report.get('usable_tuple_count'),
+              'network': report.get('network'),
+              'safe_error': report.get('safe_error'),
+          }, indent=2))
+          if (report.get('network') or {}).get('provider_writes') != 0:
+              raise SystemExit('Sender discovery unexpectedly performed provider writes')
+          PY
+
+      - name: Upload discovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8e-sender-discovery-${{ github.run_id }}
+          path: |
+            artifacts/sprint-8e/sender-discovery.json
+            artifacts/sprint-8e/sender-discovery-exit-code.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce discovery decision
+        if: always()
+        run: |
+          code="$(cat artifacts/sprint-8e/sender-discovery-exit-code.txt 2>/dev/null || echo 99)"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('artifacts/sprint-8e/sender-discovery.json').read_text(encoding='utf-8'))
+          if report.get('decision') != 'PASS':
+              raise SystemExit(f"Sender discovery decision: {report.get('decision')}")
+          if int(report.get('usable_tuple_count') or 0) < 1:
+              raise SystemExit('No usable sender tuple was discovered')
+          PY
+          test "$code" = "0"
