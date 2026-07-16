@@ -107,18 +107,33 @@ def assert_previous_head_upgrade(ids: dict[str, str]) -> None:
         ).one()
         assert gate.provider_writes_allowed is False
         assert gate.provider_connection_verified_at is None
-        try:
+    duplicate_id = str(uuid4())
+    try:
+        with engine.begin() as connection:
             connection.execute(
                 text("""
-                    INSERT INTO customer_addresses (workspace_id, customer_id, address_line1, is_default)
-                    VALUES (:workspace_id, :customer_id, 'Duplicate default', true)
+                    INSERT INTO customer_addresses (
+                        id,
+                        workspace_id,
+                        customer_id,
+                        address_line1,
+                        is_default
+                    )
+                    VALUES (
+                        :duplicate_id,
+                        :workspace_id,
+                        :customer_id,
+                        'Duplicate default',
+                        true
+                    )
                 """),
-                ids,
+                {**ids, "duplicate_id": duplicate_id},
             )
-        except IntegrityError:
-            pass
-        else:
-            raise AssertionError("partial unique index allowed a duplicate active default address")
+    except IntegrityError as exc:
+        database_error = str(exc.orig)
+        assert "uq_customer_addresses_one_active_default" in database_error
+    else:
+        raise AssertionError("uq_customer_addresses_one_active_default allowed a second active default")
 
 
 def assert_current_head() -> None:
