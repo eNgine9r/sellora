@@ -1,0 +1,129 @@
+name: Sprint 8E Recover Failed-Safe Provider Create
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "qa/sprint_8e_recover_failed_safe.py"
+      - ".github/workflows/sprint-8e-recover-failed-safe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sprint-8e-recover-failed-safe
+  cancel-in-progress: false
+
+jobs:
+  recover-failed-safe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      EXPECTED_RUNTIME_COMMIT: f7f5aea9e56e5aed83a011dd5d10da7cf85c4c22
+      QA8E_WORKSPACE_ID: 5ae30ca3-a4d7-4cc1-8bba-335f2b8c1ef4
+      NOVA_POSHTA_API_URL: https://api.novaposhta.ua/v2.0/json/
+      STAGING_OWNER_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'EMAIL')] }}
+      STAGING_OWNER_PASSWORD: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'PASSWORD')] }}
+      STAGING_MANAGER_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'MANAGER', 'EMAIL')] }}
+      STAGING_MANAGER_PASSWORD: ${{ secrets[format('STAGING_{0}_{1}', 'MANAGER', 'PASSWORD')] }}
+      STAGING_ANALYST_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'ANALYST', 'EMAIL')] }}
+      STAGING_ANALYST_PASSWORD: ${{ secrets[format('STAGING_{0}_{1}', 'ANALYST', 'PASSWORD')] }}
+      STAGING_NOVA_POSHTA_API_KEY: ${{ secrets[format('STAGING_NOVA_POSHTA_{0}', 'API_KEY')] }}
+      STAGING_NOVA_POSHTA_SENDER_CITY_REF: ${{ secrets[format('STAGING_NOVA_POSHTA_SENDER_{0}_{1}', 'CITY', 'REF')] }}
+      STAGING_NOVA_POSHTA_SENDER_WAREHOUSE_REF: ${{ secrets[format('STAGING_NOVA_POSHTA_SENDER_{0}_{1}', 'WAREHOUSE', 'REF')] }}
+      STAGING_NOVA_POSHTA_SENDER_PHONE: ${{ secrets[format('STAGING_NOVA_POSHTA_SENDER_{0}', 'PHONE')] }}
+
+    steps:
+      - name: Checkout QA-only branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned QA dependency
+        run: python -m pip install --disable-pip-version-check httpx==0.28.1
+
+      - name: Compile recovery runner
+        run: python -m py_compile qa/sprint_8e_recover_failed_safe.py
+
+      - name: Warm Render runtime
+        run: |
+          curl -fsSL --retry 8 --retry-all-errors --retry-delay 10 --max-time 90 \
+            "$STAGING_API_URL/health" >/tmp/qa8e-health.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          health = json.loads(Path('/tmp/qa8e-health.json').read_text(encoding='utf-8'))
+          if health.get('status') != 'ok':
+              raise SystemExit('Backend health is not ok')
+          print(json.dumps({
+              'status': health.get('status'),
+              'runtime_commit': health.get('runtime_commit'),
+              'process_started_at': health.get('process_started_at'),
+          }, indent=2))
+          PY
+
+      - name: Execute exact failed-safe recovery
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts/sprint-8e
+          python qa/sprint_8e_recover_failed_safe.py
+          code=$?
+          echo "$code" > artifacts/sprint-8e/failed-safe-recovery-exit-code.txt
+          exit 0
+
+      - name: Validate sanitized recovery evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('artifacts/sprint-8e/failed-safe-recovery.json')
+          if not path.exists():
+              raise SystemExit('Sprint 8E failed-safe recovery artifact missing')
+          report = json.loads(path.read_text(encoding='utf-8'))
+          print(json.dumps({
+              'decision': report.get('decision'),
+              'check_count': len(report.get('checks', [])),
+              'provider_document_expected': report.get('provider_document_expected'),
+              'restart_required': report.get('restart_required'),
+              'cleanup_required': report.get('cleanup_required'),
+              'network': report.get('network'),
+          }, indent=2))
+          if report.get('provider_document_expected') not in (0, 1):
+              raise SystemExit('Unexpected provider document count')
+          PY
+
+      - name: Upload sanitized recovery evidence
+        if: always() && hashFiles('artifacts/sprint-8e/failed-safe-recovery.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8e-failed-safe-recovery-${{ github.run_id }}
+          path: |
+            artifacts/sprint-8e/failed-safe-recovery.json
+            artifacts/sprint-8e/failed-safe-recovery-exit-code.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce recovery decision
+        if: always()
+        run: |
+          code="$(cat artifacts/sprint-8e/failed-safe-recovery-exit-code.txt 2>/dev/null || echo 99)"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('artifacts/sprint-8e/failed-safe-recovery.json').read_text(encoding='utf-8'))
+          if report.get('decision') != 'PASS_PENDING_RESTART_AND_CLEANUP':
+              raise SystemExit(f"Sprint 8E recovery decision: {report.get('decision')}")
+          if report.get('provider_document_expected') != 1:
+              raise SystemExit('Exactly one provider document was not confirmed')
+          if report.get('restart_required') is not True or report.get('cleanup_required') is not True:
+              raise SystemExit('Restart/cleanup boundary not armed')
+          PY
+          test "$code" = "0"
