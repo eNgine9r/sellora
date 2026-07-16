@@ -1,0 +1,124 @@
+name: Apply Sprint 8E Provider Payload Fix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-sprint-8e-provider-payload-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    if: github.event.pull_request.head.ref == 'fix/sprint-8e-nova-poshta-payload'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/sprint-8e-nova-poshta-payload
+          token: ${{ github.token }}
+
+      - name: Apply provider payload fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          service = Path('backend/app/services/nova_poshta_service.py')
+          text = service.read_text(encoding='utf-8')
+          old = '''    def _document_payload(self, shipment, settings: dict) -> dict:
+        return {
+            "PayerType": "Recipient",
+            "PaymentMethod": "Cash",
+            "CargoType": "Parcel",
+            "ServiceType": "WarehouseWarehouse",
+            "Cost": str(shipment.declared_value or 0),
+            "CitySender": settings.get("sender_city_ref"),
+            "Sender": settings.get("sender_counterparty_ref"),
+            "SenderAddress": settings.get("sender_warehouse_ref"),
+            "ContactSender": settings.get("sender_contact_ref"),
+            "SendersPhone": settings.get("sender_phone"),
+            "CityRecipient": shipment.nova_poshta_city_ref,
+            "RecipientAddress": shipment.nova_poshta_warehouse_ref,
+            "RecipientsPhone": shipment.recipient_phone,
+            "RecipientName": shipment.recipient_name,
+        }
+'''
+          new = '''    def _document_payload(self, shipment, settings: dict) -> dict:
+        return {
+            "PayerType": "Recipient",
+            "PaymentMethod": "Cash",
+            "DateTime": datetime.now(UTC).strftime("%d.%m.%Y"),
+            "CargoType": "Parcel",
+            "VolumeGeneral": "0.001",
+            "Weight": "0.5",
+            "ServiceType": "WarehouseWarehouse",
+            "SeatsAmount": "1",
+            "Description": "Товар",
+            "Cost": str(shipment.declared_value or 0),
+            "CitySender": settings.get("sender_city_ref"),
+            "Sender": settings.get("sender_counterparty_ref"),
+            "SenderAddress": settings.get("sender_warehouse_ref"),
+            "ContactSender": settings.get("sender_contact_ref"),
+            "SendersPhone": settings.get("sender_phone"),
+            "NewAddress": "1",
+            "RecipientCityName": shipment.city,
+            "RecipientAddressName": shipment.warehouse,
+            "RecipientName": shipment.recipient_name,
+            "RecipientType": "PrivatePerson",
+            "RecipientsPhone": shipment.recipient_phone,
+        }
+'''
+          if old not in text:
+              raise SystemExit('document payload marker not found')
+          service.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          client = Path('backend/app/integrations/nova_poshta_client.py')
+          text = client.read_text(encoding='utf-8')
+          old = '''        if not body.get("success"):
+            raise NovaPoshtaClientError(
+                "Nova Poshta rejected the request",
+                code="NOVA_POSHTA_PROVIDER_REJECTED",
+                retryable=False,
+                ambiguous=False,
+            )
+'''
+          new = '''        if not body.get("success"):
+            provider_errors = [str(item)[:200] for item in (body.get("errors") or [])[:3]]
+            safe_summary = "; ".join(provider_errors) if provider_errors else "Provider rejected the request"
+            raise NovaPoshtaClientError(
+                f"Nova Poshta rejected the request: {safe_summary}",
+                code="NOVA_POSHTA_PROVIDER_REJECTED",
+                retryable=False,
+                ambiguous=False,
+            )
+'''
+          if old not in text:
+              raise SystemExit('client error marker not found')
+          client.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          tests = Path('backend/tests/test_nova_poshta.py')
+          text = tests.read_text(encoding='utf-8')
+          addition = '''\n\ndef test_real_provider_payload_contains_required_new_recipient_fields() -> None:\n    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="380000000000", city="Луцьк", warehouse="Відділення №1", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)\n    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")\n    service = _shipment_service(shipment)\n    payload = service._document_payload(shipment, service.settings.connections.connection.settings)\n    assert payload["NewAddress"] == "1"\n    assert payload["RecipientType"] == "PrivatePerson"\n    assert payload["RecipientCityName"] == "Луцьк"\n    assert payload["RecipientAddressName"] == "Відділення №1"\n    assert payload["Weight"] == "0.5"\n    assert payload["SeatsAmount"] == "1"\n    assert payload["DateTime"]\n    assert "CityRecipient" not in payload\n    assert "RecipientAddress" not in payload\n'''
+          if 'test_real_provider_payload_contains_required_new_recipient_fields' not in text:
+              tests.write_text(text + addition, encoding='utf-8')
+
+          workflow = Path('.github/workflows/apply-sprint-8e-provider-payload-fix.yml')
+          workflow.unlink()
+          PY
+
+      - name: Run targeted tests
+        working-directory: backend
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          pytest -q tests/test_nova_poshta.py tests/integrations/nova_poshta/test_durable_ttn_workflow.py
+
+      - name: Commit final fix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add backend/app/services/nova_poshta_service.py backend/app/integrations/nova_poshta_client.py backend/tests/test_nova_poshta.py .github/workflows/apply-sprint-8e-provider-payload-fix.yml
+          git commit -m "Fix Nova Poshta InternetDocument payload"
+          git push origin HEAD:fix/sprint-8e-nova-poshta-payload
+
+# connector synchronization trigger
