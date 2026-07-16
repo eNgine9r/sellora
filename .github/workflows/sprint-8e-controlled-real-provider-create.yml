@@ -1,5 +1,6 @@
 name: Sprint 8E Controlled Real Provider Create
 
+# QA Test AI v3.0 runtime probe trigger: 2026-07-16
 on:
   pull_request:
     branches: [main]
