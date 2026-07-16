@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from app.services.nova_poshta_service import NovaPoshtaShipmentService
+from app.utils.phone import to_nova_poshta_phone
 
 
 class NovaPoshtaProviderShipmentService(NovaPoshtaShipmentService):
@@ -29,11 +30,11 @@ class NovaPoshtaProviderShipmentService(NovaPoshtaShipmentService):
             "Sender": settings.get("sender_counterparty_ref"),
             "SenderAddress": settings.get("sender_warehouse_ref"),
             "ContactSender": settings.get("sender_contact_ref"),
-            "SendersPhone": settings.get("sender_phone"),
+            "SendersPhone": to_nova_poshta_phone(settings.get("sender_phone")),
             "NewAddress": "1",
             "RecipientCityName": shipment.city,
             "RecipientAddressName": shipment.warehouse,
             "RecipientName": shipment.recipient_name,
             "RecipientType": "PrivatePerson",
-            "RecipientsPhone": shipment.recipient_phone,
+            "RecipientsPhone": to_nova_poshta_phone(shipment.recipient_phone),
         }

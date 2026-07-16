@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import DateTime, JSON, String
+from sqlalchemy import Boolean, DateTime, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -27,5 +27,7 @@ class IntegrationConnection(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDelet
     connected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    provider_writes_allowed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    provider_connection_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     credentials = relationship("IntegrationCredential", back_populates="connection", cascade="all, delete-orphan")

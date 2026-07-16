@@ -9,14 +9,14 @@ def test_real_provider_payload_contains_required_new_recipient_fields() -> None:
         city="Луцьк",
         warehouse="Відділення №1",
         recipient_name="Recipient",
-        recipient_phone="380000000000",
+        recipient_phone="380671234567",
     )
     settings = {
         "sender_city_ref": "sender-city-ref",
         "sender_warehouse_ref": "sender-warehouse-ref",
         "sender_counterparty_ref": "sender-counterparty-ref",
         "sender_contact_ref": "sender-contact-ref",
-        "sender_phone": "380000000000",
+        "sender_phone": "380671234567",
     }
 
     service = NovaPoshtaProviderShipmentService.__new__(NovaPoshtaProviderShipmentService)
@@ -30,6 +30,8 @@ def test_real_provider_payload_contains_required_new_recipient_fields() -> None:
     assert payload["VolumeGeneral"] == "0.001"
     assert payload["SeatsAmount"] == "1"
     assert payload["DateTime"]
+    assert payload["SendersPhone"] == "380671234567"
+    assert payload["RecipientsPhone"] == "380671234567"
     assert payload["CitySender"] == "sender-city-ref"
     assert payload["Sender"] == "sender-counterparty-ref"
     assert payload["ContactSender"] == "sender-contact-ref"

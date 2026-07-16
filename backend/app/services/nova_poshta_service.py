@@ -31,10 +31,12 @@ from app.schemas.integration import (
     NovaPoshtaDirectoryItem,
     NovaPoshtaSettingsRequest,
     NovaPoshtaSettingsResponse,
+    NovaPoshtaWritePermissionRequest,
     NovaPoshtaStatusResponse,
     NovaPoshtaTestConnectionResponse,
     NovaPoshtaTtnResponse,
 )
+from app.utils.phone import PhoneNormalizationError, normalize_ua_phone, to_nova_poshta_phone
 from app.utils.secrets import decrypt_secret, encrypt_secret, mask_secret
 
 
@@ -46,6 +48,10 @@ class NovaPoshtaClientProtocol(Protocol):
     def test_connection(self) -> bool: ...
     def search_cities(self, query: str, limit: int = 20): ...
     def search_warehouses(self, city_ref: str, query: str | None = None, limit: int = 50): ...
+    def counterparty_exists(self, counterparty_ref: str) -> bool: ...
+    def contact_belongs_to_counterparty(self, counterparty_ref: str, contact_ref: str) -> bool: ...
+    def warehouse_belongs_to_city(self, city_ref: str, warehouse_ref: str) -> bool: ...
+    def sender_address_belongs_to_sender(self, sender_ref: str, address_ref: str) -> bool: ...
     def create_internet_document(self, payload: dict): ...
     def find_internet_document(self, marker: str, date_from: datetime, date_to: datetime): ...
     def get_document_status(self, tracking_number: str) -> str | None: ...
@@ -59,31 +65,88 @@ class NovaPoshtaSettingsService:
         self.audit_logs = AuditLogRepository(db)
         self.client_factory = client_factory or (lambda api_key: NovaPoshtaClient(api_key))
 
+    MATERIAL_SETTING_FIELDS = (
+        "sender_city_ref",
+        "sender_warehouse_ref",
+        "sender_counterparty_ref",
+        "sender_contact_ref",
+        "sender_phone",
+    )
+
+    def _material_sender_settings_changed(self, existing: dict, updates: dict) -> bool:
+        return any(field in updates and updates.get(field) != existing.get(field) for field in self.MATERIAL_SETTING_FIELDS)
+
+    def _invalidate_verification(
+        self,
+        connection: IntegrationConnection,
+        actor_user_id: UUID | None,
+        *,
+        api_key_rotated: bool,
+        sender_settings_changed: bool,
+    ) -> None:
+        if not api_key_rotated and not sender_settings_changed:
+            return
+        connection.provider_connection_verified_at = None
+        connection.provider_writes_allowed = False
+        self.audit_logs.create(
+            workspace_id=connection.workspace_id,
+            user_id=actor_user_id,
+            entity_type="IntegrationConnection",
+            entity_id=connection.id,
+            action="NOVA_POSHTA_VERIFICATION_INVALIDATED",
+            new_value={
+                "provider": IntegrationProvider.NOVA_POSHTA.value,
+                "api_key_rotated": api_key_rotated,
+                "sender_settings_changed": sender_settings_changed,
+                "provider_writes_disabled": True,
+            },
+        )
+
+    def _sender_configured(self, settings: dict) -> bool:
+        return all(bool(settings.get(field)) for field in self.MATERIAL_SETTING_FIELDS)
+
+    def _write_gate(self, connection: IntegrationConnection | None, credential: IntegrationCredential | None, settings: dict) -> dict:
+        environment_capability = get_settings().staging_nova_poshta_allow_writes
+        connected = connection is not None and connection.status == IntegrationStatus.CONNECTED.value
+        sender_configured = self._sender_configured(settings)
+        connection_verified = bool(connection and connection.provider_connection_verified_at)
+        workspace_permission = bool(connection and connection.provider_writes_allowed)
+        blockers: list[str] = []
+        if not environment_capability:
+            blockers.append("ENVIRONMENT_CAPABILITY_DISABLED")
+        if not connected or credential is None:
+            blockers.append("CONNECTION_NOT_CONFIGURED")
+        if not connection_verified:
+            blockers.append("CONNECTION_NOT_VERIFIED")
+        if not sender_configured:
+            blockers.append("SENDER_NOT_CONFIGURED")
+        if not workspace_permission:
+            blockers.append("WORKSPACE_PERMISSION_DISABLED")
+        return {
+            "environment_capability": environment_capability,
+            "workspace_permission": workspace_permission,
+            "provider_writes_enabled": not blockers,
+            "sender_configured": sender_configured,
+            "connection_verified": connection_verified,
+            "write_blockers": blockers,
+        }
+
     def get_settings(self, workspace_id: UUID) -> NovaPoshtaSettingsResponse:
         connection = self.connections.get_by_provider(workspace_id, IntegrationProvider.NOVA_POSHTA.value)
         if connection is None or connection.status == IntegrationStatus.DISCONNECTED.value:
-            return NovaPoshtaSettingsResponse(
-                status=IntegrationStatus.DISCONNECTED,
-                provider_writes_enabled=get_settings().staging_nova_poshta_allow_writes,
-            )
+            gate = self._write_gate(None, None, {})
+            return NovaPoshtaSettingsResponse(status=IntegrationStatus.DISCONNECTED, **gate)
         credential = self.credentials.get_active_for_connection(workspace_id, connection.id)
         api_key = decrypt_secret(credential.encrypted_access_token) if credential else None
         settings = connection.settings or {}
-        required_sender_fields = (
-            "sender_city_ref",
-            "sender_warehouse_ref",
-            "sender_counterparty_ref",
-            "sender_contact_ref",
-            "sender_phone",
-        )
+        gate = self._write_gate(connection, credential, settings)
         return NovaPoshtaSettingsResponse(
             status=IntegrationStatus(connection.status),
             connection_name=connection.connection_name,
             connected_at=connection.connected_at,
             last_sync_at=connection.last_sync_at,
             masked_api_key=mask_secret(api_key),
-            provider_writes_enabled=get_settings().staging_nova_poshta_allow_writes,
-            sender_configured=all(bool(settings.get(field)) for field in required_sender_fields),
+            **gate,
             **settings,
         )
 
@@ -99,7 +162,15 @@ class NovaPoshtaSettingsService:
         now = datetime.now(UTC)
         existing_settings = dict(connection.settings or {}) if connection else {}
         updates = payload.model_dump(exclude={"api_key"}, exclude_unset=True)
-        settings = {**existing_settings, **{key: value for key, value in updates.items() if value is not None}}
+        material_updates = {key: value for key, value in updates.items() if value is not None}
+        if "sender_phone" in material_updates:
+            try:
+                material_updates["sender_phone"] = normalize_ua_phone(material_updates["sender_phone"])
+            except PhoneNormalizationError as exc:
+                raise NovaPoshtaServiceError("INVALID_UA_PHONE") from exc
+        api_key_rotated = payload.api_key is not None
+        sender_settings_changed = self._material_sender_settings_changed(existing_settings, material_updates)
+        settings = {**existing_settings, **material_updates}
         if connection is None:
             connection = self.connections.create(
                 IntegrationConnection(
@@ -130,6 +201,7 @@ class NovaPoshtaSettingsService:
                 credential.encrypted_access_token = encrypted
         elif credential is None:
             raise NovaPoshtaServiceError("Nova Poshta API key is required for the first connection")
+        self._invalidate_verification(connection, actor_user_id, api_key_rotated=api_key_rotated, sender_settings_changed=sender_settings_changed)
         audit_action = "NOVA_POSHTA_CONNECTED" if payload.api_key else "NOVA_POSHTA_SENDER_SETTINGS_UPDATED"
         self.audit_logs.create(
             workspace_id=workspace_id,
@@ -147,53 +219,87 @@ class NovaPoshtaSettingsService:
         self.db.commit()
         return self.get_settings(workspace_id)
 
+    def _validate_sender_tuple(self, client: NovaPoshtaClientProtocol, settings: dict) -> str | None:
+        missing = [field for field in self.MATERIAL_SETTING_FIELDS if not settings.get(field)]
+        if missing:
+            return "NOVA_POSHTA_SENDER_VALIDATION_UNAVAILABLE"
+        try:
+            to_nova_poshta_phone(settings.get("sender_phone"))
+        except PhoneNormalizationError:
+            return "NOVA_POSHTA_SENDER_PHONE_INVALID"
+        try:
+            if not client.counterparty_exists(settings["sender_counterparty_ref"]):
+                return "NOVA_POSHTA_SENDER_COUNTERPARTY_INVALID"
+            if not client.contact_belongs_to_counterparty(settings["sender_counterparty_ref"], settings["sender_contact_ref"]):
+                return "NOVA_POSHTA_SENDER_CONTACT_INVALID"
+            if not client.sender_address_belongs_to_sender(settings["sender_counterparty_ref"], settings["sender_warehouse_ref"]):
+                return "NOVA_POSHTA_SENDER_ADDRESS_INVALID"
+            if not client.warehouse_belongs_to_city(settings["sender_city_ref"], settings["sender_warehouse_ref"]):
+                return "NOVA_POSHTA_SENDER_CITY_MISMATCH"
+        except NovaPoshtaClientError:
+            return "NOVA_POSHTA_SENDER_VALIDATION_UNAVAILABLE"
+        except Exception:
+            return "NOVA_POSHTA_SENDER_VALIDATION_UNAVAILABLE"
+        return None
+
     def test_connection(
         self,
         workspace_id: UUID,
         actor_user_id: UUID | None,
     ) -> NovaPoshtaTestConnectionResponse:
         connection, api_key = self._require_connection(workspace_id)
+        client = self.client_factory(api_key)
         try:
-            self.client_factory(api_key).test_connection()
+            client.test_connection()
         except Exception:
             connection.status = IntegrationStatus.ERROR.value
+            connection.provider_connection_verified_at = None
+            connection.provider_writes_allowed = False
             self.audit_logs.create(
                 workspace_id=workspace_id,
                 user_id=actor_user_id,
                 entity_type="IntegrationConnection",
                 entity_id=connection.id,
                 action="NOVA_POSHTA_ERROR",
-                new_value={
-                    "provider": IntegrationProvider.NOVA_POSHTA.value,
-                    "safe_error": "CONNECTION_TEST_FAILED",
-                },
+                new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": "NOVA_POSHTA_API_KEY_INVALID"},
             )
             self.db.commit()
-            return NovaPoshtaTestConnectionResponse(
-                success=False,
-                message="Nova Poshta connection failed.",
-                status=IntegrationStatus.ERROR,
+            return NovaPoshtaTestConnectionResponse(success=False, message="Nova Poshta connection failed.", status=IntegrationStatus.ERROR, errors=["NOVA_POSHTA_API_KEY_INVALID"])
+        validation_error = self._validate_sender_tuple(client, connection.settings or {})
+        if validation_error:
+            connection.status = IntegrationStatus.ERROR.value
+            connection.provider_connection_verified_at = None
+            connection.provider_writes_allowed = False
+            self.audit_logs.create(
+                workspace_id=workspace_id,
+                user_id=actor_user_id,
+                entity_type="IntegrationConnection",
+                entity_id=connection.id,
+                action="NOVA_POSHTA_ERROR",
+                new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": validation_error},
             )
+            self.db.commit()
+            return NovaPoshtaTestConnectionResponse(success=False, message="Nova Poshta sender settings failed validation.", status=IntegrationStatus.ERROR, errors=[validation_error])
         connection.status = IntegrationStatus.CONNECTED.value
-        connection.last_sync_at = datetime.now(UTC)
+        verified_at = datetime.now(UTC)
+        connection.last_sync_at = verified_at
+        connection.provider_connection_verified_at = verified_at
         self.audit_logs.create(
             workspace_id=workspace_id,
             user_id=actor_user_id,
             entity_type="IntegrationConnection",
             entity_id=connection.id,
             action="NOVA_POSHTA_CONNECTION_TESTED",
-            new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "success": True},
+            new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "success": True, "sender_verified": True},
         )
         self.db.commit()
-        return NovaPoshtaTestConnectionResponse(
-            success=True,
-            message="Nova Poshta connection is active.",
-            status=IntegrationStatus.CONNECTED,
-        )
+        return NovaPoshtaTestConnectionResponse(success=True, message="Nova Poshta connection is active.", status=IntegrationStatus.CONNECTED, errors=[])
 
     def disconnect(self, workspace_id: UUID, actor_user_id: UUID | None) -> NovaPoshtaSettingsResponse:
         connection = self.connections.get_by_provider(workspace_id, IntegrationProvider.NOVA_POSHTA.value)
         if connection:
+            connection.provider_connection_verified_at = None
+            connection.provider_writes_allowed = False
             connection.status = IntegrationStatus.DISCONNECTED.value
             connection.deleted_at = datetime.now(UTC)
             connection.deleted_by = actor_user_id
@@ -211,8 +317,36 @@ class NovaPoshtaSettingsService:
             self.db.commit()
         return NovaPoshtaSettingsResponse(
             status=IntegrationStatus.DISCONNECTED,
-            provider_writes_enabled=get_settings().staging_nova_poshta_allow_writes,
+            **self._write_gate(None, None, {}),
         )
+
+    def set_write_permission(
+        self,
+        workspace_id: UUID,
+        payload: NovaPoshtaWritePermissionRequest,
+        actor_user_id: UUID | None,
+    ) -> NovaPoshtaSettingsResponse:
+        connection = self.connections.get_by_provider(workspace_id, IntegrationProvider.NOVA_POSHTA.value)
+        credential = self.credentials.get_active_for_connection(workspace_id, connection.id) if connection else None
+        settings = connection.settings or {} if connection else {}
+        gate = self._write_gate(connection, credential, settings)
+        blockers_without_permission = [blocker for blocker in gate["write_blockers"] if blocker != "WORKSPACE_PERMISSION_DISABLED"]
+        if payload.allowed and blockers_without_permission:
+            raise NovaPoshtaServiceError("Nova Poshta provider writes cannot be enabled until connection, sender, verification, and environment capability are ready")
+        if connection is None:
+            raise NovaPoshtaServiceError("Nova Poshta is not configured")
+        previous = bool(connection.provider_writes_allowed)
+        connection.provider_writes_allowed = payload.allowed
+        self.audit_logs.create(
+            workspace_id=workspace_id,
+            user_id=actor_user_id,
+            entity_type="IntegrationConnection",
+            entity_id=connection.id,
+            action="NOVA_POSHTA_PROVIDER_WRITES_ENABLED" if payload.allowed else "NOVA_POSHTA_PROVIDER_WRITES_DISABLED",
+            new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "previous": previous, "new": payload.allowed},
+        )
+        self.db.commit()
+        return self.get_settings(workspace_id)
 
     def _require_connection(self, workspace_id: UUID) -> tuple[IntegrationConnection, str]:
         connection = self.connections.get_by_provider(workspace_id, IntegrationProvider.NOVA_POSHTA.value)
@@ -280,6 +414,7 @@ class NovaPoshtaShipmentService:
         actor_user_id: UUID | None,
     ) -> NovaPoshtaTtnResponse:
         connection, api_key = self.settings._require_connection(workspace_id)
+        self._current_connection = connection
         shipment = self._get_shipment_for_update(workspace_id, shipment_id)
         errors = self._validate_for_ttn(shipment, connection.settings or {})
         if errors:
@@ -466,6 +601,7 @@ class NovaPoshtaShipmentService:
         actor_user_id: UUID | None,
     ) -> NovaPoshtaTtnResponse:
         connection, api_key = self.settings._require_connection(workspace_id)
+        self._current_connection = connection
         shipment = self._get_shipment_for_update(workspace_id, shipment_id)
         if shipment is None:
             raise NovaPoshtaServiceError("Shipment not found")
@@ -810,7 +946,11 @@ class NovaPoshtaShipmentService:
             return override
         if not hasattr(self, "operations"):
             return True
-        return get_settings().staging_nova_poshta_allow_writes
+        connection = getattr(self, "_current_connection", None)
+        if connection is None:
+            return get_settings().staging_nova_poshta_allow_writes
+        credential = self.settings.credentials.get_active_for_connection(connection.workspace_id, connection.id)
+        return self.settings._write_gate(connection, credential, connection.settings or {})["provider_writes_enabled"]
 
     def _legacy_create_ttn(
         self,
@@ -891,6 +1031,11 @@ class NovaPoshtaShipmentService:
             errors.append("recipient_name is required")
         if not shipment.recipient_phone:
             errors.append("recipient_phone is required")
+        else:
+            try:
+                to_nova_poshta_phone(shipment.recipient_phone)
+            except PhoneNormalizationError:
+                errors.append("NOVA_POSHTA_RECIPIENT_PHONE_INVALID")
         if not (shipment.city or shipment.nova_poshta_city_ref):
             errors.append("city is required")
         if not (shipment.warehouse or shipment.nova_poshta_warehouse_ref):
@@ -906,6 +1051,11 @@ class NovaPoshtaShipmentService:
         ):
             if not settings.get(field):
                 errors.append(f"{field} is required")
+        if settings.get("sender_phone"):
+            try:
+                to_nova_poshta_phone(settings["sender_phone"])
+            except PhoneNormalizationError:
+                errors.append("NOVA_POSHTA_SENDER_PHONE_INVALID")
         return errors
 
     def _document_payload(self, shipment, settings: dict) -> dict:
@@ -919,10 +1069,10 @@ class NovaPoshtaShipmentService:
             "Sender": settings.get("sender_counterparty_ref"),
             "SenderAddress": settings.get("sender_warehouse_ref"),
             "ContactSender": settings.get("sender_contact_ref"),
-            "SendersPhone": settings.get("sender_phone"),
+            "SendersPhone": to_nova_poshta_phone(settings.get("sender_phone")),
             "CityRecipient": shipment.nova_poshta_city_ref,
             "RecipientAddress": shipment.nova_poshta_warehouse_ref,
-            "RecipientsPhone": shipment.recipient_phone,
+            "RecipientsPhone": to_nova_poshta_phone(shipment.recipient_phone),
             "RecipientName": shipment.recipient_name,
         }
 

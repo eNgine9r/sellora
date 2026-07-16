@@ -102,9 +102,10 @@ class FakeSettings:
                 "sender_warehouse_ref": "sender-warehouse",
                 "sender_counterparty_ref": "sender-counterparty",
                 "sender_contact_ref": "sender-contact",
-                "sender_phone": "0000000000",
+                "sender_phone": "+380671234567",
             },
             last_sync_at=None,
+            provider_connection_verified_at=None,
         )
         self.client = client
 
@@ -126,7 +127,7 @@ def eligible_shipment() -> Shipment:
         carrier=ShipmentCarrier.NOVA_POSHTA.value,
         status=ShipmentStatus.DRAFT.value,
         recipient_name="QA8E Recipient",
-        recipient_phone="0000000000",
+        recipient_phone="+380671234567",
         city="Kyiv",
         warehouse="Warehouse 1",
         nova_poshta_city_ref="recipient-city",
@@ -165,8 +166,11 @@ def test_successful_create_is_idempotent_across_service_instances() -> None:
     assert repeated.success
     assert repeated.reused_existing_result
     assert first_client.create_calls == 1
+    assert first.settings.connection.provider_connection_verified_at is None
     assert second_client.create_calls == 0
     assert operations.operation.state == NovaPoshtaOperationState.COMPLETED.value
+    assert first.settings.connection.last_sync_at is not None
+    assert first.settings.connection.provider_connection_verified_at is None
 
 
 def test_ambiguous_provider_response_blocks_blind_retry_after_restart() -> None:
