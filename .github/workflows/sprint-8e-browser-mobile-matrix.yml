@@ -1,0 +1,103 @@
+name: Sprint 8E Browser Mobile Matrix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "qa/sprint_8e_browser_matrix.cjs"
+      - ".github/workflows/sprint-8e-browser-mobile-matrix.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sprint-8e-browser-mobile-matrix
+  cancel-in-progress: false
+
+jobs:
+  browser-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      QA8E_WORKSPACE_ID: 5ae30ca3-a4d7-4cc1-8bba-335f2b8c1ef4
+      STAGING_OWNER_EMAIL: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'EMAIL')] }}
+      STAGING_OWNER_PASSWORD: ${{ secrets[format('STAGING_{0}_{1}', 'OWNER', 'PASSWORD')] }}
+
+    steps:
+      - name: Checkout QA-only branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pinned Playwright runtime
+        run: |
+          mkdir -p /tmp/sellora-qa-playwright
+          cd /tmp/sellora-qa-playwright
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.55.0
+          ./node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Compile browser runner
+        run: node --check qa/sprint_8e_browser_matrix.cjs
+
+      - name: Execute browser and mobile matrix
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts/sprint-8e
+          NODE_PATH=/tmp/sellora-qa-playwright/node_modules node qa/sprint_8e_browser_matrix.cjs
+          code=$?
+          echo "$code" > artifacts/sprint-8e/browser-matrix-exit-code.txt
+          exit 0
+
+      - name: Validate sanitized browser evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("artifacts/sprint-8e/browser-matrix.json")
+          if not path.exists():
+              raise SystemExit("Sprint 8E browser matrix artifact missing")
+          report = json.loads(path.read_text(encoding="utf-8"))
+          print(json.dumps({
+              "decision": report.get("decision"),
+              "viewports": len(report.get("viewports", [])),
+              "totals": report.get("totals"),
+          }, indent=2))
+          encoded = json.dumps(report)
+          for secret_name in ("STAGING_OWNER_EMAIL", "STAGING_OWNER_PASSWORD"):
+              secret = __import__("os").environ.get(secret_name)
+              if secret and secret in encoded:
+                  raise SystemExit(f"Sanitization failed for {secret_name}")
+          PY
+
+      - name: Upload browser matrix evidence
+        if: always() && hashFiles('artifacts/sprint-8e/browser-matrix.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-sprint-8e-browser-matrix-${{ github.run_id }}
+          path: |
+            artifacts/sprint-8e/browser-matrix.json
+            artifacts/sprint-8e/browser-matrix-exit-code.txt
+            artifacts/sprint-8e/browser-matrix/*.png
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce browser matrix decision
+        if: always()
+        run: |
+          code="$(cat artifacts/sprint-8e/browser-matrix-exit-code.txt 2>/dev/null || echo 99)"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/sprint-8e/browser-matrix.json").read_text(encoding="utf-8"))
+          if report.get("decision") != "PASS":
+              raise SystemExit(f"Sprint 8E browser matrix decision: {report.get('decision')}")
+          PY
+          test "$code" = "0"
