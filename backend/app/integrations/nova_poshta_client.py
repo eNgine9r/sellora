@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import json
+import re
 from typing import Any
 from urllib import error, request
 
@@ -50,6 +51,32 @@ class NovaPoshtaClient:
         self.base_url = base_url or get_settings().nova_poshta_api_url
         self.timeout_seconds = timeout_seconds
 
+    def _safe_rejection_code(self, body: dict[str, Any]) -> str:
+        """Return a bounded, credential-safe provider validation code.
+
+        Nova Poshta returns actionable validation messages in ``errors`` while the
+        previous client collapsed every rejection to one generic code. Preserve
+        only the first sanitized message so staging/runtime evidence can identify
+        an invalid field without exposing API keys, phones, UUIDs or document IDs.
+        The result is bounded to the database ``String(120)`` contract.
+        """
+        values = body.get("errors") or body.get("warnings") or body.get("info") or []
+        if not isinstance(values, list):
+            values = [values]
+        detail = next((str(value).strip() for value in values if str(value).strip()), "")
+        if not detail:
+            return "NOVA_POSHTA_PROVIDER_REJECTED"
+        detail = detail.replace(self.api_key, "[REDACTED]")
+        detail = re.sub(
+            r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b",
+            "[VALUE]",
+            detail,
+        )
+        detail = re.sub(r"\b\d{7,}\b", "[VALUE]", detail)
+        detail = re.sub(r"\s+", " ", detail).strip()
+        prefix = "NOVA_POSHTA_PROVIDER_REJECTED::"
+        return (prefix + detail)[:120]
+
     def _call(
         self,
         model: str,
@@ -89,7 +116,7 @@ class NovaPoshtaClient:
         if not body.get("success"):
             raise NovaPoshtaClientError(
                 "Nova Poshta rejected the request",
-                code="NOVA_POSHTA_PROVIDER_REJECTED",
+                code=self._safe_rejection_code(body),
                 retryable=False,
                 ambiguous=False,
             )
