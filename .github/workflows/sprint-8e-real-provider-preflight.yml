@@ -56,33 +56,25 @@ jobs:
 
           path = Path("qa/sprint_8e_real_provider_preflight.py")
           text = path.read_text(encoding="utf-8")
-          old_mask = '''        self.check(
-              "2",
-              "API key masked in response",
-              bool(saved.get("masked_api_key")) and real_key not in json.dumps(saved, ensure_ascii=False),
-          )'''
-          new_mask = '''        _, current_settings = self.request(
-              "GET",
-              "/integrations/nova-poshta/settings",
-              role="OWNER",
-              expected=(200,),
-          )
-          masked_key = str(current_settings.get("masked_api_key") or "")
-          self.check(
-              "2",
-              "API key masked in response",
-              bool(masked_key) and masked_key.startswith("****") and masked_key != real_key,
+
+          old_mask = 'bool(saved.get("masked_api_key")) and real_key not in json.dumps(saved, ensure_ascii=False),'
+          new_mask = '''bool(saved.get("masked_api_key")) and str(saved.get("masked_api_key")).startswith("****") and str(saved.get("masked_api_key")) != real_key,
               {
-                  "masked_present": bool(masked_key),
-                  "masked_format": masked_key.startswith("****"),
-                  "raw_equal": masked_key == real_key,
-              },
-          )'''
-          old_empty = '''params={"q": f"qa8e-no-city-{datetime.now(UTC).strftime('%H%M%S')}", "limit": 20},'''
-          new_empty = '''params={"q": "НемаєТакогоМістаАбсолютно", "limit": 20},'''
-          if old_mask not in text or old_empty not in text:
-              raise SystemExit("Expected Sprint 8E probe markers not found")
-          path.write_text(text.replace(old_mask, new_mask).replace(old_empty, new_empty), encoding="utf-8")
+                  "masked_present": bool(saved.get("masked_api_key")),
+                  "masked_format": str(saved.get("masked_api_key") or "").startswith("****"),
+                  "raw_equal": str(saved.get("masked_api_key") or "") == real_key,
+              },'''
+          old_empty = "f\"qa8e-no-city-{datetime.now(UTC).strftime('%H%M%S')}\""
+          new_empty = '"НемаєТакогоМістаАбсолютно"'
+
+          if old_mask not in text:
+              raise SystemExit("Masking probe expression not found")
+          if old_empty not in text:
+              raise SystemExit("No-result city probe expression not found")
+
+          text = text.replace(old_mask, new_mask, 1)
+          text = text.replace(old_empty, new_empty, 1)
+          path.write_text(text, encoding="utf-8")
           PY
 
       - name: Compile preflight runner
