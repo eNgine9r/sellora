@@ -39,6 +39,7 @@ class Cleanup:
         self.network = {"requests": 0, "writes": 0, "http_5xx": 0}
         self.runtime: dict[str, Any] = {}
         self.safe_error: str | None = None
+        self.already_clean = False
 
     def check(self, name: str, ok: bool, detail: Any | None = None) -> None:
         item: dict[str, Any] = {"name": name, "status": "PASS" if ok else "FAIL"}
@@ -56,7 +57,7 @@ class Cleanup:
         expected: tuple[int, ...],
         auth: bool = True,
         payload: dict[str, Any] | None = None,
-    ) -> tuple[int, dict[str, Any]]:
+    ) -> tuple[int, Any]:
         headers = {"Content-Type": "application/json"}
         if auth:
             headers.update({
@@ -72,7 +73,7 @@ class Cleanup:
         if response.status_code >= 500:
             self.network["http_5xx"] += 1
         try:
-            body = response.json() if response.content else {}
+            body: Any = response.json() if response.content else {}
         except Exception:
             body = {"message": response.text[:200]}
         print(f"HTTP {method} {path} -> {response.status_code}", flush=True)
@@ -115,8 +116,26 @@ class Cleanup:
         self.token = str(tokens.get("access_token") or "")
         self.check("OWNER login succeeded", bool(self.token))
 
-    def verify_exact_orphan(self) -> None:
-        _, shipment = self.request("GET", f"/shipments/{SHIPMENT_ID}", expected=(200,))
+    def verify_already_clean(self) -> None:
+        for label, path in (
+            ("shipment", f"/shipments/{SHIPMENT_ID}"),
+            ("order", f"/orders/{ORDER_ID}"),
+            ("product", f"/products/{PRODUCT_ID}"),
+            ("customer", f"/customers/{CUSTOMER_ID}"),
+        ):
+            code, _ = self.request("GET", path, expected=(404,))
+            self.check(f"{label} remains inactive", code == 404)
+        _, variants = self.request("GET", f"/products/variants?product_id={PRODUCT_ID}", expected=(200,))
+        self.check("variant remains inactive", not any(item.get("id") == VARIANT_ID for item in variants))
+        self.check("idempotent cleanup state verified", True, {"already_clean": True})
+
+    def verify_exact_orphan(self) -> bool:
+        code, shipment = self.request("GET", f"/shipments/{SHIPMENT_ID}", expected=(200, 404))
+        if code == 404:
+            self.already_clean = True
+            self.verify_already_clean()
+            return False
+
         self.check("orphan shipment identity", shipment.get("id") == SHIPMENT_ID and shipment.get("order_id") == ORDER_ID)
         self.check("orphan shipment has no TTN", not shipment.get("tracking_number"))
         self.check(
@@ -150,6 +169,7 @@ class Cleanup:
         _, variants = self.request("GET", f"/products/variants?product_id={PRODUCT_ID}", expected=(200,))
         matching = [item for item in variants if item.get("id") == VARIANT_ID]
         self.check("orphan variant exact identity", len(matching) == 1 and str(matching[0].get("sku") or "").startswith(PREFIX))
+        return True
 
     def cleanup(self) -> None:
         self.request("DELETE", f"/shipments/{SHIPMENT_ID}", expected=(204,))
@@ -169,7 +189,6 @@ class Cleanup:
 
         _, variants = self.request("GET", f"/products/variants?product_id={PRODUCT_ID}", expected=(200,))
         self.check("variant no longer active", not any(item.get("id") == VARIANT_ID for item in variants))
-        self.check("cleanup produced no HTTP 5xx", self.network["http_5xx"] == 0, self.network)
 
     def write_report(self) -> None:
         decision = "PASS" if self.safe_error is None and all(c["status"] == "PASS" for c in self.checks) else "FAIL"
@@ -180,6 +199,7 @@ class Cleanup:
             "runtime": self.runtime,
             "checks": self.checks,
             "network": self.network,
+            "already_clean": self.already_clean,
             "target": {
                 "shipment_id": SHIPMENT_ID,
                 "order_id": ORDER_ID,
@@ -206,8 +226,9 @@ class Cleanup:
     def run(self) -> int:
         try:
             self.preflight()
-            self.verify_exact_orphan()
-            self.cleanup()
+            if self.verify_exact_orphan():
+                self.cleanup()
+            self.check("cleanup produced no HTTP 5xx", self.network["http_5xx"] == 0, self.network)
         except Exception as exc:
             self.safe_error = safe(exc)
             print(f"SAFE_ERROR: {self.safe_error}", flush=True)
