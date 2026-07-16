@@ -121,4 +121,4 @@ jobs:
           git commit -m "Fix Nova Poshta InternetDocument payload"
           git push origin HEAD:fix/sprint-8e-nova-poshta-payload
 
-# connector synchronization trigger
+# apply payload fix now
