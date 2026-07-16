@@ -2,12 +2,24 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.utils.phone import PhoneNormalizationError, normalize_ua_phone
 
 from app.models.shipment import ShipmentCarrier, ShipmentStatus
 
 
-class ShipmentBase(BaseModel):
+class ShipmentPhoneMixin(BaseModel):
+    @field_validator("recipient_phone", mode="before", check_fields=False)
+    @classmethod
+    def normalize_recipient_phone(cls, value):
+        try:
+            return normalize_ua_phone(value)
+        except PhoneNormalizationError as exc:
+            raise ValueError("INVALID_UA_PHONE") from exc
+
+
+class ShipmentBase(ShipmentPhoneMixin):
     tracking_number: str | None = None
     carrier: ShipmentCarrier = ShipmentCarrier.NOVA_POSHTA
     status: ShipmentStatus = ShipmentStatus.DRAFT
@@ -34,7 +46,7 @@ class ShipmentCreate(ShipmentBase):
     customer_id: UUID | None = None
 
 
-class ShipmentUpdate(BaseModel):
+class ShipmentUpdate(ShipmentPhoneMixin):
     tracking_number: str | None = None
     carrier: ShipmentCarrier | None = None
     status: ShipmentStatus | None = None

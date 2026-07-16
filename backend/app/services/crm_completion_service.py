@@ -239,6 +239,19 @@ class CustomerCrmService:
 
         old_value = snapshot(address)
         values = payload.model_dump(exclude_unset=True)
+        is_nova_poshta_address = (
+            values.get("delivery_provider", address.delivery_provider) == "NOVA_POSHTA"
+            or bool(address.nova_poshta_city_ref)
+            or bool(values.get("nova_poshta_city_ref"))
+        )
+        city_changed = "nova_poshta_city_ref" in values and values.get("nova_poshta_city_ref") != address.nova_poshta_city_ref
+        if is_nova_poshta_address and city_changed:
+            if not values.get("nova_poshta_warehouse_ref"):
+                raise CrmCompletionServiceError("NOVA_POSHTA_WAREHOUSE_REQUIRED_AFTER_CITY_CHANGE")
+            if not values.get("address_line1"):
+                raise CrmCompletionServiceError("NOVA_POSHTA_WAREHOUSE_DESCRIPTION_REQUIRED")
+        if is_nova_poshta_address and "nova_poshta_warehouse_ref" in values and not values.get("address_line1"):
+            raise CrmCompletionServiceError("NOVA_POSHTA_WAREHOUSE_DESCRIPTION_REQUIRED")
         if values.get("is_default") is True:
             self.customer_crm.clear_default_addresses(workspace_id, customer_id, address.id)
         for field, value in values.items():

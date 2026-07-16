@@ -7,7 +7,9 @@ from app.models.customer_address import CustomerAddress
 from app.models.customer_note import CustomerNote
 from app.models.customer_tag import CustomerTag
 from app.models.tag import Tag
-from app.schemas.crm_completion import AttachmentCreate, CustomerAddressCreate, CustomerNoteCreate
+import pytest
+
+from app.schemas.crm_completion import AttachmentCreate, CustomerAddressCreate, CustomerAddressUpdate, CustomerNoteCreate
 from app.services.crm_completion_service import AttachmentService, CustomerCrmService
 
 
@@ -169,3 +171,130 @@ def test_customer_create_schema_accepts_valid_payload() -> None:
 
     assert payload.name == "Test Customer"
     assert payload.phone is None
+
+
+def test_customer_address_phone_is_normalized() -> None:
+    service, customer, _tag = _customer_service()
+
+    address = service.add_address(
+        customer.workspace_id,
+        customer.id,
+        CustomerAddressCreate(address_line1="Відділення №1", phone="067 123 45 67"),
+        actor_user_id=uuid4(),
+    )
+
+    assert address.phone == "+380671234567"
+
+
+def test_nova_poshta_city_change_without_warehouse_is_rejected_and_state_unchanged() -> None:
+    service, customer, _tag = _customer_service()
+    address = service.add_address(
+        customer.workspace_id,
+        customer.id,
+        CustomerAddressCreate(
+            address_line1="Відділення №1",
+            delivery_provider="NOVA_POSHTA",
+            nova_poshta_city_ref="city-old",
+            nova_poshta_warehouse_ref="wh-old",
+            warehouse_number="1",
+        ),
+        actor_user_id=uuid4(),
+    )
+
+    with pytest.raises(ValueError, match="NOVA_POSHTA_WAREHOUSE_REQUIRED_AFTER_CITY_CHANGE"):
+        service.update_address(
+            customer.workspace_id,
+            customer.id,
+            address.id,
+            CustomerAddressUpdate(nova_poshta_city_ref="city-new"),
+            actor_user_id=uuid4(),
+        )
+
+    assert address.nova_poshta_city_ref == "city-old"
+    assert address.nova_poshta_warehouse_ref == "wh-old"
+    assert address.warehouse_number == "1"
+    assert address.address_line1 == "Відділення №1"
+
+
+def test_nova_poshta_warehouse_ref_without_description_is_rejected() -> None:
+    service, customer, _tag = _customer_service()
+    address = service.add_address(
+        customer.workspace_id,
+        customer.id,
+        CustomerAddressCreate(
+            address_line1="Відділення №1",
+            delivery_provider="NOVA_POSHTA",
+            nova_poshta_city_ref="city-old",
+            nova_poshta_warehouse_ref="wh-old",
+        ),
+        actor_user_id=uuid4(),
+    )
+
+    with pytest.raises(ValueError, match="NOVA_POSHTA_WAREHOUSE_DESCRIPTION_REQUIRED"):
+        service.update_address(
+            customer.workspace_id,
+            customer.id,
+            address.id,
+            CustomerAddressUpdate(nova_poshta_warehouse_ref="wh-new"),
+            actor_user_id=uuid4(),
+        )
+
+    assert address.nova_poshta_warehouse_ref == "wh-old"
+    assert address.address_line1 == "Відділення №1"
+
+
+def test_nova_poshta_complete_city_and_warehouse_replacement_succeeds() -> None:
+    service, customer, _tag = _customer_service()
+    address = service.add_address(
+        customer.workspace_id,
+        customer.id,
+        CustomerAddressCreate(
+            address_line1="Відділення №1",
+            delivery_provider="NOVA_POSHTA",
+            nova_poshta_city_ref="city-old",
+            nova_poshta_warehouse_ref="wh-old",
+            warehouse_number="1",
+        ),
+        actor_user_id=uuid4(),
+    )
+
+    updated = service.update_address(
+        customer.workspace_id,
+        customer.id,
+        address.id,
+        CustomerAddressUpdate(
+            nova_poshta_city_ref="city-new",
+            nova_poshta_warehouse_ref="wh-new",
+            address_line1="Відділення №2",
+            warehouse_number="2",
+        ),
+        actor_user_id=uuid4(),
+    )
+
+    assert updated is address
+    assert address.nova_poshta_city_ref == "city-new"
+    assert address.nova_poshta_warehouse_ref == "wh-new"
+    assert address.warehouse_number == "2"
+    assert address.address_line1 == "Відділення №2"
+
+
+def test_generic_non_nova_poshta_address_city_update_remains_compatible() -> None:
+    service, customer, _tag = _customer_service()
+    address = service.add_address(
+        customer.workspace_id,
+        customer.id,
+        CustomerAddressCreate(address_line1="Generic address", city="Київ", delivery_provider="OTHER"),
+        actor_user_id=uuid4(),
+    )
+
+    updated = service.update_address(
+        customer.workspace_id,
+        customer.id,
+        address.id,
+        CustomerAddressUpdate(city="Львів"),
+        actor_user_id=uuid4(),
+    )
+
+    assert updated is address
+    assert address.city == "Львів"
+    assert address.address_line1 == "Generic address"

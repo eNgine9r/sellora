@@ -2,10 +2,22 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.utils.phone import PhoneNormalizationError, normalize_ua_phone
 
 
-class CustomerCreate(BaseModel):
+class CustomerPhoneMixin(BaseModel):
+    @field_validator("phone", mode="before", check_fields=False)
+    @classmethod
+    def normalize_phone(cls, value):
+        try:
+            return normalize_ua_phone(value)
+        except PhoneNormalizationError as exc:
+            raise ValueError("INVALID_UA_PHONE") from exc
+
+
+class CustomerCreate(CustomerPhoneMixin):
     name: str = Field(min_length=1, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
     instagram_username: str | None = Field(default=None, max_length=120)
@@ -13,7 +25,7 @@ class CustomerCreate(BaseModel):
     region: str | None = Field(default=None, max_length=120)
 
 
-class CustomerUpdate(BaseModel):
+class CustomerUpdate(CustomerPhoneMixin):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
     instagram_username: str | None = Field(default=None, max_length=120)
