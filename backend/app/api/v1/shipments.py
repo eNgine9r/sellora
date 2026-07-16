@@ -10,7 +10,8 @@ from app.models.shipment import ShipmentStatus
 from app.models.user import User
 from app.schemas.integration import NovaPoshtaStatusResponse, NovaPoshtaTtnResponse
 from app.schemas.shipment import ShipmentCreate, ShipmentResponse, ShipmentSummaryResponse, ShipmentUpdate
-from app.services.nova_poshta_service import NovaPoshtaServiceError, NovaPoshtaShipmentService
+from app.services.nova_poshta_provider_service import NovaPoshtaProviderShipmentService
+from app.services.nova_poshta_service import NovaPoshtaServiceError
 from app.services.shipment_service import ShipmentService, ShipmentServiceError
 
 router = APIRouter(prefix="/shipments", tags=["Shipments"])
@@ -114,7 +115,7 @@ def cancel(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), cu
 @router.post("/{shipment_id}/nova-poshta/create-ttn", response_model=NovaPoshtaTtnResponse)
 def create_nova_poshta_ttn(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> NovaPoshtaTtnResponse:
     try:
-        return NovaPoshtaShipmentService(db).create_ttn(workspace_id, shipment_id, current_user.id)
+        return NovaPoshtaProviderShipmentService(db).create_ttn(workspace_id, shipment_id, current_user.id)
     except NovaPoshtaServiceError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
@@ -122,7 +123,7 @@ def create_nova_poshta_ttn(shipment_id: UUID, workspace_id: UUID = Depends(get_w
 @router.post("/{shipment_id}/nova-poshta/reconcile-ttn", response_model=NovaPoshtaTtnResponse)
 def reconcile_nova_poshta_ttn(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> NovaPoshtaTtnResponse:
     try:
-        return NovaPoshtaShipmentService(db).reconcile_ttn(workspace_id, shipment_id, current_user.id)
+        return NovaPoshtaProviderShipmentService(db).reconcile_ttn(workspace_id, shipment_id, current_user.id)
     except NovaPoshtaServiceError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
@@ -130,6 +131,6 @@ def reconcile_nova_poshta_ttn(shipment_id: UUID, workspace_id: UUID = Depends(ge
 @router.post("/{shipment_id}/nova-poshta/sync-status", response_model=NovaPoshtaStatusResponse)
 def sync_nova_poshta_status(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> NovaPoshtaStatusResponse:
     try:
-        return NovaPoshtaShipmentService(db).sync_status(workspace_id, shipment_id, current_user.id)
+        return NovaPoshtaProviderShipmentService(db).sync_status(workspace_id, shipment_id, current_user.id)
     except NovaPoshtaServiceError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
