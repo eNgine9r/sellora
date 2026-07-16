@@ -7,7 +7,7 @@ from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_min_role
 from app.models.role import RoleName
 from app.models.user import User
-from app.schemas.integration import NovaPoshtaDirectoryItem, NovaPoshtaSettingsRequest, NovaPoshtaSettingsResponse, NovaPoshtaTestConnectionResponse
+from app.schemas.integration import NovaPoshtaDirectoryItem, NovaPoshtaSettingsRequest, NovaPoshtaSettingsResponse, NovaPoshtaTestConnectionResponse, NovaPoshtaWritePermissionRequest
 from app.services.nova_poshta_service import NovaPoshtaDirectoryService, NovaPoshtaServiceError, NovaPoshtaSettingsService
 
 router = APIRouter(prefix="/integrations/nova-poshta", tags=["Nova Poshta"])
@@ -26,6 +26,14 @@ def get_settings(workspace_id: UUID = Depends(get_workspace_id), current_user: U
 def save_settings(payload: NovaPoshtaSettingsRequest, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.OWNER)), db: Session = Depends(get_db)) -> NovaPoshtaSettingsResponse:
     try:
         return NovaPoshtaSettingsService(db).save_settings(workspace_id, payload, current_user.id)
+    except NovaPoshtaServiceError as exc:
+        raise _bad_request(exc)
+
+
+@router.patch("/write-permission", response_model=NovaPoshtaSettingsResponse)
+def update_write_permission(payload: NovaPoshtaWritePermissionRequest, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.OWNER)), db: Session = Depends(get_db)) -> NovaPoshtaSettingsResponse:
+    try:
+        return NovaPoshtaSettingsService(db).set_write_permission(workspace_id, payload, current_user.id)
     except NovaPoshtaServiceError as exc:
         raise _bad_request(exc)
 

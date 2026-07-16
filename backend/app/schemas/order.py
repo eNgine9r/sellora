@@ -17,7 +17,6 @@ class OrderItemCreate(BaseModel):
 class OrderCreate(BaseModel):
     customer_id: UUID | None = None
     campaign_id: UUID | None = None
-    campaign_id: UUID | None = None
     status: OrderStatus = OrderStatus.NEW
     payment_status: PaymentStatus = PaymentStatus.PENDING
     is_historical: bool = False
