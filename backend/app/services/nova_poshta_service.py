@@ -36,7 +36,7 @@ from app.schemas.integration import (
     NovaPoshtaTestConnectionResponse,
     NovaPoshtaTtnResponse,
 )
-from app.utils.phone import PhoneNormalizationError, to_nova_poshta_phone
+from app.utils.phone import PhoneNormalizationError, normalize_ua_phone, to_nova_poshta_phone
 from app.utils.secrets import decrypt_secret, encrypt_secret, mask_secret
 
 
@@ -163,6 +163,11 @@ class NovaPoshtaSettingsService:
         existing_settings = dict(connection.settings or {}) if connection else {}
         updates = payload.model_dump(exclude={"api_key"}, exclude_unset=True)
         material_updates = {key: value for key, value in updates.items() if value is not None}
+        if "sender_phone" in material_updates:
+            try:
+                material_updates["sender_phone"] = normalize_ua_phone(material_updates["sender_phone"])
+            except PhoneNormalizationError as exc:
+                raise NovaPoshtaServiceError("INVALID_UA_PHONE") from exc
         api_key_rotated = payload.api_key is not None
         sender_settings_changed = self._material_sender_settings_changed(existing_settings, material_updates)
         settings = {**existing_settings, **material_updates}
@@ -1026,6 +1031,11 @@ class NovaPoshtaShipmentService:
             errors.append("recipient_name is required")
         if not shipment.recipient_phone:
             errors.append("recipient_phone is required")
+        else:
+            try:
+                to_nova_poshta_phone(shipment.recipient_phone)
+            except PhoneNormalizationError:
+                errors.append("NOVA_POSHTA_RECIPIENT_PHONE_INVALID")
         if not (shipment.city or shipment.nova_poshta_city_ref):
             errors.append("city is required")
         if not (shipment.warehouse or shipment.nova_poshta_warehouse_ref):
@@ -1041,6 +1051,11 @@ class NovaPoshtaShipmentService:
         ):
             if not settings.get(field):
                 errors.append(f"{field} is required")
+        if settings.get("sender_phone"):
+            try:
+                to_nova_poshta_phone(settings["sender_phone"])
+            except PhoneNormalizationError:
+                errors.append("NOVA_POSHTA_SENDER_PHONE_INVALID")
         return errors
 
     def _document_payload(self, shipment, settings: dict) -> dict:
@@ -1054,10 +1069,10 @@ class NovaPoshtaShipmentService:
             "Sender": settings.get("sender_counterparty_ref"),
             "SenderAddress": settings.get("sender_warehouse_ref"),
             "ContactSender": settings.get("sender_contact_ref"),
-            "SendersPhone": settings.get("sender_phone"),
+            "SendersPhone": to_nova_poshta_phone(settings.get("sender_phone")),
             "CityRecipient": shipment.nova_poshta_city_ref,
             "RecipientAddress": shipment.nova_poshta_warehouse_ref,
-            "RecipientsPhone": shipment.recipient_phone,
+            "RecipientsPhone": to_nova_poshta_phone(shipment.recipient_phone),
             "RecipientName": shipment.recipient_name,
         }
 

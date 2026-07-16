@@ -298,3 +298,84 @@ def test_generic_non_nova_poshta_address_city_update_remains_compatible() -> Non
     assert updated is address
     assert address.city == "Львів"
     assert address.address_line1 == "Generic address"
+
+
+def test_nova_poshta_address_can_switch_to_other_and_clears_refs() -> None:
+    service, customer, _tag = _customer_service()
+    address = service.add_address(
+        customer.workspace_id,
+        customer.id,
+        CustomerAddressCreate(
+            address_line1="Відділення №1",
+            city="Київ",
+            delivery_provider="NOVA_POSHTA",
+            nova_poshta_city_ref="city-old",
+            nova_poshta_warehouse_ref="wh-old",
+            warehouse_number="1",
+        ),
+        actor_user_id=uuid4(),
+    )
+
+    updated = service.update_address(
+        customer.workspace_id,
+        customer.id,
+        address.id,
+        CustomerAddressUpdate(delivery_provider="OTHER", address_line1="вул. Хрещатик, 1", city="Київ"),
+        actor_user_id=uuid4(),
+    )
+
+    assert updated is address
+    assert address.delivery_provider == "OTHER"
+    assert address.address_line1 == "вул. Хрещатик, 1"
+    assert address.nova_poshta_city_ref is None
+    assert address.nova_poshta_warehouse_ref is None
+    assert address.warehouse_number is None
+
+
+def test_nova_poshta_address_can_switch_to_ukrposhta_or_null_provider() -> None:
+    service, customer, _tag = _customer_service()
+    first = service.add_address(
+        customer.workspace_id,
+        customer.id,
+        CustomerAddressCreate(address_line1="Відділення №1", delivery_provider="NOVA_POSHTA", nova_poshta_city_ref="city", nova_poshta_warehouse_ref="wh", warehouse_number="1"),
+        actor_user_id=uuid4(),
+    )
+    second = service.add_address(
+        customer.workspace_id,
+        customer.id,
+        CustomerAddressCreate(address_line1="Відділення №2", delivery_provider="NOVA_POSHTA", nova_poshta_city_ref="city", nova_poshta_warehouse_ref="wh2", warehouse_number="2"),
+        actor_user_id=uuid4(),
+    )
+
+    service.update_address(customer.workspace_id, customer.id, first.id, CustomerAddressUpdate(delivery_provider="UKRPOSHTA", address_line1="Укрпошта 01001"), actor_user_id=uuid4())
+    service.update_address(customer.workspace_id, customer.id, second.id, CustomerAddressUpdate(delivery_provider=None, address_line1="ручна адреса"), actor_user_id=uuid4())
+
+    assert first.delivery_provider == "UKRPOSHTA"
+    assert first.nova_poshta_city_ref is None
+    assert first.nova_poshta_warehouse_ref is None
+    assert second.delivery_provider is None
+    assert second.nova_poshta_city_ref is None
+    assert second.nova_poshta_warehouse_ref is None
+
+
+def test_generic_address_switching_to_nova_poshta_requires_complete_destination() -> None:
+    service, customer, _tag = _customer_service()
+    address = service.add_address(
+        customer.workspace_id,
+        customer.id,
+        CustomerAddressCreate(address_line1="Generic address", city="Київ", delivery_provider="OTHER"),
+        actor_user_id=uuid4(),
+    )
+
+    with pytest.raises(ValueError, match="NOVA_POSHTA_WAREHOUSE_REQUIRED_AFTER_CITY_CHANGE"):
+        service.update_address(
+            customer.workspace_id,
+            customer.id,
+            address.id,
+            CustomerAddressUpdate(delivery_provider="NOVA_POSHTA", nova_poshta_city_ref="city-new"),
+            actor_user_id=uuid4(),
+        )
+
+    assert address.delivery_provider == "OTHER"
+    assert address.nova_poshta_city_ref is None
+    assert address.address_line1 == "Generic address"

@@ -48,7 +48,7 @@ class FakeAudit:
 
 class FakeClient:
     def __init__(self, credential, fail=False, fail_create=False, fail_status=False, sender_error=None):
-        self.credential = credential; self.fail = fail; self.fail_create = fail_create; self.fail_status = fail_status; self.sender_error = sender_error; self.create_called = False
+        self.credential = credential; self.fail = fail; self.fail_create = fail_create; self.fail_status = fail_status; self.sender_error = sender_error; self.create_called = False; self.last_payload = None
     def test_connection(self):
         if self.fail: raise RuntimeError("failed")
         return True
@@ -69,6 +69,7 @@ class FakeClient:
         return city_ref == "sender-city" and warehouse_ref == "sender-wh"
     def create_internet_document(self, payload):
         self.create_called = True
+        self.last_payload = payload
         if self.fail_create: raise RuntimeError("raw upstream payload with credential-like value")
         return SimpleNamespace(tracking_number="TTN-001", document_ref="doc-ref", status="CREATED")
     def get_document_status(self, tracking_number):
@@ -104,7 +105,7 @@ def test_settings_save_encrypts_and_masks_response_without_raw_value() -> None:
 def test_sender_settings_update_preserves_existing_credential_without_raw_response() -> None:
     service = _settings_service(); workspace_id = uuid4()
     service.save_settings(workspace_id, NovaPoshtaSettingsRequest(api_key="synthetic-credential-value"), uuid4())
-    response = service.save_settings(workspace_id, NovaPoshtaSettingsRequest(sender_city_ref="sender-city", sender_warehouse_ref="sender-wh", sender_counterparty_ref="sender", sender_contact_ref="contact", sender_phone="0000000000"), uuid4())
+    response = service.save_settings(workspace_id, NovaPoshtaSettingsRequest(sender_city_ref="sender-city", sender_warehouse_ref="sender-wh", sender_counterparty_ref="sender", sender_contact_ref="contact", sender_phone="+380671234567"), uuid4())
     assert decrypt_secret(service.credentials.credential.encrypted_access_token) == "synthetic-credential-value"
     assert response.sender_city_ref == "sender-city"
     assert "synthetic-credential-value" not in str(response.model_dump())
@@ -181,7 +182,7 @@ def test_create_ttn_validates_required_fields_before_api_call() -> None:
 
 
 def test_create_ttn_reports_clear_sender_settings_message() -> None:
-    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="+380671234567", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
     shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
     service = _shipment_service(shipment, sender_settings_complete=False)
     response = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
@@ -191,7 +192,7 @@ def test_create_ttn_reports_clear_sender_settings_message() -> None:
 
 
 def test_create_ttn_updates_shipment_and_does_not_log_credential() -> None:
-    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="+380671234567", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
     shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
     service = _shipment_service(shipment)
     response = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
@@ -207,7 +208,7 @@ def test_manual_shipments_remain_valid_without_nova_poshta_configuration() -> No
 
 
 def test_create_ttn_prevents_duplicate_nova_poshta_document() -> None:
-    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.CREATED.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100, tracking_number="TTN-001", nova_poshta_document_ref="doc-ref", nova_poshta_document_number="TTN-001")
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.CREATED.value, recipient_name="Recipient", recipient_phone="+380671234567", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100, tracking_number="TTN-001", nova_poshta_document_ref="doc-ref", nova_poshta_document_number="TTN-001")
     shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
     service = _shipment_service(shipment)
     response = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
@@ -217,7 +218,7 @@ def test_create_ttn_prevents_duplicate_nova_poshta_document() -> None:
 
 
 def test_create_ttn_api_failure_uses_safe_error_message_without_raw_payload() -> None:
-    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="+380671234567", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
     shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
     service = _shipment_service(shipment)
     service.settings.client_factory = lambda credential: FakeClient(credential, fail_create=True)
@@ -239,7 +240,7 @@ def test_sync_status_failure_returns_safe_message() -> None:
 
 
 def test_create_ttn_incomplete_response_is_safe_and_does_not_store_tracking() -> None:
-    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="+380671234567", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
     shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
     service = _shipment_service(shipment)
     service.settings.client_factory = lambda credential: SimpleNamespace(create_internet_document=lambda payload: SimpleNamespace(tracking_number=None, document_ref=None, status="CREATED"))
@@ -275,7 +276,7 @@ def test_sync_status_empty_response_returns_safe_unavailable_message() -> None:
 
 
 def test_cross_workspace_ttn_access_uses_workspace_scoped_connection_and_shipment() -> None:
-    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="0000000000", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="+380671234567", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
     shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
     service = _shipment_service(shipment)
 
@@ -401,7 +402,8 @@ def test_sender_tuple_validation_failures_are_sanitized(sender_error, expected_c
 def test_sender_tuple_invalid_phone_fails_without_provider_write() -> None:
     client = FakeClient("credential")
     service = _settings_service(lambda credential: client); workspace_id = uuid4()
-    service.save_settings(workspace_id, _complete_settings(sender_phone="00380671234567"), uuid4())
+    service.save_settings(workspace_id, _complete_settings(), uuid4())
+    service.connections.connection.settings["sender_phone"] = "00380671234567"
 
     response = service.test_connection(workspace_id, uuid4())
 
@@ -431,3 +433,90 @@ def test_permission_gate_missing_credential_sender_and_unverified_block(monkeypa
     assert "CONNECTION_NOT_CONFIGURED" in response.write_blockers
     assert "SENDER_NOT_CONFIGURED" in response.write_blockers
     assert "CONNECTION_NOT_VERIFIED" in response.write_blockers
+
+
+@pytest.mark.parametrize("raw_phone", ["0671234567", "+380671234567", "380671234567", "067 123 45 67", "(067) 123-45-67"])
+def test_sender_phone_is_stored_canonically_and_payload_uses_provider_format(raw_phone) -> None:
+    service = _settings_service(); workspace_id = uuid4()
+
+    response = service.save_settings(workspace_id, _complete_settings(sender_phone=raw_phone), uuid4())
+
+    assert response.sender_phone == "+380671234567"
+    shipment = Shipment(id=uuid4(), workspace_id=workspace_id, order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone=raw_phone, city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
+    payload = NovaPoshtaShipmentService.__new__(NovaPoshtaShipmentService)._document_payload(shipment, service.connections.connection.settings)
+
+    assert payload["SendersPhone"] == "380671234567"
+    assert payload["RecipientsPhone"] == "380671234567"
+
+
+def test_invalid_sender_phone_is_rejected_on_settings_save() -> None:
+    service = _settings_service(); workspace_id = uuid4()
+
+    with pytest.raises(ValueError, match="INVALID_UA_PHONE"):
+        service.save_settings(workspace_id, _complete_settings(sender_phone="00380671234567"), uuid4())
+
+
+def test_invalid_recipient_phone_blocks_provider_call(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    client = FakeClient("credential")
+    settings = _settings_service(lambda credential: client); workspace_id = uuid4()
+    settings.save_settings(workspace_id, _complete_settings(), uuid4())
+    settings.test_connection(workspace_id, uuid4())
+    settings.set_write_permission(workspace_id, NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+    shipment = Shipment(id=uuid4(), workspace_id=workspace_id, order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="not-a-phone", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
+    service = NovaPoshtaShipmentService.__new__(NovaPoshtaShipmentService)
+    service.db = FakeDb(); service.settings = settings; service.audit_logs = FakeAudit(); service.shipments = SimpleNamespace(get=lambda workspace_id, shipment_id: shipment); service.operations = SimpleNamespace(get_for_update=lambda *args: None)
+
+    response = service.create_ttn(workspace_id, shipment.id, uuid4())
+
+    assert not response.success
+    assert "NOVA_POSHTA_RECIPIENT_PHONE_INVALID" in response.errors
+    assert not client.create_called
+
+
+def test_legacy_ttn_updates_last_sync_but_not_verification(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    client = FakeClient("credential")
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="+380671234567", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
+    service = _shipment_service(shipment)
+    service.settings.client_factory = lambda credential: client
+    connection = service.settings.connections.connection
+    connection.provider_connection_verified_at = None
+
+    response = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
+
+    assert response.success
+    assert connection.last_sync_at is not None
+    assert connection.provider_connection_verified_at is None
+    assert client.last_payload["SendersPhone"] == "380671234567"
+    assert client.last_payload["RecipientsPhone"] == "380671234567"
+
+
+def test_durable_ttn_success_and_failure_do_not_modify_verification(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    client = FakeClient("credential")
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="+380671234567", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    shipment.order = SimpleNamespace(order_number="ORD-SYNTH")
+    service = _shipment_service(shipment)
+    service.settings.client_factory = lambda credential: client
+    service.operations = SimpleNamespace(get_for_update=lambda *args: None)
+    connection = service.settings.connections.connection
+    connection.provider_connection_verified_at = None
+
+    blocked = service.create_ttn(shipment.workspace_id, shipment.id, uuid4())
+    assert not blocked.success
+    assert connection.provider_connection_verified_at is None
+
+
+def test_request_fingerprint_uses_provider_formatted_payload() -> None:
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="067 123 45 67", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)
+    service = NovaPoshtaShipmentService.__new__(NovaPoshtaShipmentService)
+    payload = service._document_payload(shipment, {"sender_city_ref": "sender-city", "sender_warehouse_ref": "sender-wh", "sender_counterparty_ref": "sender", "sender_contact_ref": "contact", "sender_phone": "+380671234567"})
+    fingerprint = service._request_fingerprint(payload)
+
+    assert payload["SendersPhone"] == "380671234567"
+    assert payload["RecipientsPhone"] == "380671234567"
+    assert "067 123" not in fingerprint
