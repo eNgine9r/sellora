@@ -1,0 +1,5 @@
+Sprint 8E diagnostic runtime deployment trigger.
+
+This file is intentionally located under the Render backend root directory so the staging service detects the commit. It contains no executable code and changes no application behavior.
+
+Required runtime includes PR #177 sanitized Nova Poshta validation diagnostics.
