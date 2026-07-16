@@ -107,6 +107,9 @@ def assert_previous_head_upgrade(ids: dict[str, str]) -> None:
         ).one()
         assert gate.provider_writes_allowed is False
         assert gate.provider_connection_verified_at is None
+
+
+def assert_partial_unique_index_enforced(ids: dict[str, str]) -> None:
     duplicate_id = str(uuid4())
     try:
         with engine.begin() as connection:
@@ -127,13 +130,31 @@ def assert_previous_head_upgrade(ids: dict[str, str]) -> None:
                         true
                     )
                 """),
-                {**ids, "duplicate_id": duplicate_id},
+                {
+                    "duplicate_id": duplicate_id,
+                    "workspace_id": ids["workspace_id"],
+                    "customer_id": ids["customer_id"],
+                },
             )
     except IntegrityError as exc:
         database_error = str(exc.orig)
-        assert "uq_customer_addresses_one_active_default" in database_error
+        assert "uq_customer_addresses_one_active_default" in database_error, database_error
     else:
-        raise AssertionError("uq_customer_addresses_one_active_default allowed a second active default")
+        raise AssertionError("uq_customer_addresses_one_active_default allowed a second active default address")
+
+    with engine.begin() as connection:
+        default_count = connection.execute(
+            text("""
+                SELECT count(*)
+                FROM customer_addresses
+                WHERE workspace_id = :workspace_id
+                  AND customer_id = :customer_id
+                  AND is_default = true
+                  AND deleted_at IS NULL
+            """),
+            ids,
+        ).scalar_one()
+        assert default_count == 1
 
 
 def assert_current_head() -> None:
@@ -151,6 +172,7 @@ def main() -> None:
     ids = seed_previous_head_records()
     alembic("upgrade", "202607160023")
     assert_previous_head_upgrade(ids)
+    assert_partial_unique_index_enforced(ids)
 
     alembic("downgrade", "202607150022")
     alembic("upgrade", "202607160023")
