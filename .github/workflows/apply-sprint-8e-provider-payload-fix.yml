@@ -120,3 +120,5 @@ jobs:
           git add backend/app/services/nova_poshta_service.py backend/app/integrations/nova_poshta_client.py backend/tests/test_nova_poshta.py .github/workflows/apply-sprint-8e-provider-payload-fix.yml
           git commit -m "Fix Nova Poshta InternetDocument payload"
           git push origin HEAD:fix/sprint-8e-nova-poshta-payload
+
+# connector synchronization trigger
