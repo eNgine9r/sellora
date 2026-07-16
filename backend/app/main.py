@@ -10,6 +10,7 @@ from app.core.config import get_settings
 settings = get_settings()
 PROCESS_STARTED_AT = datetime.now(UTC).isoformat()
 RUNTIME_COMMIT = os.getenv("RENDER_GIT_COMMIT", "local")
+# Sprint 8E: source-level no-op marker for the mandatory post-provider restart boundary.
 
 app = FastAPI(
     title=settings.app_name,
