@@ -163,14 +163,14 @@ class NovaPoshtaClient:
         return any(str(item.get("Ref") or "") == counterparty_ref for item in body.get("data", []))
 
     def contact_belongs_to_counterparty(self, counterparty_ref: str, contact_ref: str) -> bool:
-        body = self._call("ContactPerson", "getCounterpartyContactPersons", {"Ref": counterparty_ref})
+        body = self._call("Counterparty", "getCounterpartyContactPersons", {"Ref": counterparty_ref})
         return any(str(item.get("Ref") or "") == contact_ref for item in body.get("data", []))
 
     def warehouse_belongs_to_city(self, city_ref: str, warehouse_ref: str) -> bool:
         return any(item.ref == warehouse_ref for item in self.search_warehouses(city_ref, None, 500))
 
     def sender_address_belongs_to_sender(self, sender_ref: str, address_ref: str) -> bool:
-        body = self._call("Address", "getCounterpartyAddresses", {"Ref": sender_ref, "CounterpartyProperty": "Sender"})
+        body = self._call("Counterparty", "getCounterpartyAddresses", {"Ref": sender_ref, "CounterpartyProperty": "Sender"})
         return any(str(item.get("Ref") or "") == address_ref for item in body.get("data", []))
 
     def create_internet_document(self, payload: dict[str, Any]) -> NovaPoshtaDocumentResult:

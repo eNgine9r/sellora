@@ -59,7 +59,7 @@ class ShipmentService:
         shipment = self.shipments.get_by_order(workspace_id, order_id)
         return self._response(shipment) if shipment else None
 
-    def create(self, workspace_id: UUID, payload: ShipmentCreate, actor_user_id: UUID | None) -> ShipmentResponse:
+    def create(self, workspace_id: UUID, payload: ShipmentCreate, actor_user_id: UUID | None, *, commit: bool = True) -> ShipmentResponse:
         order = self._get_order_for_update(workspace_id, payload.order_id)
         if order is None:
             raise ShipmentServiceError("Order not found in this workspace")
@@ -92,11 +92,14 @@ class ShipmentService:
         self._stamp_status(shipment, payload.status)
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Shipment", entity_id=shipment.id, action="SHIPMENT_CREATE", new_value=snapshot(shipment))
         try:
-            self.db.commit()
+            if commit:
+                self.db.commit()
+                self.db.refresh(shipment)
+            else:
+                self.db.flush()
         except IntegrityError as exc:
             self.db.rollback()
             raise ShipmentServiceError("Active shipment or tracking number already exists in this workspace") from exc
-        self.db.refresh(shipment)
         return self._response(self.shipments.get(workspace_id, shipment.id) or shipment)
 
     def update(self, workspace_id: UUID, shipment_id: UUID, payload: ShipmentUpdate, actor_user_id: UUID | None) -> ShipmentResponse | None:

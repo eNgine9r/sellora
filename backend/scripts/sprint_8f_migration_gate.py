@@ -157,9 +157,15 @@ def assert_partial_unique_index_enforced(ids: dict[str, str]) -> None:
         assert default_count == 1
 
 
-def assert_current_head() -> None:
+def assert_current_revision(expected_revision: str) -> None:
     output = alembic("current")
-    assert "202607160023" in output
+    assert expected_revision in output, output
+
+
+def assert_current_head() -> None:
+    current_revision = alembic("current").split()[0]
+    head_revision = alembic("heads").split()[0]
+    assert current_revision == head_revision, (current_revision, head_revision)
 
 
 def main() -> None:
@@ -176,7 +182,7 @@ def main() -> None:
 
     alembic("downgrade", "202607150022")
     alembic("upgrade", "202607160023")
-    assert_current_head()
+    assert_current_revision("202607160023")
 
 
 if __name__ == "__main__":

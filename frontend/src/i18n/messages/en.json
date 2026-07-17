@@ -920,6 +920,7 @@
     "needsAction": "Needs action",
     "openOrder": "Open order",
     "copyTtn": "Copy TTN",
+    "retryTtn": "Retry TTN creation",
     "ttnCopied": "TTN number copied.",
     "ttnCopyFailed": "Unable to copy TTN. Copy the number manually.",
     "ttnPrintUnavailable": "TTN printing is not connected yet.",
@@ -2083,6 +2084,54 @@
         "title": "Inventory state",
         "description": "Review stock and low-stock signals."
       }
+    }
+  },
+  "fulfillment": {
+    "progress": "Checkout steps",
+    "step1": "Customer and delivery",
+    "step2": "Products and payment",
+    "step3": "Review",
+    "existingCustomer": "Existing customer",
+    "newCustomer": "New customer",
+    "recipientAndDelivery": "Recipient and Nova Poshta",
+    "recipientName": "Recipient name",
+    "normalized": "Will be saved as",
+    "phoneHint": "Enter a Ukrainian number, for example 067 123 45 67",
+    "city": "City",
+    "warehouse": "Branch or parcel locker",
+    "saveDefault": "Save as the customer's default address",
+    "product": "Product and variant",
+    "codAmount": "Cash on delivery amount",
+    "declaredValue": "Declared value",
+    "additionalDetails": "Additional details (optional)",
+    "delivery": "Delivery",
+    "total": "Total",
+    "writesDisabled": "TTN creation is currently unavailable. You can safely create the order without a TTN and complete it after the integration is verified.",
+    "ready": "The required data is ready. Sellora will create the order, reservation, shipment and one TTN.",
+    "back": "Back",
+    "continue": "Continue",
+    "createWithoutTtn": "Create without TTN",
+    "createOrderAndTtn": "Create order and TTN",
+    "creating": "Creating…",
+    "submitError": "Could not complete checkout. Review the highlighted data.",
+    "providerActionRequired": "The order is saved. Check Nova Poshta settings or reconciliation state before the next action.",
+    "copyTtn": "Copy TTN",
+    "openOrder": "Open order",
+    "openShipment": "Open shipment",
+    "result": {
+      "ORDER_AND_TTN_CREATED": "Order and TTN are ready",
+      "ORDER_CREATED_TTN_PENDING": "Order created, TTN pending",
+      "ORDER_CREATED_PROVIDER_RECONCILIATION_REQUIRED": "Order saved — TTN review required"
+    },
+    "validation": {
+      "customer": "Select a customer.",
+      "name": "Enter the new customer's name.",
+      "recipient": "Enter the recipient name.",
+      "phone": "Enter a valid Ukrainian phone number.",
+      "city": "Select a city from the Nova Poshta directory.",
+      "warehouse": "Select a branch or parcel locker from the directory.",
+      "items": "Add a product, quantity and price.",
+      "stock": "One of the products does not have enough available stock."
     }
   },
   "workspace": {

@@ -1008,7 +1008,6 @@ class NovaPoshtaShipmentService:
         shipment.tracking_number = result.tracking_number
         shipment.status = ShipmentStatus.CREATED.value
         connection.last_sync_at = datetime.now(UTC)
-        connection.provider_connection_verified_at = connection.last_sync_at
         self.db.commit()
         return NovaPoshtaTtnResponse(
             success=True,
@@ -1060,7 +1059,7 @@ class NovaPoshtaShipmentService:
         return errors
 
     def _document_payload(self, shipment, settings: dict) -> dict:
-        return {
+        payload = {
             "PayerType": "Recipient",
             "PaymentMethod": "Cash",
             "CargoType": "Parcel",
@@ -1076,6 +1075,15 @@ class NovaPoshtaShipmentService:
             "RecipientsPhone": to_nova_poshta_phone(shipment.recipient_phone),
             "RecipientName": shipment.recipient_name,
         }
+        if shipment.cod_amount and shipment.cod_amount > 0:
+            payload["BackwardDeliveryData"] = [
+                {
+                    "PayerType": "Recipient",
+                    "CargoType": "Money",
+                    "RedeliveryString": str(shipment.cod_amount),
+                }
+            ]
+        return payload
 
     def _request_fingerprint(self, payload: dict) -> str:
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")

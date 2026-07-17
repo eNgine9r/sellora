@@ -15,7 +15,7 @@ class NovaPoshtaProviderShipmentService(NovaPoshtaShipmentService):
     """
 
     def _document_payload(self, shipment, settings: dict) -> dict:
-        return {
+        payload = {
             "PayerType": "Recipient",
             "PaymentMethod": "Cash",
             "DateTime": datetime.now(UTC).strftime("%d.%m.%Y"),
@@ -38,3 +38,13 @@ class NovaPoshtaProviderShipmentService(NovaPoshtaShipmentService):
             "RecipientType": "PrivatePerson",
             "RecipientsPhone": to_nova_poshta_phone(shipment.recipient_phone),
         }
+        cod_amount = getattr(shipment, "cod_amount", None)
+        if cod_amount and cod_amount > 0:
+            payload["BackwardDeliveryData"] = [
+                {
+                    "PayerType": "Recipient",
+                    "CargoType": "Money",
+                    "RedeliveryString": str(cod_amount),
+                }
+            ]
+        return payload

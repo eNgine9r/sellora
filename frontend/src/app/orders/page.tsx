@@ -20,12 +20,12 @@ import { Button, CompactSummary, EntitySidePanel, MetricCard, WorkspaceHeader, W
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { OrderDetails } from "@/features/orders/components/order-details";
 import { OrderForm } from "@/features/orders/components/order-form";
+import { OrderFulfillmentWizard } from "@/features/orders/components/order-fulfillment-wizard";
 import { OrderTable } from "@/features/orders/components/order-table";
 import { formatMoney } from "@/lib/currency";
-import { createCustomer, fetchCustomers } from "@/services/crm";
+import { fetchCustomers } from "@/services/crm";
 import {
   changeOrderStatus,
-  createOrder,
   deleteOrder,
   fetchOrderDashboard,
   fetchOrders,
@@ -38,7 +38,6 @@ import {
   fetchProducts,
   fetchProductVariants,
 } from "@/services/products";
-import { Customer } from "@/types/crm";
 import { Order, OrderStatus, PaymentStatus } from "@/types/orders";
 import { useAuth } from "@/hooks/use-auth";
 import { safeApiErrorMessage } from "@/services/api";
@@ -138,15 +137,6 @@ export default function OrdersPage() {
     });
     queryClient.invalidateQueries({ queryKey: ["shipments", workspaceId] });
   };
-  const createMutation = useMutation({
-    mutationFn: (values: Parameters<typeof createOrder>[1]) =>
-      createOrder(workspaceId, values),
-    onSuccess: (order) => {
-      setIsCreateOpen(false);
-      setSelectedOrder(order);
-      invalidateOrderState();
-    },
-  });
   const statusMutation = useMutation({
     mutationFn: ({
       orderId,
@@ -175,20 +165,6 @@ export default function OrdersPage() {
       if (selectedOrder?.id === archivingOrder?.id) setSelectedOrder(null);
       setArchivingOrder(null);
       invalidateOrderState();
-    },
-  });
-  const createCustomerMutation = useMutation({
-    mutationFn: (payload: Parameters<typeof createCustomer>[1]) =>
-      createCustomer(workspaceId, payload),
-    onSuccess: (customer) => {
-      queryClient.setQueryData<Customer[]>(
-        ["customers", workspaceId, "order-selector"],
-        (current = []) => [
-          customer,
-          ...current.filter((item) => item.id !== customer.id),
-        ],
-      );
-      queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
     },
   });
 
@@ -413,7 +389,8 @@ export default function OrdersPage() {
             size="xl"
             onClose={() => setIsCreateOpen(false)}
           >
-            <OrderForm
+            <OrderFulfillmentWizard
+              workspaceId={workspaceId}
               variants={variantsQuery.data ?? []}
               products={productsQuery.data ?? []}
               inventory={inventoryQuery.data ?? []}
@@ -421,15 +398,11 @@ export default function OrdersPage() {
               campaigns={campaignsQuery.data ?? []}
               currencyCode={currencyCode}
               showProfit={currentWorkspace?.role === "OWNER"}
-              isCreatingCustomer={createCustomerMutation.isPending}
-              onCreateCustomer={(payload) =>
-                createCustomerMutation.mutateAsync(payload)
-              }
-              onSubmit={(values) =>
-                createMutation.mutate(
-                  values as Parameters<typeof createOrder>[1],
-                )
-              }
+              onSuccess={(result) => {
+                setSelectedOrder(result.order);
+                invalidateOrderState();
+                queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
+              }}
             />
           </FormDialog>
         ) : null}

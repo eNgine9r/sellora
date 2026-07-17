@@ -71,12 +71,13 @@ export function ShipmentForm({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const isNovaPoshta = carrier === "NOVA_POSHTA";
     const payload = buildShipmentCreatePayload({
       order_id: orderId,
       customer_id: selectedOrder?.customer_id ?? undefined,
-      tracking_number: trackingNumber,
+      tracking_number: isNovaPoshta ? "" : trackingNumber,
       carrier,
-      status,
+      status: isNovaPoshta ? "DRAFT" : status,
       recipient_name: recipientName,
       recipient_phone: recipientPhone,
       city,
@@ -96,7 +97,7 @@ export function ShipmentForm({
       setValidationError(t("shipments.orderCustomerMissing"));
       return;
     }
-    if (payload.status !== "DRAFT" && !payload.tracking_number) {
+    if (!isNovaPoshta && payload.status !== "DRAFT" && !payload.tracking_number) {
       setValidationError(t("shipments.trackingRequired"));
       return;
     }
@@ -136,14 +137,6 @@ export function ShipmentForm({
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {t("shipments.trackingTtn")}
-          <input
-            className="min-h-11 rounded-lg border border-slate-300 px-3 py-2"
-            value={trackingNumber}
-            onChange={(event) => setTrackingNumber(event.target.value)}
-          />
-        </label>
-        <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
           {t("shipments.carrier")}
           <select
             className="min-h-11 rounded-lg border border-slate-300 px-3 py-2"
@@ -159,21 +152,37 @@ export function ShipmentForm({
             ))}
           </select>
         </label>
+        {carrier !== "NOVA_POSHTA" ? (
+          <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {t("shipments.trackingTtn")}
+            <input
+              className="min-h-11 rounded-lg border border-slate-300 px-3 py-2"
+              value={trackingNumber}
+              onChange={(event) => setTrackingNumber(event.target.value)}
+            />
+          </label>
+        ) : (
+          <p className="self-end rounded-lg bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-100">
+            {t("fulfillment.providerReady")}
+          </p>
+        )}
       </div>
-      <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-        {t("tables.status")}
-        <select
-          className="min-h-11 rounded-lg border border-slate-300 px-3 py-2"
-          value={status}
-          onChange={(event) => setStatus(event.target.value as ShipmentStatus)}
-        >
-          {STATUSES.map((item) => (
-            <option key={item} value={item}>
-              {formatStatus("shipment", item)}
-            </option>
-          ))}
-        </select>
-      </label>
+      {carrier !== "NOVA_POSHTA" ? (
+        <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+          {t("tables.status")}
+          <select
+            className="min-h-11 rounded-lg border border-slate-300 px-3 py-2"
+            value={status}
+            onChange={(event) => setStatus(event.target.value as ShipmentStatus)}
+          >
+            {STATUSES.map((item) => (
+              <option key={item} value={item}>
+                {formatStatus("shipment", item)}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
           {t("shipments.recipient")}
@@ -192,24 +201,26 @@ export function ShipmentForm({
           />
         </label>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {t("shipments.city")}
-          <input
-            className="min-h-11 rounded-lg border border-slate-300 px-3 py-2"
-            value={city}
-            onChange={(event) => setCity(event.target.value)}
-          />
-        </label>
-        <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {t("shipments.warehouse")}
-          <input
-            className="min-h-11 rounded-lg border border-slate-300 px-3 py-2"
-            value={warehouse}
-            onChange={(event) => setWarehouse(event.target.value)}
-          />
-        </label>
-      </div>
+      {carrier !== "NOVA_POSHTA" ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {t("shipments.city")}
+            <input
+              className="min-h-11 rounded-lg border border-slate-300 px-3 py-2"
+              value={city}
+              onChange={(event) => setCity(event.target.value)}
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {t("shipments.warehouse")}
+            <input
+              className="min-h-11 rounded-lg border border-slate-300 px-3 py-2"
+              value={warehouse}
+              onChange={(event) => setWarehouse(event.target.value)}
+            />
+          </label>
+        </div>
+      ) : null}
       {carrier === "NOVA_POSHTA" ? (
         <div className="grid gap-4 rounded-xl bg-slate-50 p-3 dark:bg-white/[0.04] sm:grid-cols-2">
           <CitySearchSelect
