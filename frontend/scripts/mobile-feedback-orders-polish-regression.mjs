@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 
 const checks = [];
 function read(path) { return readFileSync(path, "utf8"); }
@@ -6,7 +6,7 @@ function check(label, condition) { checks.push({ label, condition }); }
 function has(path, ...needles) { const source = read(path); return needles.every((needle) => source.includes(needle)); }
 
 check("mobile sidebar footer compact layout", has("frontend/src/components/app-shell.tsx", "mobile-sidebar-footer-compact", "truncate", "mobileSidebar.quickControls"));
-check("mobile topbar action consolidation", has("frontend/src/components/app-topbar.tsx", "mobile-topbar-compact", "mobile-topbar-more-menu", "MoreHorizontal", "md:hidden"));
+check("mobile topbar action consolidation", has("frontend/src/components/app-topbar.tsx", "mobile-topbar-compact", "mobile-more-sheet", "MoreHorizontal", "md:hidden"));
 check("mobile More menu contains feedback/language/theme", has("frontend/src/components/app-topbar.tsx", "FeedbackDialog", "LanguageSwitcher compact", "ThemeToggle compact"));
 check("date range mobile overflow fix", has("frontend/src/components/date-range-selector.tsx", "date-range-mobile-custom", "grid min-w-0 gap-2", "sm:flex"));
 check("calendar icon visibility styles", has("frontend/src/app/globals.css", "::-webkit-calendar-picker-indicator", "color-scheme: dark", "sellora-date-input"));

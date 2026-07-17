@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 
 const checks = [];
 const read = (path) => readFileSync(path, "utf8");
-const has = (path, ...needles) => needles.every((needle) => read(path).includes(needle));
 const check = (label, condition) => checks.push({ label, condition });
 
 const backendService = read("backend/app/services/nova_poshta_service.py");
@@ -30,7 +29,7 @@ check("safe error messages", backendService.includes("NOVA_POSHTA_TTN_FAILED") &
 check("audit logging without raw keys", backendService.includes("credential_rotated") && backendService.includes("safe_error") && backendTests.includes("does_not_log_credential"));
 check("workspace safety markers", backendService.includes("get(workspace_id, shipment_id)") && backendService.includes("_require_connection(workspace_id)") && backendApi.includes("get_workspace_id"));
 check("i18n keys", [en, uk].every((messages) => messages.includes("ttnFailed") && messages.includes("senderSettingsIncomplete") && messages.includes("statusSyncUnavailable") && messages.includes("createFromOrder")));
-check("production validation docs", docs.includes("Nova Poshta Production Validation Guide") && docs.includes("Duplicate TTN") || docs.includes("Duplicate TTN"));
+check("production validation docs", docs.includes("Nova Poshta Production Validation Guide") && docs.includes("Duplicate TTN"));
 check("no raw API key fixture", !/(api[_ -]?key\s*[:=]\s*[A-Za-z0-9_-]{16,}|Authorization: Bearer\s+[A-Za-z0-9._-]+)/i.test(settingsCard + backendTests + docs));
 
 const failed = checks.filter((item) => !item.condition);
