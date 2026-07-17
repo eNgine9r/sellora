@@ -3,6 +3,7 @@ from pathlib import Path
 from app.models.customer_address import CustomerAddress
 
 MIGRATION = Path("alembic/versions/202607160023_sprint_8f_foundation.py")
+MIGRATION_GATE = Path("scripts/sprint_8f_migration_gate.py")
 
 
 def test_migration_repairs_duplicate_defaults_before_partial_index() -> None:
@@ -23,3 +24,10 @@ def test_customer_address_model_contains_matching_partial_default_index() -> Non
     assert [column.name for column in index.columns] == ["workspace_id", "customer_id"]
     assert index.unique is True
     assert str(index.dialect_options["postgresql"]["where"]) == "is_default = true AND deleted_at IS NULL"
+
+
+def test_migration_gate_resolves_the_current_head_dynamically() -> None:
+    source = MIGRATION_GATE.read_text()
+
+    assert 'alembic("heads")' in source
+    assert "current_revision == head_revision" in source
