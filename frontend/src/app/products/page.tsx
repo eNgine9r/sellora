@@ -148,6 +148,7 @@ export default function ProductsPage() {
 
   const products = useMemo(() => productsQuery.data ?? [], [productsQuery.data]);
   const variants = useMemo(() => variantsQuery.data ?? [], [variantsQuery.data]);
+  const inventory = useMemo(() => inventoryQuery.data ?? [], [inventoryQuery.data]);
   const categoryOptions = translatedCategoryOptions(t);
   const visibleProducts = useMemo(() => {
     const variantLookup = new Map<string, ProductVariant[]>();

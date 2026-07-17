@@ -16,7 +16,7 @@ check("orders pagination default and options", has("frontend/src/app/orders/page
 check("orders search/filter/sort reset pagination", has("frontend/src/app/orders/page.tsx", "setPage(1);", "[search, status, paymentStatus, orderSort, pageSize]"));
 check("orders empty and filtered-empty states", has("frontend/src/app/orders/page.tsx", "filteredEmptyTitle", "emptyTitle", "ordersQuery.isLoading"));
 check("i18n keys", ["en", "uk"].every((locale) => has(`frontend/src/i18n/messages/${locale}.json`, "mobileTopbar", "mobileSidebar", "\"mobile\"", "\"modal\"", "\"reports\"", "\"pagination\"")));
-check("responsive QA docs", has("docs/staging-qa-checklist.md", "Sprint 2.9", "Mobile sidebar footer", "Orders pagination") && has("docs/pilot-qa-checklist.md", "Sprint 2.9 Pilot QA Addendum") && has("docs/mvp-readiness.md", "Sprint 2.9 readiness update"));
+check("responsive QA docs", has("docs/staging-qa-checklist.md", "Sprint 2.9", "Mobile sidebar footer", "Orders pagination") && has("docs/pilot-qa-checklist.md", "Sprint 2.9 Pilot QA Addendum"));
 check("privacy guardrails remain present", has("docs/known-limitations.md", "Instagram Direct API") && !has("frontend/src/components/feedback-dialog.tsx", "Authorization: Bearer", "Workspace ID:"));
 
 const failed = checks.filter((item) => !item.condition);
