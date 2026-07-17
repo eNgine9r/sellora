@@ -59,7 +59,7 @@ class OrderService:
         orders_today, revenue_today, profit_today = self.orders.dashboard_today(workspace_id)
         return OrderDashboardResponse(orders_today=orders_today, revenue_today=revenue_today, profit_today=profit_today)
 
-    def create(self, workspace_id: UUID, payload: OrderCreate, actor_user_id: UUID | None, affect_inventory: bool = True, order_number: str | None = None, created_at: datetime | None = None, completed_at: datetime | None = None) -> Order:
+    def create(self, workspace_id: UUID, payload: OrderCreate, actor_user_id: UUID | None, affect_inventory: bool = True, order_number: str | None = None, created_at: datetime | None = None, completed_at: datetime | None = None, *, commit: bool = True) -> Order:
         customer = self._get_order_customer(workspace_id, payload.customer_id, payload.is_historical)
         self._validate_campaign(workspace_id, payload.campaign_id)
         prepared_items = []
@@ -123,8 +123,11 @@ class OrderService:
         self._recalculate_profit(order)
         self._add_status_history(order, None, OrderStatus(initial_status), actor_user_id, "Order created")
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="CREATE", new_value=snapshot(order))
-        self.db.commit()
-        self.db.refresh(order)
+        if commit:
+            self.db.commit()
+            self.db.refresh(order)
+        else:
+            self.db.flush()
         return order
 
     def update(self, workspace_id: UUID, order_id: UUID, payload: OrderUpdate, actor_user_id: UUID | None) -> Order | None:

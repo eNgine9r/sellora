@@ -12,6 +12,7 @@ WORKSPACE_PREFIXES = (
     "/api/v1/leads",
     "/api/v1/customers",
     "/api/v1/orders",
+    "/api/v1/order-fulfillments",
     "/api/v1/products",
     "/api/v1/inventory",
     "/api/v1/shipments",
@@ -41,12 +42,12 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 3,
     "AUTHENTICATED_GLOBAL": 4,
-    "WORKSPACE_SCOPED": 136,
+    "WORKSPACE_SCOPED": 137,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 155
-EXPECTED_MUTATION_ROUTES = 86
+EXPECTED_TOTAL_ROUTES = 156
+EXPECTED_MUTATION_ROUTES = 87
 
 
 def _flatten_routes(routes, prefix: str = "") -> list[tuple[str, APIRoute]]:

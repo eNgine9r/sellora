@@ -23,7 +23,7 @@ class CustomerService:
     def get(self, workspace_id: UUID, customer_id: UUID) -> Customer | None:
         return self.customers.get(workspace_id, customer_id)
 
-    def create(self, workspace_id: UUID, payload: CustomerCreate, actor_user_id: UUID | None) -> Customer:
+    def create(self, workspace_id: UUID, payload: CustomerCreate, actor_user_id: UUID | None, *, commit: bool = True) -> Customer:
         customer = self.customers.create(Customer(workspace_id=workspace_id, **payload.model_dump()))
         self.audit_logs.create(
             workspace_id=workspace_id,
@@ -33,8 +33,11 @@ class CustomerService:
             action="CREATE",
             new_value=snapshot(customer),
         )
-        self.db.commit()
-        self.db.refresh(customer)
+        if commit:
+            self.db.commit()
+            self.db.refresh(customer)
+        else:
+            self.db.flush()
         return customer
 
     def update(self, workspace_id: UUID, customer_id: UUID, payload: CustomerUpdate, actor_user_id: UUID | None) -> Customer | None:

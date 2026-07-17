@@ -13,6 +13,7 @@ export type NovaPoshtaSettings = {
   sender_contact_ref: string | null;
   sender_phone: string | null;
   provider_writes_enabled: boolean;
+  write_blockers?: string[];
   sender_configured: boolean;
 };
 

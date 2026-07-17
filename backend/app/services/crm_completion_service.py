@@ -205,6 +205,8 @@ class CustomerCrmService:
         customer_id: UUID,
         payload: CustomerAddressCreate,
         actor_user_id: UUID | None,
+        *,
+        commit: bool = True,
     ) -> CustomerAddress:
         self._require_customer(workspace_id, customer_id)
         if payload.is_default:
@@ -221,8 +223,11 @@ class CustomerCrmService:
             action="CREATE",
             new_value=snapshot(address),
         )
-        self.db.commit()
-        self.db.refresh(address)
+        if commit:
+            self.db.commit()
+            self.db.refresh(address)
+        else:
+            self.db.flush()
         return address
 
     def update_address(
@@ -232,6 +237,8 @@ class CustomerCrmService:
         address_id: UUID,
         payload: CustomerAddressUpdate,
         actor_user_id: UUID | None,
+        *,
+        commit: bool = True,
     ) -> CustomerAddress | None:
         address = self.customer_crm.get_address(workspace_id, customer_id, address_id)
         if address is None:
@@ -275,8 +282,11 @@ class CustomerCrmService:
             old_value=old_value,
             new_value=snapshot(address),
         )
-        self.db.commit()
-        self.db.refresh(address)
+        if commit:
+            self.db.commit()
+            self.db.refresh(address)
+        else:
+            self.db.flush()
         return address
 
     def delete_address(
