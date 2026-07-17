@@ -17,6 +17,21 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def _revoke_table_privileges_if_role_exists(table_name: str, role_name: str) -> None:
+    # Supabase provides these roles, while local and CI PostgreSQL instances may not.
+    op.execute(
+        f"""
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{role_name}') THEN
+                REVOKE ALL PRIVILEGES ON TABLE public."{table_name}" FROM "{role_name}";
+            END IF;
+        END
+        $$
+        """
+    )
+
+
 def upgrade() -> None:
     op.create_table(
         "nova_poshta_operations",
@@ -84,7 +99,8 @@ def upgrade() -> None:
     op.add_column("shipments", sa.Column("nova_poshta_last_error_code", sa.String(length=120), nullable=True))
 
     op.execute('ALTER TABLE IF EXISTS public."nova_poshta_operations" ENABLE ROW LEVEL SECURITY')
-    op.execute('REVOKE ALL PRIVILEGES ON TABLE public."nova_poshta_operations" FROM anon, authenticated')
+    for role_name in ("anon", "authenticated"):
+        _revoke_table_privileges_if_role_exists("nova_poshta_operations", role_name)
 
 
 def downgrade() -> None:
