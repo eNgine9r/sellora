@@ -23,7 +23,9 @@
     "loadingWorkspace": "Preparing your workspace…",
     "workspaceUnavailable": "Workspace unavailable",
     "workspaceUnavailableDescription": "Workspace is not ready yet. Refresh the page or select another workspace.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "yes": "Yes",
+    "no": "No"
   },
   "actions": {
     "create": "Create",
@@ -634,7 +636,8 @@
       "all": "All customers",
       "withPurchases": "With purchases",
       "repeat": "Repeat",
-      "withoutOrders": "No orders"
+      "withoutOrders": "No orders",
+      "unavailable": "Workspace-level summary needed"
     },
     "activity": "Activity",
     "tabs": {
@@ -730,7 +733,15 @@
     },
     "profitNotCalculated": "Profit is not calculated yet because product costs or expenses are missing.",
     "openCustomer": "Open customer",
-    "shipmentMissing": "Shipment has not been created yet."
+    "shipmentMissing": "Shipment has not been created yet.",
+    "todayLabel": "Today",
+    "summary": {
+      "all": "All orders",
+      "new": "New",
+      "awaitingPayment": "Awaiting payment",
+      "readyToShip": "Ready to ship",
+      "problematic": "Problematic"
+    }
   },
   "products": {
     "title": "Products",
@@ -758,7 +769,42 @@
     "inactive": "Inactive",
     "createProductVariantFirst": "Create a product first before adding variants.",
     "allStatuses": "All statuses",
-    "sku": "SKU"
+    "sku": "SKU",
+    "details": "Product details",
+    "loadError": "Unable to load products.",
+    "loading": "Loading products…",
+    "emptyDescription": "Create products and variants to prepare the catalog for orders.",
+    "summary": {
+      "all": "All products",
+      "active": "Active",
+      "variants": "Variants",
+      "lowStock": "Low stock",
+      "withoutPhoto": "Without photo"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "variants": "Variants",
+      "stock": "Stock",
+      "history": "History"
+    },
+    "stockUnavailable": "Stock data is unavailable for this product.",
+    "historyUnavailable": "Product history is unavailable in the current API.",
+    "archiveTitle": "Archive product?",
+    "archiveDescription": "Archiving this product hides it from the active catalog. Existing orders remain unchanged.",
+    "archiveVariantTitle": "Archive variant?",
+    "archiveVariantDescription": "This variant will be hidden from active selectors. Inventory is not hard deleted, and historical order items remain unchanged.",
+    "archiveVariant": "Archive variant",
+    "createFailed": "Unable to create product. Please try again.",
+    "createVariantFailed": "Unable to create variant. Please try again.",
+    "saveFailed": "Unable to save product changes. Please try again.",
+    "saveVariantFailed": "Unable to save variant changes. Please try again.",
+    "deleteFailed": "Unable to delete record. Please try again.",
+    "variantInUse": "This record cannot be deleted because it is used by other records.",
+    "variantSku": "Variant SKU",
+    "color": "Color",
+    "size": "Size",
+    "sellingPrice": "Selling price",
+    "barcode": "Barcode"
   },
   "inventory": {
     "title": "Inventory",
@@ -799,7 +845,23 @@
       "order_reservation": "Order reservation",
       "order_shipped_release_reservation": "Order shipped release reservation",
       "order_shipped_stock_out": "Order shipped stock out"
-    }
+    },
+    "summary": {
+      "totalStock": "Total stock",
+      "available": "Available",
+      "outOfStock": "Out of stock"
+    },
+    "tabs": {
+      "stock": "Stock",
+      "transactions": "Transactions"
+    },
+    "sort": {
+      "availableAsc": "Available: low to high"
+    },
+    "loadError": "Unable to load inventory.",
+    "filteredEmptyTitle": "No stock items match these filters.",
+    "filteredEmptyDescription": "Try changing search, category, low-stock or sorting filters.",
+    "updateError": "Unable to save inventory changes. Please try again."
   },
   "shipments": {
     "title": "Shipments",
@@ -858,6 +920,7 @@
     "needsAction": "Needs action",
     "openOrder": "Open order",
     "copyTtn": "Copy TTN",
+    "retryTtn": "Retry TTN creation",
     "ttnCopied": "TTN number copied.",
     "ttnCopyFailed": "Unable to copy TTN. Copy the number manually.",
     "ttnPrintUnavailable": "TTN printing is not connected yet.",
@@ -897,7 +960,13 @@
     "recipientCityRequired": "Select the recipient city.",
     "recipientWarehouseRequired": "Select the recipient warehouse.",
     "createTtnIncomplete": "Nova Poshta returned an incomplete response. Check the Nova Poshta account before trying again.",
-    "loadError": "Unable to load shipments."
+    "loadError": "Unable to load shipments.",
+    "summary": {
+      "all": "All shipments",
+      "ready": "Ready to ship",
+      "delivered": "Delivered",
+      "problems": "Problems / returned"
+    }
   },
   "advertising": {
     "title": "Advertising",
@@ -1001,7 +1070,8 @@
     "readinessPendingImportQa": "staging import QA",
     "readinessPendingPostgresMigration": "PostgreSQL runtime validation for the attribution migration",
     "readinessPendingBrowserMobileQa": "browser/mobile QA for leads, orders, and advertising",
-    "readinessMetaFuture": "future stage, not active now"
+    "readinessMetaFuture": "future stage, not active now",
+    "safeZeroDenominator": "Shown as unavailable when spend is missing or zero."
   },
   "analytics": {
     "title": "Analytics",
@@ -1167,7 +1237,7 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Manage workspace tools, import workflows, and external service integrations from one place.",
+    "subtitle": "Manage your store, team, integrations and Sellora preferences",
     "workspace": "Workspace",
     "workspaceSettings": "Workspace settings",
     "currency": "Currency",
@@ -1188,11 +1258,109 @@
       "novaAction": "Configure Nova Poshta",
       "feedbackTitle": "Pilot feedback",
       "feedbackDescription": "Review issue reports, ideas and confusion signals from pilot users.",
-      "feedbackAction": "Open feedback"
+      "feedbackAction": "Open feedback",
+      "workspaceTitle": "Workspace",
+      "workspaceDescription": "Name, slug, currency and timezone for the workspace.",
+      "teamTitle": "Team",
+      "teamDescription": "Users, OWNER/MANAGER/ANALYST roles and access state."
     },
     "label": "Sellora Settings",
     "integrationsTitle": "Integrations",
-    "integrationsSubtitle": "Configure delivery integrations for this workspace."
+    "integrationsSubtitle": "Configure delivery integrations for this workspace.",
+    "status": {
+      "configured": "Configured",
+      "roles": "Roles",
+      "available": "Available",
+      "requiresSetup": "Requires setup",
+      "ownerManaged": "Owner managed"
+    },
+    "summary": {
+      "workspace": "Workspace",
+      "workspaceHelp": "Current workspace",
+      "role": "Your role",
+      "roleHelp": "Backend authorization remains source of truth",
+      "imports": "Imports",
+      "importsHelp": "CSV/Excel and dry-run validation",
+      "integrations": "Integrations",
+      "integrationsHelp": "Nova Poshta/Meta Ads without fake live sync"
+    },
+    "preferences": {
+      "title": "Profile and appearance",
+      "heading": "Language and theme",
+      "description": "Change locale and theme with existing controls without changing backend enum values.",
+      "appearance": "Theme"
+    },
+    "attention": {
+      "title": "Safe settings",
+      "description": "Destructive or secret-related actions are shown only when a real backend flow exists."
+    },
+    "currencyLabels": {
+      "UAH": "UAH — Ukrainian hryvnia",
+      "USD": "USD — US dollar"
+    },
+    "workspacePage": {
+      "title": "Workspace",
+      "description": "Core store and workspace settings",
+      "saved": "Workspace settings updated.",
+      "saveFailed": "Unable to save workspace settings.",
+      "loading": "Loading settings…",
+      "loadFailed": "Unable to load workspace.",
+      "nameLabel": "Store name",
+      "nameHint": "Visible to your team inside Sellora.",
+      "slugLabel": "Slug / short name",
+      "slugHint": "Lowercase Latin letters, numbers and dashes only.",
+      "slugError": "Slug can contain lowercase Latin letters, numbers and dashes.",
+      "timezoneLabel": "Timezone",
+      "timezoneHint": "Used for report and operation dates.",
+      "safetyTitle": "Safety",
+      "safetyHeading": "No fake danger zone",
+      "safetyDescription": "Archive, delete or ownership transfer actions are not shown without real endpoints.",
+      "dangerUnavailable": "Workspace destructive actions are not available in the current API."
+    },
+    "teamPage": {
+      "title": "Team",
+      "description": "Manage user access to your store",
+      "addAction": "Add user",
+      "summaryActive": "Active",
+      "summaryActiveHelp": "Active users in the current API response",
+      "summaryInactive": "Inactive",
+      "summaryInactiveHelp": "Deactivated access records",
+      "summaryOwners": "Owners",
+      "summaryOwnersHelp": "Last OWNER protection",
+      "summaryRoles": "Roles",
+      "summaryRolesHelp": "OWNER, MANAGER, ANALYST",
+      "restricted": "You do not have access to manage the team.",
+      "loading": "Loading team…",
+      "emptyTitle": "No team users yet.",
+      "emptyDescription": "Add a manager or analyst to work together in Sellora.",
+      "userColumn": "User",
+      "emailColumn": "Email",
+      "roleColumn": "Role",
+      "statusColumn": "Status",
+      "actionsColumn": "Actions",
+      "currentUser": "You",
+      "active": "Active",
+      "inactive": "Inactive",
+      "addTitle": "Add user",
+      "addDescription": "The current backend creates a user with a temporary password immediately; no invitation message is sent.",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "roleHint": "Roles remain backend enums: OWNER, MANAGER, ANALYST.",
+      "tempPasswordLabel": "Temporary password",
+      "tempPasswordHint": "Share this password safely outside Sellora.",
+      "addSubmit": "Add user",
+      "added": "User added to the team.",
+      "addFailed": "Unable to add user.",
+      "roleSaved": "User role updated.",
+      "roleFailed": "Unable to change role.",
+      "deactivated": "User deactivated in this workspace.",
+      "deactivateFailed": "Unable to deactivate user.",
+      "deactivateTitle": "Deactivate access",
+      "deactivateDescription": "Deactivate access for {email}? Historical records are not deleted.",
+      "deactivateAction": "Deactivate",
+      "lastOwnerGuard": "The last active owner cannot be changed or deactivated."
+    }
   },
   "importCenter": {
     "title": "Import Center",
@@ -1229,7 +1397,9 @@
     "requiredColumns": "Required columns: Date, Campaign.",
     "optionalColumns": "Recommended columns: Platform, Spend, Messages, Leads, Orders, Revenue, Net Profit, Impressions, Clicks.",
     "duplicateHint": "Duplicate rows with the same campaign and date must be explained in dry-run: create, update, skip, or warning.",
-    "afterImport": "After a successful import, open Advertising, Dashboard, and Analytics with the same period."
+    "afterImport": "After a successful import, open Advertising, Dashboard, and Analytics with the same period.",
+    "uploading": "Uploading…",
+    "uploadLimits": "Supports .xlsx and .csv up to 10 MB, 5,000 rows, 100 columns, and 20 sheets. Macros and executable files are rejected."
   },
   "novaPoshta": {
     "title": "Nova Poshta",
@@ -1826,7 +1996,9 @@
       "manual_fees": "Manual fees",
       "net_profit": "Net profit"
     },
-    "adjustmentsLoadError": "Could not load adjustments. Please try again."
+    "adjustmentsLoadError": "Could not load adjustments. Please try again.",
+    "totalExpenses": "Total expenses",
+    "expenseStructure": "COGS, ads, shipping, other and manual adjustments."
   },
   "accountMenu": {
     "profile": "Profile",
@@ -1851,5 +2023,122 @@
   "mobileNavigation": {
     "bottomNav": "Mobile bottom navigation",
     "drawer": "Mobile navigation menu"
+  },
+  "roles": {
+    "OWNER": "Owner",
+    "MANAGER": "Manager",
+    "ANALYST": "Analyst"
+  },
+  "demo": {
+    "viewDemo": "View Sellora demo",
+    "creating": "Creating demo workspace…",
+    "remove": "Remove demo workspace",
+    "removing": "Removing demo…",
+    "removeConfirm": "The demo workspace will be deactivated. Your real shop and its data will not change."
+  },
+  "gettingStarted": {
+    "eyebrow": "Getting started",
+    "title": "Start with Sellora",
+    "description": "Complete a few steps to set up your shop and create the first order.",
+    "analystDescription": "Explore key reports and metrics in read-only mode.",
+    "progress": "Completed {completed} of {total}",
+    "restricted": "Unavailable for your role",
+    "steps": {
+      "workspace": {
+        "title": "Configure shop",
+        "description": "Check name, currency and timezone."
+      },
+      "product": {
+        "title": "Add first product",
+        "description": "Create a product and variant for orders."
+      },
+      "stock": {
+        "title": "Add stock",
+        "description": "Record the opening inventory movement."
+      },
+      "lead": {
+        "title": "Create lead or customer",
+        "description": "Capture the first Instagram request."
+      },
+      "order": {
+        "title": "Create first order",
+        "description": "Connect customer, product and stock."
+      },
+      "dashboard": {
+        "title": "Open Dashboard",
+        "description": "Review core shop metrics."
+      },
+      "analytics": {
+        "title": "Open analytics",
+        "description": "Review sales reports."
+      },
+      "finance": {
+        "title": "Check finance",
+        "description": "Review revenue, costs and profit."
+      },
+      "advertising": {
+        "title": "Ad metrics",
+        "description": "Review spend, ROAS, CPA and CPL."
+      },
+      "inventory": {
+        "title": "Inventory state",
+        "description": "Review stock and low-stock signals."
+      }
+    }
+  },
+  "fulfillment": {
+    "progress": "Checkout steps",
+    "step1": "Customer and delivery",
+    "step2": "Products and payment",
+    "step3": "Review",
+    "existingCustomer": "Existing customer",
+    "newCustomer": "New customer",
+    "recipientAndDelivery": "Recipient and Nova Poshta",
+    "recipientName": "Recipient name",
+    "normalized": "Will be saved as",
+    "phoneHint": "Enter a Ukrainian number, for example 067 123 45 67",
+    "city": "City",
+    "warehouse": "Branch or parcel locker",
+    "saveDefault": "Save as the customer's default address",
+    "product": "Product and variant",
+    "codAmount": "Cash on delivery amount",
+    "declaredValue": "Declared value",
+    "additionalDetails": "Additional details (optional)",
+    "delivery": "Delivery",
+    "total": "Total",
+    "writesDisabled": "TTN creation is currently unavailable. You can safely create the order without a TTN and complete it after the integration is verified.",
+    "ready": "The required data is ready. Sellora will create the order, reservation, shipment and one TTN.",
+    "back": "Back",
+    "continue": "Continue",
+    "createWithoutTtn": "Create without TTN",
+    "createOrderAndTtn": "Create order and TTN",
+    "creating": "Creating…",
+    "submitError": "Could not complete checkout. Review the highlighted data.",
+    "providerActionRequired": "The order is saved. Check Nova Poshta settings or reconciliation state before the next action.",
+    "copyTtn": "Copy TTN",
+    "openOrder": "Open order",
+    "openShipment": "Open shipment",
+    "result": {
+      "ORDER_AND_TTN_CREATED": "Order and TTN are ready",
+      "ORDER_CREATED_TTN_PENDING": "Order created, TTN pending",
+      "ORDER_CREATED_PROVIDER_RECONCILIATION_REQUIRED": "Order saved — TTN review required"
+    },
+    "validation": {
+      "customer": "Select a customer.",
+      "name": "Enter the new customer's name.",
+      "recipient": "Enter the recipient name.",
+      "phone": "Enter a valid Ukrainian phone number.",
+      "city": "Select a city from the Nova Poshta directory.",
+      "warehouse": "Select a branch or parcel locker from the directory.",
+      "items": "Add a product, quantity and price.",
+      "stock": "One of the products does not have enough available stock."
+    }
+  },
+  "workspace": {
+    "demo": {
+      "badge": "Demo",
+      "synthetic": "Synthetic data",
+      "notReal": "Not real shop performance"
+    }
   }
 }

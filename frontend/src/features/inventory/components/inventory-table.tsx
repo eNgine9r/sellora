@@ -4,17 +4,20 @@ import { RemoteImage } from "@/components/ui/remote-image";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
 import { statusBadgeClass } from "@/lib/status-styles";
+import { cn } from "@/services/utils";
 import { Inventory, Product, ProductVariant } from "@/types/products";
 
 function variantLabel(item: Inventory, variant?: ProductVariant) { return variant?.sku ?? `Variant ${item.product_variant_id.slice(0, 8)}…`; }
 function productImage(product?: Product) { return product?.images.find((image) => image.is_primary) ?? product?.images[0]; }
+function availableQuantity(item: Inventory) { return item.stock_quantity - item.reserved_quantity; }
 
-export function InventoryTable({ inventory, variants, products, onEdit }: { inventory: Inventory[]; variants: ProductVariant[]; products: Product[]; onEdit?: (inventory: Inventory) => void }) {
+export function InventoryTable({ inventory, variants, products, selectedInventoryId, onSelect, onEdit }: { inventory: Inventory[]; variants: ProductVariant[]; products: Product[]; selectedInventoryId?: string; onSelect?: (inventory: Inventory) => void; onEdit?: (inventory: Inventory) => void }) {
   const variantById = new Map(variants.map((variant) => [variant.id, variant]));
   const productById = new Map(products.map((product) => [product.id, product]));
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const archivedVariantLabel = locale === "uk" ? "Архівний варіант" : "Archived variant";
   return (
-    <div className="w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-slate-900">
+    <div className="w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
       <div className="sellora-scrollbar hidden max-w-full overflow-x-auto lg:block">
         <table className="w-full min-w-[980px] divide-y divide-slate-200 text-sm dark:divide-white/10">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-white/[0.04] dark:text-slate-300"><tr><th className="px-4 py-3">{t("inventory.productImage")}</th><th className="px-4 py-3">{t("inventory.category")}</th><th className="px-4 py-3">{t("inventory.product")}</th><th className="px-4 py-3">{t("tables.variantSku")}</th><th className="px-4 py-3">{t("tables.stock")}</th><th className="px-4 py-3">{t("tables.reserved")}</th><th className="px-4 py-3">{t("tables.incoming")}</th><th className="px-4 py-3">{t("tables.minimum")}</th><th className="px-4 py-3">{t("tables.status")}</th><th className="px-4 py-3">{t("tables.actions")}</th></tr></thead>
@@ -28,4 +31,3 @@ export function InventoryTable({ inventory, variants, products, onEdit }: { inve
     </div>
   );
 }
-// Localization regression compatibility markers: Edit thresholds.

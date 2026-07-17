@@ -1,14 +1,16 @@
 "use client";
 
-import { ReactNode } from "react";
-import { Card, PageHeader, StatusBadge, Button } from "@/components/ui/primitives";
+import { ReactNode, useId } from "react";
+import { Card, IconButton, PageHeader, StatusBadge, Button } from "@/components/ui/primitives";
 import { Drawer } from "@/components/ui/overlay";
+import { X } from "lucide-react";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/services/utils";
 
 type MetricTone = "neutral" | "success" | "warning" | "danger" | "info";
 
 export function WorkspacePage({ children, className }: { children: ReactNode; className?: string }) {
-  return <main className={cn("min-w-0 overflow-x-hidden px-4 py-4 text-text-primary sm:px-6 sm:py-6", className)}><div className="mx-auto grid min-w-0 max-w-7xl gap-5 lg:gap-6">{children}</div></main>;
+  return <main className={cn("min-w-0 overflow-x-hidden px-4 py-4 text-text-primary sm:px-5 sm:py-5 lg:px-6", className)}><div className="grid min-w-0 w-full gap-4 lg:gap-5">{children}</div></main>;
 }
 
 export function WorkspaceHeader({ title, description, eyebrow, actions }: { title: string; description?: string; eyebrow?: string; actions?: ReactNode }) {
@@ -29,12 +31,40 @@ export function MetricCard({ label, value, helper, trend, tone = "neutral", isUn
   </Card>;
 }
 
-export function CompactSummary({ items }: { items: { label: string; value: ReactNode; helper?: string; active?: boolean; onClick?: () => void; unavailable?: boolean }[] }) {
-  return <section className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">{items.map((item) => {
+export function CompactSummary({ items, layout = "auto" }: { items: { label: string; value: ReactNode; helper?: string; active?: boolean; onClick?: () => void; unavailable?: boolean }[]; layout?: "auto" | "five-balanced" }) {
+  const isFiveCardLayout = layout === "five-balanced";
+  return <section data-summary-layout={layout} className={cn("grid min-w-0 items-stretch gap-3", isFiveCardLayout ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 2xl:grid-cols-5" : "sm:grid-cols-2 xl:grid-cols-4")}>{items.map((item, index) => {
     const content = <><p className="text-xs font-black uppercase tracking-[0.14em] text-text-muted">{item.label}</p><p className={cn("mt-2 text-2xl font-black text-text-primary", item.unavailable && "text-text-muted")}>{item.unavailable ? "—" : item.value}</p>{item.helper ? <p className="mt-1 text-sm text-text-secondary">{item.helper}</p> : null}</>;
-    if (item.onClick) return <button key={item.label} type="button" onClick={item.onClick} className={cn("rounded-2xl border border-border-subtle bg-surface-1 p-4 text-left shadow-sm transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring", item.active && "border-primary bg-surface-selected")}>{content}</button>;
-    return <Card key={item.label} className={cn("p-4", item.active && "border-primary bg-surface-selected")}>{content}</Card>;
+    const balancedSpan = isFiveCardLayout ? (index < 3 ? "lg:col-span-2 2xl:col-span-1" : "sm:last:col-span-2 lg:col-span-3 2xl:col-span-1") : items.length % 2 === 1 && index === items.length - 1 ? "sm:col-span-2 xl:col-span-1" : undefined;
+    if (item.onClick) return <button key={item.label} type="button" onClick={item.onClick} className={cn("h-full rounded-2xl border border-border-subtle bg-surface-1 p-4 text-left shadow-sm transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring", item.active && "border-primary bg-surface-selected", balancedSpan)}>{content}</button>;
+    return <Card key={item.label} className={cn("h-full p-4", item.active && "border-primary bg-surface-selected", balancedSpan)}>{content}</Card>;
   })}</section>;
+}
+
+
+export function WorkspaceSplitView({ children, panelOpen = false, panel, sidePanel }: { children: ReactNode; panelOpen?: boolean; panel?: ReactNode; sidePanel?: ReactNode }) {
+  const activePanel = panel ?? sidePanel;
+  const isOpen = panelOpen && Boolean(activePanel);
+  return <section data-workspace-split-view data-panel-open={isOpen ? "true" : "false"} className={cn("grid min-w-0 gap-5 lg:items-start lg:transition-[grid-template-columns] lg:duration-200 lg:ease-out motion-reduce:transition-none", isOpen ? "lg:grid-cols-[minmax(0,1fr)_clamp(360px,29vw,440px)]" : "lg:grid-cols-[minmax(0,1fr)]")}>
+    <div data-workspace-split-main className="min-w-0">{children}</div>
+    {activePanel ? <div data-workspace-split-panel className={cn("min-w-0", !isOpen && "lg:hidden")}>{activePanel}</div> : null}
+  </section>;
+}
+
+export function EntitySidePanel({ title, description, open, onClose, children, footer }: { title: string; description?: string; open: boolean; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
+  const titleId = useId();
+  const { t } = useI18n();
+  return <>
+    {open ? <aside aria-labelledby={titleId} data-entity-side-panel="desktop" className="hidden max-h-[calc(100dvh-var(--topbar-height,72px)-32px)] min-w-0 flex-col overflow-hidden rounded-3xl border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)] lg:sticky lg:top-4 lg:flex lg:animate-in lg:fade-in-0 lg:slide-in-from-right-2 motion-reduce:animate-none">
+      <header className="flex items-start justify-between gap-4 border-b border-border-subtle bg-surface-1/95 p-4">
+        <div className="min-w-0"><h2 id={titleId} className="break-words text-lg font-black text-text-primary">{title}</h2>{description ? <p className="mt-1 break-words text-sm text-text-secondary">{description}</p> : null}</div>
+        <IconButton variant="ghost" onClick={onClose} aria-label={t("actions.close")}><X className="h-5 w-5" /></IconButton>
+      </header>
+      <div className="sellora-scrollbar min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+      {footer ? <footer className="border-t border-border-subtle bg-surface-1/95 p-4">{footer}</footer> : null}
+    </aside> : null}
+    <div className="lg:hidden"><Drawer open={open} onClose={onClose} title={title} description={description} footer={footer}>{children}</Drawer></div>
+  </>;
 }
 
 export function ToolbarShell({ children }: { children: ReactNode }) {
@@ -42,7 +72,7 @@ export function ToolbarShell({ children }: { children: ReactNode }) {
 }
 
 export function EntityDrawer({ title, description, open, onClose, children, footer }: { title: string; description?: string; open: boolean; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
-  return <Drawer open={open} onClose={onClose} title={title} description={description} footer={footer}>{children}</Drawer>;
+  return <EntitySidePanel open={open} onClose={onClose} title={title} description={description} footer={footer}>{children}</EntitySidePanel>;
 }
 
 export function FieldGrid({ children }: { children: ReactNode }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
@@ -10,7 +10,7 @@ import { CustomerDetails } from "@/features/customers/components/customer-detail
 import { CustomerForm } from "@/features/customers/components/customer-form";
 import { CustomerTable } from "@/features/customers/components/customer-table";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
-import { Button, CompactSummary, EntityDrawer, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
+import { Button, CompactSummary, EntitySidePanel, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
 import {
   addAttachment,
   addCustomerAddress,
@@ -123,16 +123,22 @@ export default function CustomersPage() {
   }), [customersQuery.data, customerSort]);
   const hasActiveFilters = Boolean(search.trim());
   const allCustomers = customersQuery.data?.length ?? 0;
-  const withPurchases = customersQuery.data?.filter((customer) => customer.total_orders >= 1).length ?? 0;
-  const repeatCustomers = customersQuery.data?.filter((customer) => customer.total_orders > 1).length ?? 0;
-  const withoutOrders = customersQuery.data?.filter((customer) => customer.total_orders === 0).length ?? 0;
   const customersError = customersQuery.isError ? safeApiErrorMessage(customersQuery.error, t("customers.loadError")) : null;
+
+  useEffect(() => {
+    setSelectedCustomer(null);
+  }, [workspaceId]);
 
   return (
     <WorkspacePage>
         <WorkspaceHeader title={t("customers.title")} description={t("customers.subtitle")} actions={<Button onClick={() => setIsCreateOpen(true)}>{t("customers.create")}</Button>} />
 
-        <CompactSummary items={[{ label: t("customers.summary.all"), value: allCustomers }, { label: t("customers.summary.withPurchases"), value: withPurchases }, { label: t("customers.summary.repeat"), value: repeatCustomers }, { label: t("customers.summary.withoutOrders"), value: withoutOrders }]} />
+        <CompactSummary items={[
+          { label: t("customers.summary.all"), value: allCustomers },
+          { label: t("customers.summary.withPurchases"), value: null, unavailable: true, helper: t("customers.summary.unavailable") },
+          { label: t("customers.summary.repeat"), value: null, unavailable: true, helper: t("customers.summary.unavailable") },
+          { label: t("customers.summary.withoutOrders"), value: null, unavailable: true, helper: t("customers.summary.unavailable") },
+        ]} />
 
         <FilterBar>
           <SearchInput value={search} onChange={setSearch} placeholder={t("customers.searchPlaceholder")} />
@@ -140,32 +146,37 @@ export default function CustomersPage() {
           <ResetFiltersButton onClick={() => { setSearch(""); setCustomerSort("newest"); }} />
         </FilterBar>
 
-        {customersQuery.isLoading ? <LoadingSkeleton rows={5} title={t("customers.loading")} /> : null}
-        {customersError ? <ErrorState title={t("customers.loadError")} description={customersError} onRetry={() => void customersQuery.refetch()} /> : null}
-        {!customersError && customersQuery.isSuccess && visibleCustomers.length === 0 ? (
-          <EmptyState
-            title={hasActiveFilters ? t("customers.filteredEmptyTitle") : t("customers.emptyTitle")}
-            description={hasActiveFilters ? t("customers.filteredEmptyDescription") : t("customers.emptyDescription")}
-            action={<Button onClick={() => setIsCreateOpen(true)}>{t("customers.create")}</Button>}
-          />
-        ) : null}
-        {!customersError && visibleCustomers.length > 0 ? <CustomerTable customers={visibleCustomers} currencyCode={currentWorkspace?.currency_code ?? "UAH"} selectedCustomerId={selectedCustomer?.id} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} /> : null}
-
-        <EntityDrawer open={Boolean(selectedCustomer)} title={selectedCustomer?.name ?? t("customers.title")} description={selectedCustomer?.instagram_username ? `@${selectedCustomer.instagram_username.replace(/^@/, "")}` : selectedCustomer?.phone ?? undefined} onClose={() => setSelectedCustomer(null)} footer={selectedCustomer && canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingCustomer(selectedCustomer)}>{t("customers.edit")}</Button><Button variant="danger" onClick={() => setArchivingCustomer(selectedCustomer)}>{t("customers.archive")}</Button></div> : undefined}>
-          {selectedCustomer ? <CustomerDetails
-            customer={selectedCustomer}
-            tags={tagsQuery.data ?? []}
-            customerTags={customerTagsQuery.data ?? []}
-            notes={notesQuery.data ?? []}
-            addresses={addressesQuery.data ?? []}
-            attachments={attachmentsQuery.data ?? []}
-            currencyCode={currentWorkspace?.currency_code ?? "UAH"}
-            onAddTag={(tagId) => addTagMutation.mutate(tagId)}
-            onAddNote={(note) => addNoteMutation.mutate(note)}
-            onAddAddress={(addressLine1, isDefault) => addAddressMutation.mutate({ addressLine1, isDefault })}
-            onAddAttachment={(fileUrl) => addAttachmentMutation.mutate(fileUrl)}
-          /> : null}
-        </EntityDrawer>
+        <WorkspaceSplitView
+          panelOpen={Boolean(selectedCustomer)}
+          panel={selectedCustomer ? (
+            <EntitySidePanel open={Boolean(selectedCustomer)} title={selectedCustomer.name ?? t("customers.title")} description={selectedCustomer.instagram_username ? `@${selectedCustomer.instagram_username.replace(/^@/, "")}` : selectedCustomer.phone ?? undefined} onClose={() => setSelectedCustomer(null)} footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingCustomer(selectedCustomer)}>{t("customers.edit")}</Button><Button variant="danger" onClick={() => setArchivingCustomer(selectedCustomer)}>{t("customers.archive")}</Button></div> : undefined}>
+              <CustomerDetails
+                customer={selectedCustomer}
+                tags={tagsQuery.data ?? []}
+                customerTags={customerTagsQuery.data ?? []}
+                notes={notesQuery.data ?? []}
+                addresses={addressesQuery.data ?? []}
+                attachments={attachmentsQuery.data ?? []}
+                currencyCode={currentWorkspace?.currency_code ?? "UAH"}
+                onAddTag={(tagId) => addTagMutation.mutate(tagId)}
+                onAddNote={(note) => addNoteMutation.mutate(note)}
+                onAddAddress={(addressLine1, isDefault) => addAddressMutation.mutate({ addressLine1, isDefault })}
+                onAddAttachment={(fileUrl) => addAttachmentMutation.mutate(fileUrl)}
+              />
+            </EntitySidePanel>
+          ) : null}
+        >
+          {customersQuery.isLoading ? <LoadingSkeleton rows={5} title={t("customers.loading")} /> : null}
+          {customersError ? <ErrorState title={t("customers.loadError")} description={customersError} onRetry={() => void customersQuery.refetch()} /> : null}
+          {!customersError && customersQuery.isSuccess && visibleCustomers.length === 0 ? (
+            <EmptyState
+              title={hasActiveFilters ? t("customers.filteredEmptyTitle") : t("customers.emptyTitle")}
+              description={hasActiveFilters ? t("customers.filteredEmptyDescription") : t("customers.emptyDescription")}
+              action={<Button onClick={() => setIsCreateOpen(true)}>{t("customers.create")}</Button>}
+            />
+          ) : null}
+          {!customersError && visibleCustomers.length > 0 ? <CustomerTable customers={visibleCustomers} currencyCode={currentWorkspace?.currency_code ?? "UAH"} selectedCustomerId={selectedCustomer?.id} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} /> : null}
+        </WorkspaceSplitView>
 
         {isCreateOpen ? (
           <FormDialog title={t("customers.create")} description={t("customers.createDescription")} onClose={() => setIsCreateOpen(false)}>

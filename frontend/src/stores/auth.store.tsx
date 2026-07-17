@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { normalizeWorkspaceId } from "@/lib/workspace";
 import { authStorage, fetchCurrentUser, firstAvailableWorkspace, loginWithPassword, refreshAccessToken } from "@/services/auth.service";
 import { CurrentUser, WorkspaceMembership } from "@/types/auth";
@@ -22,6 +23,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null);
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!normalizedWorkspaceId) setError("У вас ще немає робочого простору. Створіть перший магазин, щоб почати роботу в Sellora.");
       void reloadCurrentUser().catch(() => {
         authStorage.clear();
+        queryClient.clear();
         setCurrentUser(null);
         setCurrentWorkspaceId(null);
         setStatus("unauthenticated");
@@ -87,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     setStatus("unauthenticated");
-  }, [reloadCurrentUser]);
+  }, [queryClient, reloadCurrentUser]);
 
   const login = useCallback(async (email: string, password: string) => {
     setError(null);
@@ -99,15 +102,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     authStorage.clear();
+    queryClient.clear();
     setCurrentUser(null);
     setCurrentWorkspaceId(null);
     setError(null);
     setStatus("unauthenticated");
-  }, []);
+  }, [queryClient]);
 
   const switchWorkspace = useCallback((workspaceId: string) => {
     const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
-    if (!normalizedWorkspaceId) return;
+    if (!normalizedWorkspaceId || normalizedWorkspaceId === currentWorkspaceId) return;
+    void queryClient.cancelQueries();
     authStorage.setCurrentWorkspaceId(normalizedWorkspaceId);
     setCurrentWorkspaceId(normalizedWorkspaceId);
     setError(null);

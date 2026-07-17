@@ -1,0 +1,5 @@
+Sprint 8E mandatory post-provider restart boundary.
+
+This non-executable file intentionally triggers a fresh Render backend process after the single controlled Nova Poshta provider result was durably stored.
+
+No application logic or configuration is changed.

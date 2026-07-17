@@ -32,13 +32,19 @@ class InventoryService:
     def get_inventory_by_variant(self, workspace_id: UUID, product_variant_id: UUID) -> Inventory | None:
         return self.inventory.get_by_variant(workspace_id, product_variant_id)
 
+    def _get_inventory_for_update(self, workspace_id: UUID, inventory_id: UUID) -> Inventory | None:
+        getter = getattr(self.inventory, "get_for_update", None)
+        return getter(workspace_id, inventory_id) if getter else self.inventory.get(workspace_id, inventory_id)
+
     def update_inventory(self, workspace_id: UUID, inventory_id: UUID, payload: InventoryUpdate, actor_user_id: UUID | None) -> Inventory | None:
-        inventory = self.get_inventory(workspace_id, inventory_id)
+        inventory = self._get_inventory_for_update(workspace_id, inventory_id)
         if inventory is None:
             return None
         old_value = snapshot(inventory)
         for field, value in payload.model_dump(exclude_unset=True).items():
             setattr(inventory, field, value)
+        if inventory.stock_quantity < inventory.reserved_quantity:
+            raise InventoryServiceError("Stock quantity cannot be lower than reserved quantity")
         self.audit_logs.create(
             workspace_id=workspace_id,
             user_id=actor_user_id,
@@ -56,7 +62,7 @@ class InventoryService:
         return self.transactions.list_for_workspace(workspace_id, inventory_id, product_variant_id)
 
     def record_transaction(self, workspace_id: UUID, inventory_id: UUID, payload: InventoryTransactionCreate, actor_user_id: UUID | None, commit: bool = True) -> InventoryTransaction | None:
-        inventory = self.get_inventory(workspace_id, inventory_id)
+        inventory = self._get_inventory_for_update(workspace_id, inventory_id)
         if inventory is None:
             return None
 
@@ -93,6 +99,10 @@ class InventoryService:
         if commit:
             self.db.commit()
             self.db.refresh(transaction)
+        else:
+            flush = getattr(self.db, "flush", None)
+            if flush:
+                flush()
         return transaction
 
     def _calculate_quantities(self, inventory: Inventory, transaction_type: InventoryTransactionType, quantity: int) -> tuple[int, int]:

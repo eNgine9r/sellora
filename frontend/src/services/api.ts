@@ -94,7 +94,7 @@ function headersWithAuth(path: string, initHeaders: HeadersInit | undefined, bod
   }
 
   const workspaceId = normalizeWorkspaceId(authStorage.getCurrentWorkspaceId()) ?? explicitWorkspaceId;
-  const workspaceOptional = path === "/workspaces" || path === "/workspaces/";
+  const workspaceOptional = path === "/workspaces" || path === "/workspaces/" || path === "/workspaces/demo" || path === "/workspaces/demo/";
   if (!workspaceId && !workspaceOptional) {
     throw workspaceSessionError(path);
   }

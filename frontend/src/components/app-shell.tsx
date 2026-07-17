@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { BarChart3, Home, Package, ShoppingBag, Users } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
+import { BrandLockup } from "@/components/brand";
 import { NoWorkspaceOnboarding } from "@/components/no-workspace-onboarding";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -75,11 +76,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (status === "unauthenticated") return <div className="grid min-h-screen place-items-center bg-canvas text-text-secondary">{t("common.redirectingLogin")}</div>;
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-canvas text-text-primary lg:flex">
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:block lg:w-60">
-        <AppSidebar />
+    <div
+      className="min-h-screen w-full overflow-x-hidden bg-canvas text-text-primary lg:grid lg:[--sidebar-width:220px] lg:[--topbar-height:72px] lg:[grid-template-columns:var(--sidebar-width)_minmax(0,1fr)] lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]"
+      data-protected-shell-grid
+    >
+      <div className="hidden min-w-0 border-b border-r border-border-subtle bg-canvas/92 px-4 backdrop-blur-xl lg:flex lg:h-[var(--topbar-height)] lg:w-[var(--sidebar-width)] lg:items-center" data-shell-brand-cell>
+        <Link href="/dashboard" aria-label={t("navigation.dashboard")} className="flex min-w-0 items-center rounded-2xl border border-transparent px-1 py-1 transition hover:border-border-subtle hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+          <BrandLockup markClassName="h-10 w-10" textClassName="text-text-primary" />
+        </Link>
+      </div>
+      <aside className="hidden min-h-0 lg:block lg:[grid-column:1] lg:[grid-row:2]">
+        <AppSidebar showBrand={false} />
       </aside>
-      <div className="min-w-0 flex-1 overflow-x-hidden pb-24 lg:pb-0 lg:pl-60">
+      <div className="min-w-0 overflow-x-hidden pb-24 lg:pb-0 lg:[grid-column:2] lg:[grid-row:1/3] lg:grid lg:min-h-0 lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]">
         <AppTopbar
           currentUser={currentUser}
           currentWorkspace={currentWorkspace}
@@ -89,8 +98,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           onSwitchWorkspace={switchWorkspace}
           onWorkspaceCreated={reloadCurrentUser}
         />
-        {error ? <p className="mx-4 mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-100 md:mx-6">{error}</p> : null}
-        {!currentWorkspaceId ? <NoWorkspaceOnboarding onWorkspaceCreated={reloadCurrentUser} onSwitchWorkspace={switchWorkspace} /> : children}
+        <div className="min-w-0 overflow-x-hidden lg:min-h-0 lg:overflow-y-auto">
+          {error ? <p className="mx-4 mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-warning md:mx-6">{error}</p> : null}
+          {!currentWorkspaceId ? <NoWorkspaceOnboarding onWorkspaceCreated={reloadCurrentUser} onSwitchWorkspace={switchWorkspace} /> : children}
+        </div>
       </div>
       <nav className="mobile-bottom-nav mobile-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border-subtle bg-surface-1/95 px-2 py-2 shadow-[0_-12px_35px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:hidden" aria-label={t("mobileNavigation.bottomNav")}>
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1">

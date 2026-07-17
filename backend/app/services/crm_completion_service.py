@@ -205,6 +205,8 @@ class CustomerCrmService:
         customer_id: UUID,
         payload: CustomerAddressCreate,
         actor_user_id: UUID | None,
+        *,
+        commit: bool = True,
     ) -> CustomerAddress:
         self._require_customer(workspace_id, customer_id)
         if payload.is_default:
@@ -221,8 +223,11 @@ class CustomerCrmService:
             action="CREATE",
             new_value=snapshot(address),
         )
-        self.db.commit()
-        self.db.refresh(address)
+        if commit:
+            self.db.commit()
+            self.db.refresh(address)
+        else:
+            self.db.flush()
         return address
 
     def update_address(
@@ -232,6 +237,8 @@ class CustomerCrmService:
         address_id: UUID,
         payload: CustomerAddressUpdate,
         actor_user_id: UUID | None,
+        *,
+        commit: bool = True,
     ) -> CustomerAddress | None:
         address = self.customer_crm.get_address(workspace_id, customer_id, address_id)
         if address is None:
@@ -239,6 +246,28 @@ class CustomerCrmService:
 
         old_value = snapshot(address)
         values = payload.model_dump(exclude_unset=True)
+        target_provider = values.get("delivery_provider", address.delivery_provider)
+        target_is_nova_poshta = target_provider == "NOVA_POSHTA"
+        if not target_is_nova_poshta and "delivery_provider" in values:
+            values["nova_poshta_city_ref"] = None
+            values["nova_poshta_warehouse_ref"] = None
+            values["warehouse_number"] = None
+        if target_is_nova_poshta:
+            merged_city_ref = values.get("nova_poshta_city_ref", address.nova_poshta_city_ref)
+            merged_warehouse_ref = values.get("nova_poshta_warehouse_ref", address.nova_poshta_warehouse_ref)
+            merged_address_line1 = values.get("address_line1", address.address_line1)
+            city_changed = "nova_poshta_city_ref" in values and values.get("nova_poshta_city_ref") != address.nova_poshta_city_ref
+            becoming_nova_poshta = address.delivery_provider != "NOVA_POSHTA" or not address.nova_poshta_city_ref
+            if city_changed and not values.get("nova_poshta_warehouse_ref"):
+                raise CrmCompletionServiceError("NOVA_POSHTA_WAREHOUSE_REQUIRED_AFTER_CITY_CHANGE")
+            if becoming_nova_poshta and (not merged_city_ref or not merged_warehouse_ref):
+                raise CrmCompletionServiceError("NOVA_POSHTA_WAREHOUSE_REQUIRED_AFTER_CITY_CHANGE")
+            if city_changed and not values.get("address_line1"):
+                raise CrmCompletionServiceError("NOVA_POSHTA_WAREHOUSE_DESCRIPTION_REQUIRED")
+            if "nova_poshta_warehouse_ref" in values and not values.get("address_line1"):
+                raise CrmCompletionServiceError("NOVA_POSHTA_WAREHOUSE_DESCRIPTION_REQUIRED")
+            if becoming_nova_poshta and not merged_address_line1:
+                raise CrmCompletionServiceError("NOVA_POSHTA_WAREHOUSE_DESCRIPTION_REQUIRED")
         if values.get("is_default") is True:
             self.customer_crm.clear_default_addresses(workspace_id, customer_id, address.id)
         for field, value in values.items():
@@ -253,8 +282,11 @@ class CustomerCrmService:
             old_value=old_value,
             new_value=snapshot(address),
         )
-        self.db.commit()
-        self.db.refresh(address)
+        if commit:
+            self.db.commit()
+            self.db.refresh(address)
+        else:
+            self.db.flush()
         return address
 
     def delete_address(

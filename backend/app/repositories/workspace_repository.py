@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select, func
+from sqlalchemy import String, and_, cast, func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.audit_log import AuditLog
 from app.models.role import Role, RoleName
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_user import WorkspaceUser
+from app.repositories.audit_log_repository import DEMO_WORKSPACE_CREATE_ACTION
 
 
 class WorkspaceRepository:
@@ -37,6 +39,22 @@ class WorkspaceRepository:
         if membership and membership.is_active and membership.workspace.is_active:
             return membership
         return None
+
+
+    def find_active_demo_for_user(self, user_id: UUID) -> WorkspaceUser | None:
+        stmt = (
+            select(WorkspaceUser)
+            .join(WorkspaceUser.workspace)
+            .where(
+                WorkspaceUser.user_id == user_id,
+                WorkspaceUser.is_active.is_(True),
+                Workspace.is_active.is_(True),
+                Workspace.slug.like("demo-sellora-%"),
+            )
+            .options(selectinload(WorkspaceUser.workspace), selectinload(WorkspaceUser.role))
+            .order_by(Workspace.created_at.asc())
+        )
+        return self.db.execute(stmt).scalars().first()
 
     def get_workspace(self, workspace_id: UUID) -> Workspace | None:
         return self.db.get(Workspace, workspace_id)

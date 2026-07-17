@@ -22,12 +22,26 @@ _TABLES = (
 )
 
 
+def _revoke_table_privileges_if_role_exists(table_name: str, role_name: str) -> None:
+    # Supabase provides these roles, while local and CI PostgreSQL instances may not.
+    op.execute(
+        f"""
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{role_name}') THEN
+                REVOKE ALL PRIVILEGES ON TABLE public."{table_name}" FROM "{role_name}";
+            END IF;
+        END
+        $$
+        """
+    )
+
+
 def upgrade() -> None:
     for table_name in _TABLES:
         op.execute(f'ALTER TABLE IF EXISTS public."{table_name}" ENABLE ROW LEVEL SECURITY')
-        op.execute(
-            f'REVOKE ALL PRIVILEGES ON TABLE public."{table_name}" FROM anon, authenticated'
-        )
+        for role_name in ("anon", "authenticated"):
+            _revoke_table_privileges_if_role_exists(table_name, role_name)
 
 
 def downgrade() -> None:

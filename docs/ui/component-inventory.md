@@ -36,3 +36,44 @@
 | --- | --- | --- |
 | CRM protected pages | `WorkspacePage`, `WorkspaceHeader`, `MetricCard`, `CompactSummary` | Shared wrappers for Dashboard, Leads, and Customers; avoid page-local duplicated headers and KPI cards. |
 | Entity details | `EntityDrawer`, `FieldGrid`, `FieldItem`, `DrawerTabs` | Shared drawer/detail foundations for Lead and Customer detail flows using existing overlay behavior. |
+
+## Sprint Dd.4.2 additions
+
+- `WorkspaceSplitView` — shared protected-page split layout for list/table content plus a desktop entity side panel.
+- `EntitySidePanel` — responsive entity details surface: non-modal desktop `<aside>` and modal mobile Drawer sheet.
+- `CompactSummary` now includes count-aware balanced layouts for five-card KPI/summary rows.
+
+## Dd.4.3 additions
+
+- `CompactSummary layout="five-balanced"`: explicit count-aware five-card summary layout for Orders, Products, and any future five-KPI protected page.
+- `WorkspaceSplitView`: route-level split layout that renders main table/list content and an embedded desktop entity panel as sibling columns.
+- `EntitySidePanel`: non-modal desktop detail aside with mobile `Drawer` fallback for Orders, Products, Leads, and Customers.
+
+## Dd.4.4 updates
+
+- `WorkspacePage`: tightened default protected-page spacing for more consistent Dashboard/Orders rhythm.
+- `AppShell`/`AppTopbar`/`AppSidebar`: unified full-width desktop header treatment and clearer sidebar navigation offset below the header row.
+
+## Dd.5 Inventory and Shipments components
+
+- `WorkspaceSplitView` is now route-integrated by `/inventory` and `/shipments` so selected stock/shipment records open in embedded desktop right panels while mobile keeps the modal Drawer fallback.
+- `CompactSummary layout="five-balanced"` is used for Inventory and Shipments five-card KPI rows.
+- `InventoryTable` supports selected row/card states and separate on-hand, reserved, and available quantity presentation.
+- `ShipmentTable` supports selected row/card states, TTN copy/open-order actions, and compact desktop/mobile layouts.
+
+## Dd.6 Business performance components
+
+- `CompactSummary layout="five-balanced"` is reused for Advertising, Finance, and Analytics primary metric rows.
+- `WorkspaceSplitView` + `EntitySidePanel` is used for Advertising campaign details where a real selectable entity exists.
+- Existing report tables now keep pagination below the report content for Advertising campaign performance, ad metrics, campaigns, Finance adjustments, and Analytics sales rows.
+
+## Dd.7 Settings components usage
+
+Settings reuses existing shared primitives rather than adding a second design language:
+
+- `WorkspacePage` and `WorkspaceHeader` for route layout;
+- `CompactSummary` for Settings and Team summary rows;
+- `Card`, `Button`, `FormField`, `Input`, `Select`, `StatusBadge`, `DataTable` and `PaginationControls` for forms and lists;
+- `Modal` for add-user creation and `ConfirmationDialog` for deactivation confirmation.
+
+Role labels are translated at the UI layer while backend role enum values remain `OWNER`, `MANAGER` and `ANALYST`.

@@ -130,7 +130,10 @@ def add_customer_address(customer_id: UUID, payload: CustomerAddressCreate, work
 
 @router.put("/{customer_id}/addresses/{address_id}", response_model=CustomerAddressResponse)
 def update_customer_address(customer_id: UUID, address_id: UUID, payload: CustomerAddressUpdate, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> CustomerAddressResponse:
-    address = CustomerCrmService(db).update_address(workspace_id, customer_id, address_id, payload, current_user.id)
+    try:
+        address = CustomerCrmService(db).update_address(workspace_id, customer_id, address_id, payload, current_user.id)
+    except CrmCompletionServiceError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     if address is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer address not found")
     return address

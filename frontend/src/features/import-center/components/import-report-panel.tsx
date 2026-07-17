@@ -1,23 +1,156 @@
+"use client";
+
+import { escapeImportCsvCell, getImportCenterPilotCopy, localizeImportIssue } from "@/features/import-center/import-center-pilot-copy";
 import { useI18n } from "@/i18n/provider";
-import { ImportReport } from "@/types/import-center";
+import { ImportReport, ValidationIssue } from "@/types/import-center";
 
 export function ImportReportPanel({ report }: { report?: ImportReport }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   if (!report) return null;
+
   const catalogMetrics = ([
-    [t("imports.results.products"), report.products_detected], [t("imports.results.variants"), report.variants_detected], [t("imports.results.inventoryRows"), report.inventory_rows_detected], [t("imports.results.images"), report.images_detected], [t("imports.duplicates.products"), report.duplicate_products], [t("imports.duplicates.variants"), report.duplicate_variants],
+    [t("imports.results.products"), report.products_detected],
+    [t("imports.results.variants"), report.variants_detected],
+    [t("imports.results.inventoryRows"), report.inventory_rows_detected],
+    [t("imports.results.images"), report.images_detected],
+    [t("imports.duplicates.products"), report.duplicate_products],
+    [t("imports.duplicates.variants"), report.duplicate_variants],
   ] as [string, unknown][]).filter(([, value]) => typeof value === "number" && value > 0);
+
   const orderMetrics = ([
-    [t("imports.results.ordersDetected"), report.orders_detected], [t("imports.results.orderItemsDetected"), report.order_items_detected], [t("imports.results.customersMatched"), report.customers_matched], [t("imports.results.customersToCreate"), report.customers_to_create], [t("imports.results.variantsMatched"), report.variants_matched], [t("imports.results.variantsMissing"), report.variants_missing], [t("imports.results.shipmentsDetected"), report.shipments_detected], [t("imports.duplicates.orders"), report.duplicate_orders], [t("imports.results.readyOrders"), report.ready_orders], [t("imports.results.readyItems"), report.ready_items], [t("imports.results.estimatedRevenue"), report.estimated_revenue], [t("imports.results.estimatedAdCost"), report.estimated_ad_cost], [t("imports.results.estimatedProfit"), report.estimated_profit],
+    [t("imports.results.ordersDetected"), report.orders_detected],
+    [t("imports.results.orderItemsDetected"), report.order_items_detected],
+    [t("imports.results.customersMatched"), report.customers_matched],
+    [t("imports.results.customersToCreate"), report.customers_to_create],
+    [t("imports.results.variantsMatched"), report.variants_matched],
+    [t("imports.results.variantsMissing"), report.variants_missing],
+    [t("imports.results.shipmentsDetected"), report.shipments_detected],
+    [t("imports.duplicates.orders"), report.duplicate_orders],
+    [t("imports.results.readyOrders"), report.ready_orders],
+    [t("imports.results.readyItems"), report.ready_items],
+    [t("imports.results.estimatedRevenue"), report.estimated_revenue],
+    [t("imports.results.estimatedAdCost"), report.estimated_ad_cost],
+    [t("imports.results.estimatedProfit"), report.estimated_profit],
   ] as [string, unknown][]).filter(([, value]) => value !== undefined && value !== null && value !== 0 && value !== "0");
+
   const adMetrics = ([
-    [t("imports.results.campaignsDetected"), report.campaigns_detected], [t("imports.results.campaignsToCreate"), report.campaigns_to_create], [t("imports.results.campaignsReused"), report.campaigns_reused], [t("imports.results.metricsDetected"), report.metrics_detected], [t("imports.duplicates.metrics"), report.duplicate_metrics], [t("imports.results.estimatedSpend"), report.estimated_spend], [t("imports.results.estimatedRevenue"), report.estimated_revenue], [t("imports.results.estimatedNetProfit"), report.estimated_net_profit], [t("imports.results.estimatedRoas"), report.estimated_roas],
+    [t("imports.results.campaignsDetected"), report.campaigns_detected],
+    [t("imports.results.campaignsToCreate"), report.campaigns_to_create],
+    [t("imports.results.campaignsReused"), report.campaigns_reused],
+    [t("imports.results.metricsDetected"), report.metrics_detected],
+    [t("imports.duplicates.metrics"), report.duplicate_metrics],
+    [t("imports.results.estimatedSpend"), report.estimated_spend],
+    [t("imports.results.estimatedRevenue"), report.estimated_revenue],
+    [t("imports.results.estimatedNetProfit"), report.estimated_net_profit],
+    [t("imports.results.estimatedRoas"), report.estimated_roas],
   ] as [string, unknown][]).filter(([, value]) => value !== undefined && value !== null && value !== 0 && value !== "0");
-  return <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900"><h2 className="font-semibold">{t("imports.dryRun.reportTitle")}</h2><div className="mt-3 grid min-w-0 gap-2 text-sm sm:grid-cols-2 md:grid-cols-4"><span>{t("imports.results.totalRows")}: {report.total_rows}</span><span>{t("imports.results.validRows")}: {report.valid_rows}</span><span>{t("imports.results.invalidRows")}: {report.invalid_rows ?? report.error_rows}</span><span>{t("imports.results.readyRows")}: {report.ready_to_import_rows}</span><span>{t("imports.results.warnings")}: {report.warnings_count ?? report.warning_rows}</span><span>{t("imports.results.errors")}: {report.errors_count ?? report.error_rows}</span><span>{t("imports.results.duplicates")}: {report.duplicate_rows}</span><span>{t("imports.results.skipped")}: {report.skipped_rows}</span><span>{t("imports.results.created")}: {report.created_count ?? report.estimated_entities_to_create}</span><span>{t("imports.results.updated")}: {report.updated_count ?? 0}</span></div>{catalogMetrics.length ? <MetricBlock title={t("imports.presets.productCatalog")} tone="blue" metrics={catalogMetrics} /> : null}{orderMetrics.length ? <MetricBlock title={t("imports.presets.ordersHistory")} tone="amber" metrics={orderMetrics} /> : null}{adMetrics.length ? <MetricBlock title={t("imports.presets.advertisingHistory")} tone="purple" metrics={adMetrics} /> : null}<div className="mt-4 grid min-w-0 gap-4 md:grid-cols-2"><div><h3 className="font-medium text-red-600">{t("imports.errors.sampleErrors")}</h3>{report.sample_errors.map((item, index) => <p className="break-words text-sm" key={index}>{t("imports.validation.row", { row: item.row_number ?? "—" })}: {item.message}</p>)}</div><div><h3 className="font-medium text-amber-600">{t("imports.warnings.sampleWarnings")}</h3>{report.sample_warnings.map((item, index) => <p className="break-words text-sm" key={index}>{t("imports.validation.row", { row: item.row_number ?? "—" })}: {item.message}</p>)}</div></div></section>;
+
+  const downloadableIssues = collectReportIssues(report);
+  const labels = getImportCenterPilotCopy(locale);
+
+  function downloadErrorCsv() {
+    const rows = [
+      [labels.row, labels.severity, labels.field, labels.message],
+      ...downloadableIssues.map((issue) => [
+        issue.row_number ?? labels.mapping,
+        issue.severity === "WARNING" ? labels.warning : labels.error,
+        issue.field ?? "",
+        localizeImportIssue(issue, locale),
+      ]),
+    ];
+    const csv = `\uFEFF${rows.map((row) => row.map(escapeImportCsvCell).join(",")).join("\r\n")}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "sellora-import-errors.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900" data-import-dry-run-report>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-semibold">{t("imports.dryRun.reportTitle")}</h2>
+        {downloadableIssues.length ? (
+          <button
+            type="button"
+            className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold dark:border-slate-700"
+            onClick={downloadErrorCsv}
+            data-import-error-csv-download
+          >
+            {labels.downloadErrorCsv}
+          </button>
+        ) : null}
+      </div>
+      <div className="mt-3 grid min-w-0 gap-2 text-sm sm:grid-cols-2 md:grid-cols-4">
+        <span>{t("imports.results.totalRows")}: {report.total_rows}</span>
+        <span>{t("imports.results.validRows")}: {report.valid_rows}</span>
+        <span>{t("imports.results.invalidRows")}: {report.invalid_rows ?? report.error_rows}</span>
+        <span>{t("imports.results.readyRows")}: {report.ready_to_import_rows}</span>
+        <span>{t("imports.results.warnings")}: {report.warnings_count ?? report.warning_rows}</span>
+        <span>{t("imports.results.errors")}: {report.errors_count ?? report.error_rows}</span>
+        <span>{t("imports.results.duplicates")}: {report.duplicate_rows}</span>
+        <span>{t("imports.results.skipped")}: {report.skipped_rows}</span>
+        <span>{t("imports.results.created")}: {report.created_count ?? report.estimated_entities_to_create}</span>
+        <span>{t("imports.results.updated")}: {report.updated_count ?? 0}</span>
+      </div>
+      {catalogMetrics.length ? <MetricBlock title={t("imports.presets.productCatalog")} tone="blue" metrics={catalogMetrics} /> : null}
+      {orderMetrics.length ? <MetricBlock title={t("imports.presets.ordersHistory")} tone="amber" metrics={orderMetrics} /> : null}
+      {adMetrics.length ? <MetricBlock title={t("imports.presets.advertisingHistory")} tone="purple" metrics={adMetrics} /> : null}
+      <div className="mt-4 grid min-w-0 gap-4 md:grid-cols-2">
+        <div>
+          <h3 className="font-medium text-red-600">{t("imports.errors.sampleErrors")}</h3>
+          {report.sample_errors.map((item, index) => (
+            <p className="break-words text-sm" key={`${item.row_number ?? "mapping"}-${item.field ?? "general"}-${index}`}>
+              {t("imports.validation.row", { row: item.row_number ?? "—" })}: {localizeImportIssue(item, locale)}
+            </p>
+          ))}
+        </div>
+        <div>
+          <h3 className="font-medium text-amber-600">{t("imports.warnings.sampleWarnings")}</h3>
+          {report.sample_warnings.map((item, index) => (
+            <p className="break-words text-sm" key={`${item.row_number ?? "mapping"}-${item.field ?? "general"}-${index}`}>
+              {t("imports.validation.row", { row: item.row_number ?? "—" })}: {localizeImportIssue(item, locale)}
+            </p>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function collectReportIssues(report: ImportReport): ValidationIssue[] {
+  const values = [
+    ...Object.values(report.errors_by_row ?? {}).flat(),
+    ...Object.values(report.warnings_by_row ?? {}).flat(),
+    ...report.sample_errors,
+    ...report.sample_warnings,
+  ];
+  const seen = new Set<string>();
+  return values.filter((issue) => {
+    const key = `${issue.row_number ?? "mapping"}|${issue.severity}|${issue.field ?? ""}|${issue.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function MetricBlock({ title, tone, metrics }: { title: string; tone: "blue" | "amber" | "purple"; metrics: [string, unknown][] }) {
-  const color = tone === "blue" ? "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-100" : tone === "amber" ? "bg-amber-50 text-amber-800 dark:bg-amber-400/10 dark:text-amber-100" : "bg-purple-50 text-purple-800 dark:bg-purple-400/10 dark:text-purple-100";
-  return <div className={`mt-4 min-w-0 overflow-hidden rounded-lg p-3 ${color}`}><h3 className="font-medium">{title}</h3><div className="mt-2 grid min-w-0 gap-2 text-sm md:grid-cols-3">{metrics.map(([label, value]) => <span className="break-words" key={label}>{label}: {String(value)}</span>)}</div></div>;
+  const color = tone === "blue"
+    ? "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-100"
+    : tone === "amber"
+      ? "bg-amber-50 text-amber-800 dark:bg-amber-400/10 dark:text-amber-100"
+      : "bg-purple-50 text-purple-800 dark:bg-purple-400/10 dark:text-purple-100";
+  return (
+    <div className={`mt-4 min-w-0 overflow-hidden rounded-lg p-3 ${color}`}>
+      <h3 className="font-medium">{title}</h3>
+      <div className="mt-2 grid min-w-0 gap-2 text-sm md:grid-cols-3">
+        {metrics.map(([label, value]) => <span className="break-words" key={label}>{label}: {String(value)}</span>)}
+      </div>
+    </div>
+  );
 }
+
 // Regression markers kept for historical import QA: Historical orders counters; Historical advertising counters.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
@@ -15,7 +15,7 @@ import { Lead, LeadStatus } from "@/types/crm";
 import { buildLeadUpdatePayload } from "@/lib/payload-builders";
 import { useAuth } from "@/hooks/use-auth";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
-import { Button, CompactSummary, EntityDrawer, FieldGrid, FieldItem, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
+import { Button, CompactSummary, EntitySidePanel, FieldGrid, FieldItem, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
 import { Select } from "@/components/ui/primitives";
 import { useI18n } from "@/i18n/provider";
 
@@ -92,6 +92,10 @@ export default function LeadsPage() {
   const newLeads = leadsQuery.data?.filter((lead) => lead.status === "NEW").length ?? 0;
   const inProgressLeads = leadsQuery.data?.filter((lead) => lead.status === "IN_PROGRESS").length ?? 0;
 
+  useEffect(() => {
+    setSelectedLead(null);
+  }, [workspaceId]);
+
   return (
     <WorkspacePage>
         <WorkspaceHeader title={t("leads.title")} description={t("leads.subtitle")} actions={<Button disabled={!enabled} onClick={() => setIsCreateOpen(true)}>{t("leads.create")}</Button>} />
@@ -111,36 +115,41 @@ export default function LeadsPage() {
           <ResetFiltersButton onClick={() => { setSearch(""); setStatus(""); setLeadSourceId(""); setLeadSort("newest"); }} />
         </FilterBar>
 
-        {!authReady ? <LoadingSkeleton title={t("common.loadingWorkspace")} /> : null}
-        {authReady && authStatus === "authenticated" && !workspaceId ? <ErrorState description={t("common.workspaceUnavailableDescription")} title={t("common.workspaceUnavailable")} /> : null}
-        {sourcesError ? <p className="rounded-lg bg-amber-50 p-4 text-sm font-semibold text-amber-700">{sourcesError}</p> : null}
-        {leadsQuery.isLoading || leadsQuery.isFetching && !leadsQuery.data ? <LoadingSkeleton title={t("leads.loading")} /> : null}
-        {listError ? <ErrorState description={listError} onRetry={() => void leadsQuery.refetch()} title={t("leads.loadError")} /> : null}
-        {!listError && leadsQuery.isSuccess && (leadsQuery.data?.length ?? 0) === 0 ? (
-          <EmptyState
-            title={hasActiveFilters ? t("leads.filteredEmptyTitle") : t("leads.emptyTitle")}
-            description={hasActiveFilters ? t("leads.filteredEmptyDescription") : t("leads.emptyDescription")}
-            action={<Button onClick={() => setIsCreateOpen(true)}>{t("leads.create")}</Button>}
-          />
-        ) : null}
-        {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={visibleLeads} leadSources={sourcesQuery.data ?? []} selectedLeadId={selectedLead?.id} onSelect={setSelectedLead} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} /> : null}
-
-        <EntityDrawer open={Boolean(selectedLead)} title={selectedLead?.name ?? t("leads.title")} description={selectedLead?.instagram_username ? `@${selectedLead.instagram_username.replace(/^@/, "")}` : selectedLead?.phone ?? undefined} onClose={() => setSelectedLead(null)} footer={selectedLead && canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingLead(selectedLead)}>{t("leads.edit")}</Button><Button variant="danger" onClick={() => setArchivingLead(selectedLead)}>{t("leads.archive")}</Button></div> : undefined}>
-          {selectedLead ? <div className="grid gap-4">
-            <FieldGrid>
-              <FieldItem label={t("tables.status")} value={t(`statuses.lead.${selectedLead.status}`)} />
-              <FieldItem label={t("leads.source")} value={selectedLead.lead_source_id ? (sourcesQuery.data ?? []).find((source) => source.id === selectedLead.lead_source_id)?.name ?? t("leads.unknownSource") : "—"} />
-              <FieldItem label={t("leads.campaignLabel")} value={selectedLead.campaign_name ?? "—"} />
-              <FieldItem label={t("leads.assignedManager")} value={selectedLead.assigned_user_id ? t("leads.assigned") : t("leads.unassigned")} />
-              <FieldItem label={t("analytics.revenue")} value={selectedLead.expected_revenue ?? "—"} />
-              <FieldItem label={t("leads.nextAction")} value={selectedLead.status === "QUALIFIED" ? t("leads.nextActionCreateOrder") : selectedLead.status === "CONVERTED" ? t("leads.nextActionConverted") : selectedLead.status === "LOST" ? t("leads.nextActionLost") : t("leads.nextActionContact")} />
-              <FieldItem label={t("tables.phone")} value={selectedLead.phone ?? "—"} />
-              <FieldItem label={t("tables.instagram")} value={selectedLead.instagram_username ? `@${selectedLead.instagram_username.replace(/^@/, "")}` : "—"} />
-            </FieldGrid>
-            <section className="rounded-2xl border border-border-subtle bg-surface-2 p-4"><h3 className="font-black text-text-primary">{t("orders.notes")}</h3><p className="mt-2 whitespace-pre-wrap text-sm text-text-secondary">{selectedLead.notes || "—"}</p></section>
-            <section className="rounded-2xl border border-border-subtle bg-surface-2 p-4"><h3 className="font-black text-text-primary">{t("customers.activity")}</h3><p className="mt-2 text-sm text-text-secondary">{t("leads.drawerActivityUnavailable")}</p></section>
-          </div> : null}
-        </EntityDrawer>
+        <WorkspaceSplitView
+          panelOpen={Boolean(selectedLead)}
+          panel={selectedLead ? (
+            <EntitySidePanel open={Boolean(selectedLead)} title={selectedLead.name ?? t("leads.title")} description={selectedLead.instagram_username ? `@${selectedLead.instagram_username.replace(/^@/, "")}` : selectedLead.phone ?? undefined} onClose={() => setSelectedLead(null)} footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingLead(selectedLead)}>{t("leads.edit")}</Button><Button variant="danger" onClick={() => setArchivingLead(selectedLead)}>{t("leads.archive")}</Button></div> : undefined}>
+              <div className="grid gap-4">
+                <FieldGrid>
+                  <FieldItem label={t("tables.status")} value={t(`statuses.lead.${selectedLead.status}`)} />
+                  <FieldItem label={t("leads.source")} value={selectedLead.lead_source_id ? (sourcesQuery.data ?? []).find((source) => source.id === selectedLead.lead_source_id)?.name ?? t("leads.unknownSource") : "—"} />
+                  <FieldItem label={t("leads.campaignLabel")} value={selectedLead.campaign_name ?? "—"} />
+                  <FieldItem label={t("leads.assignedManager")} value={selectedLead.assigned_user_id ? t("leads.assigned") : t("leads.unassigned")} />
+                  <FieldItem label={t("analytics.revenue")} value={selectedLead.expected_revenue ?? "—"} />
+                  <FieldItem label={t("leads.nextAction")} value={selectedLead.status === "QUALIFIED" ? t("leads.nextActionCreateOrder") : selectedLead.status === "CONVERTED" ? t("leads.nextActionConverted") : selectedLead.status === "LOST" ? t("leads.nextActionLost") : t("leads.nextActionContact")} />
+                  <FieldItem label={t("tables.phone")} value={selectedLead.phone ?? "—"} />
+                  <FieldItem label={t("tables.instagram")} value={selectedLead.instagram_username ? `@${selectedLead.instagram_username.replace(/^@/, "")}` : "—"} />
+                </FieldGrid>
+                <section className="rounded-2xl border border-border-subtle bg-surface-2 p-4"><h3 className="font-black text-text-primary">{t("orders.notes")}</h3><p className="mt-2 whitespace-pre-wrap text-sm text-text-secondary">{selectedLead.notes || "—"}</p></section>
+                <section className="rounded-2xl border border-border-subtle bg-surface-2 p-4"><h3 className="font-black text-text-primary">{t("customers.activity")}</h3><p className="mt-2 text-sm text-text-secondary">{t("leads.drawerActivityUnavailable")}</p></section>
+              </div>
+            </EntitySidePanel>
+          ) : null}
+        >
+          {!authReady ? <LoadingSkeleton title={t("common.loadingWorkspace")} /> : null}
+          {authReady && authStatus === "authenticated" && !workspaceId ? <ErrorState description={t("common.workspaceUnavailableDescription")} title={t("common.workspaceUnavailable")} /> : null}
+          {sourcesError ? <p className="rounded-lg bg-amber-50 p-4 text-sm font-semibold text-amber-700">{sourcesError}</p> : null}
+          {leadsQuery.isLoading || leadsQuery.isFetching && !leadsQuery.data ? <LoadingSkeleton title={t("leads.loading")} /> : null}
+          {listError ? <ErrorState description={listError} onRetry={() => void leadsQuery.refetch()} title={t("leads.loadError")} /> : null}
+          {!listError && leadsQuery.isSuccess && (leadsQuery.data?.length ?? 0) === 0 ? (
+            <EmptyState
+              title={hasActiveFilters ? t("leads.filteredEmptyTitle") : t("leads.emptyTitle")}
+              description={hasActiveFilters ? t("leads.filteredEmptyDescription") : t("leads.emptyDescription")}
+              action={<Button onClick={() => setIsCreateOpen(true)}>{t("leads.create")}</Button>}
+            />
+          ) : null}
+          {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={visibleLeads} leadSources={sourcesQuery.data ?? []} selectedLeadId={selectedLead?.id} onSelect={setSelectedLead} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} /> : null}
+        </WorkspaceSplitView>
 
         {isCreateOpen ? (
           <FormDialog title={t("leads.create")} description={t("leads.createHelp")} size="md" onClose={() => setIsCreateOpen(false)}>
