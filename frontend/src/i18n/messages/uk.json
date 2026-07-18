@@ -2187,6 +2187,8 @@
     "conversations": "Діалоги",
     "search": "Пошук за іменем, username або повідомленням",
     "noAutoSend": "Чернетки AI не відправляються клієнтам автоматично.",
-    "aiPanel": "AI-панель"
+    "aiPanel": "AI-панель",
+    "openAiPanel": "Відкрити AI-панель",
+    "syntheticBadge": "Тестовий діалог"
   }
 }

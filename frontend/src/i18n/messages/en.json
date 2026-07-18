@@ -2187,6 +2187,8 @@
     "conversations": "Conversations",
     "search": "Search by name, username, or message",
     "noAutoSend": "AI drafts are never sent to customers automatically.",
-    "aiPanel": "AI panel"
+    "aiPanel": "AI panel",
+    "openAiPanel": "Open AI panel",
+    "syntheticBadge": "Test conversation"
   }
 }
