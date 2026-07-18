@@ -243,3 +243,7 @@ Repository implementation now includes a durable fulfillment operation journal a
 ## Sprint 8F.1 consolidation readiness update — 2026-07-18
 
 Fulfillment now has a single canonical persistence model in the repository: `order_fulfillments`. MVP readiness remains blocked until migration `202607180026`, seeded PostgreSQL concurrency checks, deployment evidence, browser QA, and one controlled Nova Poshta smoke test are complete.
+
+## Sprint 9 AI foundation
+
+AI Direct Intelligence is advisory and synthetic-first. Workspace AI is disabled by default, production Meta ingestion is disabled, and automatic messaging is disabled.
