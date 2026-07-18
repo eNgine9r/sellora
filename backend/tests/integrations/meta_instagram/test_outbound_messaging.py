@@ -46,3 +46,25 @@ def test_outbound_idempotency_rejects_different_fingerprint(monkeypatch):
         service.prepare_operation(workspace_id, conversation_id, uuid4(), "hello", "k")
     assert exc.value.code == "META_IDEMPOTENCY_KEY_REUSED"
     get_settings.cache_clear()
+
+def test_completed_idempotency_result_does_not_call_provider(monkeypatch):
+    workspace_id = uuid4(); conversation_id = uuid4()
+    fingerprint = InstagramOutboundMessageService(SimpleNamespace())._fingerprint(conversation_id, "hello", False)
+    completed = MetaMessageOperation(workspace_id=workspace_id, conversation_id=conversation_id, instagram_connection_id=uuid4(), recipient_scoped_id="cust", idempotency_key="k", request_fingerprint=fingerprint, status="COMPLETED", provider_message_id="mid-1", direct_message_id=uuid4())
+    ops = FakeOps(); ops.existing = completed
+    service = InstagramOutboundMessageService(SimpleNamespace()); service.ops = ops
+    result = service.prepare_operation(workspace_id, conversation_id, uuid4(), "hello", "k")
+    assert result.operation is completed
+    assert result.should_call_provider is False
+    assert result.reused_existing is True
+
+
+def test_reconciliation_required_idempotency_result_does_not_call_provider():
+    workspace_id = uuid4(); conversation_id = uuid4()
+    fingerprint = InstagramOutboundMessageService(SimpleNamespace())._fingerprint(conversation_id, "hello", False)
+    op = MetaMessageOperation(workspace_id=workspace_id, conversation_id=conversation_id, instagram_connection_id=uuid4(), recipient_scoped_id="cust", idempotency_key="k", request_fingerprint=fingerprint, status="RECONCILIATION_REQUIRED", blind_retry_blocked=True)
+    ops = FakeOps(); ops.existing = op
+    service = InstagramOutboundMessageService(SimpleNamespace()); service.ops = ops
+    result = service.prepare_operation(workspace_id, conversation_id, uuid4(), "hello", "k")
+    assert result.should_call_provider is False
+    assert result.status == "RECONCILIATION_REQUIRED"

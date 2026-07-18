@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
 from app.models.ai_direct import DirectChannel, DirectMessage, DirectMessageDirection, DirectMessageSenderType, DirectMessageType
-from app.models.meta_instagram import MetaMessageOperationStatus, MetaWebhookEvent, MetaWebhookEventStatus
+from app.models.meta_instagram import InstagramConnectionStatus, MetaMessageOperationStatus, MetaWebhookEvent, MetaWebhookEventStatus
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
 from app.integrations.meta_instagram.repositories.message_operation_repository import MetaMessageOperationRepository
 
@@ -16,8 +16,8 @@ class InstagramInboundMessageService:
         self.db = db; self.conversations = DirectConversationRepository(db); self.messages = DirectMessageRepository(db)
     def process_event(self, event: MetaWebhookEvent) -> int:
         connection = InstagramConnectionRepository(self.db).get_active(event.workspace_id) if event.workspace_id else None
-        if not connection:
-            event.status = MetaWebhookEventStatus.IGNORED.value; event.processed_at = datetime.now(UTC); return 0
+        if not connection or connection.status != InstagramConnectionStatus.CONNECTED.value:
+            event.status = MetaWebhookEventStatus.IGNORED.value; event.safe_error_code = "META_CONNECTION_NOT_READY"; event.processed_at = datetime.now(UTC); return 0
         created = 0
         for entry in event.payload.get("entry", []) or []:
             for item in entry.get("messaging", []) or []:

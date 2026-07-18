@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 import hashlib
@@ -12,6 +13,13 @@ from app.integrations.meta_instagram.repositories.message_operation_repository i
 from app.models.ai_direct import DirectMessage, DirectMessageDirection, DirectMessageSenderType, DirectMessageType
 from app.models.meta_instagram import MetaMessageOperation, MetaMessageOperationStatus
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
+
+@dataclass(frozen=True)
+class PreparedOperationResult:
+    operation: MetaMessageOperation
+    should_call_provider: bool
+    reused_existing: bool
+    status: str
 
 class InstagramOutboundMessageService:
     def __init__(self, db: Session, client_factory=None) -> None:
@@ -32,12 +40,12 @@ class InstagramOutboundMessageService:
                 if not conversation.human_agent_window_expires_at or conversation.human_agent_window_expires_at < now: blockers.append("META_HUMAN_AGENT_NOT_ALLOWED")
         if len(message_text) > 1000: blockers.append("META_WEBHOOK_PAYLOAD_INVALID")
         return not blockers, blockers, warnings
-    def prepare_operation(self, workspace_id: UUID, conversation_id: UUID, user_id: UUID, message_text: str, idempotency_key: str, human_agent_requested: bool = False) -> MetaMessageOperation:
+    def prepare_operation(self, workspace_id: UUID, conversation_id: UUID, user_id: UUID, message_text: str, idempotency_key: str, human_agent_requested: bool = False) -> PreparedOperationResult:
         fingerprint = self._fingerprint(conversation_id, message_text, human_agent_requested)
         existing = self.ops.get_by_idempotency_for_update(workspace_id, idempotency_key)
         if existing:
             if existing.request_fingerprint != fingerprint: raise MetaInstagramError("META_IDEMPOTENCY_KEY_REUSED", "Idempotency key reused with different payload.", 409)
-            return existing
+            return PreparedOperationResult(operation=existing, should_call_provider=False, reused_existing=True, status=existing.status)
         self._rate_limit(workspace_id, conversation_id)
         ready, blockers, _ = self.prepare(workspace_id, conversation_id, message_text, human_agent_requested)
         if not ready: raise MetaInstagramError(blockers[0], blockers[0])
@@ -46,7 +54,7 @@ class InstagramOutboundMessageService:
         if not connection or connection.status != "CONNECTED" or not connection.access_token_ciphertext: raise MetaInstagramError("META_CONNECTION_NOT_READY", "Instagram connection is not ready.")
         if connection.token_expires_at and connection.token_expires_at < datetime.now(UTC): raise MetaInstagramError("META_TOKEN_EXPIRED", "Instagram token expired.")
         op = MetaMessageOperation(workspace_id=workspace_id, instagram_connection_id=connection.id, conversation_id=conversation_id, recipient_scoped_id=conversation.participant_scoped_id, idempotency_key=idempotency_key, request_fingerprint=fingerprint, status=MetaMessageOperationStatus.SENDING.value, started_at=datetime.now(UTC), created_by=user_id, messaging_window_expires_at=conversation.messaging_window_expires_at, human_agent_allowed=human_agent_requested, safe_request_metadata={"message_length": len(message_text), "human_agent_requested": human_agent_requested, "message_hash": hashlib.sha256(message_text.encode()).hexdigest()})
-        return self.ops.create(op)
+        return PreparedOperationResult(operation=self.ops.create(op), should_call_provider=True, reused_existing=False, status=MetaMessageOperationStatus.SENDING.value)
     async def call_provider(self, workspace_id: UUID, operation_id: UUID, message_text: str) -> MetaSendResult:
         op = self.ops.get(workspace_id, operation_id)
         if not op: raise MetaInstagramError("META_MESSAGE_OPERATION_ACTIVE", "Message operation not found.", 404)
@@ -85,8 +93,7 @@ class InstagramOutboundMessageService:
         op.last_error_code = exc.code; op.last_error_message = exc.message[:300]
         return op
     async def send(self, workspace_id: UUID, conversation_id: UUID, user_id: UUID, message_text: str, idempotency_key: str, human_agent_requested: bool = False):
-        op = self.prepare_operation(workspace_id, conversation_id, user_id, message_text, idempotency_key, human_agent_requested)
-        return op
+        return self.prepare_operation(workspace_id, conversation_id, user_id, message_text, idempotency_key, human_agent_requested).operation
     def _fingerprint(self, conversation_id: UUID, message_text: str, human_agent_requested: bool) -> str:
         return hashlib.sha256(f"{conversation_id}:{message_text}:{human_agent_requested}".encode()).hexdigest()
     def _rate_limit(self, workspace_id: UUID, conversation_id: UUID) -> None:

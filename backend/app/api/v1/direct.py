@@ -71,8 +71,11 @@ async def send_reply(conversation_id: UUID, payload: ReplySendRequest, idempoten
         raise HTTPException(400, 'META_IDEMPOTENCY_KEY_REUSED')
     service = InstagramOutboundMessageService(db)
     try:
-        op = service.prepare_operation(workspace_id, conversation_id, user.id, payload.message_text, idempotency_key, payload.human_agent_requested)
-        db.commit(); operation_id = op.id
+        prepared = service.prepare_operation(workspace_id, conversation_id, user.id, payload.message_text, idempotency_key, payload.human_agent_requested)
+        db.commit(); operation_id = prepared.operation.id
+        if not prepared.should_call_provider:
+            op = prepared.operation
+            return ReplySendResponse(operation_id=op.id, status=op.status, provider_message_id=op.provider_message_id, direct_message_id=op.direct_message_id)
     except MetaInstagramError as exc:
         db.rollback(); raise HTTPException(exc.status_code, {'code': exc.code, 'message': exc.message}) from exc
     try:
