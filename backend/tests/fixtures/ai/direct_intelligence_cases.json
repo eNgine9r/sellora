@@ -1,0 +1,642 @@
+[
+  {
+    "id": "price-001",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії price: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "PRICE_INQUIRY",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "availability-002",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії availability: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "AVAILABILITY_CHECK",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "order-003",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії order: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "ORDER_REQUEST",
+      "payment_method": "COD",
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "delivery-004",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії delivery: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "DELIVERY_QUESTION",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "payment-005",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії payment: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "PAYMENT_QUESTION",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "COD-006",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії COD: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "ORDER_REQUEST",
+      "payment_method": "COD",
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "phone-007",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії phone: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "multiple-products-008",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії multiple-products: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "ORDER_REQUEST",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "ambiguous-product-009",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії ambiguous-product: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "unknown-product-010",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії unknown-product: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "complaint-011",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії complaint: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "COMPLAINT",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "return-012",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії return: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "RETURN_REQUEST",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "exchange-013",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії exchange: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "EXCHANGE_REQUEST",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "spam-014",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії spam: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "SPAM",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "mixed-language-015",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії mixed-language: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "emoji-heavy-016",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії emoji-heavy: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "short-message-017",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії short-message: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "long-message-018",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії long-message: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "missing-data-019",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії missing-data: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "conflicting-data-020",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії conflicting-data: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "price-021",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії price: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "PRICE_INQUIRY",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "availability-022",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії availability: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "AVAILABILITY_CHECK",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "order-023",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії order: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "ORDER_REQUEST",
+      "payment_method": "COD",
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "delivery-024",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії delivery: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "DELIVERY_QUESTION",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "payment-025",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії payment: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "PAYMENT_QUESTION",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "COD-026",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії COD: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "ORDER_REQUEST",
+      "payment_method": "COD",
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "phone-027",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії phone: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "multiple-products-028",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії multiple-products: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "ORDER_REQUEST",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "ambiguous-product-029",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії ambiguous-product: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "unknown-product-030",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії unknown-product: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "complaint-031",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії complaint: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "COMPLAINT",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "return-032",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії return: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "RETURN_REQUEST",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "exchange-033",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії exchange: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "EXCHANGE_REQUEST",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "spam-034",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії spam: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "SPAM",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "mixed-language-035",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії mixed-language: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "emoji-heavy-036",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії emoji-heavy: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "short-message-037",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії short-message: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "long-message-038",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії long-message: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "missing-data-039",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії missing-data: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  },
+  {
+    "id": "conflicting-data-040",
+    "language": "uk",
+    "messages": [
+      "Тестове повідомлення категорії conflicting-data: хочу чорний годинник післяплатою"
+    ],
+    "expected": {
+      "intent": "GENERAL_MESSAGE",
+      "payment_method": null,
+      "clarification_required": true,
+      "missing_fields": [
+        "phone",
+        "delivery"
+      ]
+    }
+  }
+]
