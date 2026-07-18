@@ -39,6 +39,18 @@ class Settings(BaseSettings):
     meta_token_encryption_key: str | None = Field(default=None, alias="META_TOKEN_ENCRYPTION_KEY")
     meta_oauth_authorize_url: str | None = Field(default=None, alias="META_OAUTH_AUTHORIZE_URL")
 
+
+    ai_provider: str = Field(default="openai", alias="AI_PROVIDER")
+    ai_api_key: str | None = Field(default=None, alias="AI_API_KEY")
+    ai_default_model: str = Field(default="gpt-4.1-mini", alias="AI_DEFAULT_MODEL")
+    ai_fast_model: str = Field(default="gpt-4.1-mini", alias="AI_FAST_MODEL")
+    ai_request_timeout_seconds: float = Field(default=30.0, ge=1, le=120, alias="AI_REQUEST_TIMEOUT_SECONDS")
+    ai_max_retries: int = Field(default=1, ge=0, le=3, alias="AI_MAX_RETRIES")
+    ai_max_input_characters: int = Field(default=12000, ge=100, le=50000, alias="AI_MAX_INPUT_CHARACTERS")
+    ai_default_daily_token_limit: int = Field(default=100000, ge=1, le=5000000, alias="AI_DEFAULT_DAILY_TOKEN_LIMIT")
+    ai_default_monthly_budget_usd: float = Field(default=25.0, ge=0, le=10000, alias="AI_DEFAULT_MONTHLY_BUDGET_USD")
+    ai_feature_enabled: bool = Field(default=False, alias="AI_FEATURE_ENABLED")
+
     initial_admin_email: str = Field(default="admin@sellora.local", alias="INITIAL_ADMIN_EMAIL")
     initial_admin_password: str = Field(default="ChangeMe123!", alias="INITIAL_ADMIN_PASSWORD")
     initial_admin_first_name: str = Field(default="Sellora", alias="INITIAL_ADMIN_FIRST_NAME")
