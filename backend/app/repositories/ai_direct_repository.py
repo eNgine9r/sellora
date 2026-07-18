@@ -10,6 +10,8 @@ class DirectConversationRepository:
         return list(self.db.execute(select(DirectConversation).where(DirectConversation.workspace_id==workspace_id, DirectConversation.deleted_at.is_(None)).order_by(DirectConversation.last_message_at.desc().nullslast())).scalars())
     def get(self, workspace_id: UUID, conversation_id: UUID) -> DirectConversation | None:
         return self.db.execute(select(DirectConversation).where(DirectConversation.workspace_id==workspace_id, DirectConversation.id==conversation_id, DirectConversation.deleted_at.is_(None))).scalar_one_or_none()
+    def get_by_instagram_participant(self, workspace_id: UUID, instagram_connection_id: UUID, participant_scoped_id: str) -> DirectConversation | None:
+        return self.db.execute(select(DirectConversation).where(DirectConversation.workspace_id==workspace_id, DirectConversation.instagram_connection_id==instagram_connection_id, DirectConversation.participant_scoped_id==participant_scoped_id, DirectConversation.deleted_at.is_(None))).scalar_one_or_none()
     def create(self, conversation: DirectConversation) -> DirectConversation:
         self.db.add(conversation); self.db.flush(); return conversation
 
@@ -19,6 +21,8 @@ class DirectMessageRepository:
         return list(self.db.execute(select(DirectMessage).where(DirectMessage.workspace_id==workspace_id, DirectMessage.conversation_id==conversation_id, DirectMessage.deleted_at.is_(None)).order_by(DirectMessage.received_at.asc(), DirectMessage.created_at.asc())).scalars())
     def latest_analyzable(self, workspace_id: UUID, conversation_id: UUID) -> DirectMessage | None:
         return self.db.execute(select(DirectMessage).where(DirectMessage.workspace_id==workspace_id, DirectMessage.conversation_id==conversation_id, DirectMessage.deleted_at.is_(None), DirectMessage.message_type=='TEXT').order_by(DirectMessage.received_at.desc())).scalar_one_or_none()
+    def get_by_provider_message(self, workspace_id: UUID, provider: str, provider_message_id: str) -> DirectMessage | None:
+        return self.db.execute(select(DirectMessage).where(DirectMessage.workspace_id==workspace_id, DirectMessage.provider==provider, DirectMessage.provider_message_id==provider_message_id, DirectMessage.deleted_at.is_(None))).scalar_one_or_none()
     def create(self, message: DirectMessage) -> DirectMessage:
         self.db.add(message); self.db.flush(); return message
 

@@ -6,7 +6,7 @@ from app.dependencies.rbac import get_workspace_id, require_min_role
 from app.models.role import RoleName
 from app.models.user import User
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
-from app.integrations.meta_instagram.schemas import InstagramConnectResponse, InstagramConnectionStatusResponse, InstagramOAuthCallbackResponse, InstagramDisconnectResponse, InstagramValidateResponse, ReplyPrepareRequest, ReplyPrepareResponse, ReplySendRequest, ReplySendResponse
+from app.integrations.meta_instagram.schemas import InstagramConnectResponse, InstagramConnectionStatusResponse, InstagramOAuthCallbackResponse, InstagramDisconnectResponse, InstagramValidateResponse
 from app.integrations.meta_instagram.services.connection_service import InstagramConnectionService
 from app.integrations.meta_instagram.services.webhook_service import InstagramWebhookService
 from app.integrations.meta_instagram.services.outbound_message_service import InstagramOutboundMessageService
@@ -23,10 +23,10 @@ def connect_instagram(workspace_id: UUID = Depends(get_workspace_id), user: User
     except MetaInstagramError as exc: _raise(exc)
 
 @router.get("/oauth/callback", response_model=InstagramOAuthCallbackResponse)
-def instagram_oauth_callback(state: str = Query(...), code: str = Query(...), workspace_id: UUID = Depends(get_workspace_id), user: User = Depends(require_min_role(RoleName.OWNER)), db: Session = Depends(get_db)):
+async def instagram_oauth_callback(state: str = Query(...), code: str = Query(...), db: Session = Depends(get_db)):
     try:
-        c = InstagramConnectionService(db).complete_callback(workspace_id, user.id, state, code); db.commit(); return InstagramOAuthCallbackResponse(status=c.status, connected=c.status == "CONNECTED", instagram_username=c.instagram_username)
-    except MetaInstagramError as exc: _raise(exc)
+        c = await InstagramConnectionService(db).complete_callback(state, code); db.commit(); return InstagramOAuthCallbackResponse(status=c.status, connected=c.status == "CONNECTED", instagram_username=c.instagram_username)
+    except MetaInstagramError as exc: db.rollback(); _raise(exc)
 
 @router.get("/status", response_model=InstagramConnectionStatusResponse)
 def instagram_status(workspace_id: UUID = Depends(get_workspace_id), _: User = Depends(require_min_role(RoleName.ANALYST)), db: Session = Depends(get_db)):
@@ -36,8 +36,8 @@ def instagram_status(workspace_id: UUID = Depends(get_workspace_id), _: User = D
     return InstagramConnectionStatusResponse(workspace_id=workspace_id, status=c.status, instagram_username=c.instagram_username, instagram_account_type=c.instagram_account_type, granted_permissions=c.granted_permissions, subscribed_webhook_fields=c.subscribed_webhook_fields, token_expires_at=c.token_expires_at, connected_at=c.connected_at, disconnected_at=c.disconnected_at, last_webhook_at=c.last_webhook_at, last_message_received_at=c.last_message_received_at, last_message_sent_at=c.last_message_sent_at, token_present=bool(c.access_token_ciphertext))
 
 @router.post("/validate", response_model=InstagramValidateResponse)
-def validate_instagram(workspace_id: UUID = Depends(get_workspace_id), _: User = Depends(require_min_role(RoleName.OWNER)), db: Session = Depends(get_db)):
-    c, ok = InstagramConnectionService(db).validate(workspace_id); db.commit()
+async def validate_instagram(workspace_id: UUID = Depends(get_workspace_id), _: User = Depends(require_min_role(RoleName.OWNER)), db: Session = Depends(get_db)):
+    c, ok = await InstagramConnectionService(db).validate(workspace_id); db.commit()
     return InstagramValidateResponse(status=c.status if c else "DISCONNECTED", permission_ok=ok, token_present=bool(c and c.access_token_ciphertext))
 
 @router.post("/disconnect", response_model=InstagramDisconnectResponse)

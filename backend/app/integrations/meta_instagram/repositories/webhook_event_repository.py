@@ -1,5 +1,5 @@
-from datetime import datetime
-from sqlalchemy import select
+from datetime import UTC, datetime
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 from app.models.meta_instagram import MetaWebhookEvent
 
@@ -15,4 +15,5 @@ class MetaWebhookEventRepository:
             stmt = stmt.where(MetaWebhookEvent.payload_hash == payload_hash, MetaWebhookEvent.event_date_bucket == bucket)
         return self.db.execute(stmt).scalar_one_or_none()
     def next_batch_for_update(self, limit: int = 25) -> list[MetaWebhookEvent]:
-        return list(self.db.execute(select(MetaWebhookEvent).where(MetaWebhookEvent.status.in_(["VERIFIED", "QUEUED", "RETRY_PENDING"])).order_by(MetaWebhookEvent.received_at).limit(limit).with_for_update(skip_locked=True)).scalars())
+        now = datetime.now(UTC)
+        return list(self.db.execute(select(MetaWebhookEvent).where(MetaWebhookEvent.status.in_(["VERIFIED", "QUEUED", "RETRY_PENDING"]), or_(MetaWebhookEvent.next_retry_at.is_(None), MetaWebhookEvent.next_retry_at <= now)).order_by(MetaWebhookEvent.received_at).limit(limit).with_for_update(skip_locked=True)).scalars())

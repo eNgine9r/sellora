@@ -11,8 +11,9 @@ from app.ai.services.direct_conversation_service import DirectConversationServic
 from app.ai.services.direct_intelligence_service import DirectIntelligenceService
 from app.ai.exceptions import AIError
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
-from app.integrations.meta_instagram.schemas import ReplyPrepareRequest, ReplyPrepareResponse, ReplySendRequest, ReplySendResponse
+from app.integrations.meta_instagram.schemas import MessageOperationResponse, ReplyPrepareRequest, ReplyPrepareResponse, ReplySendRequest, ReplySendResponse
 from app.integrations.meta_instagram.services.outbound_message_service import InstagramOutboundMessageService
+from app.integrations.meta_instagram.services.reconciliation_service import InstagramReconciliationService
 
 router=APIRouter(prefix='/direct', tags=['direct-intelligence'])
 
@@ -68,9 +69,28 @@ def prepare_reply(conversation_id: UUID, payload: ReplyPrepareRequest, workspace
 async def send_reply(conversation_id: UUID, payload: ReplySendRequest, idempotency_key: str | None=Header(default=None, alias='Idempotency-Key'), workspace_id: UUID=Depends(get_workspace_id), user: User=Depends(require_min_role(RoleName.MANAGER)), db: Session=Depends(get_db)):
     if not idempotency_key:
         raise HTTPException(400, 'META_IDEMPOTENCY_KEY_REUSED')
+    service = InstagramOutboundMessageService(db)
     try:
-        op = await InstagramOutboundMessageService(db).send(workspace_id, conversation_id, user.id, payload.message_text, idempotency_key, payload.human_agent_requested)
-        db.commit(); db.refresh(op)
+        op = service.prepare_operation(workspace_id, conversation_id, user.id, payload.message_text, idempotency_key, payload.human_agent_requested)
+        db.commit(); operation_id = op.id
+    except MetaInstagramError as exc:
+        db.rollback(); raise HTTPException(exc.status_code, {'code': exc.code, 'message': exc.message}) from exc
+    try:
+        result = await service.call_provider(workspace_id, operation_id, payload.message_text)
+        op = service.finalize_success(workspace_id, operation_id, payload.message_text, result); db.commit(); db.refresh(op)
         return ReplySendResponse(operation_id=op.id, status=op.status, provider_message_id=op.provider_message_id, direct_message_id=op.direct_message_id)
+    except MetaInstagramError as exc:
+        op = service.finalize_failure(workspace_id, operation_id, exc); db.commit(); db.refresh(op)
+        return ReplySendResponse(operation_id=op.id, status=op.status, provider_message_id=op.provider_message_id, direct_message_id=op.direct_message_id)
+
+@router.get('/message-operations/{operation_id}', response_model=MessageOperationResponse)
+def message_operation_status(operation_id: UUID, workspace_id: UUID=Depends(get_workspace_id), _: User=Depends(require_min_role(RoleName.ANALYST)), db: Session=Depends(get_db)):
+    try: return InstagramReconciliationService(db).status(workspace_id, operation_id)
+    except MetaInstagramError as exc: raise HTTPException(exc.status_code, {'code': exc.code, 'message': exc.message}) from exc
+
+@router.post('/message-operations/{operation_id}/reconcile', response_model=MessageOperationResponse)
+def reconcile_message_operation(operation_id: UUID, workspace_id: UUID=Depends(get_workspace_id), _: User=Depends(require_min_role(RoleName.MANAGER)), db: Session=Depends(get_db)):
+    try:
+        op = InstagramReconciliationService(db).reconcile(workspace_id, operation_id); db.commit(); db.refresh(op); return op
     except MetaInstagramError as exc:
         db.rollback(); raise HTTPException(exc.status_code, {'code': exc.code, 'message': exc.message}) from exc

@@ -56,3 +56,16 @@ class ReplySendResponse(BaseModel):
     status: str
     provider_message_id: str | None = None
     direct_message_id: UUID | None = None
+
+class MessageOperationResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    conversation_id: UUID
+    status: str
+    provider_message_id: str | None = None
+    direct_message_id: UUID | None = None
+    manual_reconciliation_required: bool = False
+    blind_retry_blocked: bool = False
+    last_error_code: str | None = None
+
+    model_config = {"from_attributes": True}
