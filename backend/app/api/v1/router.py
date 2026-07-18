@@ -1,5 +1,7 @@
 from app.api.v1.advertising import router as advertising_router
 from fastapi import APIRouter
+from app.api.v1.ai import router as ai_router
+from app.api.v1.direct import router as direct_router
 
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.attachments import router as attachments_router
@@ -20,11 +22,14 @@ from app.api.v1.order_fulfillments import router as order_fulfillments_router
 from app.api.v1.order_fulfillment_operations import router as order_fulfillment_operations_router
 from app.api.v1.shipments import router as shipments_router
 from app.api.v1.import_center import router as import_center_router
+from app.api.v1.instagram import router as instagram_router
 from app.api.v1.inventory import router as inventory_router
 from app.api.v1.workspaces import router as workspaces_router
 from app.api.v1.workspace_users import router as workspace_users_router
 
 api_router = APIRouter()
+api_router.include_router(ai_router)
+api_router.include_router(direct_router)
 api_router.include_router(advertising_router)
 api_router.include_router(analytics_router)
 api_router.include_router(auth_router)
@@ -35,6 +40,7 @@ api_router.include_router(feedback_router)
 api_router.include_router(finance_router)
 api_router.include_router(products_router)
 api_router.include_router(import_center_router)
+api_router.include_router(instagram_router)
 api_router.include_router(inventory_router)
 api_router.include_router(onboarding_router)
 api_router.include_router(orders_router)

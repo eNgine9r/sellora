@@ -81,7 +81,9 @@ jobs:
             tests/test_order_fulfillment_consolidation_migration.py \
             tests/integrations/fulfillment/test_fulfillment_provider_reconciliation.py \
             tests/integrations/nova_poshta/test_real_provider_payload.py \
-            tests/integrations/nova_poshta/test_durable_ttn_workflow.py
+            tests/integrations/nova_poshta/test_durable_ttn_workflow.py \
+            tests/ai/test_ai_foundation.py \
+            tests/test_meta_instagram_foundation.py
 
   security-and-tenant-isolation:
     name: security-and-tenant-isolation
@@ -123,7 +125,8 @@ jobs:
             tests/orders/test_sprint_8d_locking_contract.py \
             tests/inventory/test_inventory_operational_invariants.py \
             tests/test_shipments.py \
-            tests/shipments/test_local_shipment_pilot.py
+            tests/shipments/test_local_shipment_pilot.py \
+            tests/test_meta_instagram_foundation.py
 
   backend-full:
     name: backend-full
@@ -185,14 +188,15 @@ jobs:
       - name: Run canonical migration downgrade and re-upgrade gate
         run: |
           alembic upgrade head
-          alembic downgrade 202607180025
+          alembic downgrade 202607180027
           alembic upgrade head
           alembic current
       - name: Run PostgreSQL concurrency and consolidation tests
         run: |
           python -m pytest -q \
             tests/integrations/fulfillment/test_fulfillment_concurrency_postgres.py \
-            tests/test_order_fulfillment_consolidation_migration.py
+            tests/test_order_fulfillment_consolidation_migration.py \
+            tests/test_meta_instagram_foundation.py
 
   frontend-production:
     name: frontend-production
@@ -225,3 +229,7 @@ jobs:
         run: node frontend/scripts/orders-inventory-shipments-pilot-regression.mjs
       - name: Run Nova Poshta static regression
         run: node frontend/scripts/nova-poshta-real-validation-regression.mjs
+      - name: Run Direct and Meta Instagram static regressions
+        run: |
+          node frontend/scripts/direct-app-shell-regression.mjs
+          node frontend/scripts/meta-instagram-regression.mjs
