@@ -509,3 +509,9 @@ First-run guidance and demo workspace generation are implemented for controlled 
 - Real Nova Poshta document creation remains blocked behind controlled provider-write gates until runtime evidence is collected.
 - Browser QA and controlled real-TTN smoke evidence are pending outside this local repository change.
 - Fulfillment finance recognition remains operational-preview level and must be validated with delivered, cancelled, returned, and refunded runtime scenarios before public launch.
+
+## Sprint 8F.1 consolidation limitations — 2026-07-18
+
+- Fulfillment is consolidated back to the canonical `order_fulfillments` table, but external runtime and controlled Nova Poshta smoke evidence remain pending.
+- Provider document cancellation remains safely unsupported unless a durable provider cancellation operation is implemented and validated.
+- PostgreSQL concurrency proof must be collected in CI/runtime; local SQLite-style evidence is not sufficient.

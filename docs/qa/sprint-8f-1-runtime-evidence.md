@@ -8,8 +8,10 @@ This repository change does not contain secrets, customer PII, runtime credentia
 
 - [ ] Merge commit SHA deployed to Render.
 - [ ] Backend `/health` returns `200` and the expected runtime commit.
-- [ ] Packaged Alembic head equals `202607180025`.
-- [ ] Runtime database revision equals `202607180025`.
+- [ ] Packaged Alembic head equals `202607180026`.
+- [ ] Runtime database revision equals `202607180026`.
+- [ ] Duplicate `order_fulfillment_operations` table is absent at runtime.
+- [ ] Canonical `order_fulfillments` indexes are present.
 - [ ] Vercel deployment is Ready for the same merge commit.
 - [ ] Environment Nova Poshta writes disabled before smoke test.
 - [ ] Workspace provider permission disabled before smoke test.
@@ -17,5 +19,5 @@ This repository change does not contain secrets, customer PII, runtime credentia
 
 ## Current repository evidence
 
-- New migration head: `202607180025`.
+- New migration head: `202607180026`.
 - Runtime/provider evidence: not available in the local Codex environment.

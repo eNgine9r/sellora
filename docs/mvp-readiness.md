@@ -239,3 +239,7 @@ Nova Poshta integration code is conditionally ready for a controlled staging pil
 ## Sprint 8F.1 fulfillment readiness update — 2026-07-18
 
 Repository implementation now includes a durable fulfillment operation journal and existing-order fulfillment endpoints. MVP readiness remains **not approved for public unrestricted production launch** until PostgreSQL CI, runtime deployment, browser QA, and controlled Nova Poshta smoke evidence are completed and documented.
+
+## Sprint 8F.1 consolidation readiness update — 2026-07-18
+
+Fulfillment now has a single canonical persistence model in the repository: `order_fulfillments`. MVP readiness remains blocked until migration `202607180026`, seeded PostgreSQL concurrency checks, deployment evidence, browser QA, and one controlled Nova Poshta smoke test are complete.

@@ -2,12 +2,21 @@
 
 Status: **not executed**.
 
-Run this only after all CI, migration, deployment, and browser QA gates are green.
+Run this only after all CI, seeded PostgreSQL migration, deployment, and browser QA gates are green.
+
+## Required canonical assertions
+
+- One canonical `order_fulfillments` row.
+- One shipment.
+- One Nova Poshta durable provider operation maximum.
+- One provider create call maximum.
+- Repeat request returns the stored canonical result.
+- Reconcile calls provider reconciliation, not provider create.
 
 ## Sanitized evidence to capture
 
 - Commit SHA.
-- Operation ID hash.
+- Fulfillment ID hash.
 - Shipment ID hash.
 - Document ref hash.
 - Masked/hash tracking number.

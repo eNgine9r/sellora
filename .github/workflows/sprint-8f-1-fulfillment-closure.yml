@@ -34,8 +34,18 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
-      - name: Focused fulfillment/Nova Poshta/finance/RBAC tests
-        run: pytest tests -q -k "fulfillment or nova_poshta or finance or rbac or workspace or tenant or inventory"
+      - name: Focused fulfillment closure suites
+        run: |
+          pytest \
+            tests/test_order_fulfillment.py \
+            tests/test_order_fulfillment_workflow.py \
+            tests/test_order_fulfillment_api.py \
+            tests/test_order_fulfillment_finance.py \
+            tests/test_order_fulfillment_consolidation_migration.py \
+            tests/integrations/fulfillment/test_fulfillment_provider_reconciliation.py \
+            tests/security/test_endpoint_inventory.py \
+            tests/security/test_tenant_object_isolation.py \
+            -q
 
   full-backend:
     runs-on: ubuntu-latest
@@ -81,11 +91,15 @@ jobs:
       - name: PostgreSQL migration upgrade/downgrade/re-upgrade gate
         run: |
           alembic upgrade head
-          alembic downgrade 202607160024
+          alembic downgrade 202607180025
           alembic upgrade head
           alembic current
-      - name: PostgreSQL focused concurrency and uniqueness tests
-        run: pytest tests -q -k "postgres or concurrency or operation_uniqueness or fulfillment"
+      - name: PostgreSQL focused concurrency and migration tests
+        run: |
+          pytest \
+            tests/integrations/fulfillment/test_fulfillment_concurrency_postgres.py \
+            tests/test_order_fulfillment_consolidation_migration.py \
+            -q
 
   frontend-production:
     runs-on: ubuntu-latest
