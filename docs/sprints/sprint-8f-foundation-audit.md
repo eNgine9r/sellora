@@ -72,3 +72,7 @@ Scope: PR 1 foundation for validation, addresses, and Nova Poshta provider write
 - Canonical directory verification before provider document creation.
 - COD backward-delivery provider payload contract.
 - Three-step frontend wizard and responsive/browser evidence.
+
+## Sprint 8F.1 repository follow-up — 2026-07-18
+
+A dedicated fulfillment operation journal was added after the Sprint 8F foundation migration. The foundation verification lifecycle remains separate from TTN creation: provider writes are still gated and Sprint 8F.1 does not claim runtime/provider approval without external evidence.
