@@ -198,9 +198,6 @@ jobs:
     name: frontend-production
     runs-on: ubuntu-24.04
     timeout-minutes: 25
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -211,16 +208,20 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - name: Install frontend dependencies
+        working-directory: frontend
         run: npm ci
       - name: Typecheck
+        working-directory: frontend
         run: npm run typecheck
       - name: Lint
+        working-directory: frontend
         run: npm run lint
       - name: Production build
+        working-directory: frontend
         run: npm run build
       - name: Run import-center static regression
-        run: node scripts/import-center-pilot-regression.mjs
+        run: node frontend/scripts/import-center-pilot-regression.mjs
       - name: Run orders, inventory and shipments static regression
-        run: node scripts/orders-inventory-shipments-pilot-regression.mjs
+        run: node frontend/scripts/orders-inventory-shipments-pilot-regression.mjs
       - name: Run Nova Poshta static regression
-        run: node scripts/nova-poshta-real-validation-regression.mjs
+        run: node frontend/scripts/nova-poshta-real-validation-regression.mjs
