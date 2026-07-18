@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { WorkspacePage, WorkspaceHeader } from "@/components/crm-workspace";
+import { InstagramMessagingIntegrationCard } from "@/features/integrations/components/instagram-messaging-integration-card";
 import { MetaAdsReadinessCard } from "@/features/integrations/components/meta-ads-readiness-card";
 import { NovaPoshtaSettingsCard } from "@/features/integrations/components/nova-poshta-settings-card";
 import { useAuth } from "@/hooks/use-auth";
@@ -81,8 +82,8 @@ export default function IntegrationsSettingsPage() {
   return (
     <WorkspacePage>
       <WorkspaceHeader eyebrow={t("settings.label")} title={t("settings.integrationsTitle")} description={t("settings.integrationsSubtitle")} />
-      <section className="grid min-w-0 gap-4 xl:grid-cols-2">
-        <MetaAdsReadinessCard />
+      <section className="grid min-w-0 gap-4 xl:grid-cols-3">
+        <InstagramMessagingIntegrationCard workspaceId={workspaceId} />
         <NovaPoshtaSettingsCard
           workspaceId={workspaceId}
           settings={settings.data}
@@ -96,6 +97,7 @@ export default function IntegrationsSettingsPage() {
           onUpdateWritePermission={(allowed) => permission.mutate(allowed)}
           onDisconnect={() => disconnect.mutate()}
         />
+        <MetaAdsReadinessCard />
       </section>
     </WorkspacePage>
   );

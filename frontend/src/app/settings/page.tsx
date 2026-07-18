@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Building2, Languages, PlugZap, ShieldCheck, UploadCloud, Users, Wand2 } from "lucide-react";
 import { WorkspacePage, WorkspaceHeader, CompactSummary } from "@/components/crm-workspace";
 import { Card, StatusBadge } from "@/components/ui/primitives";
@@ -8,19 +9,22 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
-
-const settingsRoutes = [
-  { href: "/settings/workspace", icon: Building2, titleKey: "settings.cards.workspaceTitle", descriptionKey: "settings.cards.workspaceDescription", statusKey: "settings.status.configured", tone: "success" as const },
-  { href: "/settings/team", icon: Users, titleKey: "settings.cards.teamTitle", descriptionKey: "settings.cards.teamDescription", statusKey: "settings.status.roles", tone: "info" as const },
-  { href: "/settings/import", icon: UploadCloud, titleKey: "settings.cards.importTitle", descriptionKey: "settings.cards.importDescription", statusKey: "settings.status.available", tone: "success" as const },
-  { href: "/settings/integrations", icon: PlugZap, titleKey: "settings.cards.integrationsTitle", descriptionKey: "settings.cards.integrationsDescription", statusKey: "settings.status.requiresSetup", tone: "warning" as const },
-  { href: "/settings/feedback", icon: Wand2, titleKey: "settings.cards.feedbackTitle", descriptionKey: "settings.cards.feedbackDescription", statusKey: "settings.status.ownerManaged", tone: "neutral" as const },
-];
+import { fetchInstagramStatus } from "@/services/meta-instagram";
 
 export default function SettingsOverviewPage() {
   const { t } = useI18n();
-  const { currentWorkspace } = useAuth();
+  const { currentWorkspace, currentWorkspaceId, status } = useAuth();
   const role = currentWorkspace?.role ?? "ANALYST";
+  const workspaceId = currentWorkspaceId ?? "";
+  const instagramStatus = useQuery({ queryKey: ["instagram-connection-status", workspaceId], queryFn: fetchInstagramStatus, enabled: status === "authenticated" && Boolean(workspaceId) });
+  const integrationsSummary = instagramStatus.data?.status === "CONNECTED" ? t("settings.status.instagramConnected") : t("settings.status.integrationCount", { connected: 0, total: 3 });
+  const settingsRoutes = [
+    { href: "/settings/workspace", icon: Building2, titleKey: "settings.cards.workspaceTitle", descriptionKey: "settings.cards.workspaceDescription", statusKey: "settings.status.configured", tone: "success" as const },
+    { href: "/settings/team", icon: Users, titleKey: "settings.cards.teamTitle", descriptionKey: "settings.cards.teamDescription", statusKey: "settings.status.roles", tone: "info" as const },
+    { href: "/settings/import", icon: UploadCloud, titleKey: "settings.cards.importTitle", descriptionKey: "settings.cards.importDescription", statusKey: "settings.status.available", tone: "success" as const },
+    { href: "/settings/integrations", icon: PlugZap, titleKey: "settings.cards.integrationsTitle", descriptionKey: "settings.cards.integrationsDescription", statusKey: instagramStatus.data?.status === "CONNECTED" ? "settings.status.instagramConnected" : "settings.status.requiresSetup", tone: instagramStatus.data?.status === "CONNECTED" ? "success" as const : "warning" as const },
+    { href: "/settings/feedback", icon: Wand2, titleKey: "settings.cards.feedbackTitle", descriptionKey: "settings.cards.feedbackDescription", statusKey: "settings.status.ownerManaged", tone: "neutral" as const },
+  ];
 
   return (
     <WorkspacePage>
@@ -34,7 +38,7 @@ export default function SettingsOverviewPage() {
         { label: t("settings.summary.workspace"), value: currentWorkspace?.workspace_name ?? "—", helper: t("settings.summary.workspaceHelp") },
         { label: t("settings.summary.role"), value: t(`roles.${role}`), helper: t("settings.summary.roleHelp") },
         { label: t("settings.summary.imports"), value: t("settings.status.available"), helper: t("settings.summary.importsHelp") },
-        { label: t("settings.summary.integrations"), value: t("settings.status.requiresSetup"), helper: t("settings.summary.integrationsHelp") },
+        { label: t("settings.summary.integrations"), value: integrationsSummary, helper: t("settings.summary.integrationsHelp") },
       ]} />
 
       <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">

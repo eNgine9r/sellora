@@ -1,12 +1,14 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
+from starlette.responses import RedirectResponse
+from app.core.config import get_settings
 from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_min_role
 from app.models.role import RoleName
 from app.models.user import User
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
-from app.integrations.meta_instagram.schemas import InstagramConnectResponse, InstagramConnectionStatusResponse, InstagramOAuthCallbackResponse, InstagramDisconnectResponse, InstagramValidateResponse
+from app.integrations.meta_instagram.schemas import InstagramConnectResponse, InstagramConnectionStatusResponse, InstagramDisconnectResponse, InstagramValidateResponse
 from app.integrations.meta_instagram.services.connection_service import InstagramConnectionService
 from app.integrations.meta_instagram.services.webhook_service import InstagramWebhookService
 from app.integrations.meta_instagram.services.outbound_message_service import InstagramOutboundMessageService
@@ -22,11 +24,34 @@ def connect_instagram(workspace_id: UUID = Depends(get_workspace_id), user: User
         url, expires_at = InstagramConnectionService(db).start_connect(workspace_id, user.id); db.commit(); return InstagramConnectResponse(authorization_url=url, expires_at=expires_at)
     except MetaInstagramError as exc: _raise(exc)
 
-@router.get("/oauth/callback", response_model=InstagramOAuthCallbackResponse)
+def _oauth_frontend_redirect(status: str) -> RedirectResponse:
+    target = get_settings().meta_oauth_frontend_callback_url or "/settings/integrations/instagram/callback"
+    separator = "&" if "?" in target else "?"
+    return RedirectResponse(f"{target}{separator}status={status}", status_code=303)
+
+@router.get("/oauth/callback")
 async def instagram_oauth_callback(state: str = Query(...), code: str = Query(...), db: Session = Depends(get_db)):
     try:
-        c = await InstagramConnectionService(db).complete_callback(state, code); db.commit(); return InstagramOAuthCallbackResponse(status=c.status, connected=c.status == "CONNECTED", instagram_username=c.instagram_username)
-    except MetaInstagramError as exc: db.rollback(); _raise(exc)
+        c = await InstagramConnectionService(db).complete_callback(state, code); db.commit()
+        if c.status == "CONNECTED":
+            return _oauth_frontend_redirect("success")
+        if c.status == "PERMISSION_MISSING":
+            return _oauth_frontend_redirect("permission_missing")
+        return _oauth_frontend_redirect("failed")
+    except MetaInstagramError as exc:
+        db.commit()
+        status_map = {
+            "META_ACCOUNT_PROFILE_VALIDATION_FAILED": "profile_failed",
+            "META_ACCOUNT_IDENTITY_MISSING": "profile_failed",
+            "META_ACCOUNT_NOT_PROFESSIONAL": "account_not_professional",
+            "META_ACCOUNT_TYPE_UNVERIFIED": "account_type_unverified",
+            "META_PERMISSION_MISSING": "permission_missing",
+            "META_PERMISSION_VALIDATION_FAILED": "permission_failed",
+            "META_OAUTH_STATE_ALREADY_USED": "invalid_state",
+            "META_OAUTH_STATE_EXPIRED": "invalid_state",
+            "META_OAUTH_STATE_INVALID": "invalid_state",
+        }
+        return _oauth_frontend_redirect(status_map.get(exc.code, "failed"))
 
 @router.get("/status", response_model=InstagramConnectionStatusResponse)
 def instagram_status(workspace_id: UUID = Depends(get_workspace_id), _: User = Depends(require_min_role(RoleName.ANALYST)), db: Session = Depends(get_db)):

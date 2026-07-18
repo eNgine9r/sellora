@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     meta_app_id: str | None = Field(default=None, alias="META_APP_ID")
     meta_app_secret: str | None = Field(default=None, alias="META_APP_SECRET")
     meta_oauth_redirect_uri: str | None = Field(default=None, alias="META_OAUTH_REDIRECT_URI")
+    meta_oauth_frontend_callback_url: str | None = Field(default=None, alias="META_OAUTH_FRONTEND_CALLBACK_URL")
     meta_api_version: str = Field(default="v20.0", alias="META_API_VERSION")
     meta_token_encryption_key: str | None = Field(default=None, alias="META_TOKEN_ENCRYPTION_KEY")
     meta_oauth_authorize_url: str | None = Field(default=None, alias="META_OAUTH_AUTHORIZE_URL")

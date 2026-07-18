@@ -1273,7 +1273,9 @@
       "roles": "Roles",
       "available": "Available",
       "requiresSetup": "Requires setup",
-      "ownerManaged": "Owner managed"
+      "ownerManaged": "Owner managed",
+      "instagramConnected": "Instagram Direct connected",
+      "integrationCount": "{connected} of {total} connected"
     },
     "summary": {
       "workspace": "Workspace",
@@ -2203,20 +2205,61 @@
     "noToken": "No token",
     "accountType": "Account type",
     "permissions": "Permissions",
-    "webhooks": "Webhook fields",
+    "webhooks": "Webhook",
     "lastWebhook": "Last webhook",
     "validate": "Validate",
     "disconnect": "Disconnect",
     "readOnly": "You have read-only access. Workspace owners manage the connection.",
     "status": {
-      "PENDING": "Pending",
+      "PENDING": "Connecting",
       "CONNECTED": "Connected",
       "TOKEN_EXPIRED": "Token expired",
       "PERMISSION_MISSING": "Permission missing",
       "WEBHOOK_INACTIVE": "Webhook inactive",
       "RECONNECT_REQUIRED": "Reconnect required",
       "DISCONNECTED": "Disconnected",
-      "FAILED": "Failed"
+      "FAILED": "Connection failed",
+      "MEDIA_CREATOR": "Creator"
+    },
+    "username": "Username",
+    "tokenExpiry": "Token expiry",
+    "messagingPermission": "Messaging permission",
+    "webhookStatus": "Webhook status",
+    "lastInbound": "Last inbound message",
+    "autoReplies": "Automatic replies",
+    "outboundStatus": "Outbound status",
+    "disabled": "Disabled",
+    "manualOutbound": "Controlled manual sending",
+    "permissionGranted": "Granted",
+    "permissionMissing": "Missing permissions",
+    "permissionsRequired": "Required permissions",
+    "manualSafety": "AI may prepare a draft, but only a manager sends after confirmation.",
+    "openSettings": "Open settings",
+    "openDirect": "Open Direct",
+    "backToIntegrations": "Back to integrations",
+    "disconnectConfirm": "Disconnect Instagram Direct? Message history will remain in Sellora.",
+    "profileFailed": "Could not verify the Instagram profile. Start connection again.",
+    "hub": {
+      "eyebrow": "Instagram Direct",
+      "title": "Instagram Direct",
+      "subtitle": "Receive Instagram messages and reply to customers from Sellora",
+      "emptyDescription": "Connect a Professional account to receive Direct messages in Sellora without automatic replies."
+    },
+    "callback": {
+      "title": "Returning from Instagram Login",
+      "description": "Sellora displays only a safe connection status and clears code/state from browser history.",
+      "success": "Instagram connected successfully",
+      "redirect": "Returning to settings in {seconds}s.",
+      "status": {
+        "processing": "Verifying connection…",
+        "permission_missing": "Instagram permissions are missing",
+        "profile_failed": "Could not verify Instagram profile",
+        "account_not_professional": "Professional account required",
+        "account_type_unverified": "Could not verify account type",
+        "permission_failed": "Could not verify permissions",
+        "invalid_state": "OAuth session is invalid or already used",
+        "failed": "Connection was not completed"
+      }
     }
   }
 }

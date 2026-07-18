@@ -23,9 +23,18 @@ class InstagramConnectionService:
         settings = get_settings()
         token = await client.exchange_code(code=code, redirect_uri=oauth_state.redirect_uri)
         token = await self._maybe_long_lived(client, token)
-        profile = await client.inspect_account(access_token=token.access_token)
         connection = self.repo.get_active(oauth_state.workspace_id) or self.repo.create(InstagramConnection(workspace_id=oauth_state.workspace_id, created_by=oauth_state.user_id))
         connection.meta_app_id = settings.meta_app_id
+        connection.instagram_account_id = token.user_id
+        connection.granted_permissions = token.granted_permissions or []
+        try:
+            profile = await client.inspect_account(access_token=token.access_token, token_user_id=token.user_id)
+        except MetaInstagramError as exc:
+            connection.status = InstagramConnectionStatus.FAILED.value
+            connection.last_error_code = exc.code
+            connection.last_error_message = exc.message[:300]
+            oauth_state.consumed_at = datetime.now(UTC)
+            raise
         connection.instagram_account_id = profile.instagram_account_id
         connection.instagram_username = profile.username
         connection.instagram_account_type = profile.account_type
@@ -34,12 +43,23 @@ class InstagramConnectionService:
         connection.token_expires_at = token.expires_at or profile.token_expires_at
         connection.token_last_validated_at = datetime.now(UTC)
         connection.updated_by = oauth_state.user_id
-        if profile.account_type not in PROFESSIONAL_ACCOUNT_TYPES:
+        normalized_account_type = (profile.account_type or "").upper()
+        if not normalized_account_type:
             connection.status = InstagramConnectionStatus.FAILED.value
+            connection.last_error_code = "META_ACCOUNT_TYPE_UNVERIFIED"
+            connection.last_error_message = "Instagram account type could not be verified."
+            oauth_state.consumed_at = datetime.now(UTC)
+            raise MetaInstagramError("META_ACCOUNT_TYPE_UNVERIFIED", "Instagram account type could not be verified.", 400)
+        if normalized_account_type not in PROFESSIONAL_ACCOUNT_TYPES:
+            connection.status = InstagramConnectionStatus.FAILED.value
+            connection.last_error_code = "META_ACCOUNT_NOT_PROFESSIONAL"
+            connection.last_error_message = "Instagram account must be Business or Creator."
             oauth_state.consumed_at = datetime.now(UTC)
             raise MetaInstagramError("META_ACCOUNT_NOT_PROFESSIONAL", "Instagram account must be Business or Creator.", 400)
         if not self._permissions_ok(profile.granted_permissions):
             connection.status = InstagramConnectionStatus.PERMISSION_MISSING.value
+            connection.last_error_code = "META_PERMISSION_MISSING"
+            connection.last_error_message = "Required Instagram messaging permissions are missing."
             oauth_state.consumed_at = datetime.now(UTC)
             return connection
         ciphertext, nonce, version = encrypt_instagram_token(token.access_token)
@@ -58,7 +78,7 @@ class InstagramConnectionService:
         token = decrypt_instagram_token(connection.access_token_ciphertext)
         profile = await self._oauth_client().inspect_account(access_token=token)
         permission_ok = self._permissions_ok(profile.granted_permissions)
-        professional = profile.account_type in PROFESSIONAL_ACCOUNT_TYPES
+        professional = (profile.account_type or "").upper() in PROFESSIONAL_ACCOUNT_TYPES
         connection.instagram_account_id = profile.instagram_account_id
         connection.instagram_username = profile.username
         connection.instagram_account_type = profile.account_type

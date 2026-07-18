@@ -36,7 +36,7 @@ class MetaSendResult:
 class MetaInstagramOAuthClientProtocol(Protocol):
     async def exchange_code(self, *, code: str, redirect_uri: str) -> MetaTokenResult: ...
     async def exchange_long_lived(self, *, access_token: str) -> MetaTokenResult: ...
-    async def inspect_account(self, *, access_token: str) -> MetaAccountProfile: ...
+    async def inspect_account(self, *, access_token: str, token_user_id: str | None = None) -> MetaAccountProfile: ...
 
 
 class MetaInstagramOAuthClient:
@@ -88,20 +88,14 @@ class MetaInstagramOAuthClient:
             self._last_granted_permissions = permissions
         return MetaTokenResult(access_token=token, user_id=self._user_id_from_payload(payload), expires_at=self._expires_at(payload.get("expires_in")), granted_permissions=permissions)
 
-    async def inspect_account(self, *, access_token: str) -> MetaAccountProfile:
+    async def inspect_account(self, *, access_token: str, token_user_id: str | None = None) -> MetaAccountProfile:
         headers = {"Authorization": f"Bearer {access_token}"}
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
-                me = await client.get(f"{self.graph_base_url}/{self.graph_version}/me", headers=headers, params={"fields": "id,user_id,username,account_type"})
-            me.raise_for_status()
-        except httpx.TimeoutException as exc:
-            raise MetaInstagramError("META_PROVIDER_UNAVAILABLE", "Meta account profile validation timed out.", 504) from exc
-        except httpx.HTTPStatusError as exc:
-            raise MetaInstagramError("META_ACCOUNT_PROFILE_VALIDATION_FAILED", "Meta account profile validation failed.", 400) from exc
-        account = me.json()
-        instagram_account_id = str(account.get("id") or account.get("user_id") or "")
+        account = await self._profile_request(headers=headers, fields="user_id,username,account_type", stage="profile_primary")
+        if account is None:
+            account = await self._profile_request(headers=headers, fields="username,account_type", stage="profile_fallback", allow_field_fallback=False)
+        instagram_account_id = str(token_user_id or account.get("user_id") or account.get("id") or "")
         if not instagram_account_id:
-            raise MetaInstagramError("META_ACCOUNT_PROFILE_VALIDATION_FAILED", "Meta account profile validation failed.", 400)
+            raise MetaInstagramError("META_ACCOUNT_IDENTITY_MISSING", "Meta account identity is missing.", 400)
         granted = self._last_granted_permissions
         if granted is None:
             granted = await self._inspect_permissions(access_token=access_token, headers=headers)
@@ -111,6 +105,27 @@ class MetaInstagramOAuthClient:
             account_type=account.get("account_type"),
             granted_permissions=granted,
         )
+
+    async def _profile_request(self, *, headers: dict[str, str], fields: str, stage: str, allow_field_fallback: bool = True) -> dict[str, Any] | None:
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.get(f"{self.graph_base_url}/{self.graph_version}/me", headers=headers, params={"fields": fields})
+            response.raise_for_status()
+            return response.json()
+        except httpx.TimeoutException as exc:
+            raise MetaInstagramError("META_PROVIDER_UNAVAILABLE", "Meta account profile validation timed out.", 504) from exc
+        except httpx.HTTPStatusError as exc:
+            if allow_field_fallback and self._is_field_error(exc.response):
+                return None
+            raise MetaInstagramError("META_ACCOUNT_PROFILE_VALIDATION_FAILED", "Meta account profile validation failed.", 400) from exc
+
+    def _is_field_error(self, response: httpx.Response) -> bool:
+        try:
+            error = response.json().get("error", {})
+        except (AttributeError, ValueError):
+            return False
+        message = str(error.get("message") or "").lower()
+        return response.status_code == 400 and ("field" in message or "unknown" in message or "unsupported" in message)
 
     async def _inspect_permissions(self, *, access_token: str, headers: dict[str, str]) -> list[str]:
         try:
