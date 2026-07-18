@@ -35,14 +35,34 @@ Local cancellation is handled in the service layer against canonical operation s
 
 This consolidation does not introduce full accounting. Draft/TTN-pending fulfillment does not recognize additional revenue or COGS. Existing order/shipment status workflows remain the source of stock-out, delivery, return, and profit recalculation behavior pending full runtime finance evidence.
 
+## GitHub CI status
+
+PR #194 corrected the strict endpoint inventory to the canonical 167-route / 95-mutation API surface and completed the Sprint 8F.1 static, focused, full backend, PostgreSQL and frontend checks successfully.
+
+The repository-hygiene closure replaces overlapping Sprint-named PR workflows with one canonical `Sellora CI` workflow. Permanent required check names are now product-level rather than Sprint-level:
+
+- `Sellora CI / backend-static`
+- `Sellora CI / backend-focused`
+- `Sellora CI / backend-full`
+- `Sellora CI / postgresql-integration`
+- `Sellora CI / frontend-production`
+- `Sellora CI / security-and-tenant-isolation`
+- `Vercel`
+
+Hosted storage and restart-boundary checks remain explicit manual workflows because they require staging credentials and runtime access. They must not block ordinary pull requests through skipped checks.
+
+Detailed audit: `docs/qa/github-actions-workflow-audit.md`.
+
+Repository hygiene decisions: `docs/qa/github-repository-hygiene-closure.md`.
+
 ## Not claimed as complete
 
-The following release gates require external CI/runtime/provider evidence and are **not approved by this repository-only change**:
+The following release gates require external runtime/provider evidence and are **not approved by this repository-only change**:
 
-- GitHub Actions full green run.
-- Seeded PostgreSQL 16 migration/concurrency workflow evidence.
 - Render runtime commit and Alembic revision verification.
-- Vercel production deployment evidence.
+- Vercel production deployment evidence for the final approved merge commit.
 - Desktop/mobile browser QA.
 - Controlled real Nova Poshta TTN smoke test.
+- Restart durability.
 - Provider cleanup and provider-write disabled evidence after the smoke test.
+- Resolution or explicit pilot decision for open issues #137, #132 and #131.
