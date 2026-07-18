@@ -12,7 +12,9 @@ from app.integrations.meta_instagram.exceptions import MetaInstagramError
 @dataclass(frozen=True)
 class MetaTokenResult:
     access_token: str
+    user_id: str | None = None
     expires_at: datetime | None = None
+    granted_permissions: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -45,6 +47,7 @@ class MetaInstagramOAuthClient:
         self.graph_base_url = graph_base_url.rstrip("/")
         self.graph_version = graph_version.strip("/")
         self.timeout_seconds = timeout_seconds
+        self._last_granted_permissions: list[str] | None = None
 
     async def exchange_code(self, *, code: str, redirect_uri: str) -> MetaTokenResult:
         data = {
@@ -66,7 +69,9 @@ class MetaInstagramOAuthClient:
         token = payload.get("access_token")
         if not token:
             raise MetaInstagramError("META_TOKEN_INVALID", "Meta OAuth response did not include an access token.", 502)
-        return MetaTokenResult(access_token=token, expires_at=self._expires_at(payload.get("expires_in")))
+        permissions = self._permissions_from_payload(payload)
+        self._last_granted_permissions = permissions
+        return MetaTokenResult(access_token=token, user_id=self._user_id_from_payload(payload), expires_at=self._expires_at(payload.get("expires_in")), granted_permissions=permissions)
 
     async def exchange_long_lived(self, *, access_token: str) -> MetaTokenResult:
         params = {"grant_type": "ig_exchange_token", "client_secret": self.app_secret, "access_token": access_token}
@@ -78,29 +83,63 @@ class MetaInstagramOAuthClient:
             return MetaTokenResult(access_token=access_token)
         payload = response.json()
         token = payload.get("access_token") or access_token
-        return MetaTokenResult(access_token=token, expires_at=self._expires_at(payload.get("expires_in")))
+        permissions = self._permissions_from_payload(payload) or self._last_granted_permissions
+        if permissions:
+            self._last_granted_permissions = permissions
+        return MetaTokenResult(access_token=token, user_id=self._user_id_from_payload(payload), expires_at=self._expires_at(payload.get("expires_in")), granted_permissions=permissions)
 
     async def inspect_account(self, *, access_token: str) -> MetaAccountProfile:
         headers = {"Authorization": f"Bearer {access_token}"}
         try:
             async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
-                me = await client.get(f"{self.graph_base_url}/{self.graph_version}/me", headers=headers, params={"fields": "id,username,account_type"})
-                me.raise_for_status()
-                permissions = await client.get(f"{self.graph_base_url}/{self.graph_version}/me/permissions", headers=headers)
-                permissions.raise_for_status()
+                me = await client.get(f"{self.graph_base_url}/{self.graph_version}/me", headers=headers, params={"fields": "id,user_id,username,account_type"})
+            me.raise_for_status()
         except httpx.TimeoutException as exc:
-            raise MetaInstagramError("META_PROVIDER_UNAVAILABLE", "Meta account validation timed out.", 504) from exc
+            raise MetaInstagramError("META_PROVIDER_UNAVAILABLE", "Meta account profile validation timed out.", 504) from exc
         except httpx.HTTPStatusError as exc:
-            raise MetaInstagramError("META_TOKEN_INVALID", "Meta account validation failed.", 400) from exc
+            raise MetaInstagramError("META_ACCOUNT_PROFILE_VALIDATION_FAILED", "Meta account profile validation failed.", 400) from exc
         account = me.json()
-        permission_payload = permissions.json().get("data", [])
-        granted = [str(item.get("permission")) for item in permission_payload if item.get("status") in {"granted", "approved"} and item.get("permission")]
+        instagram_account_id = str(account.get("id") or account.get("user_id") or "")
+        if not instagram_account_id:
+            raise MetaInstagramError("META_ACCOUNT_PROFILE_VALIDATION_FAILED", "Meta account profile validation failed.", 400)
+        granted = self._last_granted_permissions
+        if granted is None:
+            granted = await self._inspect_permissions(access_token=access_token, headers=headers)
         return MetaAccountProfile(
-            instagram_account_id=str(account.get("id") or ""),
+            instagram_account_id=instagram_account_id,
             username=account.get("username"),
             account_type=account.get("account_type"),
             granted_permissions=granted,
         )
+
+    async def _inspect_permissions(self, *, access_token: str, headers: dict[str, str]) -> list[str]:
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                permissions = await client.get(f"{self.graph_base_url}/{self.graph_version}/me/permissions", headers=headers)
+            permissions.raise_for_status()
+        except httpx.TimeoutException as exc:
+            raise MetaInstagramError("META_PROVIDER_UNAVAILABLE", "Meta permission validation timed out.", 504) from exc
+        except httpx.HTTPStatusError as exc:
+            raise MetaInstagramError("META_PERMISSION_VALIDATION_FAILED", "Meta permission validation failed.", 400) from exc
+        permission_payload = permissions.json().get("data", [])
+        return [str(item.get("permission")) for item in permission_payload if item.get("status") in {"granted", "approved"} and item.get("permission")]
+
+    def _user_id_from_payload(self, payload: dict[str, Any]) -> str | None:
+        value = payload.get("user_id") or payload.get("id")
+        return str(value) if value else None
+
+    def _permissions_from_payload(self, payload: dict[str, Any]) -> list[str] | None:
+        raw = payload.get("permissions") or payload.get("granted_scopes") or payload.get("scope")
+        if raw is None:
+            return None
+        if isinstance(raw, str):
+            values = raw.replace(" ", ",").split(",")
+        elif isinstance(raw, list):
+            values = raw
+        else:
+            return None
+        permissions = [str(item).strip() for item in values if str(item).strip()]
+        return permissions or None
 
     def _expires_at(self, expires_in: Any) -> datetime | None:
         try:

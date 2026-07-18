@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.integrations.meta_instagram.client import MetaInstagramOAuthClient, MetaInstagramOAuthClientProtocol, MetaTokenResult
-from app.integrations.meta_instagram.config import PROFESSIONAL_ACCOUNT_TYPES, REQUIRED_MESSAGING_PERMISSION, WEBHOOK_SUBSCRIPTIONS
+from app.integrations.meta_instagram.config import PROFESSIONAL_ACCOUNT_TYPES, REQUIRED_BASIC_PERMISSION, REQUIRED_MESSAGING_PERMISSION, WEBHOOK_SUBSCRIPTIONS
 from app.integrations.meta_instagram.crypto import decrypt_instagram_token, encrypt_instagram_token
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
 from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
@@ -34,14 +34,14 @@ class InstagramConnectionService:
         connection.token_expires_at = token.expires_at or profile.token_expires_at
         connection.token_last_validated_at = datetime.now(UTC)
         connection.updated_by = oauth_state.user_id
-        if REQUIRED_MESSAGING_PERMISSION not in profile.granted_permissions:
-            connection.status = InstagramConnectionStatus.PERMISSION_MISSING.value
-            oauth_state.consumed_at = datetime.now(UTC)
-            return connection
         if profile.account_type not in PROFESSIONAL_ACCOUNT_TYPES:
             connection.status = InstagramConnectionStatus.FAILED.value
             oauth_state.consumed_at = datetime.now(UTC)
             raise MetaInstagramError("META_ACCOUNT_NOT_PROFESSIONAL", "Instagram account must be Business or Creator.", 400)
+        if not self._permissions_ok(profile.granted_permissions):
+            connection.status = InstagramConnectionStatus.PERMISSION_MISSING.value
+            oauth_state.consumed_at = datetime.now(UTC)
+            return connection
         ciphertext, nonce, version = encrypt_instagram_token(token.access_token)
         connection.access_token_ciphertext = ciphertext
         connection.access_token_nonce = nonce
@@ -57,7 +57,7 @@ class InstagramConnectionService:
             connection.status = InstagramConnectionStatus.RECONNECT_REQUIRED.value; return connection, False
         token = decrypt_instagram_token(connection.access_token_ciphertext)
         profile = await self._oauth_client().inspect_account(access_token=token)
-        permission_ok = REQUIRED_MESSAGING_PERMISSION in profile.granted_permissions
+        permission_ok = self._permissions_ok(profile.granted_permissions)
         professional = profile.account_type in PROFESSIONAL_ACCOUNT_TYPES
         connection.instagram_account_id = profile.instagram_account_id
         connection.instagram_username = profile.username
@@ -82,6 +82,8 @@ class InstagramConnectionService:
         if not connection: raise MetaInstagramError("META_CONNECTION_NOT_FOUND", "Instagram connection not found.", 404)
         connection.status = InstagramConnectionStatus.DISCONNECTED.value; connection.disconnected_at = datetime.now(UTC); connection.access_token_ciphertext = None; connection.access_token_nonce = None; connection.updated_by = user_id
         return connection
+    def _permissions_ok(self, granted_permissions: list[str]) -> bool:
+        return REQUIRED_BASIC_PERMISSION in granted_permissions and REQUIRED_MESSAGING_PERMISSION in granted_permissions
     def _oauth_client(self) -> MetaInstagramOAuthClientProtocol:
         if self.oauth_client: return self.oauth_client
         s = get_settings()
