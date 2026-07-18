@@ -64,9 +64,14 @@ class OrderService:
         self._validate_campaign(workspace_id, payload.campaign_id)
         prepared_items = []
         requested_by_inventory: dict[UUID, int] = {}
+        inventory_by_variant = {}
+        if affect_inventory:
+            variant_ids = sorted({item.product_variant_id for item in payload.items}, key=str)
+            inventory_rows = self.inventory.list_by_variants_for_update(workspace_id, variant_ids) if hasattr(self.inventory, "list_by_variants_for_update") else [self.inventory.get_by_variant(workspace_id, variant_id) for variant_id in variant_ids]
+            inventory_by_variant = {row.product_variant_id: row for row in inventory_rows if row is not None}
         for item_payload in payload.items:
             variant = self._get_variant(workspace_id, item_payload.product_variant_id)
-            inventory = self.inventory.get_by_variant(workspace_id, item_payload.product_variant_id) if affect_inventory else None
+            inventory = inventory_by_variant.get(item_payload.product_variant_id) if affect_inventory else None
             if affect_inventory:
                 if inventory is None:
                     raise OrderServiceError("Inventory record not found for variant")

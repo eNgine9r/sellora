@@ -1,0 +1,122 @@
+name: Sprint 8F.1 Fulfillment Closure Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend-static:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Compile app and migrations
+        run: python -m compileall app alembic -q
+      - name: Alembic heads check
+        run: alembic heads
+
+  focused-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Focused fulfillment closure suites
+        run: |
+          pytest \
+            tests/test_order_fulfillment.py \
+            tests/test_order_fulfillment_workflow.py \
+            tests/test_order_fulfillment_api.py \
+            tests/test_order_fulfillment_finance.py \
+            tests/test_order_fulfillment_consolidation_migration.py \
+            tests/integrations/fulfillment/test_fulfillment_provider_reconciliation.py \
+            tests/security/test_endpoint_inventory.py \
+            tests/security/test_tenant_object_isolation.py \
+            -q
+
+  full-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Full backend suite
+        run: pytest tests -q
+
+  postgresql-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: sellora_test
+          POSTGRES_USER: sellora
+          POSTGRES_PASSWORD: sellora
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql+psycopg://sellora:sellora@localhost:5432/sellora_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: PostgreSQL migration upgrade/downgrade/re-upgrade gate
+        run: |
+          alembic upgrade head
+          alembic downgrade 202607180025
+          alembic upgrade head
+          alembic current
+      - name: PostgreSQL focused concurrency and migration tests
+        run: |
+          pytest \
+            tests/integrations/fulfillment/test_fulfillment_concurrency_postgres.py \
+            tests/test_order_fulfillment_consolidation_migration.py \
+            -q
+
+  frontend-production:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Production build
+        run: npm run build

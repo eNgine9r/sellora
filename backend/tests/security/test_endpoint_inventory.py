@@ -42,12 +42,22 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 3,
     "AUTHENTICATED_GLOBAL": 4,
-    "WORKSPACE_SCOPED": 138,
+    "WORKSPACE_SCOPED": 148,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 157
-EXPECTED_MUTATION_ROUTES = 87
+EXPECTED_TOTAL_ROUTES = 167
+EXPECTED_MUTATION_ROUTES = 95
+
+EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
+    ("POST", "/api/v1/order-fulfillments"),
+    ("POST", "/api/v1/orders/{order_id}/fulfillment/prepare"),
+    ("POST", "/api/v1/orders/{order_id}/fulfillment/execute"),
+    ("GET", "/api/v1/orders/{order_id}/fulfillment"),
+    ("POST", "/api/v1/orders/{order_id}/fulfillment/reconcile"),
+    ("POST", "/api/v1/orders/{order_id}/fulfillment/cancel"),
+}
+
 
 
 def _flatten_routes(routes, prefix: str = "") -> list[tuple[str, APIRoute]]:
@@ -105,3 +115,18 @@ def test_global_endpoint_whitelist_is_explicit_and_small() -> None:
     assert AUTHENTICATED_GLOBAL_ENDPOINTS.issubset(global_paths)
     assert "/api/v1/workspaces/current" not in global_paths
     assert len(global_paths) == len(PUBLIC_ENDPOINTS | AUTHENTICATED_GLOBAL_ENDPOINTS)
+
+
+def test_canonical_fulfillment_routes_are_explicit_and_workspace_scoped() -> None:
+    routes = _api_routes()
+    actual_routes = {
+        (method, path)
+        for path, route in routes
+        for method in route.methods
+    }
+
+    assert EXPECTED_CANONICAL_FULFILLMENT_ROUTES.issubset(actual_routes)
+    assert all(
+        _primary_scope(path) == "WORKSPACE_SCOPED"
+        for _method, path in EXPECTED_CANONICAL_FULFILLMENT_ROUTES
+    )
