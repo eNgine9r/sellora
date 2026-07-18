@@ -47,8 +47,10 @@ jobs:
 
     steps:
       - name: Validate explicit confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
         run: |
-          [ "${{ inputs.confirmation }}" = "RUN_RESTART_BOUNDARY" ] || {
+          [ "$CONFIRMATION" = "RUN_RESTART_BOUNDARY" ] || {
             echo "Confirmation value is invalid."
             exit 1
           }
