@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Home, Package, ShoppingBag, Users } from "lucide-react";
+import { BarChart3, Home, MessageCircle, Package, ShoppingBag, Users } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
 import { BrandLockup } from "@/components/brand";
@@ -17,6 +17,7 @@ const protectedRoutes = [
   "/dashboard",
   "/overview",
   "/leads",
+  "/direct",
   "/customers",
   "/products",
   "/inventory",
@@ -36,6 +37,7 @@ const protectedRoutes = [
 const mobileQuickNav = [
   { href: "/dashboard", labelKey: "navigation.dashboard", icon: Home },
   { href: "/leads", labelKey: "navigation.leads", icon: Users },
+  { href: "/direct", labelKey: "navigation.direct", icon: MessageCircle },
   { href: "/orders", labelKey: "navigation.orders", icon: ShoppingBag },
   { href: "/products", labelKey: "navigation.products", icon: Package },
   { href: "/finance", labelKey: "navigation.finance", icon: BarChart3 },
@@ -104,7 +106,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
       <nav className="mobile-bottom-nav mobile-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border-subtle bg-surface-1/95 px-2 py-2 shadow-[0_-12px_35px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:hidden" aria-label={t("mobileNavigation.bottomNav")}>
-        <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
+        <div className="mx-auto grid max-w-md grid-cols-6 gap-1">
           {mobileQuickNav.map((item) => {
             const Icon = item.icon;
             const active = isActiveNav(pathname, item.href);

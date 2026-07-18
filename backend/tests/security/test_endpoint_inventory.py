@@ -29,6 +29,8 @@ WORKSPACE_PREFIXES = (
     "/api/v1/workspaces/current",
     "/api/v1/workspaces/demo/deactivate",
     "/api/v1/onboarding",
+    "/api/v1/ai",
+    "/api/v1/direct",
 )
 OWNER_ONLY_ENDPOINTS = {
     ("POST", "/api/v1/workspace-users"),
@@ -38,16 +40,17 @@ OWNER_ONLY_ENDPOINTS = {
     ("PATCH", "/api/v1/workspaces/demo/deactivate"),
     ("POST", "/api/v1/advertising/campaigns"),
     ("POST", "/api/v1/advertising/metrics"),
+    ("PATCH", "/api/v1/ai/settings"),
 }
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 3,
     "AUTHENTICATED_GLOBAL": 4,
-    "WORKSPACE_SCOPED": 148,
+    "WORKSPACE_SCOPED": 167,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 167
-EXPECTED_MUTATION_ROUTES = 95
+EXPECTED_TOTAL_ROUTES = 186
+EXPECTED_MUTATION_ROUTES = 103
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),

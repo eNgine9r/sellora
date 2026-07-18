@@ -69,7 +69,8 @@
     "settings": "Налаштування",
     "importCenter": "Імпорт",
     "integrations": "Інтеграції",
-    "analytics": "Аналітика"
+    "analytics": "Аналітика",
+    "direct": "Direct"
   },
   "topbar": {
     "searchPlaceholder": "Пошук клієнтів, замовлень, товарів…",
@@ -2177,5 +2178,17 @@
       "synthetic": "Синтетичні дані",
       "notReal": "Не є реальними показниками магазину"
     }
+  },
+  "direct": {
+    "kicker": "AI Direct Intelligence",
+    "title": "Direct-інтелект",
+    "description": "Synthetic inbox для безпечного аналізу Instagram Direct: AI аналізує, пропонує, а менеджер підтверджує дію. Production Meta integration і автоматичні повідомлення вимкнені.",
+    "createSynthetic": "Створити тестовий діалог",
+    "conversations": "Діалоги",
+    "search": "Пошук за іменем, username або повідомленням",
+    "noAutoSend": "Чернетки AI не відправляються клієнтам автоматично.",
+    "aiPanel": "AI-панель",
+    "openAiPanel": "Відкрити AI-панель",
+    "syntheticBadge": "Тестовий діалог"
   }
 }

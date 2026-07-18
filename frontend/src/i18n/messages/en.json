@@ -69,7 +69,8 @@
     "settings": "Settings",
     "importCenter": "Import Center",
     "integrations": "Integrations",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "direct": "Direct"
   },
   "topbar": {
     "searchPlaceholder": "Search customers, orders, products…",
@@ -2177,5 +2178,17 @@
       "synthetic": "Synthetic data",
       "notReal": "Not real shop performance"
     }
+  },
+  "direct": {
+    "kicker": "AI Direct Intelligence",
+    "title": "Direct Intelligence",
+    "description": "Synthetic inbox for safe Instagram Direct analysis: AI analyzes and suggests, while a manager approves every action. Production Meta integration and automatic messaging are disabled.",
+    "createSynthetic": "Create test conversation",
+    "conversations": "Conversations",
+    "search": "Search by name, username, or message",
+    "noAutoSend": "AI drafts are never sent to customers automatically.",
+    "aiPanel": "AI panel",
+    "openAiPanel": "Open AI panel",
+    "syntheticBadge": "Test conversation"
   }
 }
