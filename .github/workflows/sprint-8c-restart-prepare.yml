@@ -1,32 +1,66 @@
-name: Sprint 8C Restart Boundary Prepare
+name: Sellora Restart Boundary Check
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "scripts/staging_import_restart_prepare.py"
-      - ".github/workflows/sprint-8c-restart-prepare.yml"
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Hosted environment to validate"
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+      expected_commit:
+        description: "Expected deployed commit SHA"
+        required: true
+        type: string
+      expected_alembic_revision:
+        description: "Expected runtime Alembic revision"
+        required: true
+        default: "202607180026"
+        type: string
+      confirmation:
+        description: "Type RUN_RESTART_BOUNDARY to continue"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: sellora-restart-boundary-${{ inputs.target_environment }}
+  cancel-in-progress: false
+
 jobs:
   restart-boundary-prepare:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
+    environment: ${{ inputs.target_environment }}
     env:
       STAGING_API_URL: https://sellora-api-staging.onrender.com
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
       STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+      EXPECTED_RUNTIME_COMMIT: ${{ inputs.expected_commit }}
+      EXPECTED_ALEMBIC_REVISION: ${{ inputs.expected_alembic_revision }}
+      STAGING_NOVA_POSHTA_ALLOW_WRITES: "false"
 
     steps:
+      - name: Validate explicit confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          [ "$CONFIRMATION" = "RUN_RESTART_BOUNDARY" ] || {
+            echo "Confirmation value is invalid."
+            exit 1
+          }
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
       - name: Install probe dependency
         run: python -m pip install httpx
       - name: Compile prepare probe
@@ -34,11 +68,12 @@ jobs:
       - name: Execute restart-boundary prepare
         shell: bash
         run: |
+          mkdir -p artifacts
           set +e
-          python scripts/staging_import_restart_prepare.py > /tmp/sprint-8c-restart-prepare.log 2>&1
+          python scripts/staging_import_restart_prepare.py > /tmp/sellora-restart-boundary.log 2>&1
           code=$?
-          cat /tmp/sprint-8c-restart-prepare.log
-          echo "$code" > artifacts/sprint-8c-restart-prepare-exit-code.txt
+          cat /tmp/sellora-restart-boundary.log
+          echo "$code" > artifacts/restart-boundary-exit-code.txt
           exit 0
       - name: Validate sanitized evidence
         if: always()
@@ -50,9 +85,13 @@ jobs:
           if not report_path.exists():
               raise SystemExit("Restart prepare report missing")
           text = report_path.read_text(encoding="utf-8")
-          for value in (os.getenv("STAGING_OWNER_EMAIL", ""), os.getenv("STAGING_OWNER_PASSWORD", "")):
+          for value in (
+              os.getenv("STAGING_OWNER_EMAIL", ""),
+              os.getenv("STAGING_OWNER_PASSWORD", ""),
+              os.getenv("STAGING_TEST_WORKSPACE_ID", ""),
+          ):
               if value and value in text:
-                  raise SystemExit("Credential leaked into restart prepare artifact")
+                  raise SystemExit("Secret or workspace identifier leaked into restart evidence")
           report = json.loads(text)
           print(json.dumps(report, indent=2, ensure_ascii=False))
           PY
@@ -60,7 +99,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sellora-sprint-8c-restart-prepare-${{ github.run_id }}
+          name: sellora-restart-boundary-${{ github.run_id }}
           path: artifacts
           if-no-files-found: error
           retention-days: 7
@@ -68,10 +107,8 @@ jobs:
         if: always()
         shell: bash
         run: |
-          code="$(cat artifacts/sprint-8c-restart-prepare-exit-code.txt 2>/dev/null || echo 99)"
-          if [ "$code" != "0" ]; then
-            exit 1
-          fi
+          code="$(cat artifacts/restart-boundary-exit-code.txt 2>/dev/null || echo 99)"
+          [ "$code" = "0" ] || exit 1
           python - <<'PY'
           import json
           report = json.load(open("artifacts/sprint-8c-restart-prepare.json", encoding="utf-8"))
@@ -80,5 +117,5 @@ jobs:
               raise SystemExit(1)
           if report.get("error_rows") not in (0, None):
               raise SystemExit(1)
-          print("SPRINT 8C RESTART BOUNDARY PREPARE: PASS")
+          print("SELLORA RESTART BOUNDARY PREPARE: PASS")
           PY

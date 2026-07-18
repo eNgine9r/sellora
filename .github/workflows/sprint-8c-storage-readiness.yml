@@ -1,19 +1,32 @@
-name: Sprint 8C Storage Readiness
+name: Sellora Storage Readiness
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "scripts/staging_import_storage_probe.py"
-      - ".github/workflows/sprint-8c-storage-readiness.yml"
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Hosted environment to validate"
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+      confirmation:
+        description: "Type RUN_STORAGE_READINESS to continue"
+        required: true
+        type: string
 
 permissions:
   contents: read
+
+concurrency:
+  group: sellora-storage-readiness-${{ inputs.target_environment }}
+  cancel-in-progress: false
 
 jobs:
   storage-readiness:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    environment: ${{ inputs.target_environment }}
     env:
       STAGING_API_URL: https://sellora-api-staging.onrender.com
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
@@ -21,12 +34,21 @@ jobs:
       STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
 
     steps:
+      - name: Validate explicit confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          [ "$CONFIRMATION" = "RUN_STORAGE_READINESS" ] || {
+            echo "Confirmation value is invalid."
+            exit 1
+          }
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
       - name: Install probe dependency
         run: python -m pip install httpx
       - name: Compile probe
@@ -34,11 +56,12 @@ jobs:
       - name: Execute staging storage probe
         shell: bash
         run: |
+          mkdir -p artifacts
           set +e
-          python scripts/staging_import_storage_probe.py > /tmp/sprint-8c-storage-probe.log 2>&1
+          python scripts/staging_import_storage_probe.py > /tmp/sellora-storage-readiness.log 2>&1
           code=$?
-          cat /tmp/sprint-8c-storage-probe.log
-          echo "$code" > artifacts/sprint-8c-storage-readiness-exit-code.txt
+          cat /tmp/sellora-storage-readiness.log
+          echo "$code" > artifacts/storage-readiness-exit-code.txt
           exit 0
       - name: Validate sanitized evidence
         if: always()
@@ -50,9 +73,13 @@ jobs:
           if not report_path.exists():
               raise SystemExit("Storage readiness report missing")
           text = report_path.read_text(encoding="utf-8")
-          for value in (os.getenv("STAGING_OWNER_EMAIL", ""), os.getenv("STAGING_OWNER_PASSWORD", "")):
+          for value in (
+              os.getenv("STAGING_OWNER_EMAIL", ""),
+              os.getenv("STAGING_OWNER_PASSWORD", ""),
+              os.getenv("STAGING_TEST_WORKSPACE_ID", ""),
+          ):
               if value and value in text:
-                  raise SystemExit("Credential leaked into storage readiness artifact")
+                  raise SystemExit("Secret or workspace identifier leaked into storage readiness artifact")
           report = json.loads(text)
           print(json.dumps(report, indent=2, ensure_ascii=False))
           PY
@@ -60,7 +87,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sellora-sprint-8c-storage-readiness-${{ github.run_id }}
+          name: sellora-storage-readiness-${{ github.run_id }}
           path: artifacts
           if-no-files-found: error
           retention-days: 7
@@ -68,15 +95,13 @@ jobs:
         if: always()
         shell: bash
         run: |
-          code="$(cat artifacts/sprint-8c-storage-readiness-exit-code.txt 2>/dev/null || echo 99)"
-          if [ "$code" != "0" ]; then
-            exit 1
-          fi
+          code="$(cat artifacts/storage-readiness-exit-code.txt 2>/dev/null || echo 99)"
+          [ "$code" = "0" ] || exit 1
           python - <<'PY'
           import json
           report = json.load(open("artifacts/sprint-8c-storage-readiness.json", encoding="utf-8"))
           required = ("health", "login", "upload", "sheets")
           if any(report.get(key) != "PASS" for key in required):
               raise SystemExit(1)
-          print("SPRINT 8C STORAGE READINESS: PASS")
+          print("SELLORA STORAGE READINESS: PASS")
           PY
