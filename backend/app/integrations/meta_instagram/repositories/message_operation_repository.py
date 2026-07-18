@@ -1,5 +1,6 @@
 from uuid import UUID
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm import Session
 from app.models.meta_instagram import MetaMessageOperation
 
@@ -7,6 +8,18 @@ class MetaMessageOperationRepository:
     def __init__(self, db: Session) -> None: self.db = db
     def create(self, op: MetaMessageOperation) -> MetaMessageOperation:
         self.db.add(op); self.db.flush(); return op
+    def create_with_savepoint(self, op: MetaMessageOperation) -> MetaMessageOperation | None:
+        try:
+            with self.db.begin_nested():
+                self.db.add(op)
+                self.db.flush()
+            return op
+        except IntegrityError:
+            try:
+                self.db.expunge(op)
+            except InvalidRequestError:
+                pass
+            return None
     def get(self, workspace_id: UUID, operation_id: UUID) -> MetaMessageOperation | None:
         return self.db.execute(select(MetaMessageOperation).where(MetaMessageOperation.workspace_id == workspace_id, MetaMessageOperation.id == operation_id)).scalar_one_or_none()
     def get_for_update(self, workspace_id: UUID, operation_id: UUID) -> MetaMessageOperation | None:
