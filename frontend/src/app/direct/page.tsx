@@ -1,0 +1,73 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bot, CheckCircle2, MessageCircle, RefreshCw, Send, Sparkles, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Button, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
+import { fetchAISuggestions } from "@/services/ai";
+import { fetchDirectConversations, fetchDirectMessages, prepareDirectReply, runDirectAnalysis, sendDirectReply } from "@/services/direct";
+import { fetchInstagramStatus } from "@/services/meta-instagram";
+import { DirectConversation, DirectMessage } from "@/types/direct";
+import { AISuggestion } from "@/types/ai";
+import { useAuth } from "@/hooks/use-auth";
+import { useI18n } from "@/i18n/provider";
+
+export default function DirectPage() {
+  const { t } = useI18n();
+  const { currentWorkspace } = useAuth();
+  const queryClient = useQueryClient();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const conversationsQuery = useQuery({ queryKey: ["direct-conversations", currentWorkspace?.workspace_id], queryFn: fetchDirectConversations, enabled: Boolean(currentWorkspace?.workspace_id) });
+  const selectedConversation = useMemo(() => conversationsQuery.data?.find((item) => item.id === selectedId) ?? conversationsQuery.data?.[0], [conversationsQuery.data, selectedId]);
+  const messagesQuery = useQuery({ queryKey: ["direct-messages", currentWorkspace?.workspace_id, selectedConversation?.id], queryFn: () => fetchDirectMessages(selectedConversation!.id), enabled: Boolean(selectedConversation?.id) });
+  const suggestionsQuery = useQuery({ queryKey: ["ai-suggestions", currentWorkspace?.workspace_id, selectedConversation?.id], queryFn: () => fetchAISuggestions(selectedConversation!.id), enabled: Boolean(selectedConversation?.id) });
+  const statusQuery = useQuery({ queryKey: ["instagram-connection-status", currentWorkspace?.workspace_id], queryFn: fetchInstagramStatus, enabled: Boolean(currentWorkspace?.workspace_id) });
+  const analysisMutation = useMutation({ mutationFn: () => runDirectAnalysis(selectedConversation!.id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ai-suggestions", currentWorkspace?.workspace_id, selectedConversation?.id] }) });
+  const prepareMutation = useMutation({ mutationFn: () => prepareDirectReply(selectedConversation!.id, replyText) });
+  const sendMutation = useMutation({ mutationFn: () => sendDirectReply(selectedConversation!.id, replyText, crypto.randomUUID()), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["direct-messages", currentWorkspace?.workspace_id, selectedConversation?.id] }) });
+
+  useEffect(() => { setSelectedId(null); setReplyText(""); }, [currentWorkspace?.workspace_id]);
+  useEffect(() => { const draft = suggestionsQuery.data?.find((item) => item.draft_text)?.draft_text; if (draft && !replyText) setReplyText(draft); }, [suggestionsQuery.data, replyText]);
+
+  return <WorkspacePage className="min-h-full">
+    <WorkspaceHeader eyebrow={t("direct.kicker")} title={t("direct.title")} description={t("direct.description")} actions={<Button onClick={() => conversationsQuery.refetch()}><RefreshCw className="h-4 w-4" />{t("actions.refresh")}</Button>} />
+    <div className="lg:hidden"><button type="button" onClick={() => setAiPanelOpen(true)} className="min-h-11 w-full rounded-2xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-black text-primary shadow-[var(--shadow-card)]">{t("direct.openAiPanel")}</button></div>
+    <section className="grid min-h-[calc(100dvh-var(--topbar-height,72px)-190px)] min-w-0 gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)_minmax(320px,380px)]" data-direct-shell-content>
+      <ConversationList loading={conversationsQuery.isLoading} error={conversationsQuery.isError} conversations={conversationsQuery.data ?? []} selectedId={selectedConversation?.id ?? null} onSelect={setSelectedId} instagramStatus={statusQuery.data} />
+      <MessageThread conversation={selectedConversation} loading={messagesQuery.isLoading} error={messagesQuery.isError} messages={messagesQuery.data ?? []} replyText={replyText} setReplyText={setReplyText} onPrepare={() => prepareMutation.mutate()} onSend={() => sendMutation.mutate()} sendDisabled={!selectedConversation || selectedConversation.channel !== "INSTAGRAM" || statusQuery.data?.status !== "CONNECTED" || sendMutation.isPending} prepareResult={prepareMutation.data} sendPending={sendMutation.isPending} noAutoSend={t("direct.noAutoSend")} />
+      <div className="hidden lg:block"><AiPanel loading={suggestionsQuery.isLoading} suggestions={suggestionsQuery.data ?? []} onAnalyze={() => analysisMutation.mutate()} analyzing={analysisMutation.isPending} connectionStatus={statusQuery.data?.status ?? "DISCONNECTED"} /></div>
+    </section>
+    {aiPanelOpen ? <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={t("direct.aiPanel")}><button type="button" className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("actions.close")} onClick={() => setAiPanelOpen(false)} /><aside className="absolute inset-y-0 right-0 flex w-[92vw] max-w-md flex-col overflow-hidden bg-surface-1 shadow-2xl"><header className="flex items-center justify-between border-b border-border-subtle p-4"><div className="flex items-center gap-2"><Bot className="h-5 w-5 text-primary" /><h2 className="font-black">{t("direct.aiPanel")}</h2></div><button type="button" className="rounded-2xl p-2 text-text-secondary hover:bg-surface-hover" onClick={() => setAiPanelOpen(false)} aria-label={t("actions.close")}><X className="h-5 w-5" /></button></header><div className="sellora-scrollbar min-h-0 flex-1 overflow-y-auto p-4"><AiPanel loading={suggestionsQuery.isLoading} suggestions={suggestionsQuery.data ?? []} onAnalyze={() => analysisMutation.mutate()} analyzing={analysisMutation.isPending} connectionStatus={statusQuery.data?.status ?? "DISCONNECTED"} embedded /></div></aside></div> : null}
+  </WorkspacePage>;
+}
+
+function ConversationList({ loading, error, conversations, selectedId, onSelect, instagramStatus }: { loading: boolean; error: boolean; conversations: DirectConversation[]; selectedId: string | null; onSelect: (id: string) => void; instagramStatus?: { status: string; webhook_active?: boolean; token_present?: boolean } }) {
+  if (loading) return <aside className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-3"><LoadingSkeleton /></aside>;
+  if (error) return <aside className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-3"><ErrorState title="Не вдалося завантажити Direct" description="Оновіть сторінку або перевірте workspace." /></aside>;
+  return <aside className="min-w-0 rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-3 shadow-[var(--shadow-card)]"><div className="mb-3 flex items-center justify-between"><h2 className="font-black">Діалоги</h2><span className="rounded-full bg-primary/15 px-2 py-1 text-xs font-bold text-primary">API</span></div><input className="mb-3 min-h-11 w-full rounded-2xl border border-border-subtle bg-surface-2 px-3 text-sm" placeholder="Пошук за іменем або username" /><div className="flex flex-wrap gap-2 pb-3 text-xs font-bold text-text-secondary"><span>Open</span><span>Unread</span><span>Instagram</span><span>Тестовий діалог</span></div>{conversations.length === 0 ? <DirectEmptyState instagramStatus={instagramStatus} /> : <div className="space-y-2">{conversations.map((item) => <button type="button" key={item.id} onClick={() => onSelect(item.id)} className={`w-full rounded-2xl border p-3 text-left ${selectedId === item.id ? "border-primary bg-primary/10" : "border-border-subtle bg-surface-2"}`}><div className="flex items-start justify-between gap-2"><div><h3 className="font-black">{item.participant_display_name ?? "Instagram customer"}</h3><p className="text-xs text-text-muted">{item.participant_username ?? item.participant_scoped_id ?? "—"}</p></div>{item.unread_count ? <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-black text-white">{item.unread_count}</span> : null}</div><div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-violet-500/15 px-2 py-1 text-xs font-bold text-primary">{item.channel === "INSTAGRAM" ? "Instagram" : "Тестовий діалог"}</span><span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs font-bold text-emerald-600">{item.status}</span></div></button>)}</div>}</aside>;
+}
+
+function DirectEmptyState({ instagramStatus }: { instagramStatus?: { status: string; webhook_active?: boolean; token_present?: boolean } }) {
+  if (!instagramStatus || instagramStatus.status === "DISCONNECTED" || !instagramStatus.token_present) {
+    return <EmptyState title="Instagram не підключено" description="Підключіть Instagram Direct в інтеграціях або створіть тестовий діалог через backend synthetic API." />;
+  }
+  if (!instagramStatus.webhook_active) {
+    return <EmptyState title="Webhook неактивний" description="Instagram підключено, але Meta ще не надсилає повідомлення в Sellora. Активуйте webhook в налаштуваннях інтеграції." />;
+  }
+  return <EmptyState title="Повідомлень ще немає" description="Webhook активний. Надішліть нове Direct-повідомлення з тестового Instagram акаунта, і воно зʼявиться тут." />;
+}
+
+type PrepareResult = { ready: boolean; blockers: string[]; warnings: string[]; message_preview: string };
+function MessageThread({ conversation, loading, error, messages, replyText, setReplyText, onPrepare, onSend, sendDisabled, prepareResult, sendPending, noAutoSend }: { conversation?: DirectConversation | null; loading: boolean; error: boolean; messages: DirectMessage[]; replyText: string; setReplyText: (value: string) => void; onPrepare: () => void; onSend: () => void; sendDisabled: boolean; prepareResult?: PrepareResult; sendPending: boolean; noAutoSend: string }) {
+  if (!conversation) return <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4"><EmptyState title="Оберіть діалог" description="Повідомлення та AI-підказки зʼявляться після вибору розмови." /></section>;
+  return <section className="flex min-h-[520px] min-w-0 flex-col rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)]"><header className="border-b border-border-subtle p-4"><h2 className="font-black">{conversation.participant_display_name ?? "Instagram customer"}</h2><p className="text-sm text-text-secondary">{conversation.channel === "INSTAGRAM" ? "Instagram" : "Тестовий діалог"} · {conversation.messaging_window_expires_at ? `вікно до ${conversation.messaging_window_expires_at}` : "відправлення недоступне без активного messaging window"}</p></header><div className="sellora-scrollbar flex-1 space-y-3 overflow-y-auto p-4">{loading ? <LoadingSkeleton /> : null}{error ? <ErrorState title="Не вдалося завантажити повідомлення" description="Спробуйте оновити діалог." /> : null}{!loading && !error && messages.length === 0 ? <EmptyState title="Повідомлень ще немає" description="Нові Instagram webhooks або synthetic messages зʼявляться тут." /> : null}{messages.map((m) => <div key={m.id} className={`flex ${m.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}><div className={`max-w-[82%] rounded-3xl px-4 py-3 text-sm ${m.direction === "OUTBOUND" ? "bg-primary/15 text-text-primary" : "bg-surface-2"}`}><p className="mb-1 text-xs font-black text-text-muted">{m.direction} · {m.delivery_status ?? "UNKNOWN"}</p>{m.text}</div></div>)}</div><footer className="border-t border-border-subtle p-3"><div className="mb-2 rounded-2xl border border-dashed border-border-subtle p-3 text-sm text-text-muted">{`Чернетка AI — не відправлено. ${noAutoSend}`}</div><textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} className="min-h-24 w-full rounded-2xl border border-border-subtle bg-surface-2 p-3 text-sm" placeholder="Відповідь менеджера" /><div className="mt-2 flex flex-wrap gap-2"><Button variant="secondary" onClick={onPrepare} disabled={!replyText}>Перевірити відправлення</Button><Button onClick={onSend} disabled={sendDisabled || !replyText}>{sendPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Підтвердити send</Button></div>{prepareResult ? <p className="mt-2 text-sm text-text-secondary">{prepareResult.ready ? "Готово до ручного підтвердження" : `Блокери: ${prepareResult.blockers.join(", ")}`}</p> : null}</footer></section>;
+}
+
+function AiPanel({ loading, suggestions, onAnalyze, analyzing, connectionStatus, embedded = false }: { loading: boolean; suggestions: AISuggestion[]; onAnalyze: () => void; analyzing: boolean; connectionStatus: string; embedded?: boolean }) {
+  return <aside className={`${embedded ? "" : "h-full"} min-w-0 rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)]`} data-direct-ai-panel>{!embedded ? <div className="mb-4 flex items-center gap-2"><Bot className="h-5 w-5 text-primary" /><h2 className="font-black">AI Intelligence</h2></div> : null}<div className="mb-3 rounded-2xl bg-surface-2 p-3 text-sm">Instagram connection: {connectionStatus}</div><Button onClick={onAnalyze} disabled={analyzing}>{analyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}Запустити AI аналіз</Button><div className="mt-4 space-y-3 text-sm">{loading ? <LoadingSkeleton /> : null}{!loading && suggestions.length === 0 ? <EmptyState title="AI-підказок ще немає" description="Запустіть аналіз для поточного inbound text message." /> : null}{suggestions.map((s) => <Card key={s.id} icon={<MessageCircle />} title={s.title ?? s.suggestion_type} body={s.draft_text ?? s.summary ?? "Чернетка очікує перегляду менеджером."} />)}<Card title="Безпека" body="AI не надсилає Instagram повідомлення автоматично і не змінює CRM без підтвердження." /></div></aside>;
+}
+
+function Card({ title, body, icon }: { title: string; body: string; icon?: React.ReactNode }) { return <section className="rounded-2xl border border-border-subtle bg-surface-2 p-3"><div className="mb-1 flex items-center gap-2 font-black">{icon ? <span className="h-4 w-4 text-primary">{icon}</span> : <CheckCircle2 className="h-4 w-4 text-emerald-500" />}{title}</div><p className="text-text-secondary">{body}</p></section>; }

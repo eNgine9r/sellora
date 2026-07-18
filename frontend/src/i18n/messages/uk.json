@@ -69,7 +69,8 @@
     "settings": "Налаштування",
     "importCenter": "Імпорт",
     "integrations": "Інтеграції",
-    "analytics": "Аналітика"
+    "analytics": "Аналітика",
+    "direct": "Direct"
   },
   "topbar": {
     "searchPlaceholder": "Пошук клієнтів, замовлень, товарів…",
@@ -1272,7 +1273,9 @@
       "roles": "Ролі",
       "available": "Доступно",
       "requiresSetup": "Потребує налаштування",
-      "ownerManaged": "Керує власник"
+      "ownerManaged": "Керує власник",
+      "instagramConnected": "Instagram Direct підключено",
+      "integrationCount": "{connected} із {total} підключено"
     },
     "summary": {
       "workspace": "Магазин",
@@ -2176,6 +2179,97 @@
       "badge": "Демо",
       "synthetic": "Синтетичні дані",
       "notReal": "Не є реальними показниками магазину"
+    }
+  },
+  "direct": {
+    "kicker": "AI Direct Intelligence",
+    "title": "Direct-інтелект",
+    "description": "Synthetic inbox для безпечного аналізу Instagram Direct: AI аналізує, пропонує, а менеджер підтверджує дію. Production Meta integration і автоматичні повідомлення вимкнені.",
+    "createSynthetic": "Створити тестовий діалог",
+    "conversations": "Діалоги",
+    "search": "Пошук за іменем, username або повідомленням",
+    "noAutoSend": "Чернетки AI не відправляються клієнтам автоматично.",
+    "aiPanel": "AI-панель",
+    "openAiPanel": "Відкрити AI-панель",
+    "syntheticBadge": "Тестовий діалог"
+  },
+  "instagramSettings": {
+    "title": "Instagram Direct",
+    "description": "Підключіть Instagram Professional account для контрольованого пілоту Direct-повідомлень. Надсилання працює тільки після ручного підтвердження менеджера.",
+    "connect": "Підключити Instagram",
+    "notConnected": "Instagram не підключено",
+    "emptyDescription": "Після підключення Sellora зможе приймати Direct через webhook і показувати повідомлення у Direct inbox.",
+    "error": "Не вдалося завантажити інтеграцію",
+    "errorDescription": "Оновіть сторінку або перевірте доступ до робочого простору.",
+    "tokenEncrypted": "Токен зашифровано",
+    "noToken": "Токена немає",
+    "accountType": "Тип акаунта",
+    "permissions": "Дозволи",
+    "webhooks": "Webhook",
+    "lastWebhook": "Останній webhook",
+    "validate": "Перевірити",
+    "disconnect": "Відключити",
+    "readOnly": "У вас режим перегляду. Підключенням керує власник workspace.",
+    "status": {
+      "PENDING": "Підключення",
+      "CONNECTED": "Підключено",
+      "TOKEN_EXPIRED": "Токен протерміновано",
+      "PERMISSION_MISSING": "Бракує дозволів",
+      "WEBHOOK_INACTIVE": "Webhook неактивний",
+      "RECONNECT_REQUIRED": "Потрібне перепідключення",
+      "DISCONNECTED": "Не підключено",
+      "FAILED": "Помилка підключення",
+      "MEDIA_CREATOR": "Creator"
+    },
+    "username": "Username",
+    "tokenExpiry": "Термін дії токена",
+    "messagingPermission": "Дозвіл на повідомлення",
+    "webhookStatus": "Статус webhook",
+    "lastInbound": "Останнє вхідне",
+    "autoReplies": "Автоматичні відповіді",
+    "outboundStatus": "Надсилання",
+    "disabled": "Вимкнено",
+    "manualOutbound": "Контрольоване ручне надсилання",
+    "permissionGranted": "Надано",
+    "permissionMissing": "Бракує дозволів",
+    "permissionsRequired": "Потрібні дозволи",
+    "manualSafety": "AI може підготувати чернетку, але повідомлення надсилає тільки менеджер після підтвердження.",
+    "openSettings": "Відкрити налаштування",
+    "openDirect": "Відкрити Direct",
+    "backToIntegrations": "Повернутися до інтеграцій",
+    "disconnectConfirm": "Відключити Instagram Direct? Історія повідомлень залишиться в Sellora.",
+    "profileFailed": "Не вдалося перевірити профіль Instagram. Спробуйте підключити акаунт повторно.",
+    "hub": {
+      "eyebrow": "Instagram Direct",
+      "title": "Instagram Direct",
+      "subtitle": "Отримуйте повідомлення Instagram і відповідайте клієнтам із Sellora",
+      "emptyDescription": "Підключіть Professional account, щоб приймати Direct у Sellora без автоматичних відповідей."
+    },
+    "callback": {
+      "title": "Повернення з Instagram Login",
+      "description": "Sellora показує тільки безпечний статус підключення та очищає code/state з історії браузера.",
+      "success": "Instagram успішно підключено",
+      "redirect": "Повернення до налаштувань через {seconds} с.",
+      "status": {
+        "processing": "Перевіряємо підключення…",
+        "permission_missing": "Бракує дозволів Instagram",
+        "profile_failed": "Не вдалося перевірити профіль Instagram",
+        "account_not_professional": "Потрібен Professional account",
+        "account_type_unverified": "Не вдалося перевірити тип акаунта",
+        "permission_failed": "Не вдалося перевірити дозволи",
+        "invalid_state": "Сесія OAuth недійсна або вже використана",
+        "failed": "Підключення не завершено"
+      }
+    },
+    "activateWebhook": "Активувати webhook",
+    "webhookActive": "Webhook активний",
+    "webhookInactive": "Webhook неактивний",
+    "webhookInactiveExplanation": "Instagram підключено, але Meta ще не надсилає повідомлення в Sellora. Активуйте webhook, щоб отримувати нові Direct-повідомлення.",
+    "confirmedFields": "Підтверджені події",
+    "missingWebhookFields": "Бракує подій webhook",
+    "fieldLabels": {
+      "messages": "Повідомлення",
+      "messaging_postbacks": "Натискання кнопок"
     }
   }
 }
