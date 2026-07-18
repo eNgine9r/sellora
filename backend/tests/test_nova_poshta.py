@@ -305,6 +305,34 @@ def test_settings_write_gate_requires_environment_workspace_permission_sender_an
     assert service.audit_logs.records[-1]["action"] == "NOVA_POSHTA_PROVIDER_WRITES_ENABLED"
 
 
+def test_readiness_exposes_write_gate_without_credentials_or_sender_references(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    service = _settings_service()
+    workspace_id = uuid4()
+    service.save_settings(workspace_id, _complete_settings(), uuid4())
+    service.test_connection(workspace_id, uuid4())
+    service.set_write_permission(workspace_id, NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+
+    response = service.get_readiness(workspace_id)
+    payload = response.model_dump()
+
+    assert response.provider_writes_enabled
+    assert set(payload) == {
+        "provider",
+        "status",
+        "environment_capability",
+        "workspace_permission",
+        "provider_writes_enabled",
+        "sender_configured",
+        "connection_verified",
+        "write_blockers",
+    }
+    serialized = str(payload)
+    assert "synthetic-credential-value" not in serialized
+    assert "sender-wh" not in serialized
+    assert "contact" not in serialized
+
+
 def test_provider_writes_disabled_by_workspace_permission_blocks_durable_ttn(monkeypatch) -> None:
     monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
     shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.DRAFT.value, recipient_name="Recipient", recipient_phone="+380671234567", city="City", warehouse="Warehouse", nova_poshta_city_ref="city-ref", nova_poshta_warehouse_ref="warehouse-ref", declared_value=100)

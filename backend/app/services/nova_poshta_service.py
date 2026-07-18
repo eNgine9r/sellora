@@ -29,6 +29,7 @@ from app.repositories.nova_poshta_operation_repository import NovaPoshtaOperatio
 from app.repositories.shipment_repository import ShipmentRepository
 from app.schemas.integration import (
     NovaPoshtaDirectoryItem,
+    NovaPoshtaReadinessResponse,
     NovaPoshtaSettingsRequest,
     NovaPoshtaSettingsResponse,
     NovaPoshtaWritePermissionRequest,
@@ -149,6 +150,16 @@ class NovaPoshtaSettingsService:
             **gate,
             **settings,
         )
+
+    def get_readiness(self, workspace_id: UUID) -> NovaPoshtaReadinessResponse:
+        """Return the non-secret TTN write gate for order and shipment workflows."""
+        connection = self.connections.get_by_provider(workspace_id, IntegrationProvider.NOVA_POSHTA.value)
+        if connection is None or connection.status == IntegrationStatus.DISCONNECTED.value:
+            gate = self._write_gate(None, None, {})
+            return NovaPoshtaReadinessResponse(status=IntegrationStatus.DISCONNECTED, **gate)
+        credential = self.credentials.get_active_for_connection(workspace_id, connection.id)
+        gate = self._write_gate(connection, credential, connection.settings or {})
+        return NovaPoshtaReadinessResponse(status=IntegrationStatus(connection.status), **gate)
 
     def save_settings(
         self,

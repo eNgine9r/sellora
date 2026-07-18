@@ -24,30 +24,46 @@ TTN creation requires these sender settings before a shipment can be sent to Nov
 
 If sender city changes, the selected sender warehouse must be checked again because a warehouse ref is city-specific.
 
+## TTN activation gate
+
+Sellora enables real Nova Poshta writes only when all five conditions are satisfied:
+
+1. The deployment operator has enabled `STAGING_NOVA_POSHTA_ALLOW_WRITES=true` on the backend.
+2. The workspace has an active Nova Poshta connection with a saved API key.
+3. All sender settings are complete.
+4. **Test connection** has successfully verified both the API key and the sender tuple.
+5. The workspace `OWNER` has explicitly enabled TTN creation in **Settings → Integrations → Nova Poshta**.
+
+The manager-readable readiness endpoint exposes only these safe booleans and blocker codes. It never returns the API key, masked credential, phone, or sender refs. Credential changes and material sender-setting changes automatically invalidate verification and disable workspace write permission, so the owner must test and enable TTN creation again.
+
 ## Manual staging validation steps
 
 1. Open staging as an OWNER for the target workspace.
 2. Go to **Settings → Integrations → Nova Poshta**.
-3. Paste the credential into the UI field only, then save.
-4. Confirm the saved state is masked and the raw value is no longer visible.
-5. Click **Test connection** and confirm either a connected state or a safe localized error.
-6. Search for the sender city and select it.
-7. Search for the sender warehouse after the city is selected and select it.
-8. Fill sender counterparty, contact person, and phone fields from the shop’s Nova Poshta account.
-9. Save sender settings without re-entering the credential and confirm the masked key remains saved.
-10. Create a controlled test order with non-sensitive customer data.
-11. Open the order details and choose **Create shipment from order**.
-12. Fill recipient details, select Nova Poshta city and warehouse, and save the shipment as a draft.
-13. Open the shipment details and create the TTN only when the shop is ready for a real Nova Poshta-side record.
-14. Confirm the TTN/tracking number is saved on the shipment.
-15. Confirm the linked order shows shipment/tracking information.
-16. Try the status sync action if available and confirm failures use a safe localized message.
-17. Confirm creating a second TTN for the same shipment is blocked or clearly warned.
-18. Confirm logs and audit records do not contain the raw credential.
+3. Confirm the deployment environment allows Nova Poshta writes in the activation checklist. If it does not, ask the deployment operator to enable the documented server flag; do not bypass the gate in application code.
+4. Paste the credential into the UI field only.
+5. Search for the sender city and select it.
+6. Search for the sender warehouse after the city is selected and select it.
+7. Fill sender counterparty, contact person, and phone fields from the shop’s Nova Poshta account.
+8. Save the credential and complete sender settings together.
+9. Confirm the saved credential is masked and the raw value is no longer visible.
+10. Click **Test connection**. Confirm the API key and complete sender tuple pass, or fix the localized field-specific error.
+11. Confirm the activation checklist shows the first four conditions as ready.
+12. Click **Enable TTN creation** as the workspace owner and confirm the fifth condition becomes ready.
+13. Create a controlled test order with non-sensitive customer data.
+14. Open the order details and choose **Create shipment from order**.
+15. Fill recipient details, select Nova Poshta city and warehouse, and save the shipment as a draft.
+16. Open the shipment details and create the TTN only when the shop is ready for a real Nova Poshta-side record.
+17. Confirm the TTN/tracking number is saved on the shipment.
+18. Confirm the linked order shows shipment/tracking information.
+19. Try the status sync action if available and confirm failures use a safe localized message.
+20. Confirm creating a second TTN for the same shipment is blocked or clearly warned.
+21. Confirm logs and audit records do not contain the raw credential.
 
 ## Expected behavior
 
-- Credential management is OWNER-only.
+- Credential management, connection verification, and write-permission changes are OWNER-only.
+- Safe readiness state is available to MANAGER users so order creation can explain the exact non-secret blocker.
 - Shipment creation, TTN creation, status changes, and status sync require at least MANAGER permissions.
 - ANALYST users can read shipment information but cannot mutate shipments or Nova Poshta settings.
 - TTN creation sets shipment delivery data but does **not** automatically complete the order.

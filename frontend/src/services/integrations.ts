@@ -1,5 +1,11 @@
 import { apiRequest } from "@/services/api";
-import { NovaPoshtaActionResponse, NovaPoshtaDirectoryItem, NovaPoshtaSettings, NovaPoshtaSettingsPayload } from "@/types/integrations";
+import {
+  NovaPoshtaActionResponse,
+  NovaPoshtaDirectoryItem,
+  NovaPoshtaReadiness,
+  NovaPoshtaSettings,
+  NovaPoshtaSettingsPayload,
+} from "@/types/integrations";
 
 function withWorkspaceContext<T>(workspaceId: string, request: () => Promise<T>) {
   // The active workspace is attached by the shared API client. Keep this argument for a consistent service API.
@@ -8,8 +14,25 @@ function withWorkspaceContext<T>(workspaceId: string, request: () => Promise<T>)
 }
 
 export const fetchNovaPoshtaSettings = (workspaceId: string) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaSettings>("/integrations/nova-poshta/settings"));
+export const fetchNovaPoshtaReadiness = (workspaceId: string) => withWorkspaceContext(
+  workspaceId,
+  () => apiRequest<NovaPoshtaReadiness>("/integrations/nova-poshta/readiness"),
+);
 export const saveNovaPoshtaSettings = (workspaceId: string, payload: NovaPoshtaSettingsPayload) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaSettings>("/integrations/nova-poshta/settings", { method: "POST", body: JSON.stringify(payload) }));
-export const testNovaPoshtaConnection = (workspaceId: string) => withWorkspaceContext(workspaceId, () => apiRequest<{ success: boolean; message: string; status: string }>("/integrations/nova-poshta/test-connection", { method: "POST" }));
+export const updateNovaPoshtaWritePermission = (workspaceId: string, allowed: boolean) => withWorkspaceContext(
+  workspaceId,
+  () => apiRequest<NovaPoshtaSettings>("/integrations/nova-poshta/write-permission", {
+    method: "PATCH",
+    body: JSON.stringify({ allowed }),
+  }),
+);
+export const testNovaPoshtaConnection = (workspaceId: string) => withWorkspaceContext(
+  workspaceId,
+  () => apiRequest<{ success: boolean; message: string; status: string; errors: string[] }>(
+    "/integrations/nova-poshta/test-connection",
+    { method: "POST" },
+  ),
+);
 export const disconnectNovaPoshta = (workspaceId: string) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaSettings>("/integrations/nova-poshta/disconnect", { method: "DELETE" }));
 export const searchNovaPoshtaCities = (workspaceId: string, q: string, limit = 20) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaDirectoryItem[]>(`/integrations/nova-poshta/cities?q=${encodeURIComponent(q)}&limit=${limit}`));
 export const searchNovaPoshtaWarehouses = (workspaceId: string, cityRef: string, q?: string, limit = 50) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaDirectoryItem[]>(`/integrations/nova-poshta/warehouses?city_ref=${encodeURIComponent(cityRef)}${q ? `&q=${encodeURIComponent(q)}` : ""}&limit=${limit}`));

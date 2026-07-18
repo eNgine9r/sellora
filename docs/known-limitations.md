@@ -496,3 +496,10 @@ First-run guidance and demo workspace generation are implemented for controlled 
 - Finance/profit deep validation remains Sprint 8F.
 - Last-unit concurrency needs runtime PostgreSQL/staging evidence before full Sprint 8D approval.
 - Browser/mobile staging evidence and QA8D cleanup evidence remain required before final approval.
+
+## Sprint 8E Nova Poshta limitations
+
+- Real TTN creation remains disabled unless the deployment capability, active connection, complete sender settings, successful connection verification, and explicit workspace OWNER permission are all present.
+- Production-like validation still requires a controlled shop-owned credential and an approved synthetic shipment; no real key, sender reference, customer data, or TTN may be committed or copied into logs and review artifacts.
+- Background status synchronization, TTN cancellation, and printable provider documents are not production-validated; use the explicit manual status sync and Nova Poshta cabinet where needed.
+- Browser/mobile staging evidence and a controlled provider-write smoke test remain required before declaring the integration generally available.

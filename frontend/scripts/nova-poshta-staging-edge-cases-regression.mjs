@@ -56,7 +56,8 @@ has(ttnButton, "recipientPhoneRequired");
 has(ttnButton, "recipientCityRequired");
 has(ttnButton, "recipientWarehouseRequired");
 has(ttnButton, "NOVA_POSHTA_TTN_INCOMPLETE");
-has(ttnButton, "disabled={create.isPending || hasTtn}", "duplicate/loading create TTN disabled");
+has(ttnButton, "createInFlight.current", "synchronous duplicate TTN guard");
+has(ttnButton, "disabled={create.isPending || createInFlight.current || hasTtn || manualHold}", "duplicate/loading create TTN disabled");
 has(ttnButton, "disabled={sync.isPending || !hasTtn}", "sync disabled without TTN");
 has(shipmentPanel, "recipientAddressRequired");
 has(ttnActions, "navigator.clipboard.writeText", "copy TTN action");
@@ -103,10 +104,10 @@ has(novaService, "self.shipments.get(workspace_id, shipment_id)");
 
 // Docs updates and limitations.
 has(workflowDoc, "Sprint 3.2 staging edge-case stabilization");
-has(knownLimitations, "Sprint 3.2");
+has(knownLimitations, "Sprint 8E Nova Poshta limitations");
 has(stagingChecklist, "Sprint 3.2");
 has(pilotChecklist, "Sprint 3.2");
-has(mvpReadiness, "Sprint 3.2 readiness");
+has(mvpReadiness, "Sprint 8E Nova Poshta readiness update");
 
 // No raw production credential fixture markers in docs/source regression scope.
 const forbidden = ["real-nova-poshta-api-key", "actual-api-key", "live-ttn-value", "Authorization: Bearer"];
