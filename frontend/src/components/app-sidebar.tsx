@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Boxes, CalendarDays, Megaphone, NotebookText, PackageOpen, Settings, ShoppingBag, Sparkles, Truck, Users, WalletCards } from "lucide-react";
+import { BarChart3, Boxes, CalendarDays, Megaphone, MessageCircle, NotebookText, PackageOpen, Settings, ShoppingBag, Sparkles, Truck, Users, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLockup } from "@/components/brand";
@@ -9,6 +9,7 @@ import { useI18n } from "@/i18n/provider";
 const items = [
   ["/dashboard", "navigation.dashboard", BarChart3],
   ["/leads", "navigation.leads", Sparkles],
+  ["/direct", "navigation.direct", MessageCircle],
   ["/customers", "navigation.customers", Users],
   ["/orders", "navigation.orders", ShoppingBag],
   ["/products", "navigation.products", PackageOpen],
