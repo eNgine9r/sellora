@@ -503,3 +503,9 @@ First-run guidance and demo workspace generation are implemented for controlled 
 - Production-like validation still requires a controlled shop-owned credential and an approved synthetic shipment; no real key, sender reference, customer data, or TTN may be committed or copied into logs and review artifacts.
 - Background status synchronization, TTN cancellation, and printable provider documents are not production-validated; use the explicit manual status sync and Nova Poshta cabinet where needed.
 - Browser/mobile staging evidence and a controlled provider-write smoke test remain required before declaring the integration generally available.
+
+## Sprint 8F.1 fulfillment limitations — 2026-07-18
+
+- Real Nova Poshta document creation remains blocked behind controlled provider-write gates until runtime evidence is collected.
+- Browser QA and controlled real-TTN smoke evidence are pending outside this local repository change.
+- Fulfillment finance recognition remains operational-preview level and must be validated with delivered, cancelled, returned, and refunded runtime scenarios before public launch.
