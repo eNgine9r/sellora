@@ -169,6 +169,12 @@ class DirectConversation(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMi
     latest_ai_analysis_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
     created_by: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
     updated_by: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    instagram_connection_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("instagram_connections.id", ondelete="SET NULL"))
+    external_thread_id: Mapped[str | None] = mapped_column(String(180))
+    participant_scoped_id: Mapped[str | None] = mapped_column(String(180))
+    messaging_window_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    human_agent_window_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_sync_status: Mapped[str | None] = mapped_column(String(40))
 
 
 class DirectMessage(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, TimestampMixin, Base):
@@ -185,6 +191,14 @@ class DirectMessage(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, 
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     processing_status: Mapped[str] = mapped_column(String(30), nullable=False, default=DirectMessageProcessingStatus.RECEIVED.value)
     is_synthetic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    provider: Mapped[str | None] = mapped_column(String(40))
+    provider_message_id: Mapped[str | None] = mapped_column(String(180))
+    provider_event_id: Mapped[str | None] = mapped_column(String(180))
+    delivery_status: Mapped[str | None] = mapped_column(String(40))
+    message_payload_type: Mapped[str | None] = mapped_column(String(40))
+    attachment_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    provider_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_by_user_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
 
 
 class AIAnalysis(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, Base):
@@ -278,6 +292,12 @@ class AIWorkspaceSettings(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, TimestampMi
     minimum_action_confidence: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False, default=0.85)
     minimum_product_match_confidence: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False, default=0.85)
     updated_by: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    instagram_connection_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("instagram_connections.id", ondelete="SET NULL"))
+    external_thread_id: Mapped[str | None] = mapped_column(String(180))
+    participant_scoped_id: Mapped[str | None] = mapped_column(String(180))
+    messaging_window_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    human_agent_window_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_sync_status: Mapped[str | None] = mapped_column(String(40))
 
 
 class AIUsageEvent(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, Base):

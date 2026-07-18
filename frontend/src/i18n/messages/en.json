@@ -2190,5 +2190,33 @@
     "aiPanel": "AI panel",
     "openAiPanel": "Open AI panel",
     "syntheticBadge": "Test conversation"
+  },
+  "instagramSettings": {
+    "title": "Instagram Direct",
+    "description": "Connect an Instagram Professional account for the controlled Direct messaging pilot. Sending requires explicit manager confirmation.",
+    "connect": "Connect Instagram",
+    "notConnected": "Instagram is not connected",
+    "emptyDescription": "After connection, Sellora can receive Direct messages through webhooks and show them in Direct inbox.",
+    "error": "Could not load integration",
+    "errorDescription": "Refresh the page or check workspace access.",
+    "tokenEncrypted": "Token encrypted",
+    "noToken": "No token",
+    "accountType": "Account type",
+    "permissions": "Permissions",
+    "webhooks": "Webhook fields",
+    "lastWebhook": "Last webhook",
+    "validate": "Validate",
+    "disconnect": "Disconnect",
+    "readOnly": "You have read-only access. Workspace owners manage the connection.",
+    "status": {
+      "PENDING": "Pending",
+      "CONNECTED": "Connected",
+      "TOKEN_EXPIRED": "Token expired",
+      "PERMISSION_MISSING": "Permission missing",
+      "WEBHOOK_INACTIVE": "Webhook inactive",
+      "RECONNECT_REQUIRED": "Reconnect required",
+      "DISCONNECTED": "Disconnected",
+      "FAILED": "Failed"
+    }
   }
 }

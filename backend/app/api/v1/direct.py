@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_min_role, require_roles
@@ -10,6 +10,9 @@ from app.schemas.ai_direct import SyntheticConversationCreate, DirectConversatio
 from app.ai.services.direct_conversation_service import DirectConversationService
 from app.ai.services.direct_intelligence_service import DirectIntelligenceService
 from app.ai.exceptions import AIError
+from app.integrations.meta_instagram.exceptions import MetaInstagramError
+from app.integrations.meta_instagram.schemas import ReplyPrepareRequest, ReplyPrepareResponse, ReplySendRequest, ReplySendResponse
+from app.integrations.meta_instagram.services.outbound_message_service import InstagramOutboundMessageService
 
 router=APIRouter(prefix='/direct', tags=['direct-intelligence'])
 
@@ -54,3 +57,20 @@ def analyses(conversation_id: UUID, workspace_id: UUID=Depends(get_workspace_id)
 @router.get('/conversations/{conversation_id}/suggestions', response_model=list[AISuggestionResponse])
 def suggestions(conversation_id: UUID, workspace_id: UUID=Depends(get_workspace_id), _: User=Depends(require_min_role(RoleName.ANALYST)), db: Session=Depends(get_db)):
     return AIRepository(db).list_suggestions(workspace_id, conversation_id)
+
+
+@router.post('/conversations/{conversation_id}/reply/prepare', response_model=ReplyPrepareResponse)
+def prepare_reply(conversation_id: UUID, payload: ReplyPrepareRequest, workspace_id: UUID=Depends(get_workspace_id), _: User=Depends(require_min_role(RoleName.MANAGER)), db: Session=Depends(get_db)):
+    ready, blockers, warnings = InstagramOutboundMessageService(db).prepare(workspace_id, conversation_id, payload.message_text, payload.human_agent_requested)
+    return ReplyPrepareResponse(ready=ready, blockers=blockers, warnings=warnings, message_preview=payload.message_text, human_agent_eligible=payload.human_agent_requested and not blockers)
+
+@router.post('/conversations/{conversation_id}/reply/send', response_model=ReplySendResponse)
+async def send_reply(conversation_id: UUID, payload: ReplySendRequest, idempotency_key: str | None=Header(default=None, alias='Idempotency-Key'), workspace_id: UUID=Depends(get_workspace_id), user: User=Depends(require_min_role(RoleName.MANAGER)), db: Session=Depends(get_db)):
+    if not idempotency_key:
+        raise HTTPException(400, 'META_IDEMPOTENCY_KEY_REUSED')
+    try:
+        op = await InstagramOutboundMessageService(db).send(workspace_id, conversation_id, user.id, payload.message_text, idempotency_key, payload.human_agent_requested)
+        db.commit(); db.refresh(op)
+        return ReplySendResponse(operation_id=op.id, status=op.status, provider_message_id=op.provider_message_id, direct_message_id=op.direct_message_id)
+    except MetaInstagramError as exc:
+        db.rollback(); raise HTTPException(exc.status_code, {'code': exc.code, 'message': exc.message}) from exc

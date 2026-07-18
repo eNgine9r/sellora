@@ -1,3 +1,4 @@
+from app.models.meta_instagram import *
 from app.models.ai_direct import *
 from app.models.ad_campaign import AdCampaign, AdCampaignBudgetType, AdCampaignObjective, AdCampaignPlatform, AdCampaignStatus
 from app.models.ad_metric import AdMetric

@@ -519,3 +519,7 @@ First-run guidance and demo workspace generation are implemented for controlled 
 ## Sprint 9 AI limitations
 
 Production Instagram Messaging API ingestion, automatic customer replies, voice/image recognition, confirmed order creation, stock reservation, shipment creation, and Nova Poshta TTN generation are out of scope. AI costs are estimated.
+
+## Sprint 10 Meta Instagram messaging limitations
+
+Meta production pilot evidence, App Review approval, and real webhook/send smoke results must be recorded in the hosted environment. AI auto-send, bulk outreach, voice/image recognition, autonomous CRM mutations, and automatic order/stock/shipment changes remain disabled.

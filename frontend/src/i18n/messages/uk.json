@@ -2190,5 +2190,33 @@
     "aiPanel": "AI-панель",
     "openAiPanel": "Відкрити AI-панель",
     "syntheticBadge": "Тестовий діалог"
+  },
+  "instagramSettings": {
+    "title": "Instagram Direct",
+    "description": "Підключіть Instagram Professional account для контрольованого пілоту Direct-повідомлень. Надсилання працює тільки після ручного підтвердження менеджера.",
+    "connect": "Підключити Instagram",
+    "notConnected": "Instagram не підключено",
+    "emptyDescription": "Після підключення Sellora зможе приймати Direct через webhook і показувати повідомлення у Direct inbox.",
+    "error": "Не вдалося завантажити інтеграцію",
+    "errorDescription": "Оновіть сторінку або перевірте доступ до робочого простору.",
+    "tokenEncrypted": "Токен зашифровано",
+    "noToken": "Токена немає",
+    "accountType": "Тип акаунта",
+    "permissions": "Дозволи",
+    "webhooks": "Webhook fields",
+    "lastWebhook": "Останній webhook",
+    "validate": "Перевірити",
+    "disconnect": "Відключити",
+    "readOnly": "У вас режим перегляду. Підключенням керує власник workspace.",
+    "status": {
+      "PENDING": "Очікує підключення",
+      "CONNECTED": "Підключено",
+      "TOKEN_EXPIRED": "Токен протерміновано",
+      "PERMISSION_MISSING": "Бракує дозволів",
+      "WEBHOOK_INACTIVE": "Webhook неактивний",
+      "RECONNECT_REQUIRED": "Потрібне перепідключення",
+      "DISCONNECTED": "Відключено",
+      "FAILED": "Помилка"
+    }
   }
 }
