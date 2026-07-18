@@ -702,8 +702,8 @@ export function OrderForm({
                             onClick={() => selectProduct(index, product.id)}
                           >
                             {image ? (
-                              <img
-                                className="h-8 w-8 shrink-0 rounded-lg object-cover"
+                              <RemoteImage
+                                className="h-9 w-9 shrink-0 rounded-lg"
                                 src={image.image_url}
                                 alt={image.alt_text ?? product.name}
                               />

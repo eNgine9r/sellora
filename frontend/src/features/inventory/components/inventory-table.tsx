@@ -1,31 +1,269 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
+
+import { RemoteImage } from "@/components/ui/remote-image";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
 import { statusBadgeClass } from "@/lib/status-styles";
 import { cn } from "@/services/utils";
 import { Inventory, Product, ProductVariant } from "@/types/products";
 
-function variantLabel(item: Inventory, variant?: ProductVariant) { return variant?.sku ?? `Variant ${item.product_variant_id.slice(0, 8)}…`; }
-function productImage(product?: Product) { return product?.images.find((image) => image.is_primary) ?? product?.images[0]; }
-function availableQuantity(item: Inventory) { return item.stock_quantity - item.reserved_quantity; }
+type InventoryTableProps = {
+  inventory: Inventory[];
+  variants: ProductVariant[];
+  products: Product[];
+  selectedInventoryId?: string;
+  onSelect?: (inventory: Inventory) => void;
+  onEdit?: (inventory: Inventory) => void;
+};
 
-export function InventoryTable({ inventory, variants, products, selectedInventoryId, onSelect, onEdit }: { inventory: Inventory[]; variants: ProductVariant[]; products: Product[]; selectedInventoryId?: string; onSelect?: (inventory: Inventory) => void; onEdit?: (inventory: Inventory) => void }) {
+function variantLabel(
+  item: Inventory,
+  variant: ProductVariant | undefined,
+  archivedVariantLabel: string,
+) {
+  return variant?.sku ?? `${archivedVariantLabel} ${item.product_variant_id.slice(0, 8)}…`;
+}
+
+function productImage(product?: Product) {
+  return product?.images.find((image) => image.is_primary) ?? product?.images[0];
+}
+
+function handleSelectKeyDown(
+  event: KeyboardEvent,
+  item: Inventory,
+  onSelect?: (inventory: Inventory) => void,
+) {
+  if ((event.key === "Enter" || event.key === " ") && onSelect) {
+    event.preventDefault();
+    onSelect(item);
+  }
+}
+
+export function InventoryTable({
+  inventory,
+  variants,
+  products,
+  selectedInventoryId,
+  onSelect,
+  onEdit,
+}: InventoryTableProps) {
   const variantById = new Map(variants.map((variant) => [variant.id, variant]));
   const productById = new Map(products.map((product) => [product.id, product]));
   const { t, locale } = useI18n();
   const archivedVariantLabel = locale === "uk" ? "Архівний варіант" : "Archived variant";
+
   return (
-    <div className="w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
+    <div
+      className="w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm"
+      data-archived-variant-warning={
+        inventory.some((item) => !variantById.has(item.product_variant_id)) || undefined
+      }
+    >
       <div className="sellora-scrollbar hidden max-w-full overflow-x-auto lg:block">
-        <table className="w-full min-w-[980px] divide-y divide-border-subtle text-sm">
-          <thead className="bg-surface-2 text-left text-xs font-black uppercase tracking-wide text-text-muted"><tr><th className="px-4 py-3">{t("inventory.product")}</th><th className="px-4 py-3">{t("inventory.category")}</th><th className="px-4 py-3">{t("tables.variantSku")}</th><th className="px-4 py-3">{t("tables.stock")}</th><th className="px-4 py-3">{t("tables.reserved")}</th><th className="px-4 py-3">{t("inventory.summary.available")}</th><th className="px-4 py-3">{t("tables.minimum")}</th><th className="px-4 py-3">{t("tables.status")}</th><th className="px-4 py-3">{t("tables.actions")}</th></tr></thead>
-          <tbody className="divide-y divide-border-subtle">{inventory.map((item) => { const variant = variantById.get(item.product_variant_id); const product = variant ? productById.get(variant.product_id) : undefined; const image = productImage(product); const label = variantLabel(item, variant); const selected = selectedInventoryId === item.id; const archived = !variant; return <tr key={item.id} className={cn("align-top transition hover:bg-surface-hover", selected && "bg-surface-selected") } onClick={() => onSelect?.(item)}><td className="px-4 py-3"><div className="flex min-w-0 items-center gap-3">{image ? <img className="h-12 w-12 rounded-xl object-cover" src={image.image_url} alt={image.alt_text ?? product?.name ?? label} /> : <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-surface-2 text-xs font-bold text-text-muted">IMG</div>}<div className="min-w-0"><p className="truncate font-black text-text-primary">{product?.name ?? label}</p><p className="truncate text-xs text-text-muted">{product?.sku ?? label}</p>{archived ? <span className={`${statusBadgeClass("warning")} mt-1 inline-flex`} data-archived-variant-warning>{archivedVariantLabel}</span> : null}</div></div></td><td className="px-4 py-3 text-text-secondary">{displayCategory(product?.category, t)}</td><td className="max-w-[180px] truncate px-4 py-3 text-text-secondary">{label}{variant?.color || variant?.size ? <span className="block text-xs text-text-muted">{[variant.color, variant.size].filter(Boolean).join(" / ")}</span> : null}</td><td className="px-4 py-3 font-black text-text-primary">{item.stock_quantity}</td><td className="px-4 py-3 text-warning-foreground">{item.reserved_quantity}</td><td className="px-4 py-3 font-black text-success-foreground">{availableQuantity(item)}</td><td className="px-4 py-3">{item.minimum_quantity}</td><td className="px-4 py-3">{item.stock_quantity <= 0 ? <span className={statusBadgeClass("danger")}>{t("inventory.summary.outOfStock")}</span> : item.is_low_stock ? <span className={statusBadgeClass("warning")}>{t("inventory.lowStock")}</span> : <span className={statusBadgeClass("success")}>{t("inventory.healthy")}</span>}</td><td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>{onEdit ? <button aria-label={`${t("inventory.editThresholds")} ${label}`} className="rounded-lg border border-border-subtle px-3 py-2 font-semibold text-text-primary" onClick={() => onEdit(item)}>{t("inventory.editThresholds")}</button> : <span className="text-text-muted">{t("common.readOnly")}</span>}</td></tr>; })}{inventory.length === 0 ? <tr><td className="px-4 py-8 text-center text-text-muted" colSpan={9}>{t("inventory.empty")}</td></tr> : null}</tbody>
+        <table className="w-full min-w-[980px] divide-y divide-slate-200 text-sm dark:divide-white/10">
+          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-white/[0.04] dark:text-slate-300">
+            <tr>
+              <th className="px-4 py-3">{t("inventory.productImage")}</th>
+              <th className="px-4 py-3">{t("inventory.category")}</th>
+              <th className="px-4 py-3">{t("inventory.product")}</th>
+              <th className="px-4 py-3">{t("tables.variantSku")}</th>
+              <th className="px-4 py-3">{t("tables.stock")}</th>
+              <th className="px-4 py-3">{t("tables.reserved")}</th>
+              <th className="px-4 py-3">{t("tables.incoming")}</th>
+              <th className="px-4 py-3">{t("tables.minimum")}</th>
+              <th className="px-4 py-3">{t("tables.status")}</th>
+              <th className="px-4 py-3">{t("tables.actions")}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-white/10">
+            {inventory.map((item) => {
+              const variant = variantById.get(item.product_variant_id);
+              const product = variant ? productById.get(variant.product_id) : undefined;
+              const image = productImage(product);
+              const label = variantLabel(item, variant, archivedVariantLabel);
+
+              return (
+                <tr
+                  key={item.id}
+                  className={cn(
+                    "cursor-pointer transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring",
+                    selectedInventoryId === item.id && "bg-surface-selected",
+                  )}
+                  onClick={() => onSelect?.(item)}
+                  onKeyDown={(event) => handleSelectKeyDown(event, item, onSelect)}
+                  role={onSelect ? "button" : undefined}
+                  tabIndex={onSelect ? 0 : undefined}
+                >
+                  <td className="px-4 py-3">
+                    {image ? (
+                      <RemoteImage
+                        className="h-12 w-12 rounded-lg"
+                        src={image.image_url}
+                        alt={image.alt_text ?? product?.name ?? label}
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-400 dark:bg-white/10">
+                        IMG
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-200">
+                    {displayCategory(product?.category, t)}
+                  </td>
+                  <td className="max-w-[220px] truncate px-4 py-3 font-medium text-slate-900 dark:text-white">
+                    {product?.name ?? "—"}
+                  </td>
+                  <td className="max-w-[180px] truncate px-4 py-3 text-slate-700 dark:text-slate-200">
+                    {label}
+                    {variant?.color ? (
+                      <span className="block text-xs text-slate-500">
+                        {variant.color}
+                        {variant.size ? ` / ${variant.size}` : ""}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3">{item.stock_quantity}</td>
+                  <td className="px-4 py-3">{item.reserved_quantity}</td>
+                  <td className="px-4 py-3">{item.incoming_quantity}</td>
+                  <td className="px-4 py-3">{item.minimum_quantity}</td>
+                  <td className="px-4 py-3">
+                    {item.is_low_stock ? (
+                      <span className={statusBadgeClass("danger")}>
+                        {t("inventory.lowStock")}
+                      </span>
+                    ) : (
+                      <span className={statusBadgeClass("success")}>
+                        {t("inventory.healthy")}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {onEdit ? (
+                      <button
+                        type="button"
+                        aria-label={`${t("inventory.editThresholds")} ${label}`}
+                        className="rounded-lg border border-slate-300 px-3 py-2 font-semibold dark:border-white/10"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onEdit(item);
+                        }}
+                      >
+                        {t("inventory.editThresholds")}
+                      </button>
+                    ) : (
+                      <span className="text-slate-400">{t("common.readOnly")}</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {inventory.length === 0 ? (
+              <tr>
+                <td className="px-4 py-8 text-center text-slate-500" colSpan={10}>
+                  {t("inventory.empty")}
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
         </table>
       </div>
+
       <div className="grid gap-3 lg:hidden">
-        {inventory.map((item) => { const variant = variantById.get(item.product_variant_id); const product = variant ? productById.get(variant.product_id) : undefined; const image = productImage(product); const label = variantLabel(item, variant); const selected = selectedInventoryId === item.id; const archived = !variant; return <article className={cn("min-w-0 rounded-2xl border border-border-subtle p-4", selected && "border-primary bg-surface-selected")} key={item.id} onClick={() => onSelect?.(item)}><div className="flex min-w-0 items-start justify-between gap-3"><div className="flex min-w-0 gap-3">{image ? <img className="h-16 w-16 shrink-0 rounded-xl object-cover" src={image.image_url} alt={image.alt_text ?? product?.name ?? label} /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-xs font-bold text-text-muted">IMG</div>}<div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[0.2em] text-text-muted">{displayCategory(product?.category, t)}</p><h3 className="truncate text-lg font-black text-text-primary">{product?.name ?? label}</h3><p className="truncate text-sm text-text-muted">{t("tables.variantSku")}: {label}</p>{variant?.color || variant?.size ? <p className="truncate text-sm text-text-muted">{[variant.color, variant.size].filter(Boolean).join(" / ")}</p> : null}{archived ? <span className={`${statusBadgeClass("warning")} mt-2 inline-flex`} data-archived-variant-warning>{archivedVariantLabel}</span> : null}</div></div>{item.stock_quantity <= 0 ? <span className={`${statusBadgeClass("danger")} shrink-0`}>{t("inventory.summary.outOfStock")}</span> : item.is_low_stock ? <span className={`${statusBadgeClass("warning")} shrink-0`}>{t("inventory.lowStock")}</span> : <span className={`${statusBadgeClass("success")} shrink-0`}>{t("inventory.healthy")}</span>}</div><div className="mt-4 grid grid-cols-2 gap-2 text-sm text-text-secondary"><span>{t("tables.stock")}: <strong>{item.stock_quantity}</strong></span><span>{t("tables.reserved")}: <strong>{item.reserved_quantity}</strong></span><span>{t("inventory.summary.available")}: <strong>{availableQuantity(item)}</strong></span><span>{t("tables.minimum")}: <strong>{item.minimum_quantity}</strong></span></div>{onEdit ? <button aria-label={`${t("inventory.editThresholds")} ${label}`} className="mt-4 min-h-11 w-full rounded-xl border border-border-subtle px-4 py-3 font-bold text-text-primary" onClick={(event) => { event.stopPropagation(); onEdit(item); }}>{t("inventory.editThresholds")}</button> : <p className="mt-4 text-sm text-text-muted">{t("common.readOnly")}</p>}</article>; })}
-        {inventory.length === 0 ? <p className="p-6 text-center text-text-muted">{t("inventory.empty")}</p> : null}
+        {inventory.map((item) => {
+          const variant = variantById.get(item.product_variant_id);
+          const product = variant ? productById.get(variant.product_id) : undefined;
+          const image = productImage(product);
+          const label = variantLabel(item, variant, archivedVariantLabel);
+
+          return (
+            <article
+              className={cn(
+                "min-w-0 cursor-pointer rounded-2xl border border-border-subtle bg-surface-1 p-4 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
+                selectedInventoryId === item.id && "border-primary bg-surface-selected",
+              )}
+              key={item.id}
+              onClick={() => onSelect?.(item)}
+              onKeyDown={(event) => handleSelectKeyDown(event, item, onSelect)}
+              role={onSelect ? "button" : undefined}
+              tabIndex={onSelect ? 0 : undefined}
+            >
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="flex min-w-0 gap-3">
+                  {image ? (
+                    <RemoteImage
+                      className="h-16 w-16 shrink-0 rounded-xl"
+                      src={image.image_url}
+                      alt={image.alt_text ?? product?.name ?? label}
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-400 dark:bg-white/10">
+                      IMG
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
+                      {displayCategory(product?.category, t)}
+                    </p>
+                    <h3 className="truncate text-lg font-black text-slate-950 dark:text-white">
+                      {product?.name ?? label}
+                    </h3>
+                    <p className="truncate text-sm text-slate-500 dark:text-slate-300">
+                      {t("tables.variantSku")}: {label}
+                    </p>
+                    {variant?.color || variant?.size ? (
+                      <p className="truncate text-sm text-slate-500 dark:text-slate-300">
+                        {[variant.color, variant.size].filter(Boolean).join(" / ")}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                {item.is_low_stock ? (
+                  <span className={`${statusBadgeClass("danger")} shrink-0`}>
+                    {t("inventory.lowStock")}
+                  </span>
+                ) : (
+                  <span className={`${statusBadgeClass("success")} shrink-0`}>
+                    {t("inventory.healthy")}
+                  </span>
+                )}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <span>
+                  {t("tables.stock")}: <strong>{item.stock_quantity}</strong>
+                </span>
+                <span>
+                  {t("tables.reserved")}: <strong>{item.reserved_quantity}</strong>
+                </span>
+                <span>
+                  {t("tables.incoming")}: <strong>{item.incoming_quantity}</strong>
+                </span>
+                <span>
+                  {t("tables.minimum")}: <strong>{item.minimum_quantity}</strong>
+                </span>
+              </div>
+              {onEdit ? (
+                <button
+                  type="button"
+                  aria-label={`${t("inventory.editThresholds")} ${label}`}
+                  className="mt-4 min-h-11 w-full rounded-xl border border-slate-300 px-4 py-3 font-bold dark:border-white/10"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onEdit(item);
+                  }}
+                >
+                  {t("inventory.editThresholds")}
+                </button>
+              ) : (
+                <p className="mt-4 text-sm text-slate-400">{t("common.readOnly")}</p>
+              )}
+            </article>
+          );
+        })}
+        {inventory.length === 0 ? (
+          <p className="p-6 text-center text-slate-500">{t("inventory.empty")}</p>
+        ) : null}
       </div>
     </div>
   );

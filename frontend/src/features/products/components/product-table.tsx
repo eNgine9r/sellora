@@ -31,14 +31,14 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
             {products.map((product) => {
               const image = primaryImage(product);
               return (
-                <tr key={product.id} className={`cursor-pointer transition hover:bg-surface-hover ${selectedProductId === product.id ? "bg-surface-selected" : ""}`} onClick={() => onSelect?.(product)}>
-                  <td className="px-4 py-3">{image ? <img className="h-12 w-12 rounded-lg object-cover" src={image.image_url} alt={image.alt_text ?? product.name} /> : <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-surface-2 text-xs font-bold text-text-muted dark:bg-white/10">IMG</div>}</td>
-                  <td className="max-w-[240px] truncate px-4 py-3 font-medium text-text-primary">{product.name}</td>
-                  <td className="px-4 py-3 text-text-secondary">{displayCategory(product.category, t)}</td>
-                  <td className="max-w-[160px] truncate px-4 py-3 text-text-secondary">{product.sku ?? "—"}</td>
-                  <td className="px-4 py-3 text-text-secondary"><span className={statusBadgeClass(product.is_active ? "success" : "neutral")}>{product.is_active ? t("products.active") : t("products.inactive")}</span></td>
-                  <td className="px-4 py-3 text-text-secondary">{new Date(product.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3"><div className="flex flex-wrap gap-2">{onEdit ? <button aria-label={`${t("products.edit")} ${product.name}`} className="rounded-lg border border-border-subtle px-3 py-2 font-semibold dark:border-white/10" onClick={() => onEdit(product)}>{t("products.edit")}</button> : <span className="text-text-muted">{t("common.readOnly")}</span>}{onArchive ? <button aria-label={`${t("products.archive")} ${product.name}`} className="rounded-lg border border-danger-foreground/30 px-3 py-2 font-semibold text-danger-foreground" onClick={() => onArchive(product)}>{t("products.archive")}</button> : null}</div></td>
+                <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.04]">
+                  <td className="px-4 py-3">{image ? <RemoteImage className="h-12 w-12 rounded-lg" src={image.image_url} alt={image.alt_text ?? product.name} /> : <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-400 dark:bg-white/10">IMG</div>}</td>
+                  <td className="max-w-[240px] truncate px-4 py-3 font-medium text-slate-900 dark:text-white">{product.name}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{displayCategory(product.category, t)}</td>
+                  <td className="max-w-[160px] truncate px-4 py-3 text-slate-700 dark:text-slate-200">{product.sku ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-700"><span className={statusBadgeClass(product.is_active ? "success" : "neutral")}>{product.is_active ? t("products.active") : t("products.inactive")}</span></td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{new Date(product.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3"><div className="flex flex-wrap gap-2">{onEdit ? <button aria-label={`${t("products.edit")} ${product.name}`} className="rounded-lg border border-slate-300 px-3 py-2 font-semibold dark:border-white/10" onClick={() => onEdit(product)}>{t("products.edit")}</button> : <span className="text-slate-400">{t("common.readOnly")}</span>}{onArchive ? <button aria-label={`${t("products.archive")} ${product.name}`} className="rounded-lg border border-rose-200 px-3 py-2 font-semibold text-rose-700 dark:border-rose-400/40 dark:text-rose-200" onClick={() => onArchive(product)}>{t("products.archive")}</button> : null}</div></td>
                 </tr>
               );
             })}
@@ -52,7 +52,7 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
           return (
             <article className={`min-w-0 rounded-2xl border p-4 ${selectedProductId === product.id ? "border-primary bg-surface-selected" : "border-border-subtle bg-surface-1"}`} onClick={() => onSelect?.(product)} key={product.id}>
               <div className="flex min-w-0 gap-3">
-                {image ? <img className="h-16 w-16 shrink-0 rounded-xl object-cover" src={image.image_url} alt={image.alt_text ?? product.name} /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-xs font-bold text-text-muted dark:bg-white/10">IMG</div>}
+                {image ? <RemoteImage className="h-16 w-16 shrink-0 rounded-xl" src={image.image_url} alt={image.alt_text ?? product.name} /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-400 dark:bg-white/10">IMG</div>}
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-lg font-black text-text-primary">{product.name}</h3>
                   <p className="text-sm text-text-secondary">{displayCategory(product.category, t)}</p>

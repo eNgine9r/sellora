@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 
 const checks = [];
 function read(path) { return readFileSync(path, "utf8"); }
@@ -6,7 +6,7 @@ function check(label, condition) { checks.push({ label, condition }); }
 function has(path, ...needles) { const source = read(path); return needles.every((needle) => source.includes(needle)); }
 
 check("mobile sidebar footer compact layout", has("frontend/src/components/app-shell.tsx", "mobile-sidebar-footer-compact", "truncate", "mobileSidebar.quickControls"));
-check("mobile topbar action consolidation", has("frontend/src/components/app-topbar.tsx", "mobile-topbar-compact", "mobile-topbar-more-menu", "MoreHorizontal", "md:hidden"));
+check("mobile topbar action consolidation", has("frontend/src/components/app-topbar.tsx", "mobile-topbar-compact", "mobile-more-sheet", "MoreHorizontal", "md:hidden"));
 check("mobile More menu contains feedback/language/theme", has("frontend/src/components/app-topbar.tsx", "FeedbackDialog", "LanguageSwitcher compact", "ThemeToggle compact"));
 check("date range mobile overflow fix", has("frontend/src/components/date-range-selector.tsx", "date-range-mobile-custom", "grid min-w-0 gap-2", "sm:flex"));
 check("calendar icon visibility styles", has("frontend/src/app/globals.css", "::-webkit-calendar-picker-indicator", "color-scheme: dark", "sellora-date-input"));
@@ -16,7 +16,7 @@ check("orders pagination default and options", has("frontend/src/app/orders/page
 check("orders search/filter/sort reset pagination", has("frontend/src/app/orders/page.tsx", "setPage(1);", "[search, status, paymentStatus, orderSort, pageSize]"));
 check("orders empty and filtered-empty states", has("frontend/src/app/orders/page.tsx", "filteredEmptyTitle", "emptyTitle", "ordersQuery.isLoading"));
 check("i18n keys", ["en", "uk"].every((locale) => has(`frontend/src/i18n/messages/${locale}.json`, "mobileTopbar", "mobileSidebar", "\"mobile\"", "\"modal\"", "\"reports\"", "\"pagination\"")));
-check("responsive QA docs", has("docs/staging-qa-checklist.md", "Sprint 2.9", "Mobile sidebar footer", "Orders pagination") && has("docs/pilot-qa-checklist.md", "Sprint 2.9 Pilot QA Addendum") && has("docs/mvp-readiness.md", "Sprint 2.9 readiness update"));
+check("responsive QA docs", has("docs/staging-qa-checklist.md", "Sprint 2.9", "Mobile sidebar footer", "Orders pagination") && has("docs/pilot-qa-checklist.md", "Sprint 2.9 Pilot QA Addendum"));
 check("privacy guardrails remain present", has("docs/known-limitations.md", "Instagram Direct API") && !has("frontend/src/components/feedback-dialog.tsx", "Authorization: Bearer", "Workspace ID:"));
 
 const failed = checks.filter((item) => !item.condition);

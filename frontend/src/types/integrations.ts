@@ -12,10 +12,25 @@ export type NovaPoshtaSettings = {
   sender_counterparty_ref: string | null;
   sender_contact_ref: string | null;
   sender_phone: string | null;
+  environment_capability: boolean;
+  workspace_permission: boolean;
   provider_writes_enabled: boolean;
-  write_blockers?: string[];
   sender_configured: boolean;
+  connection_verified: boolean;
+  write_blockers: string[];
 };
+
+export type NovaPoshtaReadiness = Pick<
+  NovaPoshtaSettings,
+  | "provider"
+  | "status"
+  | "environment_capability"
+  | "workspace_permission"
+  | "provider_writes_enabled"
+  | "sender_configured"
+  | "connection_verified"
+  | "write_blockers"
+>;
 
 export type NovaPoshtaSettingsPayload = {
   api_key?: string | null;

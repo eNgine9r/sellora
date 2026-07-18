@@ -8,7 +8,7 @@ import { WarehouseSearchSelect } from "@/features/integrations/components/wareho
 import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
 import { fetchCustomerAddresses } from "@/services/crm-completion";
-import { fetchNovaPoshtaSettings } from "@/services/integrations";
+import { fetchNovaPoshtaReadiness } from "@/services/integrations";
 import { createOrderFulfillment } from "@/services/order-fulfillments";
 import { safeApiErrorMessage } from "@/services/api";
 import { AdCampaign } from "@/types/advertising";
@@ -90,9 +90,9 @@ export function OrderFulfillmentWizard({
     queryFn: () => fetchCustomerAddresses(workspaceId, customerId),
     enabled: Boolean(customerId),
   });
-  const settingsQuery = useQuery({
-    queryKey: ["nova-poshta-settings", workspaceId, "fulfillment"],
-    queryFn: () => fetchNovaPoshtaSettings(workspaceId),
+  const readinessQuery = useQuery({
+    queryKey: ["nova-poshta-readiness", workspaceId],
+    queryFn: () => fetchNovaPoshtaReadiness(workspaceId),
     enabled: Boolean(workspaceId),
   });
   const mutation = useMutation({
@@ -136,7 +136,8 @@ export function OrderFulfillmentWizard({
   const normalizedPhone = normalizeUaPhonePreview(recipientPhone);
   const normalizedCustomerPhone = normalizeUaPhonePreview(customerPhone);
   const costs = Number(shippingCost || 0) + Number(adCost || 0) + Number(codFee || 0) + Number(otherCost || 0);
-  const canCreateTtn = Boolean(settingsQuery.data?.provider_writes_enabled);
+  const canCreateTtn = readinessQuery.data?.provider_writes_enabled === true;
+  const writeBlockers = readinessQuery.data?.write_blockers ?? [];
 
   useEffect(() => {
     if (paymentStatus === "COD") setCodAmount(String(total || ""));
@@ -311,7 +312,10 @@ export function OrderFulfillmentWizard({
         {step === 3 ? <section className="grid gap-4">
           <div className="grid gap-3 rounded-2xl border border-border-subtle p-4 sm:grid-cols-2"><div><span className="text-xs text-text-muted">{t("orders.customerSelector")}</span><strong className="block">{selectedCustomer?.name || customerName}</strong><span className="text-sm text-text-secondary">{normalizedPhone}</span></div><div><span className="text-xs text-text-muted">{t("fulfillment.delivery")}</span><strong className="block">{city}</strong><span className="text-sm text-text-secondary">{warehouse}</span></div><div><span className="text-xs text-text-muted">{t("orders.items")}</span><strong className="block">{items.length}</strong></div><div><span className="text-xs text-text-muted">{t("tables.payment")}</span><strong className="block">{formatStatus("payment", paymentStatus)}</strong></div></div>
           <div className="rounded-2xl bg-surface-2 p-4"><div className="flex items-center justify-between text-lg"><span>{t("fulfillment.total")}</span><strong>{formatMoney(total, currencyCode)}</strong></div>{paymentStatus === "COD" ? <div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("fulfillment.codAmount")}</span><span>{formatMoney(codAmount || total, currencyCode)}</span></div> : null}{showProfit ? <div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("orders.estimatedProfit")}</span><span>{formatMoney(total - costs, currencyCode)}</span></div> : null}</div>
-          {!canCreateTtn ? <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100">{t("fulfillment.writesDisabled")}</div> : <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100">{t("fulfillment.ready")}</div>}
+          {readinessQuery.isLoading ? <div className="rounded-xl border border-blue-300 bg-blue-50 p-3 text-sm font-semibold text-blue-900 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-100">{t("fulfillment.readinessLoading")}</div> : null}
+          {readinessQuery.isError ? <div className="grid gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100" role="alert"><strong>{t("fulfillment.readinessLoadFailed")}</strong><Link className="w-fit font-black underline underline-offset-4" href="/settings/integrations">{t("fulfillment.openIntegrationSettings")}</Link></div> : null}
+          {!readinessQuery.isLoading && !readinessQuery.isError && !canCreateTtn ? <div className="grid gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100"><strong>{t("fulfillment.readinessTitle")}</strong><p>{t("fulfillment.readinessHelp")}</p>{writeBlockers.length ? <ul className="list-disc space-y-1 pl-5 font-semibold">{writeBlockers.map((blocker) => <li key={blocker}>{t(`fulfillment.blockers.${blocker}`)}</li>)}</ul> : null}<Link className="w-fit font-black underline underline-offset-4" href="/settings/integrations">{t("fulfillment.openIntegrationSettings")}</Link></div> : null}
+          {canCreateTtn ? <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100">{t("fulfillment.ready")}</div> : null}
         </section> : null}
       </div>
 

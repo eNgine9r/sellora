@@ -231,3 +231,7 @@ Import Center now has explicit pilot contracts for supported `.xlsx`/`.csv` form
 ## Sprint 8D operations readiness update
 
 Orders, inventory and local shipments now have documented operational invariants, explicit order transition rules, reservation delta tests, Issue #134 inventory visibility policy, and one-active-shipment pilot coverage. Full Sprint 8D approval still requires staging controlled-write and browser/mobile evidence.
+
+## Sprint 8E Nova Poshta readiness update
+
+Nova Poshta integration code is conditionally ready for a controlled staging pilot. Provider writes are protected by a deployment capability, verified workspace connection, complete sender configuration, and explicit OWNER activation; managers receive only a safe readiness response without credentials or sender references. General availability remains blocked until the controlled real-provider validation, browser/mobile QA, and operational rollback evidence in the staging checklist are complete.

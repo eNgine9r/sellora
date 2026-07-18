@@ -39,6 +39,17 @@ class NovaPoshtaSettingsResponse(BaseModel):
     write_blockers: list[str] = Field(default_factory=list)
 
 
+class NovaPoshtaReadinessResponse(BaseModel):
+    provider: str = "NOVA_POSHTA"
+    status: IntegrationStatus
+    environment_capability: bool = False
+    workspace_permission: bool = False
+    provider_writes_enabled: bool = False
+    sender_configured: bool = False
+    connection_verified: bool = False
+    write_blockers: list[str] = Field(default_factory=list)
+
+
 class NovaPoshtaTestConnectionResponse(BaseModel):
     success: bool
     message: str

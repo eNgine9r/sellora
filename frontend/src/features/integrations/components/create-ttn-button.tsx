@@ -50,7 +50,7 @@ export function CreateTtnButton({ workspaceId, shipmentId, hasTtn = false, manua
   };
   const create = useMutation({ mutationFn: () => createNovaPoshtaTtn(workspaceId, shipmentId), onSuccess: applyResult, onError: (error) => setMessage(safeApiErrorMessage(error, t("shipments.createTtnFailed"))) });
   const reconcile = useMutation({ mutationFn: () => reconcileNovaPoshtaTtn(workspaceId, shipmentId), onSuccess: applyResult, onError: (error) => setMessage(safeApiErrorMessage(error, t("shipments.statusSyncFailed"))) });
-  const sync = useMutation({ mutationFn: () => syncNovaPoshtaStatus(workspaceId, shipmentId), onSuccess: (result) => { setMessage(result.manual_review_required ? result.message : result.success ? t("novaPoshta.statusSynced") : t("shipments.statusUnavailable")); invalidateShipmentData(); }, onError: (error) => setMessage(safeApiErrorMessage(error, t("shipments.statusSyncFailed"))) });
+  const sync = useMutation({ mutationFn: () => syncNovaPoshtaStatus(workspaceId, shipmentId), onSuccess: (result) => { setMessage(result.manual_review_required ? result.message : result.success ? t("novaPoshta.statusSynced") : t("novaPoshta.statusSyncUnavailable")); invalidateShipmentData(); }, onError: (error) => setMessage(safeApiErrorMessage(error, t("shipments.statusSyncFailed"))) });
 
   const submitCreate = () => {
     if (createInFlight.current || create.isPending || hasTtn || manualHold) return;

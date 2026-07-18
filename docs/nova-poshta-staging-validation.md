@@ -9,33 +9,36 @@ Use a controlled staging account, a controlled test order, synthetic customer da
 1. Open the staging frontend.
 2. Log in as `OWNER`.
 3. Open `/settings/integrations`.
-4. Save the Nova Poshta API key.
-5. Confirm only the masked key is shown after save.
-6. Run **Test connection**.
-7. Search sender city.
-8. Select sender city.
-9. Confirm warehouse search is enabled after city selection.
-10. Search sender warehouse.
-11. Select sender warehouse.
-12. Save sender settings without re-entering the API key.
-13. Reload the page and confirm settings persist.
-14. Create or select a controlled customer with synthetic data.
-15. Create a controlled order with that customer.
-16. Create shipment from the order.
-17. Confirm order/customer/recipient data prefill.
-18. Select recipient city and warehouse.
-19. Create shipment draft.
-20. Create TTN only if safe to do so.
-21. Confirm tracking number is saved.
-22. Confirm tracking appears on shipment detail.
-23. Confirm tracking appears on order detail.
-24. Try duplicate TTN creation.
-25. Confirm duplicate is blocked.
-26. Run status sync.
-27. Confirm safe status update or safe unavailable message.
-28. Confirm audit/logs contain no raw API key.
-29. Confirm no raw third-party payload is shown in UI.
-30. Confirm mobile layout is usable at 375px, 390px, 430px, 768px and desktop.
+4. Confirm the activation checklist reports that the backend environment allows provider writes.
+5. Enter the Nova Poshta API key without exposing it outside the credential field.
+6. Search and select the sender city.
+7. Confirm warehouse search is enabled after city selection.
+8. Search and select the sender warehouse.
+9. Enter the sender counterparty ref, contact ref, and phone.
+10. Save the complete credential and sender configuration.
+11. Confirm only the masked key is shown after save.
+12. Run **Test connection** and resolve any localized field-specific error.
+13. Confirm credential, sender, and verification checks are ready.
+14. Click **Enable TTN creation** as `OWNER`.
+15. Confirm all five activation checks are ready.
+16. Reload the page and confirm settings and permission persist.
+17. Create or select a controlled customer with synthetic data.
+18. Create a controlled order with that customer.
+19. Create shipment from the order.
+20. Confirm order/customer/recipient data prefill.
+21. Select recipient city and warehouse.
+22. Create shipment draft.
+23. Create TTN only if safe to do so.
+24. Confirm tracking number is saved.
+25. Confirm tracking appears on shipment detail.
+26. Confirm tracking appears on order detail.
+27. Try duplicate TTN creation.
+28. Confirm duplicate is blocked.
+29. Run status sync.
+30. Confirm safe status update or safe unavailable message.
+31. Confirm audit/logs contain no raw API key.
+32. Confirm no raw third-party payload is shown in UI.
+33. Confirm mobile layout is usable at 375px, 390px, 430px, 768px and desktop.
 
 ## Credential edge cases
 
@@ -44,6 +47,7 @@ Use a controlled staging account, a controlled test order, synthetic customer da
 - API key saved but sender settings missing: block TTN creation with a human-readable sender settings message.
 - Sender settings saved without re-entering key: keep the existing encrypted credential and show only masked state.
 - Key rotation: save a new key, keep raw value hidden after save, and write safe audit metadata only.
+- Credential or sender configuration changed after verification: verification and TTN permission are revoked until the owner tests and enables the integration again.
 
 Expected UI messages include:
 
@@ -85,8 +89,8 @@ Expected UI messages include:
 
 ## RBAC and workspace validation
 
-- `OWNER`: can save/test Nova Poshta settings, manage sender settings, create shipments, create TTN and sync status.
-- `MANAGER`: can create shipments, create TTN and sync status; cannot manage API key under current rules.
+- `OWNER`: can save/test Nova Poshta settings, manage sender settings, explicitly enable/disable provider writes, create shipments, create TTN and sync status.
+- `MANAGER`: can read safe readiness state, create shipments, create TTN and sync status; cannot read credentials or change workspace write permission.
 - `ANALYST`: can view shipment data; cannot mutate shipments, create TTN, sync status or manage API key.
 - Workspace A cannot see or use Workspace B credentials, shipments, orders, TTN creation or status sync.
 

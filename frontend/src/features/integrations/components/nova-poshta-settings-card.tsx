@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import { CitySearchSelect } from "@/features/integrations/components/city-search-select";
 import { IntegrationStatusBadge } from "@/features/integrations/components/integration-status-badge";
 import { WarehouseSearchSelect } from "@/features/integrations/components/warehouse-search-select";
@@ -15,13 +16,15 @@ type NovaPoshtaSettingsCardProps = {
   message?: string | null;
   isSaving?: boolean;
   isTesting?: boolean;
+  isUpdatingPermission?: boolean;
   isDisconnecting?: boolean;
   onSave: (payload: NovaPoshtaSettingsPayload) => void;
   onTest: () => void;
+  onUpdateWritePermission: (allowed: boolean) => void;
   onDisconnect: () => void;
 };
 
-export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSaving = false, isTesting = false, isDisconnecting = false, onSave, onTest, onDisconnect }: NovaPoshtaSettingsCardProps) {
+export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSaving = false, isTesting = false, isUpdatingPermission = false, isDisconnecting = false, onSave, onTest, onUpdateWritePermission, onDisconnect }: NovaPoshtaSettingsCardProps) {
   const { t } = useI18n();
   const [apiKey, setApiKey] = useState("");
   const [senderCityRef, setSenderCityRef] = useState(settings?.sender_city_ref ?? "");
@@ -32,6 +35,20 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
   const [senderCitySearch, setSenderCitySearch] = useState("");
   const [senderWarehouseSearch, setSenderWarehouseSearch] = useState("");
   const hasSavedKey = Boolean(settings?.masked_api_key);
+  const connectionReady = settings?.status === "CONNECTED" && hasSavedKey;
+  const activationPrerequisitesReady = Boolean(
+    settings?.environment_capability
+    && connectionReady
+    && settings.sender_configured
+    && settings.connection_verified,
+  );
+  const activationItems = [
+    { label: t("novaPoshta.activationEnvironment"), ready: Boolean(settings?.environment_capability) },
+    { label: t("novaPoshta.activationConnection"), ready: connectionReady },
+    { label: t("novaPoshta.activationSender"), ready: Boolean(settings?.sender_configured) },
+    { label: t("novaPoshta.activationVerification"), ready: Boolean(settings?.connection_verified) },
+    { label: t("novaPoshta.activationPermission"), ready: Boolean(settings?.workspace_permission) },
+  ];
 
   useEffect(() => {
     setSenderCityRef(settings?.sender_city_ref ?? "");
@@ -108,13 +125,44 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
         </section>
       </form>
 
+      <section className="grid gap-4 rounded-2xl border border-slate-200 p-4 dark:border-white/10" aria-labelledby="nova-poshta-activation-title">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="font-black text-slate-950 dark:text-white" id="nova-poshta-activation-title">{t("novaPoshta.activationTitle")}</h3>
+            <p className="text-sm leading-6 text-slate-500 dark:text-slate-300">{t("novaPoshta.activationDescription")}</p>
+          </div>
+          <span className={`w-fit rounded-full px-3 py-1 text-xs font-black ${settings?.provider_writes_enabled ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-100" : "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-100"}`}>
+            {t(settings?.provider_writes_enabled ? "novaPoshta.activationReady" : "novaPoshta.activationNeedsAction")}
+          </span>
+        </div>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {activationItems.map((item) => (
+            <li className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200" key={item.label}>
+              <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.ready ? "bg-emerald-500" : "bg-amber-500"}`} />
+              {item.label}
+              <span className="sr-only">{t(item.ready ? "common.yes" : "common.no")}</span>
+            </li>
+          ))}
+        </ul>
+        {!settings?.environment_capability ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100">{t("novaPoshta.environmentDisabledHelp")}</p> : null}
+        <button
+          className={`min-h-11 rounded-xl px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 ${settings?.workspace_permission ? "bg-rose-600" : "bg-emerald-600"}`}
+          disabled={isUpdatingPermission || (!settings?.workspace_permission && !activationPrerequisitesReady)}
+          type="button"
+          onClick={() => onUpdateWritePermission(!settings?.workspace_permission)}
+        >
+          {isUpdatingPermission
+            ? t("novaPoshta.updatingPermission")
+            : t(settings?.workspace_permission ? "novaPoshta.disableTtnCreation" : "novaPoshta.enableTtnCreation")}
+        </button>
+      </section>
+
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <button className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-bold disabled:opacity-60 dark:border-white/10" disabled={isTesting || !hasSavedKey} onClick={onTest}>{isTesting ? t("novaPoshta.testingConnection") : t("novaPoshta.testConnection")}</button>
-        <button className="min-h-11 rounded-xl border border-rose-200 px-4 py-2 font-bold text-rose-700 disabled:opacity-60 dark:border-rose-400/40 dark:text-rose-200" disabled={isDisconnecting || !hasSavedKey} onClick={onDisconnect}>{isDisconnecting ? t("common.loading") : t("novaPoshta.disconnect")}</button>
+        <button className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-bold disabled:opacity-60 dark:border-white/10" disabled={isTesting || !hasSavedKey} type="button" onClick={onTest}>{isTesting ? t("novaPoshta.testingConnection") : t("novaPoshta.testConnection")}</button>
+        <button className="min-h-11 rounded-xl border border-rose-200 px-4 py-2 font-bold text-rose-700 disabled:opacity-60 dark:border-rose-400/40 dark:text-rose-200" disabled={isDisconnecting || !hasSavedKey} type="button" onClick={onDisconnect}>{isDisconnecting ? t("common.loading") : t("novaPoshta.disconnect")}</button>
       </div>
       {message ? <p className="rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-100">{message}</p> : null}
       <p className="text-xs text-slate-500 dark:text-slate-400">{t("novaPoshta.maskedCredentials")}</p>
     </section>
   );
 }
-// Settings navigation regression compatibility marker: Sender contact person ref.

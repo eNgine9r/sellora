@@ -14,7 +14,6 @@ import { ImportUploadCard } from "@/features/import-center/components/import-upl
 import { SheetSelector } from "@/features/import-center/components/sheet-selector";
 import { ValidationReport } from "@/features/import-center/components/validation-report";
 import { ValidationIssuesTable } from "@/features/import-center/components/validation-issues-table";
-import { getImportCenterPilotCopy } from "@/features/import-center/import-center-pilot-copy";
 import { dryRunImport, executeImport, fetchImportLogs, fetchImportSheets, previewImportSheet, suggestImportMapping, uploadImportFile, validateImportMapping } from "@/services/import-center";
 import { ImportJob, ImportPreview, ImportReport, MappingSuggestion, ValidationReport as ValidationReportType } from "@/types/import-center";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,8 +28,7 @@ const presets = [
 ];
 
 export default function ImportCenterPage() {
-  const { t, locale } = useI18n();
-  const pilotCopy = getImportCenterPilotCopy(locale);
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const { currentUser, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";

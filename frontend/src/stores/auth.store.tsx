@@ -116,7 +116,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authStorage.setCurrentWorkspaceId(normalizedWorkspaceId);
     setCurrentWorkspaceId(normalizedWorkspaceId);
     setError(null);
-    void queryClient.invalidateQueries();
   }, [currentWorkspaceId, queryClient]);
 
   const currentWorkspace = useMemo(() => currentUser?.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id) === currentWorkspaceId) ?? null, [currentUser, currentWorkspaceId]);
