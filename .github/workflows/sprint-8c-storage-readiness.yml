@@ -35,8 +35,10 @@ jobs:
 
     steps:
       - name: Validate explicit confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
         run: |
-          [ "${{ inputs.confirmation }}" = "RUN_STORAGE_READINESS" ] || {
+          [ "$CONFIRMATION" = "RUN_STORAGE_READINESS" ] || {
             echo "Confirmation value is invalid."
             exit 1
           }
