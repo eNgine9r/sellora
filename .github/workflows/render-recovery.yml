@@ -1,0 +1,182 @@
+name: Render Repository Recovery
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/render-recovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-recovery-sellora-api-staging
+  cancel-in-progress: false
+
+jobs:
+  recover-render-source:
+    name: Recover Render source and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_NAME: sellora-api-staging
+      RENDER_REPO_URL: https://github.com/eNgine9r/sellora.git
+      RENDER_BRANCH: main
+      RENDER_ROOT_DIR: backend
+      RENDER_HEALTH_URL: https://sellora-api-staging.onrender.com/health
+    steps:
+      - name: Validate recovery credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            echo "RENDER_API_KEY is not configured in GitHub Actions secrets." >&2
+            exit 1
+          fi
+
+      - name: Resolve Render service
+        id: service
+        shell: bash
+        run: |
+          set -euo pipefail
+          services_json="$(curl --fail --silent --show-error \
+            --get 'https://api.render.com/v1/services' \
+            --data-urlencode "name=${RENDER_SERVICE_NAME}" \
+            --data 'limit=100' \
+            --header 'Accept: application/json' \
+            --header "Authorization: Bearer ${RENDER_API_KEY}")"
+
+          service_id="$(jq -r '[.[] | (.service // .) | select(.name == env.RENDER_SERVICE_NAME)][0].id // empty' <<<"${services_json}")"
+          if [ -z "${service_id}" ]; then
+            echo "Render service ${RENDER_SERVICE_NAME} was not found. Visible service names:" >&2
+            jq -r '.[] | (.service // .) | .name // empty' <<<"${services_json}" >&2
+            exit 1
+          fi
+
+          service_json="$(curl --fail --silent --show-error \
+            "https://api.render.com/v1/services/${service_id}" \
+            --header 'Accept: application/json' \
+            --header "Authorization: Bearer ${RENDER_API_KEY}")"
+
+          echo "Resolved Render service configuration:"
+          jq '{id, name, repo, branch, rootDir, autoDeploy, type}' <<<"${service_json}"
+          echo "service_id=${service_id}" >> "${GITHUB_OUTPUT}"
+
+      - name: Rebind service to the public Git repository
+        shell: bash
+        env:
+          SERVICE_ID: ${{ steps.service.outputs.service_id }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -n \
+            --arg repo "${RENDER_REPO_URL}" \
+            --arg branch "${RENDER_BRANCH}" \
+            --arg rootDir "${RENDER_ROOT_DIR}" \
+            '{repo: $repo, branch: $branch, rootDir: $rootDir, autoDeploy: "yes"}')"
+
+          updated="$(curl --fail --silent --show-error \
+            --request PATCH \
+            "https://api.render.com/v1/services/${SERVICE_ID}" \
+            --header 'Accept: application/json' \
+            --header 'Content-Type: application/json' \
+            --header "Authorization: Bearer ${RENDER_API_KEY}" \
+            --data "${payload}")"
+
+          echo "Updated Render source configuration:"
+          jq '{id, name, repo, branch, rootDir, autoDeploy, type}' <<<"${updated}"
+
+      - name: Trigger exact-main deployment
+        id: deploy
+        shell: bash
+        env:
+          SERVICE_ID: ${{ steps.service.outputs.service_id }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          target_commit="${PR_BASE_SHA:-${CURRENT_SHA}}"
+          if [ -z "${target_commit}" ]; then
+            echo "Unable to resolve target commit." >&2
+            exit 1
+          fi
+
+          payload="$(jq -n --arg commitId "${target_commit}" '{commitId: $commitId, clearCache: "do_not_clear"}')"
+          deploy_json="$(curl --fail --silent --show-error \
+            --request POST \
+            "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
+            --header 'Accept: application/json' \
+            --header 'Content-Type: application/json' \
+            --header "Authorization: Bearer ${RENDER_API_KEY}" \
+            --data "${payload}")"
+
+          deploy_id="$(jq -r '.id // .deploy.id // empty' <<<"${deploy_json}")"
+          if [ -z "${deploy_id}" ]; then
+            echo "Render did not return a deploy ID." >&2
+            jq '{id, status, deploy: (.deploy // null)}' <<<"${deploy_json}" >&2
+            exit 1
+          fi
+
+          echo "Triggered Render deploy ${deploy_id} for commit ${target_commit}."
+          echo "deploy_id=${deploy_id}" >> "${GITHUB_OUTPUT}"
+          echo "target_commit=${target_commit}" >> "${GITHUB_OUTPUT}"
+
+      - name: Wait for Render deployment
+        shell: bash
+        env:
+          SERVICE_ID: ${{ steps.service.outputs.service_id }}
+          DEPLOY_ID: ${{ steps.deploy.outputs.deploy_id }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 90); do
+            deploy_json="$(curl --fail --silent --show-error \
+              "https://api.render.com/v1/services/${SERVICE_ID}/deploys/${DEPLOY_ID}" \
+              --header 'Accept: application/json' \
+              --header "Authorization: Bearer ${RENDER_API_KEY}")"
+            status="$(jq -r '.status // .deploy.status // "unknown"' <<<"${deploy_json}")"
+            echo "Render deploy status (${attempt}/90): ${status}"
+
+            case "${status}" in
+              live)
+                exit 0
+                ;;
+              build_failed|update_failed|pre_deploy_failed|canceled|cancelled|deactivated)
+                echo "Render deploy failed with status ${status}." >&2
+                jq '{id, status, commit, createdAt, updatedAt, finishedAt}' <<<"${deploy_json}" >&2
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+
+          echo "Timed out waiting for Render deployment." >&2
+          exit 1
+
+      - name: Verify backend runtime identity
+        shell: bash
+        env:
+          TARGET_COMMIT: ${{ steps.deploy.outputs.target_commit }}
+        run: |
+          set -euo pipefail
+          health_json="$(curl --fail --silent --show-error \
+            --retry 12 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            --max-time 20 \
+            "${RENDER_HEALTH_URL}")"
+
+          echo "Render health response:"
+          jq '{status, runtime_commit, process_started_at}' <<<"${health_json}"
+
+          status="$(jq -r '.status // empty' <<<"${health_json}")"
+          runtime_commit="$(jq -r '.runtime_commit // empty' <<<"${health_json}")"
+          if [ "${status}" != "ok" ]; then
+            echo "Render health status is not ok." >&2
+            exit 1
+          fi
+          if [ "${runtime_commit}" != "${TARGET_COMMIT}" ]; then
+            echo "Runtime commit mismatch: expected ${TARGET_COMMIT}, got ${runtime_commit}." >&2
+            exit 1
+          fi
