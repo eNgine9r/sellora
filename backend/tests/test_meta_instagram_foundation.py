@@ -59,7 +59,7 @@ def test_webhook_signature_validation(monkeypatch):
     get_settings.cache_clear()
 
 
-def test_webhook_persistence_deduplicates_by_event_id(monkeypatch):
+def test_webhook_persistence_deduplicates_unmatched_event_safely(monkeypatch):
     import app.integrations.meta_instagram.services.webhook_service as module
     monkeypatch.setattr(module, "InstagramConnectionRepository", lambda db: SimpleNamespace(get_by_account=lambda account_id: None))
     payload = {"object": "instagram", "entry": [{"id": "ig-1", "messaging": [{"sender": {"id": "cust-1"}, "message": {"mid": "mid-1", "text": "Привіт"}}]}]}
@@ -69,7 +69,9 @@ def test_webhook_persistence_deduplicates_by_event_id(monkeypatch):
     second = service.persist_verified_event(body, payload)
     assert first.id == second.id
     assert first.signature_verified is True
-    assert first.status == "VERIFIED"
+    assert first.status == "IGNORED"
+    assert first.safe_error_code == "META_CONNECTION_NOT_READY"
+    assert first.workspace_id is None
 
 
 def test_outbound_prepare_blocks_when_send_disabled(monkeypatch):
