@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: render-recovery-sellora-api-staging
@@ -156,43 +157,59 @@ jobs:
           echo "Timed out waiting for Render deployment." >&2
           exit 1
 
-      - name: Capture Render failure diagnostics
+      - name: Capture and publish Render failure diagnostics
         if: failure()
         shell: bash
         env:
           SERVICE_ID: ${{ steps.service.outputs.service_id }}
           OWNER_ID: ${{ steps.service.outputs.owner_id }}
           DEPLOY_ID: ${{ steps.deploy.outputs.deploy_id }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set +e
-          echo "Render deploy summary:"
-          curl --silent --show-error \
-            "https://api.render.com/v1/services/${SERVICE_ID}/deploys/${DEPLOY_ID}" \
-            --header 'Accept: application/json' \
-            --header "Authorization: Bearer ${RENDER_API_KEY}" \
-            | jq '{id, status, commit, createdAt, updatedAt, finishedAt}'
+          diagnostic_file="render-diagnostics.txt"
+          {
+            echo "## Render recovery diagnostics"
+            echo
+            echo '```text'
+            echo "Service: ${RENDER_SERVICE_NAME}"
+            echo "Service ID: ${SERVICE_ID}"
+            echo "Deploy ID: ${DEPLOY_ID}"
+            echo
+            echo "Deploy summary:"
+            curl --silent --show-error \
+              "https://api.render.com/v1/services/${SERVICE_ID}/deploys/${DEPLOY_ID}" \
+              --header 'Accept: application/json' \
+              --header "Authorization: Bearer ${RENDER_API_KEY}" \
+              | jq '{id, status, commit, createdAt, updatedAt, finishedAt}'
+            echo
 
-          if [ -z "${OWNER_ID:-}" ]; then
-            echo "Render owner ID is unavailable; build log query skipped."
-            exit 0
+            if [ -n "${OWNER_ID:-}" ]; then
+              start_time="$(date -u -d '45 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
+              end_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              logs_json="$(curl --silent --show-error \
+                --get 'https://api.render.com/v1/logs' \
+                --data-urlencode "ownerId=${OWNER_ID}" \
+                --data-urlencode "resource=${SERVICE_ID}" \
+                --data-urlencode 'type=build' \
+                --data-urlencode 'direction=backward' \
+                --data-urlencode 'limit=100' \
+                --data-urlencode "startTime=${start_time}" \
+                --data-urlencode "endTime=${end_time}" \
+                --header 'Accept: application/json' \
+                --header "Authorization: Bearer ${RENDER_API_KEY}")"
+              echo "Recent Render build logs:"
+              jq -r '(.logs // .)[]? | [(.timestamp // .createdAt // ""), (.message // .text // .log // "")] | @tsv' <<<"${logs_json}" | tail -n 100
+            else
+              echo "Render owner ID unavailable; build logs were not queried."
+            fi
+            echo '```'
+          } | sed -E 's/(Bearer|access_token|Authorization:)[^[:space:]]*/\1[REDACTED]/g' | tee "${diagnostic_file}"
+
+          if [ -n "${PR_NUMBER:-}" ]; then
+            gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file "${diagnostic_file}"
           fi
-
-          start_time="$(date -u -d '45 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
-          end_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          logs_json="$(curl --silent --show-error \
-            --get 'https://api.render.com/v1/logs' \
-            --data-urlencode "ownerId=${OWNER_ID}" \
-            --data-urlencode "resource=${SERVICE_ID}" \
-            --data-urlencode 'type=build' \
-            --data-urlencode 'direction=backward' \
-            --data-urlencode 'limit=100' \
-            --data-urlencode "startTime=${start_time}" \
-            --data-urlencode "endTime=${end_time}" \
-            --header 'Accept: application/json' \
-            --header "Authorization: Bearer ${RENDER_API_KEY}")"
-
-          echo "Recent Render build logs:"
-          jq -r '(.logs // .)[]? | [(.timestamp // .createdAt // ""), (.message // .text // .log // "")] | @tsv' <<<"${logs_json}" | tail -n 100
 
       - name: Verify backend runtime identity
         shell: bash
