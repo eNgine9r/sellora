@@ -4,12 +4,53 @@ from uuid import uuid4
 
 import pytest
 
-from app.integrations.meta_instagram.client import MetaAccountProfile, MetaTokenResult
-from app.integrations.meta_instagram.config import OAUTH_REQUIRED_SCOPES, REQUIRED_BASIC_PERMISSION, REQUIRED_MESSAGING_PERMISSION
+from app.integrations.meta_instagram.client import MetaAccountProfile, MetaTokenResult, MetaWebhookSubscriptionResult
+from app.integrations.meta_instagram.config import OAUTH_REQUIRED_SCOPES, REQUIRED_BASIC_PERMISSION, REQUIRED_MESSAGING_PERMISSION, WEBHOOK_SUBSCRIPTIONS
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
 from app.integrations.meta_instagram.services.connection_service import InstagramConnectionService
 from app.models.meta_instagram import InstagramConnection
 
+
+
+class FakeWebhookClient:
+    subscribe_success = True
+    confirmed_fields = list(WEBHOOK_SUBSCRIPTIONS)
+    fail_code: str | None = None
+    calls: list[tuple] = []
+
+    def __init__(self, base_url, version, access_token):
+        self.base_url = base_url
+        self.version = version
+        self.access_token = access_token
+
+    @classmethod
+    def reset(cls):
+        cls.subscribe_success = True
+        cls.confirmed_fields = list(WEBHOOK_SUBSCRIPTIONS)
+        cls.fail_code = None
+        cls.calls = []
+
+    async def subscribe_webhooks(self, instagram_account_id, subscribed_fields):
+        self.__class__.calls.append(("subscribe", instagram_account_id, tuple(subscribed_fields), self.access_token))
+        if self.fail_code:
+            raise MetaInstagramError(self.fail_code, "Webhook subscription failed.", 400)
+        return MetaWebhookSubscriptionResult(self.subscribe_success, list(subscribed_fields), "trace-subscribe")
+
+    async def get_webhook_subscription(self, instagram_account_id):
+        self.__class__.calls.append(("get", instagram_account_id, tuple(self.confirmed_fields), self.access_token))
+        return MetaWebhookSubscriptionResult(True, list(self.confirmed_fields), "trace-get")
+
+    async def unsubscribe_webhooks(self, instagram_account_id):
+        self.__class__.calls.append(("unsubscribe", instagram_account_id, (), self.access_token))
+        return MetaWebhookSubscriptionResult(True, [], "trace-delete")
+
+
+@pytest.fixture(autouse=True)
+def fake_webhook_client(monkeypatch):
+    FakeWebhookClient.reset()
+    import app.integrations.meta_instagram.services.connection_service as module
+    monkeypatch.setattr(module, "MetaInstagramClient", FakeWebhookClient)
+    yield FakeWebhookClient
 
 class FakeOAuthStateService:
     def __init__(self, db): pass
@@ -353,3 +394,73 @@ async def test_failed_oauth_safe_diagnostic_contains_no_secret_values(monkeypatc
     assert "secret-token" not in safe_text
     assert "code-secret" not in safe_text
     assert "state-secret" not in safe_text
+
+@pytest.mark.asyncio
+async def test_oauth_success_subscribes_and_verifies_webhooks(monkeypatch):
+    monkeypatch.setenv("META_APP_ID", "app")
+    monkeypatch.setenv("META_APP_SECRET", "secret")
+    monkeypatch.setenv("META_TOKEN_ENCRYPTION_KEY", "vuyQfS5xPfYx7yUxsaTpWFjYjwjzFNEsk3KN519QcSY=")
+    from app.core.config import get_settings
+    get_settings.cache_clear()
+    import app.integrations.meta_instagram.services.connection_service as module
+    monkeypatch.setattr(module, "InstagramOAuthService", FakeOAuthStateService)
+    monkeypatch.setattr(module, "InstagramConnectionRepository", lambda db: FakeRepo(db))
+    connection = await InstagramConnectionService(SimpleNamespace(), FakeClient()).complete_callback("state", "code-value")
+    assert connection.status == "CONNECTED"
+    assert connection.subscribed_webhook_fields == WEBHOOK_SUBSCRIPTIONS
+    assert FakeWebhookClient.calls[0][:3] == ("subscribe", "ig-1", tuple(WEBHOOK_SUBSCRIPTIONS))
+    assert FakeWebhookClient.calls[1][0] == "get"
+    assert connection.last_error_code is None
+    get_settings.cache_clear()
+
+@pytest.mark.asyncio
+async def test_oauth_subscription_failure_sets_webhook_inactive(monkeypatch):
+    FakeWebhookClient.fail_code = "META_WEBHOOK_SUBSCRIPTION_FAILED"
+    monkeypatch.setenv("META_APP_ID", "app")
+    monkeypatch.setenv("META_APP_SECRET", "secret")
+    monkeypatch.setenv("META_TOKEN_ENCRYPTION_KEY", "vuyQfS5xPfYx7yUxsaTpWFjYjwjzFNEsk3KN519QcSY=")
+    from app.core.config import get_settings
+    get_settings.cache_clear()
+    import app.integrations.meta_instagram.services.connection_service as module
+    monkeypatch.setattr(module, "InstagramOAuthService", FakeOAuthStateService)
+    monkeypatch.setattr(module, "InstagramConnectionRepository", lambda db: FakeRepo(db))
+    connection = await InstagramConnectionService(SimpleNamespace(), FakeClient()).complete_callback("state", "code-value")
+    assert connection.status == "WEBHOOK_INACTIVE"
+    assert connection.subscribed_webhook_fields == []
+    assert connection.access_token_ciphertext
+    assert connection.last_error_code == "META_WEBHOOK_SUBSCRIPTION_FAILED"
+    get_settings.cache_clear()
+
+@pytest.mark.asyncio
+async def test_oauth_subscription_missing_required_field_sets_incomplete(monkeypatch):
+    FakeWebhookClient.confirmed_fields = ["messages"]
+    monkeypatch.setenv("META_APP_ID", "app")
+    monkeypatch.setenv("META_APP_SECRET", "secret")
+    monkeypatch.setenv("META_TOKEN_ENCRYPTION_KEY", "vuyQfS5xPfYx7yUxsaTpWFjYjwjzFNEsk3KN519QcSY=")
+    from app.core.config import get_settings
+    get_settings.cache_clear()
+    import app.integrations.meta_instagram.services.connection_service as module
+    monkeypatch.setattr(module, "InstagramOAuthService", FakeOAuthStateService)
+    monkeypatch.setattr(module, "InstagramConnectionRepository", lambda db: FakeRepo(db))
+    connection = await InstagramConnectionService(SimpleNamespace(), FakeClient()).complete_callback("state", "code-value")
+    assert connection.status == "WEBHOOK_INACTIVE"
+    assert connection.subscribed_webhook_fields == []
+    assert connection.last_error_code == "META_WEBHOOK_SUBSCRIPTION_INCOMPLETE"
+    get_settings.cache_clear()
+
+@pytest.mark.asyncio
+async def test_disconnect_unsubscribes_before_token_deletion(monkeypatch):
+    monkeypatch.setenv("META_TOKEN_ENCRYPTION_KEY", "vuyQfS5xPfYx7yUxsaTpWFjYjwjzFNEsk3KN519QcSY=")
+    from app.core.config import get_settings
+    get_settings.cache_clear()
+    ciphertext, nonce, version = __import__("app.integrations.meta_instagram.crypto", fromlist=["encrypt_instagram_token"]).encrypt_instagram_token("token-to-delete")
+    connection = InstagramConnection(workspace_id=uuid4(), instagram_account_id="ig-1", access_token_ciphertext=ciphertext, access_token_nonce=nonce, access_token_key_version=version, subscribed_webhook_fields=list(WEBHOOK_SUBSCRIPTIONS), status="CONNECTED")
+    repo = FakeRepo(None); repo.connection = connection
+    import app.integrations.meta_instagram.services.connection_service as module
+    monkeypatch.setattr(module, "InstagramConnectionRepository", lambda db: repo)
+    result = await InstagramConnectionService(SimpleNamespace()).disconnect(connection.workspace_id, uuid4())
+    assert FakeWebhookClient.calls[0] == ("unsubscribe", "ig-1", (), "token-to-delete")
+    assert result.access_token_ciphertext is None
+    assert result.subscribed_webhook_fields == []
+    assert result.status == "DISCONNECTED"
+    get_settings.cache_clear()

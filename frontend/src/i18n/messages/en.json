@@ -2260,6 +2260,16 @@
         "invalid_state": "OAuth session is invalid or already used",
         "failed": "Connection was not completed"
       }
+    },
+    "activateWebhook": "Activate webhook",
+    "webhookActive": "Webhook active",
+    "webhookInactive": "Webhook inactive",
+    "webhookInactiveExplanation": "Instagram is connected, but Meta is not sending messages to Sellora yet. Activate the webhook to receive new Direct messages.",
+    "confirmedFields": "Confirmed events",
+    "missingWebhookFields": "Missing webhook events",
+    "fieldLabels": {
+      "messages": "Messages",
+      "messaging_postbacks": "Button taps"
     }
   }
 }

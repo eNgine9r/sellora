@@ -7,7 +7,7 @@ import { Button, Card, StatusBadge } from "@/components/ui/primitives";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
-import { disconnectInstagram, fetchInstagramStatus, startInstagramConnect, validateInstagramConnection } from "@/services/meta-instagram";
+import { disconnectInstagram, fetchInstagramStatus, startInstagramConnect, subscribeInstagramWebhooks, validateInstagramConnection } from "@/services/meta-instagram";
 import type { InstagramConnectionStatus, InstagramConnectionStatusResponse } from "@/types/meta-instagram";
 
 function statusTone(status: InstagramConnectionStatus | "DISCONNECTED") {
@@ -34,9 +34,11 @@ export function InstagramMessagingIntegrationCard({ workspaceId }: { workspaceId
   const connectMutation = useMutation({ mutationFn: startInstagramConnect, onSuccess: (data) => { window.location.assign(data.authorization_url); } });
   const validateMutation = useMutation({ mutationFn: validateInstagramConnection, onSuccess: () => void invalidate() });
   const disconnectMutation = useMutation({ mutationFn: () => disconnectInstagram(true), onSuccess: () => void invalidate() });
+  const webhookMutation = useMutation({ mutationFn: subscribeInstagramWebhooks, onSuccess: () => void invalidate() });
   const data: InstagramConnectionStatusResponse | undefined = statusQuery.data;
   const status = data?.status ?? "DISCONNECTED";
   const connected = status === "CONNECTED";
+  const webhookInactive = Boolean(data?.token_present && !data.webhook_active);
   const permissionOk = Boolean(data?.granted_permissions.includes("instagram_business_basic") && data.granted_permissions.includes("instagram_business_manage_messages"));
 
   return (
@@ -51,7 +53,7 @@ export function InstagramMessagingIntegrationCard({ workspaceId }: { workspaceId
             <p className="mt-2 text-sm leading-6 text-text-secondary">{t("instagramSettings.hub.subtitle")}</p>
           </div>
         </div>
-        <StatusBadge tone={statusTone(status)}>{t(`instagramSettings.status.${status}`)}</StatusBadge>
+        <StatusBadge tone={webhookInactive ? "warning" : statusTone(status)}>{webhookInactive ? t("instagramSettings.webhookInactive") : t(`instagramSettings.status.${status}`)}</StatusBadge>
       </div>
 
       {statusQuery.isLoading ? <div className="mt-4"><LoadingSkeleton /></div> : null}
@@ -66,10 +68,12 @@ export function InstagramMessagingIntegrationCard({ workspaceId }: { workspaceId
           </div>
         </div>
       ) : null}
+      {data?.token_present && webhookInactive ? <div className="mt-5 rounded-3xl border border-warning/30 bg-warning/10 p-4 text-sm leading-6 text-text-secondary"><p className="font-black text-text-primary">{t("instagramSettings.webhookInactive")}</p><p>{t("instagramSettings.webhookInactiveExplanation")}</p></div> : null}
       {connected && data ? <ConnectedSummary data={data} permissionOk={permissionOk} /> : null}
 
       <div className="mt-5 flex flex-wrap gap-2">
         {canManage && !connected ? <Button onClick={() => connectMutation.mutate()} loading={connectMutation.isPending}>{t("instagramSettings.connect")}</Button> : null}
+        {canManage && data?.token_present && !data.webhook_active ? <Button variant="secondary" onClick={() => webhookMutation.mutate()} loading={webhookMutation.isPending}>{t("instagramSettings.activateWebhook")}</Button> : null}
         {canManage && connected ? <Button variant="secondary" onClick={() => validateMutation.mutate()} loading={validateMutation.isPending}><ShieldCheck className="h-4 w-4" />{t("instagramSettings.validate")}</Button> : null}
         {canManage && connected ? <Button variant="danger" onClick={() => { if (window.confirm(t("instagramSettings.disconnectConfirm"))) disconnectMutation.mutate(); }} loading={disconnectMutation.isPending}><Unplug className="h-4 w-4" />{t("instagramSettings.disconnect")}</Button> : null}
         <Link className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 px-4 text-sm font-black text-text-primary transition hover:bg-surface-hover" href="/settings/integrations/instagram">{t("instagramSettings.openSettings")}<ArrowRight className="h-4 w-4" /></Link>
@@ -87,7 +91,8 @@ function ConnectedSummary({ data, permissionOk }: { data: InstagramConnectionSta
     [t("instagramSettings.accountType"), data.instagram_account_type ?? "—"],
     [t("instagramSettings.tokenExpiry"), formatDate(data.token_expires_at)],
     [t("instagramSettings.messagingPermission"), permissionOk ? t("instagramSettings.permissionGranted") : t("instagramSettings.permissionMissing")],
-    [t("instagramSettings.webhookStatus"), data.subscribed_webhook_fields.length ? data.subscribed_webhook_fields.join(", ") : "—"],
+    [t("instagramSettings.webhookStatus"), data.webhook_active ? t("instagramSettings.webhookActive") : t("instagramSettings.webhookInactive")],
+    [t("instagramSettings.confirmedFields"), data.confirmed_webhook_fields.length ? data.confirmed_webhook_fields.map((field) => t(`instagramSettings.fieldLabels.${field}`)).join(", ") : "—"],
     [t("instagramSettings.lastWebhook"), formatDate(data.last_webhook_at)],
     [t("instagramSettings.lastInbound"), formatDate(data.last_message_received_at)],
     [t("instagramSettings.autoReplies"), t("instagramSettings.disabled")],

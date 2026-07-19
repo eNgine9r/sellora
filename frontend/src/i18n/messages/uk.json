@@ -2260,6 +2260,16 @@
         "invalid_state": "Сесія OAuth недійсна або вже використана",
         "failed": "Підключення не завершено"
       }
+    },
+    "activateWebhook": "Активувати webhook",
+    "webhookActive": "Webhook активний",
+    "webhookInactive": "Webhook неактивний",
+    "webhookInactiveExplanation": "Instagram підключено, але Meta ще не надсилає повідомлення в Sellora. Активуйте webhook, щоб отримувати нові Direct-повідомлення.",
+    "confirmedFields": "Підтверджені події",
+    "missingWebhookFields": "Бракує подій webhook",
+    "fieldLabels": {
+      "messages": "Повідомлення",
+      "messaging_postbacks": "Натискання кнопок"
     }
   }
 }

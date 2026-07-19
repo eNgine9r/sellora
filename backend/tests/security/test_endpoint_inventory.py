@@ -46,16 +46,19 @@ OWNER_ONLY_ENDPOINTS = {
     ("POST", "/api/v1/integrations/instagram/validate"),
     ("POST", "/api/v1/integrations/instagram/disconnect"),
     ("DELETE", "/api/v1/integrations/instagram/data"),
+    ("POST", "/api/v1/integrations/instagram/webhooks/subscribe"),
+    ("GET", "/api/v1/integrations/instagram/webhooks/status"),
+    ("POST", "/api/v1/integrations/instagram/webhooks/unsubscribe"),
 }
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 3,
     "AUTHENTICATED_GLOBAL": 4,
-    "WORKSPACE_SCOPED": 179,
+    "WORKSPACE_SCOPED": 182,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 198
-EXPECTED_MUTATION_ROUTES = 111
+EXPECTED_TOTAL_ROUTES = 201
+EXPECTED_MUTATION_ROUTES = 113
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),

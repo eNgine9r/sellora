@@ -33,6 +33,13 @@ class MetaSendResult:
     raw_status: str
 
 
+@dataclass(frozen=True)
+class MetaWebhookSubscriptionResult:
+    success: bool
+    subscribed_fields: list[str]
+    provider_request_id: str | None = None
+
+
 class MetaInstagramOAuthClientProtocol(Protocol):
     async def exchange_code(self, *, code: str, redirect_uri: str) -> MetaTokenResult: ...
     async def exchange_long_lived(self, *, access_token: str) -> MetaTokenResult: ...
@@ -170,6 +177,59 @@ class MetaInstagramClient:
         self.version = version.strip("/")
         self.access_token = access_token
         self.timeout_seconds = timeout_seconds
+
+    async def subscribe_webhooks(self, instagram_account_id: str, subscribed_fields: list[str]) -> MetaWebhookSubscriptionResult:
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+        data = {"subscribed_fields": ",".join(subscribed_fields)}
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.post(f"{self.base_url}/{self.version}/{instagram_account_id}/subscribed_apps", headers=headers, data=data)
+            response.raise_for_status()
+        except httpx.TimeoutException as exc:
+            raise MetaInstagramError("META_WEBHOOK_SUBSCRIPTION_FAILED", "Meta webhook subscription timed out.", 504) from exc
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 429:
+                raise MetaInstagramError("META_PROVIDER_RATE_LIMITED", "Meta provider rate limited webhook subscription.", 429) from exc
+            raise MetaInstagramError("META_WEBHOOK_SUBSCRIPTION_FAILED", "Meta webhook subscription failed.", 400) from exc
+        return MetaWebhookSubscriptionResult(success=bool(response.json().get("success", True)), subscribed_fields=subscribed_fields, provider_request_id=response.headers.get("x-fb-trace-id"))
+
+    async def get_webhook_subscription(self, instagram_account_id: str) -> MetaWebhookSubscriptionResult:
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.get(f"{self.base_url}/{self.version}/{instagram_account_id}/subscribed_apps", headers=headers)
+            response.raise_for_status()
+        except httpx.TimeoutException as exc:
+            raise MetaInstagramError("META_WEBHOOK_SUBSCRIPTION_FAILED", "Meta webhook subscription check timed out.", 504) from exc
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 429:
+                raise MetaInstagramError("META_PROVIDER_RATE_LIMITED", "Meta provider rate limited webhook subscription check.", 429) from exc
+            raise MetaInstagramError("META_WEBHOOK_SUBSCRIPTION_FAILED", "Meta webhook subscription check failed.", 400) from exc
+        return MetaWebhookSubscriptionResult(success=True, subscribed_fields=self._subscription_fields(response.json()), provider_request_id=response.headers.get("x-fb-trace-id"))
+
+    async def unsubscribe_webhooks(self, instagram_account_id: str) -> MetaWebhookSubscriptionResult:
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.delete(f"{self.base_url}/{self.version}/{instagram_account_id}/subscribed_apps", headers=headers)
+            response.raise_for_status()
+        except httpx.TimeoutException as exc:
+            raise MetaInstagramError("META_WEBHOOK_SUBSCRIPTION_FAILED", "Meta webhook unsubscribe timed out.", 504) from exc
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 429:
+                raise MetaInstagramError("META_PROVIDER_RATE_LIMITED", "Meta provider rate limited webhook unsubscribe.", 429) from exc
+            raise MetaInstagramError("META_WEBHOOK_SUBSCRIPTION_FAILED", "Meta webhook unsubscribe failed.", 400) from exc
+        return MetaWebhookSubscriptionResult(success=bool(response.json().get("success", True)), subscribed_fields=[], provider_request_id=response.headers.get("x-fb-trace-id"))
+
+    def _subscription_fields(self, payload: dict[str, Any]) -> list[str]:
+        if isinstance(payload.get("subscribed_fields"), list):
+            return [str(field) for field in payload["subscribed_fields"]]
+        data = payload.get("data")
+        if isinstance(data, list) and data:
+            fields = data[0].get("subscribed_fields") if isinstance(data[0], dict) else None
+            if isinstance(fields, list):
+                return [str(field) for field in fields]
+        return []
 
     async def send_text_message(self, instagram_account_id: str, recipient_scoped_id: str, message_text: str, human_agent: bool = False) -> MetaSendResult:
         payload: dict[str, Any] = {"recipient": {"id": recipient_scoped_id}, "message": {"text": message_text}}

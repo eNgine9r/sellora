@@ -16,3 +16,15 @@ export function validateInstagramConnection() {
 export function disconnectInstagram(confirm = false) {
   return apiRequest<InstagramDisconnectResponse>(`/integrations/instagram/disconnect?confirm=${confirm}`, { method: "POST" });
 }
+
+export function subscribeInstagramWebhooks() {
+  return apiRequest<InstagramConnectionStatusResponse>("/integrations/instagram/webhooks/subscribe", { method: "POST" });
+}
+
+export function fetchInstagramWebhookStatus() {
+  return apiRequest<InstagramConnectionStatusResponse>("/integrations/instagram/webhooks/status");
+}
+
+export function unsubscribeInstagramWebhooks() {
+  return apiRequest<InstagramConnectionStatusResponse>("/integrations/instagram/webhooks/unsubscribe", { method: "POST" });
+}

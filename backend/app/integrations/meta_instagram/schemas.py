@@ -22,6 +22,16 @@ class InstagramConnectionStatusResponse(BaseModel):
     token_present: bool = False
     send_enabled: bool = False
     auto_send_enabled: bool = False
+    webhook_active: bool = False
+    confirmed_webhook_fields: list[str] = Field(default_factory=list)
+    missing_webhook_fields: list[str] = Field(default_factory=list)
+    callback_configured: bool = False
+    verify_token_configured: bool = False
+    account_subscription_active: bool = False
+    required_fields_confirmed: bool = False
+    webhook_processing_enabled: bool = False
+    last_error_code: str | None = None
+    last_error_message: str | None = None
 
 class InstagramOAuthCallbackResponse(BaseModel):
     status: str
