@@ -1,0 +1,1 @@
+Operational workflow companion marker. The recovery workflow only rebinds the existing Render service source and verifies deployment health; it does not modify Render environment variables or create new services.
