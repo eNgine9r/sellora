@@ -4,12 +4,14 @@ from app.core.config import get_settings
 REQUIRED_BASIC_PERMISSION = "instagram_business_basic"
 REQUIRED_MESSAGING_PERMISSION = "instagram_business_manage_messages"
 OAUTH_REQUIRED_SCOPES = [REQUIRED_BASIC_PERMISSION, REQUIRED_MESSAGING_PERMISSION]
+# Meta documents message_edit as a messaging payload event, not as a separate
+# subscribed_apps field. The messages subscription delivers edits while these
+# additional fields enable explicit seen/reaction notifications.
 WEBHOOK_SUBSCRIPTIONS = [
     "messages",
     "messaging_postbacks",
     "messaging_seen",
     "message_reactions",
-    "message_edit",
 ]
 PROFESSIONAL_ACCOUNT_TYPES = {"BUSINESS", "CREATOR", "MEDIA_CREATOR"}
 
