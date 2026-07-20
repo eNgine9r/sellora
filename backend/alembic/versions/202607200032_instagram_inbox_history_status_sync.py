@@ -62,8 +62,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "workspace_id",
-            "instagram_connection_id",
-            name="uq_instagram_history_syncs_workspace_connection",
+            name="uq_instagram_history_syncs_workspace",
         ),
         sa.CheckConstraint(
             "status in ('PENDING','RUNNING','COMPLETED','PARTIAL','RETRY_PENDING','FAILED_SAFE')",
