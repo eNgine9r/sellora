@@ -1,6 +1,9 @@
 import { apiRequest } from "@/services/api";
 import {
   DirectConversation,
+  DirectCustomerAutomationState,
+  DirectCustomerCompletePayload,
+  DirectCustomerFinalizeOrderPayload,
   DirectLiveSummary,
   DirectMessage,
   InstagramHistorySync,
@@ -12,6 +15,20 @@ export function fetchDirectMessages(conversationId: string) { return apiRequest<
 export function fetchDirectLiveSummary() { return apiRequest<DirectLiveSummary>("/direct/live-summary?limit=30"); }
 export function markDirectConversationRead(conversationId: string) { return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/read`, { method: "POST" }); }
 export function refreshDirectParticipantProfile(conversationId: string) { return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/participant-profile/refresh`, { method: "POST" }); }
+export function fetchDirectCustomerAutomation(conversationId: string) { return apiRequest<DirectCustomerAutomationState>(`/direct/conversations/${conversationId}/customer-automation`); }
+export function ensureDirectCustomer(conversationId: string) { return apiRequest<DirectCustomerAutomationState>(`/direct/conversations/${conversationId}/customer-automation/ensure`, { method: "POST" }); }
+export function completeDirectCustomer(conversationId: string, payload: DirectCustomerCompletePayload) {
+  return apiRequest<DirectCustomerAutomationState>(`/direct/conversations/${conversationId}/customer-automation/complete`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+export function finalizeDirectCustomerOrder(conversationId: string, payload: DirectCustomerFinalizeOrderPayload) {
+  return apiRequest<DirectCustomerAutomationState>(`/direct/conversations/${conversationId}/customer-automation/finalize-order`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
 export function fetchInstagramHistorySync() { return apiRequest<InstagramHistorySync | null>("/direct/history-sync"); }
 export function startInstagramHistorySync(conversationLimit = 100, messagesPerConversation = 20) {
   return apiRequest<InstagramHistorySync>("/direct/history-sync", {
