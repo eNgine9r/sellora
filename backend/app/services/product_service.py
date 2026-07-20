@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -187,17 +188,36 @@ class ProductService:
         variant = self.get_variant(workspace_id, variant_id)
         if variant is None:
             return False
-        if variant.inventory and variant.inventory.reserved_quantity > 0:
+
+        inventory = self.inventory.get_by_variant_for_update(workspace_id, variant_id)
+        if inventory is not None and inventory.reserved_quantity > 0:
             raise ProductServiceError("Product variant has reserved inventory. Cancel or complete related orders before archiving it.")
-        old_value = snapshot(variant)
+
+        variant_old_value = snapshot(variant)
+        inventory_old_value = snapshot(inventory) if inventory is not None else None
+        archived_at = datetime.now(UTC)
+
         self.variants.soft_delete(variant, actor_user_id)
+        if inventory is not None:
+            inventory.deleted_at = archived_at
+            inventory.deleted_by = actor_user_id
+            self.audit_logs.create(
+                workspace_id=workspace_id,
+                user_id=actor_user_id,
+                entity_type="Inventory",
+                entity_id=inventory.id,
+                action="INVENTORY_ARCHIVE_WITH_VARIANT",
+                old_value=inventory_old_value,
+                new_value=snapshot(inventory),
+            )
+
         self.audit_logs.create(
             workspace_id=workspace_id,
             user_id=actor_user_id,
             entity_type="ProductVariant",
             entity_id=variant.id,
             action="PRODUCT_VARIANT_ARCHIVE",
-            old_value=old_value,
+            old_value=variant_old_value,
             new_value=snapshot(variant),
         )
         self.db.commit()
