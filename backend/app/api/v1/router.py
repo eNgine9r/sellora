@@ -2,6 +2,7 @@ from app.api.v1.advertising import router as advertising_router
 from fastapi import APIRouter
 from app.api.v1.ai import router as ai_router
 from app.api.v1.direct import router as direct_router
+from app.api.v1.direct_sync import router as direct_sync_router
 
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.attachments import router as attachments_router
@@ -30,6 +31,7 @@ from app.api.v1.workspace_users import router as workspace_users_router
 api_router = APIRouter()
 api_router.include_router(ai_router)
 api_router.include_router(direct_router)
+api_router.include_router(direct_sync_router)
 api_router.include_router(advertising_router)
 api_router.include_router(analytics_router)
 api_router.include_router(auth_router)
