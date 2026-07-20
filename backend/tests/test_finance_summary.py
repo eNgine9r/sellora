@@ -44,7 +44,17 @@ def make_service(repository: FakeFinanceRepository) -> FinanceService:
     return service
 
 
-def order(workspace_id, revenue="100.00", status=OrderStatus.COMPLETED.value, payment_status=PaymentStatus.PAID.value, items=None, shipping_cost="0.00", cod_fee="0.00", other_cost="0.00"):
+def order(
+    workspace_id,
+    revenue="100.00",
+    status=OrderStatus.COMPLETED.value,
+    payment_status=PaymentStatus.PAID.value,
+    items=None,
+    ad_cost="0.00",
+    shipping_cost="0.00",
+    cod_fee="0.00",
+    other_cost="0.00",
+):
     return SimpleNamespace(
         id=uuid4(),
         workspace_id=workspace_id,
@@ -52,6 +62,7 @@ def order(workspace_id, revenue="100.00", status=OrderStatus.COMPLETED.value, pa
         payment_status=payment_status,
         revenue=Decimal(revenue),
         product_cost=Decimal("0.00"),
+        ad_cost=Decimal(ad_cost),
         shipping_cost=Decimal(shipping_cost),
         cod_fee=Decimal(cod_fee),
         other_cost=Decimal(other_cost),
@@ -75,10 +86,10 @@ def adjustment(workspace_id, amount="10.00", type="EXPENSE", category="OTHER"):
     return SimpleNamespace(workspace_id=workspace_id, amount=Decimal(amount), type=type, category=category)
 
 
-def test_finance_summary_calculates_core_metrics_from_orders_ad_metrics_and_shipments():
+def test_finance_summary_calculates_core_metrics_from_canonical_order_costs():
     workspace_id = uuid4()
-    first_order = order(workspace_id, revenue="200.00", items=[item("120.00", "50.00"), item("80.00", "30.00")])
-    second_order = order(workspace_id, revenue="100.00", payment_status=PaymentStatus.COD.value, items=[item("100.00", "45.00")], cod_fee="5.00")
+    first_order = order(workspace_id, revenue="200.00", items=[item("120.00", "50.00"), item("80.00", "30.00")], ad_cost="40.00", shipping_cost="12.00")
+    second_order = order(workspace_id, revenue="100.00", payment_status=PaymentStatus.COD.value, items=[item("100.00", "45.00")], ad_cost="20.00", shipping_cost="8.00", cod_fee="5.00")
     repo = FakeFinanceRepository(
         orders=[first_order, second_order],
         shipments=[shipment(workspace_id, first_order.id, "12.00"), shipment(workspace_id, second_order.id, "8.00")],
@@ -92,13 +103,40 @@ def test_finance_summary_calculates_core_metrics_from_orders_ad_metrics_and_ship
     assert summary.gross_profit == Decimal("175.00")
     assert summary.ad_spend == Decimal("60.00")
     assert summary.shipping_cost == Decimal("20.00")
-    assert summary.other_expenses == Decimal("0.00")
-    assert summary.net_profit == Decimal("95.00")
+    assert summary.other_expenses == Decimal("5.00")
+    assert summary.net_profit == Decimal("90.00")
     assert summary.manual_expenses == Decimal("0.00")
-    assert summary.profit_margin == Decimal("31.67")
+    assert summary.profit_margin == Decimal("30.00")
     assert summary.orders_count == 2
     assert summary.paid_orders_count == 2
     assert summary.average_order_value == Decimal("150.00")
+
+
+def test_finance_summary_matches_order_dashboard_formula_for_issue_131_evidence():
+    workspace_id = uuid4()
+    synthetic_order = order(
+        workspace_id,
+        revenue="1598.00",
+        items=[item("1598.00", "600.00")],
+        ad_cost="50.00",
+        shipping_cost="70.00",
+        cod_fee="20.00",
+        other_cost="10.00",
+    )
+    repo = FakeFinanceRepository(
+        orders=[synthetic_order],
+        shipments=[shipment(workspace_id, synthetic_order.id, "70.00")],
+        ad_metrics=[ad_metric(workspace_id, "50.00")],
+    )
+
+    summary = make_service(repo).summary(workspace_id)
+
+    assert summary.revenue == Decimal("1598.00")
+    assert summary.cogs == Decimal("600.00")
+    assert summary.ad_spend == Decimal("50.00")
+    assert summary.shipping_cost == Decimal("70.00")
+    assert summary.other_expenses == Decimal("30.00")
+    assert summary.net_profit == Decimal("848.00")
 
 
 def test_finance_summary_handles_zero_revenue_without_nan_or_infinity():
@@ -122,11 +160,11 @@ def test_finance_summary_warns_for_missing_product_and_shipment_costs():
     assert "missing_shipment_cost" in codes
 
 
-def test_finance_summary_keeps_workspace_isolation_and_manual_csv_ad_spend_only():
+def test_finance_summary_keeps_workspace_isolation_and_uses_order_allocated_ad_cost():
     workspace_id = uuid4()
     other_workspace_id = uuid4()
-    own_order = order(workspace_id, revenue="100.00", items=[item("100.00", "40.00")])
-    other_order = order(other_workspace_id, revenue="999.00", items=[item("999.00", "1.00")])
+    own_order = order(workspace_id, revenue="100.00", items=[item("100.00", "40.00")], ad_cost="20.00", shipping_cost="10.00")
+    other_order = order(other_workspace_id, revenue="999.00", items=[item("999.00", "1.00")], ad_cost="999.00", shipping_cost="99.00")
     repo = FakeFinanceRepository(
         orders=[own_order, other_order],
         shipments=[shipment(workspace_id, own_order.id, "10.00"), shipment(other_workspace_id, other_order.id, "99.00")],
@@ -137,6 +175,7 @@ def test_finance_summary_keeps_workspace_isolation_and_manual_csv_ad_spend_only(
 
     assert summary.revenue == Decimal("100.00")
     assert summary.ad_spend == Decimal("20.00")
+    assert summary.shipping_cost == Decimal("10.00")
     assert all(call[1] == workspace_id for call in repo.calls)
 
 

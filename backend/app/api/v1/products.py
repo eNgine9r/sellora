@@ -53,7 +53,10 @@ def update_variant(variant_id: UUID, payload: ProductVariantUpdate, workspace_id
 
 @router.delete("/variants/{variant_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_variant(variant_id: UUID, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> Response:
-    deleted = ProductService(db).delete_variant(workspace_id, variant_id, current_user.id)
+    try:
+        deleted = ProductService(db).delete_variant(workspace_id, variant_id, current_user.id)
+    except ProductServiceError as exc:
+        raise _bad_request(exc)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product variant not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
