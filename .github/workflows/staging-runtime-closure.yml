@@ -1,0 +1,165 @@
+name: Sellora Staging Runtime Closure
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/staging-runtime-closure.yml"
+      - "scripts/staging_release_gate.py"
+      - "frontend/scripts/staging-runtime-browser-gate.mjs"
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type RUN_STAGING_RUNTIME_CLOSURE to continue"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sellora-staging-runtime-closure
+  cancel-in-progress: false
+
+jobs:
+  runtime-closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: staging
+    env:
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_MANAGER_EMAIL: ${{ secrets.STAGING_MANAGER_EMAIL }}
+      STAGING_MANAGER_PASSWORD: ${{ secrets.STAGING_MANAGER_PASSWORD }}
+      STAGING_ANALYST_EMAIL: ${{ secrets.STAGING_ANALYST_EMAIL }}
+      STAGING_ANALYST_PASSWORD: ${{ secrets.STAGING_ANALYST_PASSWORD }}
+      STAGING_TEST_WORKSPACE_ID: ${{ secrets.STAGING_TEST_WORKSPACE_ID }}
+
+    steps:
+      - name: Validate manual confirmation
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          [ "$CONFIRMATION" = "RUN_STAGING_RUNTIME_CLOSURE" ] || {
+            echo "Confirmation value is invalid."
+            exit 1
+          }
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Validate required staging secrets
+        shell: bash
+        run: |
+          missing=0
+          for key in \
+            STAGING_OWNER_EMAIL STAGING_OWNER_PASSWORD \
+            STAGING_MANAGER_EMAIL STAGING_MANAGER_PASSWORD \
+            STAGING_ANALYST_EMAIL STAGING_ANALYST_PASSWORD \
+            STAGING_TEST_WORKSPACE_ID; do
+            if [ -z "${!key:-}" ]; then
+              echo "Required secret is missing: $key"
+              missing=1
+            fi
+          done
+          [ "$missing" = "0" ]
+
+      - name: Run backend role and core-read gate
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          set +e
+          python scripts/staging_release_gate.py --mode read-only > /tmp/staging-release-gate.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/staging-release-gate.log
+          echo "$code" > artifacts/staging-release-gate-exit-code.txt
+
+      - name: Validate backend closure evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("artifacts/staging-release-gate.json")
+          if not path.exists():
+              raise SystemExit("staging release gate artifact is missing")
+          report = json.loads(path.read_text(encoding="utf-8"))
+          if report.get("frontend", {}).get("status") != "PASS":
+              raise SystemExit("frontend staging did not pass")
+          if report.get("backend", {}).get("status") != "PASS":
+              raise SystemExit("backend /health did not pass")
+          roles = report.get("roles", {})
+          for role in ("owner", "manager", "analyst"):
+              if roles.get(role) != "PASS":
+                  raise SystemExit(f"{role} login/auth-me did not pass")
+          failed_reads = {
+              name: result
+              for name, result in report.get("core_read_results", {}).items()
+              if not str(result).startswith("PASS")
+          }
+          if failed_reads:
+              raise SystemExit(f"core reads did not pass: {failed_reads}")
+          print("Backend runtime closure evidence: PASS")
+          PY
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: |
+          npm ci
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run browser and viewport closure gate
+        working-directory: frontend
+        run: node scripts/staging-runtime-browser-gate.mjs
+
+      - name: Validate sanitized artifacts
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          values = [
+              os.getenv("STAGING_OWNER_EMAIL", ""),
+              os.getenv("STAGING_OWNER_PASSWORD", ""),
+              os.getenv("STAGING_MANAGER_EMAIL", ""),
+              os.getenv("STAGING_MANAGER_PASSWORD", ""),
+              os.getenv("STAGING_ANALYST_EMAIL", ""),
+              os.getenv("STAGING_ANALYST_PASSWORD", ""),
+              os.getenv("STAGING_TEST_WORKSPACE_ID", ""),
+          ]
+          for path in Path("artifacts").glob("**/*"):
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding="utf-8", errors="ignore")
+              for value in values:
+                  if value and value in text:
+                      raise SystemExit(f"secret leaked into artifact: {path}")
+          print("Sanitized artifact validation: PASS")
+          PY
+
+      - name: Upload runtime closure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-staging-runtime-closure-${{ github.run_id }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 7
