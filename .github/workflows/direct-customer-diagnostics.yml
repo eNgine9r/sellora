@@ -13,7 +13,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       SECRET_KEY: ci-secret
       JWT_SECRET: ci-jwt-secret
@@ -30,27 +30,12 @@ jobs:
       - name: Install dependencies
         working-directory: backend
         run: python -m pip install -r requirements.txt
-      - name: Capture focused failure
+      - name: Capture full backend failure
         working-directory: backend
         shell: bash
         run: |
           set +e
-          python -m pytest -q \
-            tests/test_phone.py \
-            tests/test_crm_completion.py \
-            tests/test_nova_poshta.py \
-            tests/test_sprint_8f_foundation_migration.py \
-            tests/test_order_fulfillment.py \
-            tests/test_order_fulfillment_workflow.py \
-            tests/test_order_fulfillment_api.py \
-            tests/test_order_fulfillment_finance.py \
-            tests/test_order_fulfillment_consolidation_migration.py \
-            tests/integrations/fulfillment/test_fulfillment_provider_reconciliation.py \
-            tests/integrations/nova_poshta/test_real_provider_payload.py \
-            tests/integrations/nova_poshta/test_durable_ttn_workflow.py \
-            tests/ai/test_ai_foundation.py \
-            tests/test_meta_instagram_foundation.py \
-            tests/integrations/meta_instagram > direct-customer-diagnostics.log 2>&1
+          python -m pytest tests -q > direct-customer-diagnostics.log 2>&1
           code=$?
           echo "$code" > direct-customer-diagnostics.exit
           exit 0
