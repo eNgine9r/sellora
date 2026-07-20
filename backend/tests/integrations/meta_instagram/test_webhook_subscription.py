@@ -29,7 +29,7 @@ async def test_subscribe_webhooks_sends_required_fields_and_bearer_token(monkeyp
     assert captured["url"] == "https://graph.example/v99.0/ig-1/subscribed_apps"
     assert captured["headers"] == {"Authorization": "Bearer secret-token"}
     assert captured["data"] == {
-        "subscribed_fields": "messages,messaging_postbacks,messaging_seen,message_reactions,message_edit"
+        "subscribed_fields": "messages,messaging_postbacks,messaging_seen,message_reactions"
     }
     assert result.success is True
     assert result.subscribed_fields == WEBHOOK_SUBSCRIPTIONS
