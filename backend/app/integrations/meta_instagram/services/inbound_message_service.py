@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
+from app.integrations.meta_instagram.repositories.inbox_sync_repository import InstagramMessageStateRepository
 from app.integrations.meta_instagram.repositories.message_operation_repository import MetaMessageOperationRepository
 from app.integrations.meta_instagram.services.participant_profile_service import InstagramParticipantProfileService
 from app.models.ai_direct import (
@@ -38,6 +39,7 @@ class InstagramInboundMessageService:
         self.db = db
         self.conversations = DirectConversationRepository(db)
         self.messages = DirectMessageRepository(db)
+        self.message_states = InstagramMessageStateRepository(db)
         self.profile_service = profile_service or InstagramParticipantProfileService(db)
 
     def process_event(self, event: MetaWebhookEvent) -> int:
@@ -63,6 +65,16 @@ class InstagramInboundMessageService:
         return created
 
     def _process_item(self, event: MetaWebhookEvent, connection, item: dict[str, Any]) -> int:
+        if item.get("read"):
+            self._process_seen(event, item)
+            return 0
+        if item.get("reaction"):
+            self._process_reaction(event, item)
+            return 0
+        if item.get("message_edit"):
+            self._process_edit(event, item)
+            return 0
+
         recipient_id = str((item.get("recipient") or {}).get("id") or "")
         sender_id = str((item.get("sender") or {}).get("id") or "")
         message = item.get("message") or {}
@@ -117,7 +129,7 @@ class InstagramInboundMessageService:
             provider="INSTAGRAM",
             provider_message_id=provider_message_id,
             provider_event_id=event.event_external_id,
-            delivery_status="SENT" if is_echo else "UNKNOWN",
+            delivery_status="PROVIDER_ACCEPTED" if is_echo else "RECEIVED",
             message_payload_type=payload_type,
             provider_created_at=provider_created_at,
             attachment_metadata=self._metadata(message, postback),
@@ -151,13 +163,67 @@ class InstagramInboundMessageService:
             self._enrich_profile_safe(event.workspace_id, conversation)
         return 1
 
+    def _process_seen(self, event: MetaWebhookEvent, item: dict[str, Any]) -> None:
+        read = item.get("read") or {}
+        mid = str(read.get("mid") or "")
+        if not mid:
+            return
+        message = self.messages.get_by_provider_message(event.workspace_id, "INSTAGRAM", mid)
+        if not message:
+            return
+        seen_at = self._provider_time(item)
+        state = self.message_states.get_or_create(event.workspace_id, message.id, mid)
+        if not state.seen_at or seen_at > state.seen_at:
+            state.seen_at = seen_at
+        message.delivery_status = "SEEN"
+
+    def _process_reaction(self, event: MetaWebhookEvent, item: dict[str, Any]) -> None:
+        reaction = item.get("reaction") or {}
+        mid = str(reaction.get("mid") or "")
+        if not mid:
+            return
+        message = self.messages.get_by_provider_message(event.workspace_id, "INSTAGRAM", mid)
+        if not message:
+            return
+        state = self.message_states.get_or_create(event.workspace_id, message.id, mid)
+        action = str(reaction.get("action") or "react").lower()
+        if action == "unreact":
+            state.reaction = None
+            state.reaction_actor_scoped_id = None
+        else:
+            state.reaction = str(reaction.get("emoji") or reaction.get("reaction") or "love")[:80]
+            actor = (item.get("sender") or {}).get("id")
+            state.reaction_actor_scoped_id = str(actor) if actor else None
+        state.reaction_updated_at = self._provider_time(item)
+
+    def _process_edit(self, event: MetaWebhookEvent, item: dict[str, Any]) -> None:
+        edit = item.get("message_edit") or {}
+        mid = str(edit.get("mid") or "")
+        if not mid:
+            return
+        message = self.messages.get_by_provider_message(event.workspace_id, "INSTAGRAM", mid)
+        if not message:
+            return
+        text = str(edit.get("text") or "")
+        if text:
+            message.text = text
+            message.safe_text_hash = hashlib.sha256(text.encode()).hexdigest()
+            message.message_type = DirectMessageType.TEXT.value
+            message.message_payload_type = "TEXT"
+        state = self.message_states.get_or_create(event.workspace_id, message.id, mid)
+        try:
+            edit_count = int(edit.get("num_edit") or 0)
+        except (TypeError, ValueError):
+            edit_count = 0
+        state.edit_count = max(state.edit_count or 0, edit_count)
+        state.edited_at = self._provider_time(item)
+
     def _enrich_profile_safe(self, workspace_id, conversation) -> None:
         try:
             profile = self.profile_service.enrich_if_due(workspace_id, conversation.id)
             if profile:
                 conversation.provider_sync_status = f"PROFILE_{profile.status}"
         except Exception:
-            # Profile enrichment must never block durable message ingestion.
             conversation.provider_sync_status = "PROFILE_FAILED_SAFE"
 
     def _conversation(self, workspace_id, connection_id, participant_id):
@@ -185,7 +251,11 @@ class InstagramInboundMessageService:
 
     def _provider_time(self, item: dict[str, Any]) -> datetime:
         timestamp = item.get("timestamp")
-        return datetime.fromtimestamp(timestamp / 1000, UTC) if timestamp else datetime.now(UTC)
+        try:
+            numeric = int(timestamp) if timestamp is not None else 0
+        except (TypeError, ValueError):
+            numeric = 0
+        return datetime.fromtimestamp(numeric / 1000, UTC) if numeric else datetime.now(UTC)
 
     def _payload(
         self,
