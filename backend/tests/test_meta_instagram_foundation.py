@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from uuid import uuid4
 import hashlib, hmac, json
 from types import SimpleNamespace
@@ -30,7 +29,13 @@ def test_meta_config_defaults_disable_send_and_auto_send():
     assert config.auto_send_enabled is False
     assert config.webhook_processing_enabled is True
     assert REQUIRED_MESSAGING_PERMISSION == "instagram_business_manage_messages"
-    assert WEBHOOK_SUBSCRIPTIONS == ["messages", "messaging_postbacks"]
+    assert WEBHOOK_SUBSCRIPTIONS == [
+        "messages",
+        "messaging_postbacks",
+        "messaging_seen",
+        "message_reactions",
+        "message_edit",
+    ]
 
 
 def test_webhook_verify_uses_constant_secret(monkeypatch):
@@ -72,6 +77,19 @@ def test_webhook_persistence_deduplicates_unmatched_event_safely(monkeypatch):
     assert first.status == "IGNORED"
     assert first.safe_error_code == "META_CONNECTION_NOT_READY"
     assert first.workspace_id is None
+
+
+def test_webhook_classifies_seen_reaction_and_edit_events():
+    service = FakeWebhookService()
+    seen = {"entry": [{"messaging": [{"timestamp": 1, "read": {"mid": "mid-1"}}]}]}
+    reaction = {"entry": [{"messaging": [{"timestamp": 2, "reaction": {"mid": "mid-1", "action": "react", "emoji": "❤"}}]}]}
+    edit = {"entry": [{"messaging": [{"timestamp": 3, "message_edit": {"mid": "mid-1", "text": "edited", "num_edit": 1}}]}]}
+    assert service._event_type(seen) == "messaging_seen"
+    assert service._event_type(reaction) == "message_reactions"
+    assert service._event_type(edit) == "message_edit"
+    assert service._event_id(seen).startswith("messaging_seen:mid-1")
+    assert service._event_id(reaction).startswith("message_reactions:mid-1")
+    assert service._event_id(edit).startswith("message_edit:mid-1")
 
 
 def test_outbound_prepare_blocks_when_send_disabled(monkeypatch):
