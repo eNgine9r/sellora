@@ -8,6 +8,7 @@ import { WarehouseSearchSelect } from "@/features/integrations/components/wareho
 import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
 import { fetchCustomerAddresses } from "@/services/crm-completion";
+import { finalizeDirectCustomerOrder } from "@/services/direct";
 import { fetchNovaPoshtaReadiness } from "@/services/integrations";
 import { createOrderFulfillment } from "@/services/order-fulfillments";
 import { safeApiErrorMessage } from "@/services/api";
@@ -39,6 +40,8 @@ export function OrderFulfillmentWizard({
   campaigns,
   currencyCode,
   showProfit,
+  initialCustomerId,
+  sourceDirectConversationId,
   onSuccess,
 }: {
   workspaceId: string;
@@ -49,10 +52,13 @@ export function OrderFulfillmentWizard({
   campaigns: AdCampaign[];
   currencyCode: string;
   showProfit: boolean;
+  initialCustomerId?: string | null;
+  sourceDirectConversationId?: string | null;
   onSuccess: (result: OrderFulfillmentResult) => void;
 }) {
   const { t, formatStatus } = useI18n();
   const submitLock = useRef(false);
+  const initialCustomerApplied = useRef(false);
   const idempotencyKey = useRef(newKey());
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<"existing" | "new">("existing");
@@ -82,6 +88,7 @@ export function OrderFulfillmentWizard({
   const [notes, setNotes] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [automationWarning, setAutomationWarning] = useState<string | null>(null);
   const [result, setResult] = useState<OrderFulfillmentResult | null>(null);
 
   const selectedCustomer = customers.find((customer) => customer.id === customerId) ?? null;
@@ -97,7 +104,27 @@ export function OrderFulfillmentWizard({
   });
   const mutation = useMutation({
     mutationFn: (payload: OrderFulfillmentPayload) => createOrderFulfillment(workspaceId, payload),
-    onSuccess: (nextResult) => {
+    onSuccess: async (nextResult) => {
+      setAutomationWarning(null);
+      if (sourceDirectConversationId) {
+        try {
+          await finalizeDirectCustomerOrder(sourceDirectConversationId, {
+            order_id: nextResult.order.id,
+            name: recipientName.trim(),
+            phone: normalizeUaPhonePreview(recipientPhone) || recipientPhone,
+            city: city.trim(),
+            region: null,
+            recipient_name: recipientName.trim(),
+            recipient_phone: normalizeUaPhonePreview(recipientPhone) || recipientPhone,
+            warehouse: warehouse.trim(),
+            warehouse_number: warehouseNumber || null,
+            nova_poshta_city_ref: cityRef,
+            nova_poshta_warehouse_ref: warehouseRef,
+          });
+        } catch {
+          setAutomationWarning("Замовлення створено, але зв’язок із Direct потребує повторної синхронізації.");
+        }
+      }
       setResult(nextResult);
       onSuccess(nextResult);
     },
@@ -110,8 +137,23 @@ export function OrderFulfillmentWizard({
   useEffect(() => {
     idempotencyKey.current = newKey();
     submitLock.current = false;
+    initialCustomerApplied.current = false;
     setResult(null);
+    setAutomationWarning(null);
   }, [workspaceId]);
+
+  useEffect(() => {
+    if (!initialCustomerId || initialCustomerApplied.current) return;
+    const customer = customers.find((row) => row.id === initialCustomerId);
+    if (!customer) return;
+    initialCustomerApplied.current = true;
+    setMode("existing");
+    setCustomerId(customer.id);
+    setCustomerSearch(customer.name);
+    setRecipientName(customer.name);
+    setRecipientPhone(customer.phone || "");
+    setAddressId("");
+  }, [customers, initialCustomerId]);
 
   useEffect(() => {
     const defaultAddress = addressesQuery.data?.find((address) => address.is_default) ?? addressesQuery.data?.[0];
@@ -242,12 +284,15 @@ export function OrderFulfillmentWizard({
         <div className={`rounded-2xl border p-5 ${success ? "border-emerald-300 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-500/15" : reconciliation ? "border-amber-300 bg-amber-50 dark:border-amber-400/30 dark:bg-amber-500/15" : "border-blue-300 bg-blue-50 dark:border-blue-400/30 dark:bg-blue-500/15"}`}>
           <h3 className="text-xl font-black text-text-primary">{t(`fulfillment.result.${result.result_code}`)}</h3>
           <p className="mt-2 text-sm text-text-secondary">{result.order.order_number}</p>
+          {sourceDirectConversationId && !automationWarning ? <p className="mt-2 text-sm font-bold text-emerald-700">Діалог, клієнт і замовлення автоматично пов’язані.</p> : null}
+          {automationWarning ? <p className="mt-2 text-sm font-bold text-amber-700">{automationWarning}</p> : null}
           {result.tracking_number ? <p className="mt-3 text-2xl font-black text-text-primary">{result.tracking_number}</p> : null}
           {result.provider_error_code ? <p className="mt-3 text-sm font-semibold text-text-secondary">{t("fulfillment.providerActionRequired")}</p> : null}
         </div>
         <div className="grid gap-2 sm:grid-cols-3">
           {result.retry_available && canCreateTtn ? <button className={inputClass} type="button" onClick={() => { submitLock.current = false; setResult(null); submit(true); }}>{t("fulfillment.retryTtn")}</button> : null}
           {result.tracking_number ? <button className={inputClass} type="button" onClick={() => void navigator.clipboard.writeText(result.tracking_number || "")}>{t("fulfillment.copyTtn")}</button> : null}
+          {sourceDirectConversationId ? <Link className={`${inputClass} flex items-center justify-center`} href={`/direct?conversation=${encodeURIComponent(sourceDirectConversationId)}`}>Повернутися в Direct</Link> : null}
           <Link className={`${inputClass} flex items-center justify-center`} href={`/orders?order_id=${result.order.id}`}>{t("fulfillment.openOrder")}</Link>
           <Link className={`${inputClass} flex items-center justify-center`} href={`/shipments?order_id=${result.order.id}`}>{t("fulfillment.openShipment")}</Link>
         </div>
@@ -256,7 +301,8 @@ export function OrderFulfillmentWizard({
   }
 
   return (
-    <div className="grid min-w-0 gap-4">
+    <div className="grid min-w-0 gap-4" data-direct-order-wizard={sourceDirectConversationId ? "true" : undefined}>
+      {sourceDirectConversationId ? <div className="rounded-xl border border-violet-300 bg-violet-50 p-3 text-sm font-semibold text-violet-900 dark:border-violet-400/30 dark:bg-violet-500/15 dark:text-violet-100">Замовлення створюється з Instagram Direct. Клієнт уже вибраний; введені контактні дані та адреса автоматично доповнять його картку.</div> : null}
       <ol className="grid grid-cols-3 gap-2" aria-label={t("fulfillment.progress")}>
         {[1, 2, 3].map((number) => <li className={`rounded-xl px-2 py-2 text-center text-xs font-bold ${step === number ? "bg-primary text-primary-foreground" : step > number ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-100" : "bg-surface-2 text-text-secondary"}`} key={number}>{number}. {t(`fulfillment.step${number}`)}</li>)}
       </ol>
@@ -265,7 +311,7 @@ export function OrderFulfillmentWizard({
         {step === 1 ? <>
           <div className="grid grid-cols-2 gap-2 rounded-xl bg-surface-2 p-1">
             <button className={`min-h-11 rounded-lg font-bold ${mode === "existing" ? "bg-surface-1 shadow-sm" : "text-text-secondary"}`} type="button" onClick={() => setMode("existing")}>{t("fulfillment.existingCustomer")}</button>
-            <button className={`min-h-11 rounded-lg font-bold ${mode === "new" ? "bg-surface-1 shadow-sm" : "text-text-secondary"}`} type="button" onClick={() => { setMode("new"); setCustomerId(""); }}>{t("fulfillment.newCustomer")}</button>
+            <button className={`min-h-11 rounded-lg font-bold ${mode === "new" ? "bg-surface-1 shadow-sm" : "text-text-secondary"}`} type="button" disabled={Boolean(sourceDirectConversationId)} onClick={() => { setMode("new"); setCustomerId(""); }}>{t("fulfillment.newCustomer")}</button>
           </div>
           {mode === "existing" ? <section className="grid gap-3 rounded-2xl border border-border-subtle p-3">
             <input className={inputClass} placeholder={t("orders.customerSearchPlaceholder")} value={customerSearch} onChange={(event) => setCustomerSearch(event.target.value)} />
