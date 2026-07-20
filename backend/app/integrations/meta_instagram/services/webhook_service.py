@@ -86,10 +86,23 @@ class InstagramWebhookService:
 
     def _event_id(self, payload: dict[str, Any]) -> str | None:
         for entry in payload.get("entry", []) or []:
-            for message in entry.get("messaging", []) or []:
-                mid = (message.get("message") or {}).get("mid") or (message.get("postback") or {}).get("mid")
-                if mid:
-                    return str(mid)
+            for item in entry.get("messaging", []) or []:
+                timestamp = str(item.get("timestamp") or entry.get("time") or "")
+                message = item.get("message") or {}
+                postback = item.get("postback") or {}
+                read = item.get("read") or {}
+                reaction = item.get("reaction") or {}
+                message_edit = item.get("message_edit") or {}
+                if message.get("mid"):
+                    return f"messages:{message.get('mid')}"
+                if postback.get("mid"):
+                    return f"messaging_postbacks:{postback.get('mid')}"
+                if read.get("mid"):
+                    return f"messaging_seen:{read.get('mid')}:{timestamp}"[:180]
+                if reaction.get("mid"):
+                    return f"message_reactions:{reaction.get('mid')}:{reaction.get('action')}:{timestamp}"[:180]
+                if message_edit.get("mid"):
+                    return f"message_edit:{message_edit.get('mid')}:{message_edit.get('num_edit')}:{timestamp}"[:180]
         return None
 
     def _account_id(self, payload: dict[str, Any]) -> str | None:
@@ -99,9 +112,20 @@ class InstagramWebhookService:
         return None
 
     def _event_type(self, payload: dict[str, Any]) -> str:
-        text = json.dumps(payload, ensure_ascii=False)
-        if "postback" in text:
+        items = [
+            item
+            for entry in payload.get("entry", []) or []
+            for item in entry.get("messaging", []) or []
+            if isinstance(item, dict)
+        ]
+        if any(item.get("read") for item in items):
+            return "messaging_seen"
+        if any(item.get("reaction") for item in items):
+            return "message_reactions"
+        if any(item.get("message_edit") for item in items):
+            return "message_edit"
+        if any(item.get("postback") for item in items):
             return "messaging_postbacks"
-        if "message" in text:
+        if any(item.get("message") for item in items):
             return "messages"
         return "unsupported"
