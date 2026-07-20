@@ -1,5 +1,6 @@
 from app.models.meta_instagram import *
 from app.models.ai_direct import *
+from app.models.instagram_participant_profile import *
 from app.models.ad_campaign import AdCampaign, AdCampaignBudgetType, AdCampaignObjective, AdCampaignPlatform, AdCampaignStatus
 from app.models.ad_metric import AdMetric
 from app.models.audit_log import AuditLog
@@ -36,3 +37,4 @@ from app.models.meta_ad_connection import MetaAdConnection, MetaAdConnectionStat
 
 __all__ = ["FinanceAdjustment", "FinanceAdjustmentCategory", "FinanceAdjustmentSource", "FinanceAdjustmentType", "AdCampaign", "AdCampaignBudgetType", "AdCampaignObjective", "AdCampaignPlatform", "AdCampaignStatus", "AdMetric", "MetaAdConnection", "MetaAdConnectionStatus", "Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "DeliveryProvider", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "ImportJob", "ImportJobLog", "ImportJobLogStatus", "ImportJobStatus", "IntegrationConnection", "IntegrationCredential", "IntegrationProvider", "IntegrationStatus", "LeadStatus", "NovaPoshtaOperation", "NovaPoshtaOperationState", "NovaPoshtaOperationType", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "PilotFeedback", "PilotFeedbackCategory", "PilotFeedbackStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "Shipment", "ShipmentCarrier", "ShipmentStatus", "User", "Workspace", "WorkspaceUser"]
 __all__ += ["OrderFulfillment", "OrderFulfillmentResultCode", "OrderFulfillmentState", "OrderFulfillmentOperationType"]
+__all__ += ["InstagramParticipantProfile", "InstagramParticipantProfileStatus"]
