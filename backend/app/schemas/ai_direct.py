@@ -60,8 +60,14 @@ class DirectMessageResponse(BaseModel):
     processing_status: str
     is_synthetic: bool
     provider: str | None = None
+    provider_message_id: str | None = None
     delivery_status: str | None = None
     message_payload_type: str | None = None
+    seen_at: datetime | None = None
+    edited_at: datetime | None = None
+    edit_count: int = 0
+    reaction: str | None = None
+    reaction_updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
