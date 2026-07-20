@@ -1,0 +1,65 @@
+name: Direct Customer Diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/direct-customer-diagnostics.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SECRET_KEY: ci-secret
+      JWT_SECRET: ci-jwt-secret
+      STAGING_NOVA_POSHTA_ALLOW_WRITES: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        working-directory: backend
+        run: python -m pip install -r requirements.txt
+      - name: Capture focused failure
+        working-directory: backend
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -q \
+            tests/test_phone.py \
+            tests/test_crm_completion.py \
+            tests/test_nova_poshta.py \
+            tests/test_sprint_8f_foundation_migration.py \
+            tests/test_order_fulfillment.py \
+            tests/test_order_fulfillment_workflow.py \
+            tests/test_order_fulfillment_api.py \
+            tests/test_order_fulfillment_finance.py \
+            tests/test_order_fulfillment_consolidation_migration.py \
+            tests/integrations/fulfillment/test_fulfillment_provider_reconciliation.py \
+            tests/integrations/nova_poshta/test_real_provider_payload.py \
+            tests/integrations/nova_poshta/test_durable_ttn_workflow.py \
+            tests/ai/test_ai_foundation.py \
+            tests/test_meta_instagram_foundation.py \
+            tests/integrations/meta_instagram > direct-customer-diagnostics.log 2>&1
+          code=$?
+          echo "$code" > direct-customer-diagnostics.exit
+          exit 0
+      - name: Upload diagnostic output
+        uses: actions/upload-artifact@v4
+        with:
+          name: direct-customer-diagnostics-${{ github.run_id }}
+          path: |
+            backend/direct-customer-diagnostics.log
+            backend/direct-customer-diagnostics.exit
+          if-no-files-found: error
+          retention-days: 2
