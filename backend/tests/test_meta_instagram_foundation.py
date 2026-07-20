@@ -34,7 +34,6 @@ def test_meta_config_defaults_disable_send_and_auto_send():
         "messaging_postbacks",
         "messaging_seen",
         "message_reactions",
-        "message_edit",
     ]
 
 
