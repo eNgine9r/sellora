@@ -23,6 +23,7 @@ from app.models.meta_instagram import (
     MetaWebhookEventStatus,
 )
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
+from app.services.direct_customer_automation_service import DirectCustomerAutomationService
 
 
 MEDIA_TYPES = {
@@ -35,12 +36,13 @@ MEDIA_TYPES = {
 
 
 class InstagramInboundMessageService:
-    def __init__(self, db: Session, profile_service=None) -> None:
+    def __init__(self, db: Session, profile_service=None, customer_automation_service=None) -> None:
         self.db = db
         self.conversations = DirectConversationRepository(db)
         self.messages = DirectMessageRepository(db)
         self.message_states = InstagramMessageStateRepository(db)
         self.profile_service = profile_service or InstagramParticipantProfileService(db)
+        self.customer_automation = customer_automation_service or DirectCustomerAutomationService(db)
 
     def process_event(self, event: MetaWebhookEvent) -> int:
         connection = (
@@ -161,6 +163,7 @@ class InstagramInboundMessageService:
             conversation.human_agent_window_expires_at = provider_created_at + timedelta(days=7)
             connection.last_message_received_at = provider_created_at
             self._enrich_profile_safe(event.workspace_id, conversation)
+            self._ensure_customer_safe(event.workspace_id, conversation, text)
         return 1
 
     def _process_seen(self, event: MetaWebhookEvent, item: dict[str, Any]) -> None:
@@ -225,6 +228,18 @@ class InstagramInboundMessageService:
                 conversation.provider_sync_status = f"PROFILE_{profile.status}"
         except Exception:
             conversation.provider_sync_status = "PROFILE_FAILED_SAFE"
+
+    def _ensure_customer_safe(self, workspace_id, conversation, text: str | None) -> None:
+        try:
+            state = self.customer_automation.ensure_from_inbound_order_intent(
+                workspace_id,
+                conversation.id,
+                text,
+            )
+            if state and state.customer:
+                conversation.provider_sync_status = "CUSTOMER_PROSPECT_READY"
+        except Exception:
+            conversation.provider_sync_status = "CUSTOMER_AUTOMATION_FAILED_SAFE"
 
     def _conversation(self, workspace_id, connection_id, participant_id):
         existing = self.conversations.get_by_instagram_participant(

@@ -53,12 +53,12 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 3,
     "AUTHENTICATED_GLOBAL": 4,
-    "WORKSPACE_SCOPED": 188,
+    "WORKSPACE_SCOPED": 192,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 207
-EXPECTED_MUTATION_ROUTES = 116
+EXPECTED_TOTAL_ROUTES = 211
+EXPECTED_MUTATION_ROUTES = 119
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -67,6 +67,12 @@ EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("GET", "/api/v1/orders/{order_id}/fulfillment"),
     ("POST", "/api/v1/orders/{order_id}/fulfillment/reconcile"),
     ("POST", "/api/v1/orders/{order_id}/fulfillment/cancel"),
+}
+EXPECTED_DIRECT_CUSTOMER_AUTOMATION_ROUTES = {
+    ("GET", "/api/v1/direct/conversations/{conversation_id}/customer-automation"),
+    ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/ensure"),
+    ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/complete"),
+    ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/finalize-order"),
 }
 
 
@@ -139,4 +145,19 @@ def test_canonical_fulfillment_routes_are_explicit_and_workspace_scoped() -> Non
     assert all(
         _primary_scope(path) == "WORKSPACE_SCOPED"
         for _method, path in EXPECTED_CANONICAL_FULFILLMENT_ROUTES
+    )
+
+
+def test_direct_customer_automation_routes_are_explicit_and_workspace_scoped() -> None:
+    routes = _api_routes()
+    actual_routes = {
+        (method, path)
+        for path, route in routes
+        for method in route.methods
+    }
+
+    assert EXPECTED_DIRECT_CUSTOMER_AUTOMATION_ROUTES.issubset(actual_routes)
+    assert all(
+        _primary_scope(path) == "WORKSPACE_SCOPED"
+        for _method, path in EXPECTED_DIRECT_CUSTOMER_AUTOMATION_ROUTES
     )

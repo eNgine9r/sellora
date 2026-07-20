@@ -11,12 +11,14 @@ import {
   Send,
   ShoppingBag,
   Sparkles,
+  UserPlus,
   UserRound,
   Users,
   Wifi,
   WifiOff,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -27,7 +29,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 import { fetchAISuggestions } from "@/services/ai";
 import {
+  ensureDirectCustomer,
   fetchDirectConversations,
+  fetchDirectCustomerAutomation,
   fetchDirectMessages,
   fetchInstagramHistorySync,
   markDirectConversationRead,
@@ -39,7 +43,12 @@ import {
 } from "@/services/direct";
 import { fetchInstagramStatus } from "@/services/meta-instagram";
 import { AISuggestion } from "@/types/ai";
-import { DirectConversation, DirectMessage, InstagramHistorySync } from "@/types/direct";
+import {
+  DirectConversation,
+  DirectCustomerAutomationState,
+  DirectMessage,
+  InstagramHistorySync,
+} from "@/types/direct";
 
 const ACTIVE_HISTORY_STATUSES = new Set(["PENDING", "RUNNING", "RETRY_PENDING"]);
 
@@ -54,8 +63,10 @@ export default function DirectPage() {
   const [replyText, setReplyText] = useState("");
   const profileRefreshAttempted = useRef(new Set<string>());
   const readAttempted = useRef(new Set<string>());
+  const customerAutomationAttempted = useRef(new Set<string>());
 
   const workspaceId = currentWorkspace?.workspace_id;
+  const canManage = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
   const conversationsQuery = useQuery({
     queryKey: ["direct-conversations", workspaceId],
     queryFn: fetchDirectConversations,
@@ -75,6 +86,13 @@ export default function DirectPage() {
     refetchInterval: 1500,
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
+  });
+  const automationQuery = useQuery({
+    queryKey: ["direct-customer-automation", workspaceId, selectedConversation?.id],
+    queryFn: () => fetchDirectCustomerAutomation(selectedConversation!.id),
+    enabled: Boolean(selectedConversation?.id),
+    refetchInterval: 2000,
+    refetchIntervalInBackground: true,
   });
   const suggestionsQuery = useQuery({
     queryKey: ["ai-suggestions", workspaceId, selectedConversation?.id],
@@ -110,6 +128,14 @@ export default function DirectPage() {
     mutationFn: (conversationId: string) => refreshDirectParticipantProfile(conversationId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] }),
   });
+  const ensureCustomerMutation = useMutation({
+    mutationFn: (conversationId: string) => ensureDirectCustomer(conversationId),
+    onSuccess: (_state, conversationId) => {
+      void queryClient.invalidateQueries({ queryKey: ["direct-customer-automation", workspaceId, conversationId] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
+    },
+  });
   const historyMutation = useMutation({
     mutationFn: () => startInstagramHistorySync(100, 20),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-history-sync", workspaceId] }),
@@ -130,6 +156,7 @@ export default function DirectPage() {
     setReplyText("");
     profileRefreshAttempted.current.clear();
     readAttempted.current.clear();
+    customerAutomationAttempted.current.clear();
   }, [workspaceId]);
 
   useEffect(() => {
@@ -164,6 +191,16 @@ export default function DirectPage() {
     readAttempted.current.add(readKey);
     readMutation.mutate(selectedConversation.id);
   }, [readMutation, selectedConversation]);
+
+  useEffect(() => {
+    const conversationId = selectedConversation?.id;
+    if (!conversationId || !canManage) return;
+    if (!orderIntentConversationIds.has(conversationId)) return;
+    if (automationQuery.data?.stage !== "NOT_CREATED") return;
+    if (customerAutomationAttempted.current.has(conversationId)) return;
+    customerAutomationAttempted.current.add(conversationId);
+    ensureCustomerMutation.mutate(conversationId);
+  }, [automationQuery.data?.stage, canManage, ensureCustomerMutation, orderIntentConversationIds, selectedConversation?.id]);
 
   useEffect(() => {
     if (!historyQuery.data || !["COMPLETED", "PARTIAL"].includes(historyQuery.data.status)) return;
@@ -235,6 +272,12 @@ export default function DirectPage() {
         />
         <MessageThread
           conversation={selectedConversation}
+          automation={automationQuery.data}
+          automationLoading={automationQuery.isLoading}
+          automationError={automationQuery.isError || ensureCustomerMutation.isError}
+          canManage={canManage}
+          ensuringCustomer={ensureCustomerMutation.isPending}
+          onEnsureCustomer={() => selectedConversation && ensureCustomerMutation.mutate(selectedConversation.id)}
           loading={messagesQuery.isLoading}
           error={messagesQuery.isError}
           messages={messagesQuery.data ?? []}
@@ -420,6 +463,7 @@ function ConversationList({
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {orderIntent ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-1 text-xs font-black text-amber-700"><ShoppingBag className="h-3 w-3" />Ймовірне замовлення</span> : null}
+                      {item.linked_order_id ? <span className="rounded-full bg-blue-500/15 px-2 py-1 text-xs font-bold text-blue-700">Замовлення створено</span> : item.linked_customer_id ? <span className="rounded-full bg-cyan-500/15 px-2 py-1 text-xs font-bold text-cyan-700">Потенційний клієнт</span> : null}
                       <span className="rounded-full bg-violet-500/15 px-2 py-1 text-xs font-bold text-primary">{item.channel === "INSTAGRAM" ? "Instagram" : "Тестовий діалог"}</span>
                       <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs font-bold text-emerald-600">{item.status}</span>
                     </div>
@@ -444,6 +488,12 @@ type PrepareResult = { ready: boolean; blockers: string[]; warnings: string[]; m
 
 function MessageThread({
   conversation,
+  automation,
+  automationLoading,
+  automationError,
+  canManage,
+  ensuringCustomer,
+  onEnsureCustomer,
   loading,
   error,
   messages,
@@ -459,6 +509,12 @@ function MessageThread({
   noAutoSend,
 }: {
   conversation?: DirectConversation | null;
+  automation?: DirectCustomerAutomationState;
+  automationLoading: boolean;
+  automationError: boolean;
+  canManage: boolean;
+  ensuringCustomer: boolean;
+  onEnsureCustomer: () => void;
   loading: boolean;
   error: boolean;
   messages: DirectMessage[];
@@ -485,6 +541,15 @@ function MessageThread({
   return (
     <section className="flex min-h-[520px] min-w-0 flex-col rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)]">
       <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
+      <CustomerAutomationCard
+        conversation={conversation}
+        automation={automation}
+        loading={automationLoading}
+        error={automationError}
+        canManage={canManage}
+        ensuring={ensuringCustomer}
+        onEnsure={onEnsureCustomer}
+      />
       <div ref={scrollContainer} className="sellora-scrollbar flex-1 space-y-3 overflow-y-auto p-4" data-direct-live-thread>
         {loading ? <LoadingSkeleton /> : null}
         {error ? <ErrorState title="Не вдалося завантажити повідомлення" description="Спробуйте оновити діалог." /> : null}
@@ -511,6 +576,84 @@ function MessageThread({
         </div>
         {prepareResult ? <p className="mt-2 text-sm text-text-secondary">{prepareResult.ready ? "Готово до ручного підтвердження" : `Блокери: ${prepareResult.blockers.join(", ")}`}</p> : null}
       </footer>
+    </section>
+  );
+}
+
+function CustomerAutomationCard({
+  conversation,
+  automation,
+  loading,
+  error,
+  canManage,
+  ensuring,
+  onEnsure,
+}: {
+  conversation: DirectConversation;
+  automation?: DirectCustomerAutomationState;
+  loading: boolean;
+  error: boolean;
+  canManage: boolean;
+  ensuring: boolean;
+  onEnsure: () => void;
+}) {
+  const customer = automation?.customer;
+  const missingLabels: Record<string, string> = {
+    name: "ПІБ",
+    phone: "телефон",
+    city: "місто",
+    delivery_address: "відділення Нової пошти",
+  };
+  if (loading) return <div className="border-b border-border-subtle px-4 py-3"><LoadingSkeleton rows={1} /></div>;
+  return (
+    <section className="border-b border-border-subtle bg-surface-2/60 px-4 py-3" data-direct-customer-automation>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-black">Клієнт і замовлення</p>
+            <span className={`rounded-full px-2 py-1 text-xs font-black ${automation?.profile_complete ? "bg-emerald-500/15 text-emerald-700" : customer ? "bg-amber-500/15 text-amber-700" : "bg-surface-1 text-text-muted"}`}>
+              {automation?.profile_complete ? "Профіль заповнено" : customer ? "Потенційний клієнт" : "Не створено"}
+            </span>
+          </div>
+          {customer ? (
+            <p className="mt-1 text-sm text-text-secondary">
+              {customer.name}{customer.instagram_username ? ` · @${customer.instagram_username}` : ""}
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-text-secondary">Sellora створить prospect без телефону, а повні дані збере під час оформлення.</p>
+          )}
+          {automation?.missing_fields.length ? (
+            <p className="mt-1 text-xs font-semibold text-amber-700">Потрібно доповнити: {automation.missing_fields.map((field) => missingLabels[field] ?? field).join(", ")}.</p>
+          ) : null}
+          {error ? <p className="mt-1 text-xs font-semibold text-rose-600">Не вдалося оновити зв’язок із клієнтом. Повторіть дію.</p> : null}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {!customer && canManage ? (
+            <Button variant="secondary" onClick={onEnsure} disabled={ensuring}>
+              {ensuring ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+              Створити prospect
+            </Button>
+          ) : null}
+          {customer && !automation?.linked_order_id && canManage ? (
+            <Link
+              className="inline-flex min-h-10 items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-black text-primary-foreground"
+              href={`/orders?create=1&customer_id=${encodeURIComponent(customer.id)}&direct_conversation_id=${encodeURIComponent(conversation.id)}`}
+            >
+              <ShoppingBag className="h-4 w-4" />
+              Оформити замовлення
+            </Link>
+          ) : null}
+          {automation?.linked_order_id ? (
+            <Link
+              className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-black text-primary"
+              href={`/orders?order_id=${encodeURIComponent(automation.linked_order_id)}`}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Відкрити замовлення
+            </Link>
+          ) : null}
+        </div>
+      </div>
     </section>
   );
 }
