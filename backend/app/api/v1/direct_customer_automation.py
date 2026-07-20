@@ -10,10 +10,14 @@ from app.models.user import User
 from app.schemas.direct_customer_automation import (
     DirectCustomerAutomationState,
     DirectCustomerCompleteRequest,
+    DirectCustomerFinalizeOrderRequest,
 )
 from app.services.direct_customer_automation_service import (
     DirectCustomerAutomationError,
     DirectCustomerAutomationService,
+)
+from app.services.direct_customer_order_finalization_service import (
+    DirectCustomerOrderFinalizationService,
 )
 
 
@@ -22,9 +26,17 @@ router = APIRouter(prefix="/direct", tags=["direct-customer-automation"])
 
 def _http_error(exc: DirectCustomerAutomationError) -> HTTPException:
     code = str(exc)
-    if code in {"DIRECT_CONVERSATION_NOT_FOUND", "DIRECT_CUSTOMER_NOT_FOUND"}:
+    if code in {
+        "DIRECT_CONVERSATION_NOT_FOUND",
+        "DIRECT_CUSTOMER_NOT_FOUND",
+        "DIRECT_ORDER_NOT_FOUND",
+    }:
         return HTTPException(status.HTTP_404_NOT_FOUND, code)
-    if code in {"DIRECT_ORDER_REQUIRED", "DIRECT_CUSTOMER_WORKSPACE_MISMATCH"}:
+    if code in {
+        "DIRECT_ORDER_REQUIRED",
+        "DIRECT_CUSTOMER_WORKSPACE_MISMATCH",
+        "DIRECT_ORDER_CUSTOMER_MISMATCH",
+    }:
         return HTTPException(status.HTTP_409_CONFLICT, code)
     return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, code)
 
@@ -79,6 +91,29 @@ def complete_direct_customer(
 ):
     try:
         return DirectCustomerAutomationService(db).complete_after_order(
+            workspace_id,
+            conversation_id,
+            payload,
+            user.id,
+        )
+    except DirectCustomerAutomationError as exc:
+        db.rollback()
+        raise _http_error(exc) from exc
+
+
+@router.post(
+    "/conversations/{conversation_id}/customer-automation/finalize-order",
+    response_model=DirectCustomerAutomationState,
+)
+def finalize_direct_customer_order(
+    conversation_id: UUID,
+    payload: DirectCustomerFinalizeOrderRequest,
+    workspace_id: UUID = Depends(get_workspace_id),
+    user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return DirectCustomerOrderFinalizationService(db).finalize(
             workspace_id,
             conversation_id,
             payload,
