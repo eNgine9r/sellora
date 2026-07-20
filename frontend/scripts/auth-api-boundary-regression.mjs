@@ -11,6 +11,8 @@ const checks = [
   ["API base URL config exists", authService.includes("NEXT_PUBLIC_API_BASE_URL") && authService.includes("API_BASE_URL")],
   ["login endpoint path exists", authService.includes("/auth/login")],
   ["no localhost fallback in production-facing client", authService.includes('process.env.NODE_ENV === "production" ? "/api/v1" : DEV_API_BASE_URL')],
+  ["auth requests have a bounded timeout", authService.includes("NEXT_PUBLIC_API_TIMEOUT_MS") && authService.includes("AbortController") && authService.includes("controller.abort()")],
+  ["server failures are not reported as invalid credentials", authService.includes("response.status === 401 || response.status === 422") && authService.includes("throw new AuthNetworkError()")],
   ["network error type exists", authService.includes("AuthNetworkError") && loginPage.includes("auth.networkError")],
   ["invalid credentials copy differs", authService.includes("InvalidCredentialsError") && loginPage.includes("auth.invalidCredentials")],
   ["Ukrainian network copy exists", uk.includes("Не вдалося підключитися до сервера")],
