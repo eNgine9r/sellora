@@ -72,6 +72,26 @@ class DirectMessageResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class DirectLiveEventResponse(BaseModel):
+    message_id: UUID
+    conversation_id: UUID
+    participant_display_name: str | None = None
+    participant_username: str | None = None
+    text_preview: str
+    received_at: datetime
+    unread_count: int
+    order_intent: bool
+    order_intent_confidence: float
+    order_intent_reason: str | None = None
+
+
+class DirectLiveSummaryResponse(BaseModel):
+    server_time: datetime
+    unread_total: int
+    order_intent_count: int
+    events: list[DirectLiveEventResponse]
+
+
 class AIAnalysisResponse(BaseModel):
     id: UUID
     workspace_id: UUID
