@@ -38,3 +38,7 @@ class DirectCustomerCompleteRequest(BaseModel):
             return normalize_ua_phone(value)
         except PhoneNormalizationError as exc:
             raise ValueError("INVALID_UA_PHONE") from exc
+
+
+class DirectCustomerFinalizeOrderRequest(DirectCustomerCompleteRequest):
+    order_id: UUID
