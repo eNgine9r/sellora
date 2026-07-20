@@ -97,9 +97,10 @@ async function runInvalidCredentialCheck(browser) {
     const alert = page.locator('[role="alert"]');
     await alert.waitFor({ state: "visible", timeout: 15_000 });
     if (!page.url().includes("/login")) throw new Error("Invalid credentials unexpectedly left /login");
-    const button = page.locator('button[type="submit"]');
-    await button.waitFor({ state: "visible" });
-    if (await button.isDisabled()) throw new Error("Login button stayed disabled after invalid credentials");
+    await page.waitForFunction(() => {
+      const button = document.querySelector('button[type="submit"]');
+      return button instanceof HTMLButtonElement && !button.disabled;
+    }, null, { timeout: 5_000 });
     return { status: "PASS", response: "bounded-user-safe-error" };
   } finally {
     await context.close();
