@@ -1,6 +1,7 @@
 export type DirectConversationChannel = "SYNTHETIC" | "INSTAGRAM" | "MANUAL";
 export type DirectMessageDirection = "INBOUND" | "OUTBOUND" | "INTERNAL";
 export type ParticipantProfileStatus = "PENDING" | "READY" | "RETRY_PENDING" | "UNAVAILABLE";
+export type InstagramHistorySyncStatus = "PENDING" | "RUNNING" | "COMPLETED" | "PARTIAL" | "RETRY_PENDING" | "FAILED_SAFE";
 
 export type DirectConversation = {
   id: string;
@@ -36,8 +37,40 @@ export type DirectMessage = {
   text?: string | null;
   received_at: string;
   provider?: string | null;
+  provider_message_id?: string | null;
   delivery_status?: string | null;
   message_payload_type?: string | null;
+  seen_at?: string | null;
+  edited_at?: string | null;
+  edit_count?: number;
+  reaction?: string | null;
+  reaction_updated_at?: string | null;
+};
+
+export type InstagramHistorySync = {
+  id: string;
+  workspace_id: string;
+  instagram_connection_id: string;
+  status: InstagramHistorySyncStatus;
+  conversation_limit: number;
+  messages_per_conversation: number;
+  conversation_pages_processed: number;
+  conversations_discovered: number;
+  conversations_synced: number;
+  messages_discovered: number;
+  messages_imported: number;
+  messages_existing: number;
+  messages_unavailable: number;
+  error_count: number;
+  rate_limit_count: number;
+  attempt_count: number;
+  last_error_code?: string | null;
+  next_retry_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  last_synced_at?: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type MessageOperation = {
