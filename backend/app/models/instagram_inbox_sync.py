@@ -26,8 +26,7 @@ class InstagramHistorySync(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, TimestampM
     __table_args__ = (
         UniqueConstraint(
             "workspace_id",
-            "instagram_connection_id",
-            name="uq_instagram_history_syncs_workspace_connection",
+            name="uq_instagram_history_syncs_workspace",
         ),
     )
 
