@@ -1,0 +1,301 @@
+name: Deploy Sellora Backend Staging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/render-staging-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sellora-render-staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: staging
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_NAME: sellora-api-staging
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      TARGET_COMMIT: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate required deployment secrets
+        shell: bash
+        run: |
+          missing=0
+          for key in RENDER_API_KEY STAGING_OWNER_EMAIL STAGING_OWNER_PASSWORD; do
+            if [ -z "${!key:-}" ]; then
+              echo "Required secret is missing: $key"
+              missing=1
+            fi
+          done
+          [ "$missing" = "0" ]
+
+      - name: Discover Render staging service
+        id: service
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+
+          name = os.environ["RENDER_SERVICE_NAME"]
+          query = urlencode({"name": name, "type": "web_service", "limit": 100})
+          request = Request(
+              f"https://api.render.com/v1/services?{query}",
+              headers={
+                  "Accept": "application/json",
+                  "Authorization": f"Bearer {os.environ['RENDER_API_KEY']}",
+              },
+          )
+          with urlopen(request, timeout=30) as response:
+              payload = json.load(response)
+
+          services = []
+          for item in payload if isinstance(payload, list) else []:
+              service = item.get("service", item) if isinstance(item, dict) else {}
+              if service.get("name") == name and service.get("type") == "web_service":
+                  services.append(service)
+
+          if len(services) != 1:
+              raise SystemExit(f"Expected exactly one Render service named {name}; found {len(services)}")
+
+          service_id = services[0]["id"]
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"id={service_id}\n")
+          print("Render staging service resolved safely.")
+          PY
+
+      - name: Trigger exact-commit Render deploy
+        id: deploy
+        env:
+          RENDER_SERVICE_ID: ${{ steps.service.outputs.id }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from urllib.request import Request, urlopen
+
+          service_id = os.environ["RENDER_SERVICE_ID"]
+          payload = json.dumps({
+              "clearCache": "do_not_clear",
+              "commitId": os.environ["TARGET_COMMIT"],
+          }).encode("utf-8")
+          request = Request(
+              f"https://api.render.com/v1/services/{service_id}/deploys",
+              data=payload,
+              method="POST",
+              headers={
+                  "Accept": "application/json",
+                  "Content-Type": "application/json",
+                  "Authorization": f"Bearer {os.environ['RENDER_API_KEY']}",
+              },
+          )
+          with urlopen(request, timeout=30) as response:
+              result = json.load(response)
+          deploy_id = result.get("id")
+          if not deploy_id:
+              raise SystemExit("Render did not return a deploy ID")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"id={deploy_id}\n")
+          print("Render deploy accepted.")
+          PY
+
+      - name: Verify deployed runtime commit
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          python - <<'PY'
+          import json
+          import os
+          import time
+          from urllib.error import HTTPError, URLError
+          from urllib.request import Request, urlopen
+
+          health_url = f"{os.environ['STAGING_API_URL'].rstrip('/')}/health"
+          expected = os.environ["TARGET_COMMIT"]
+          last = {"status": "unreachable"}
+          for attempt in range(100):
+              try:
+                  with urlopen(Request(health_url, headers={"Accept": "application/json"}), timeout=20) as response:
+                      last = json.load(response)
+                  runtime = str(last.get("runtime_commit") or "")
+                  if last.get("status") == "ok" and runtime == expected:
+                      break
+              except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+                  last = {"status": "unreachable", "error_type": exc.__class__.__name__}
+              time.sleep(12)
+          else:
+              raise SystemExit("Render runtime did not reach the requested commit")
+
+          evidence = {
+              "status": last.get("status"),
+              "runtime_commit": last.get("runtime_commit"),
+              "process_started_at": last.get("process_started_at"),
+              "meta_webhook_worker_enabled": last.get("meta_webhook_worker_enabled"),
+              "meta_webhook_worker_running": last.get("meta_webhook_worker_running"),
+          }
+          with open("artifacts/render-runtime.json", "w", encoding="utf-8") as file:
+              json.dump(evidence, file, indent=2)
+          print("Render runtime commit verification: PASS")
+          PY
+
+      - name: Enrich existing Instagram participant profiles
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from collections import Counter
+          from urllib.error import HTTPError, URLError
+          from urllib.request import Request, urlopen
+
+          api = f"{os.environ['STAGING_API_URL'].rstrip('/')}/api/v1"
+
+          def request(path, *, method="GET", token=None, workspace=None, body=None):
+              headers = {"Accept": "application/json"}
+              if token:
+                  headers["Authorization"] = f"Bearer {token}"
+              if workspace:
+                  headers["X-Workspace-ID"] = workspace
+              data = None
+              if body is not None:
+                  data = json.dumps(body).encode("utf-8")
+                  headers["Content-Type"] = "application/json"
+              req = Request(f"{api}{path}", data=data, method=method, headers=headers)
+              try:
+                  with urlopen(req, timeout=30) as response:
+                      raw = response.read().decode("utf-8")
+                      return response.status, json.loads(raw) if raw else {}
+              except HTTPError as exc:
+                  raw = exc.read().decode("utf-8", errors="replace")
+                  try:
+                      payload = json.loads(raw) if raw else {}
+                  except json.JSONDecodeError:
+                      payload = {"detail": "non-json provider response"}
+                  return exc.code, payload
+              except (URLError, TimeoutError) as exc:
+                  return 0, {"detail": exc.__class__.__name__}
+
+          code, tokens = request(
+              "/auth/login",
+              method="POST",
+              body={
+                  "email": os.environ["STAGING_OWNER_EMAIL"],
+                  "password": os.environ["STAGING_OWNER_PASSWORD"],
+              },
+          )
+          if code != 200 or not tokens.get("access_token"):
+              raise SystemExit(f"Staging OWNER login failed with HTTP {code}")
+          token = tokens["access_token"]
+
+          code, current_user = request("/auth/me", token=token)
+          if code != 200:
+              raise SystemExit(f"Staging /auth/me failed with HTTP {code}")
+
+          memberships = current_user.get("memberships") or []
+          status_counts = Counter()
+          error_counts = Counter()
+          attempted = 0
+          instagram_conversations = 0
+
+          for membership in memberships:
+              workspace_id = str(membership.get("workspace_id") or "")
+              if not workspace_id:
+                  continue
+              code, conversations = request(
+                  "/direct/conversations",
+                  token=token,
+                  workspace=workspace_id,
+              )
+              if code != 200 or not isinstance(conversations, list):
+                  error_counts[f"LIST_HTTP_{code}"] += 1
+                  continue
+              for conversation in conversations:
+                  if conversation.get("channel") != "INSTAGRAM":
+                      continue
+                  instagram_conversations += 1
+                  conversation_id = conversation.get("id")
+                  if not conversation_id:
+                      continue
+                  attempted += 1
+                  code, result = request(
+                      f"/direct/conversations/{conversation_id}/participant-profile/refresh",
+                      method="POST",
+                      token=token,
+                      workspace=workspace_id,
+                  )
+                  if code == 200:
+                      status_counts[str(result.get("participant_profile_status") or "UNKNOWN")] += 1
+                      safe_error = result.get("participant_profile_error_code")
+                      if safe_error:
+                          error_counts[str(safe_error)] += 1
+                  else:
+                      detail = result.get("detail") if isinstance(result, dict) else None
+                      safe_code = detail.get("code") if isinstance(detail, dict) else None
+                      error_counts[str(safe_code or f"HTTP_{code}")] += 1
+
+          evidence = {
+              "workspace_count": len(memberships),
+              "instagram_conversation_count": instagram_conversations,
+              "refresh_attempt_count": attempted,
+              "profile_status_counts": dict(status_counts),
+              "safe_error_counts": dict(error_counts),
+          }
+          with open("artifacts/instagram-profile-enrichment.json", "w", encoding="utf-8") as file:
+              json.dump(evidence, file, indent=2, ensure_ascii=False)
+          print(json.dumps(evidence, ensure_ascii=False))
+          PY
+
+      - name: Validate sanitized deployment evidence
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          secrets = [
+              os.getenv("RENDER_API_KEY", ""),
+              os.getenv("STAGING_OWNER_EMAIL", ""),
+              os.getenv("STAGING_OWNER_PASSWORD", ""),
+          ]
+          for path in Path("artifacts").glob("**/*"):
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding="utf-8", errors="ignore")
+              for secret in secrets:
+                  if secret and secret in text:
+                      raise SystemExit(f"Secret leaked into deployment artifact: {path}")
+          print("Sanitized deployment evidence: PASS")
+          PY
+
+      - name: Upload sanitized staging evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-render-staging-${{ github.run_id }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 7
