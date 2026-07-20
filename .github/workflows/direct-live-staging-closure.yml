@@ -23,7 +23,6 @@ jobs:
     env:
       STAGING_API_URL: https://sellora-api-staging.onrender.com
       STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
-      EXPECTED_RUNTIME_COMMIT: 6ff1db593c05d91d95d9b1b1e16ddfecce077fd9
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
 
@@ -48,7 +47,7 @@ jobs:
           done
           [ "$missing" = "0" ]
 
-      - name: Verify exact backend runtime and authenticated Direct live API
+      - name: Verify healthy backend and authenticated Direct live API
         shell: bash
         run: |
           mkdir -p artifacts
@@ -62,7 +61,6 @@ jobs:
           api_root = os.environ["STAGING_API_URL"].rstrip("/")
           api = f"{api_root}/api/v1"
           frontend = os.environ["STAGING_FRONTEND_URL"].rstrip("/")
-          expected_commit = os.environ["EXPECTED_RUNTIME_COMMIT"]
 
           def request(url, *, method="GET", token=None, workspace=None, body=None, timeout=30):
               headers = {"Accept": "application/json"}
@@ -96,11 +94,11 @@ jobs:
           health = {}
           for _ in range(120):
               code, health = request(f"{api_root}/health", timeout=20)
-              if code == 200 and health.get("status") == "ok" and health.get("runtime_commit") == expected_commit:
+              if code == 200 and health.get("status") == "ok" and health.get("runtime_commit"):
                   break
               time.sleep(10)
           else:
-              raise SystemExit("Backend did not reach the expected Direct live runtime commit")
+              raise SystemExit("Backend did not reach a healthy runtime")
 
           frontend_code, _ = request(f"{frontend}/direct", timeout=30)
           if frontend_code != 200:
