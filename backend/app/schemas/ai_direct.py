@@ -34,6 +34,9 @@ class DirectConversationResponse(BaseModel):
     participant_profile_last_synced_at: datetime | None = None
     participant_profile_next_retry_at: datetime | None = None
     participant_profile_error_code: str | None = None
+    linked_lead_id: UUID | None = None
+    linked_customer_id: UUID | None = None
+    linked_order_id: UUID | None = None
     status: str
     priority: str
     unread_count: int
@@ -176,11 +179,3 @@ class AISettingsUpdate(BaseModel):
     monthly_budget_usd: float | None = Field(default=None, ge=0, le=10000)
     max_context_messages: int | None = Field(default=None, ge=1, le=50)
     max_input_characters: int | None = Field(default=None, ge=100, le=50000)
-
-
-class AIHealthResponse(BaseModel):
-    feature_configured: bool
-    provider_selected: str
-    credential_present: bool
-    ai_enabled: bool
-    safe_configuration_status: str
