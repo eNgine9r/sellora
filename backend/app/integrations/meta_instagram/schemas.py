@@ -47,6 +47,37 @@ class InstagramValidateResponse(BaseModel):
     permission_ok: bool
     token_present: bool
 
+class InstagramHistorySyncRequest(BaseModel):
+    conversation_limit: int = Field(default=100, ge=1, le=500)
+    messages_per_conversation: int = Field(default=20, ge=1, le=20)
+
+class InstagramHistorySyncResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    instagram_connection_id: UUID
+    status: str
+    conversation_limit: int
+    messages_per_conversation: int
+    conversation_pages_processed: int
+    conversations_discovered: int
+    conversations_synced: int
+    messages_discovered: int
+    messages_imported: int
+    messages_existing: int
+    messages_unavailable: int
+    error_count: int
+    rate_limit_count: int
+    attempt_count: int
+    last_error_code: str | None = None
+    next_retry_at: datetime | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    last_synced_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
 class ReplyPrepareRequest(BaseModel):
     message_text: str = Field(min_length=1, max_length=1000)
     human_agent_requested: bool = False
