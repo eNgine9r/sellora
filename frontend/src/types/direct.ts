@@ -19,6 +19,9 @@ export type DirectConversation = {
   participant_profile_last_synced_at?: string | null;
   participant_profile_next_retry_at?: string | null;
   participant_profile_error_code?: string | null;
+  linked_lead_id?: string | null;
+  linked_customer_id?: string | null;
+  linked_order_id?: string | null;
   status: string;
   priority: string;
   unread_count: number;
@@ -65,6 +68,51 @@ export type DirectLiveSummary = {
   unread_total: number;
   order_intent_count: number;
   events: DirectLiveEvent[];
+};
+
+export type DirectAutomationCustomer = {
+  id: string;
+  name: string;
+  phone?: string | null;
+  instagram_username?: string | null;
+  instagram_scoped_id?: string | null;
+  source: string;
+  lifecycle_status: string;
+  profile_status: string;
+  source_direct_conversation_id?: string | null;
+  city?: string | null;
+  region?: string | null;
+  total_orders: number;
+  total_spent: string | number;
+  last_order_at?: string | null;
+};
+
+export type DirectCustomerAutomationState = {
+  conversation_id: string;
+  customer: DirectAutomationCustomer | null;
+  linked_order_id: string | null;
+  stage: "NOT_CREATED" | "PROSPECT_READY_FOR_ORDER" | "ORDER_CREATED_PROFILE_INCOMPLETE" | "CUSTOMER_READY" | string;
+  missing_fields: string[];
+  can_create_order: boolean;
+  profile_complete: boolean;
+  created_automatically: boolean;
+};
+
+export type DirectCustomerCompletePayload = {
+  name: string;
+  phone: string;
+  city: string;
+  region?: string | null;
+  recipient_name?: string | null;
+  recipient_phone?: string | null;
+  warehouse: string;
+  warehouse_number?: string | null;
+  nova_poshta_city_ref: string;
+  nova_poshta_warehouse_ref: string;
+};
+
+export type DirectCustomerFinalizeOrderPayload = DirectCustomerCompletePayload & {
+  order_id: string;
 };
 
 export type InstagramHistorySync = {
