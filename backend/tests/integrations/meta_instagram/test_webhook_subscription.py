@@ -28,7 +28,9 @@ async def test_subscribe_webhooks_sends_required_fields_and_bearer_token(monkeyp
     result = await MetaInstagramClient("https://graph.example", "v99.0", "secret-token").subscribe_webhooks("ig-1", WEBHOOK_SUBSCRIPTIONS)
     assert captured["url"] == "https://graph.example/v99.0/ig-1/subscribed_apps"
     assert captured["headers"] == {"Authorization": "Bearer secret-token"}
-    assert captured["data"] == {"subscribed_fields": "messages,messaging_postbacks"}
+    assert captured["data"] == {
+        "subscribed_fields": "messages,messaging_postbacks,messaging_seen,message_reactions"
+    }
     assert result.success is True
     assert result.subscribed_fields == WEBHOOK_SUBSCRIPTIONS
     assert result.provider_request_id == "trace-1"
@@ -39,7 +41,7 @@ async def test_get_webhook_subscription_parses_provider_confirmed_fields(monkeyp
     class Response:
         headers = {"x-fb-trace-id": "trace-2"}
         def raise_for_status(self): pass
-        def json(self): return {"data": [{"subscribed_fields": ["messages", "messaging_postbacks"]}]}
+        def json(self): return {"data": [{"subscribed_fields": WEBHOOK_SUBSCRIPTIONS}]}
 
     class AsyncClient:
         def __init__(self, timeout): pass

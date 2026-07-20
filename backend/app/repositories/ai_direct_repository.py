@@ -12,6 +12,8 @@ class DirectConversationRepository:
         return self.db.execute(select(DirectConversation).where(DirectConversation.workspace_id==workspace_id, DirectConversation.id==conversation_id, DirectConversation.deleted_at.is_(None))).scalar_one_or_none()
     def get_by_instagram_participant(self, workspace_id: UUID, instagram_connection_id: UUID, participant_scoped_id: str) -> DirectConversation | None:
         return self.db.execute(select(DirectConversation).where(DirectConversation.workspace_id==workspace_id, DirectConversation.instagram_connection_id==instagram_connection_id, DirectConversation.participant_scoped_id==participant_scoped_id, DirectConversation.deleted_at.is_(None))).scalar_one_or_none()
+    def get_by_external_thread(self, workspace_id: UUID, instagram_connection_id: UUID, external_thread_id: str) -> DirectConversation | None:
+        return self.db.execute(select(DirectConversation).where(DirectConversation.workspace_id==workspace_id, DirectConversation.instagram_connection_id==instagram_connection_id, DirectConversation.external_thread_id==external_thread_id, DirectConversation.deleted_at.is_(None))).scalar_one_or_none()
     def create(self, conversation: DirectConversation) -> DirectConversation:
         self.db.add(conversation); self.db.flush(); return conversation
 

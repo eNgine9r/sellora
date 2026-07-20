@@ -25,7 +25,7 @@ class InstagramReconciliationService:
         if existing:
             op.direct_message_id = existing.id
         else:
-            msg = DirectMessageRepository(self.db).create(DirectMessage(workspace_id=workspace_id, conversation_id=op.conversation_id, direction=DirectMessageDirection.OUTBOUND.value, sender_type=DirectMessageSenderType.MANAGER.value, message_type=DirectMessageType.TEXT.value, text="[Reconciled Instagram outbound message]", received_at=datetime.now(UTC), processing_status="SENT", is_synthetic=False, provider="INSTAGRAM", provider_message_id=op.provider_message_id, delivery_status="SENT", sent_by_user_id=op.created_by))
+            msg = DirectMessageRepository(self.db).create(DirectMessage(workspace_id=workspace_id, conversation_id=op.conversation_id, direction=DirectMessageDirection.OUTBOUND.value, sender_type=DirectMessageSenderType.MANAGER.value, message_type=DirectMessageType.TEXT.value, text="[Reconciled Instagram outbound message]", received_at=datetime.now(UTC), processing_status="SENT", is_synthetic=False, provider="INSTAGRAM", provider_message_id=op.provider_message_id, delivery_status="PROVIDER_ACCEPTED", sent_by_user_id=op.created_by))
             op.direct_message_id = msg.id
         op.status = MetaMessageOperationStatus.COMPLETED.value
         op.completed_at = datetime.now(UTC)

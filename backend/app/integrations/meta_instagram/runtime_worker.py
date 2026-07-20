@@ -5,6 +5,7 @@ import logging
 import os
 
 from app.database.session import SessionLocal
+from app.integrations.meta_instagram.services.history_sync_service import InstagramHistorySyncService
 from app.integrations.meta_instagram.services.webhook_processor_service import InstagramWebhookProcessorService
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,17 @@ def process_webhook_batch() -> int:
             raise
 
 
+async def process_history_sync_job() -> str | None:
+    with SessionLocal() as db:
+        try:
+            sync = await InstagramHistorySyncService(db).process_next()
+            db.commit()
+            return sync.status if sync else None
+        except Exception:
+            db.rollback()
+            raise
+
+
 async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
     interval = webhook_poll_seconds()
     logger.info("Instagram webhook worker started", extra={"poll_seconds": interval})
@@ -45,6 +57,19 @@ async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
             raise
         except Exception:
             logger.exception("Instagram webhook worker batch failed")
+
+        try:
+            history_status = await process_history_sync_job()
+            if history_status:
+                logger.info(
+                    "Instagram history sync job processed",
+                    extra={"status": history_status},
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Instagram history sync job failed")
+
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval)
         except TimeoutError:
