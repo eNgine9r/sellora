@@ -53,12 +53,12 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 3,
     "AUTHENTICATED_GLOBAL": 4,
-    "WORKSPACE_SCOPED": 182,
+    "WORKSPACE_SCOPED": 183,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 201
-EXPECTED_MUTATION_ROUTES = 113
+EXPECTED_TOTAL_ROUTES = 202
+EXPECTED_MUTATION_ROUTES = 114
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -68,7 +68,6 @@ EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/orders/{order_id}/fulfillment/reconcile"),
     ("POST", "/api/v1/orders/{order_id}/fulfillment/cancel"),
 }
-
 
 
 def _flatten_routes(routes, prefix: str = "") -> list[tuple[str, APIRoute]]:

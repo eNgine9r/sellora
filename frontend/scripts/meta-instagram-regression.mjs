@@ -7,6 +7,7 @@ const settingsOverview = read("src/app/settings/page.tsx");
 const instagramCard = read("src/features/integrations/components/instagram-messaging-integration-card.tsx");
 const service = read("src/services/meta-instagram.ts");
 const directService = read("src/services/direct.ts");
+const directTypes = read("src/types/direct.ts");
 const directPage = read("src/app/direct/page.tsx");
 const callbackPage = read("src/app/settings/integrations/instagram/callback/page.tsx");
 const uk = read("src/i18n/messages/uk.json");
@@ -18,11 +19,15 @@ const checks = [
   ["Instagram status query is workspace scoped", instagramCard.includes('["instagram-connection-status", workspaceId]') && settingsPage.includes('["instagram-connection-status", workspaceId]') && settingsOverview.includes('["instagram-connection-status", workspaceId]')],
   ["Instagram card exposes safe owner actions", instagramCard.includes("startInstagramConnect") && instagramCard.includes("validateInstagramConnection") && instagramCard.includes("disconnectInstagram") && instagramCard.includes("subscribeInstagramWebhooks") && instagramCard.includes("window.confirm")],
   ["Instagram card routes to settings and Direct", instagramCard.includes('href="/settings/integrations/instagram"') && instagramCard.includes('href="/direct"')],
-  ["Callback clears code/state from browser history", callbackPage.includes("window.history.replaceState") && !callbackPage.includes("params.get(\"code\")") && !callbackPage.includes("params.get(\"state\")")],
+  ["Callback clears code/state from browser history", callbackPage.includes("window.history.replaceState") && !callbackPage.includes('params.get("code")') && !callbackPage.includes('params.get("state")')],
   ["Callback uses safe localized statuses", callbackPage.includes("safeStatuses") && callbackPage.includes("profile_failed") && callbackPage.includes("instagramSettings.callback.status")],
   ["Ukrainian localization includes Instagram card, webhook and callback copy", uk.includes("Отримуйте повідомлення Instagram") && uk.includes("Не вдалося перевірити профіль Instagram") && uk.includes("Активувати webhook") && uk.includes("Webhook неактивний")],
   ["Webhook status contract is surfaced without secrets", service.includes("/integrations/instagram/webhooks/subscribe") && service.includes("/integrations/instagram/webhooks/status") && instagramCard.includes("webhook_active") && instagramCard.includes("confirmed_webhook_fields") && !instagramCard.includes("access_token")],
   ["Direct reply prepare/send services exist", directService.includes("reply/prepare") && directService.includes("reply/send") && directService.includes("Idempotency-Key")],
+  ["Participant profile refresh uses backend endpoint only", directService.includes("participant-profile/refresh") && !directService.includes("graph.instagram.com")],
+  ["Participant profile contract includes safe Meta fields", directTypes.includes("participant_profile_picture_url") && directTypes.includes("participant_follower_count") && directTypes.includes("participant_is_verified_user") && directTypes.includes("participant_is_user_follow_business")],
+  ["Direct page renders profile identity and truthful fallback", directPage.includes("ParticipantProfileCard") && directPage.includes("ParticipantAvatar") && directPage.includes("Username поки недоступний") && directPage.includes("Meta не надала дані профілю")],
+  ["Direct page shows potential customer indicators", directPage.includes("підписників") && directPage.includes("Підписаний на магазин") && directPage.includes("Verified")],
   ["Direct production page has no hardcoded sample conversations", !directPage.includes("@olena.shop") && !directPage.includes("@ira_style") && !directPage.includes("conversations = [")],
   ["Direct production page still has no uncontrolled Instagram send button", !directPage.includes("Send Instagram") && !directPage.includes("Відправити в Instagram")],
   ["Operation reconciliation service marker exists", directService.includes("reconcileMessageOperation") && directService.includes("message-operations")],

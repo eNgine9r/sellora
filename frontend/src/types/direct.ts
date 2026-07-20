@@ -1,5 +1,52 @@
 export type DirectConversationChannel = "SYNTHETIC" | "INSTAGRAM" | "MANUAL";
 export type DirectMessageDirection = "INBOUND" | "OUTBOUND" | "INTERNAL";
-export type DirectConversation = { id: string; channel: DirectConversationChannel; participant_username?: string | null; participant_display_name?: string | null; participant_scoped_id?: string | null; status: string; priority: string; unread_count: number; ai_processing_status: string; last_message_at?: string | null; messaging_window_expires_at?: string | null; provider_sync_status?: string | null };
-export type DirectMessage = { id: string; conversation_id: string; direction: DirectMessageDirection; sender_type?: string; message_type?: string; text?: string | null; received_at: string; provider?: string | null; delivery_status?: string | null; message_payload_type?: string | null };
-export type MessageOperation = { id: string; conversation_id: string; status: string; provider_message_id?: string | null; direct_message_id?: string | null; manual_reconciliation_required: boolean; blind_retry_blocked: boolean; last_error_code?: string | null };
+export type ParticipantProfileStatus = "PENDING" | "READY" | "RETRY_PENDING" | "UNAVAILABLE";
+
+export type DirectConversation = {
+  id: string;
+  channel: DirectConversationChannel;
+  participant_username?: string | null;
+  participant_display_name?: string | null;
+  participant_scoped_id?: string | null;
+  participant_profile_picture_url?: string | null;
+  participant_profile_picture_expires_at?: string | null;
+  participant_follower_count?: number | null;
+  participant_is_verified_user?: boolean | null;
+  participant_is_user_follow_business?: boolean | null;
+  participant_is_business_follow_user?: boolean | null;
+  participant_profile_status?: ParticipantProfileStatus | null;
+  participant_profile_last_synced_at?: string | null;
+  participant_profile_next_retry_at?: string | null;
+  participant_profile_error_code?: string | null;
+  status: string;
+  priority: string;
+  unread_count: number;
+  ai_processing_status: string;
+  last_message_at?: string | null;
+  messaging_window_expires_at?: string | null;
+  provider_sync_status?: string | null;
+};
+
+export type DirectMessage = {
+  id: string;
+  conversation_id: string;
+  direction: DirectMessageDirection;
+  sender_type?: string;
+  message_type?: string;
+  text?: string | null;
+  received_at: string;
+  provider?: string | null;
+  delivery_status?: string | null;
+  message_payload_type?: string | null;
+};
+
+export type MessageOperation = {
+  id: string;
+  conversation_id: string;
+  status: string;
+  provider_message_id?: string | null;
+  direct_message_id?: string | null;
+  manual_reconciliation_required: boolean;
+  blind_retry_blocked: boolean;
+  last_error_code?: string | null;
+};
