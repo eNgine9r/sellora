@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: sellora-direct-live-staging-closure
@@ -233,6 +234,37 @@ jobs:
                       raise SystemExit(f"Secret leaked into closure artifact: {path}")
           print("Sanitized Direct live evidence: PASS")
           PY
+
+      - name: Publish sanitized closure result
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          evidence = json.loads(Path("artifacts/direct-live-staging-closure.json").read_text(encoding="utf-8"))
+          body = "\n".join([
+              "## Direct live staging closure — PASS",
+              "",
+              f"- Backend status: `{evidence['backend_status']}`",
+              f"- Runtime commit: `{evidence['runtime_commit']}`",
+              f"- Frontend `/direct`: HTTP `{evidence['frontend_direct_http']}`",
+              f"- Connected Instagram workspaces: `{evidence['connected_instagram_workspace_count']}`",
+              f"- Direct conversations: `{evidence['conversation_count']}`",
+              f"- Unread total: `{evidence['unread_total']}`",
+              f"- Live events returned: `{evidence['live_event_count']}`",
+              f"- Probable order signals: `{evidence['order_intent_count']}`",
+              f"- Live summary schema: `{evidence['live_summary_schema']}`",
+              f"- Workspace isolation headers: `{evidence['workspace_isolation_headers']}`",
+              "",
+              "The report contains aggregate counters only. No message text, usernames, tokens, email addresses or workspace identifiers were published.",
+          ])
+          Path("/tmp/direct-live-comment.json").write_text(json.dumps({"body": body}), encoding="utf-8")
+          PY
+          gh api "repos/${GITHUB_REPOSITORY}/issues/217/comments" --method POST --input /tmp/direct-live-comment.json
 
       - name: Upload sanitized staging evidence
         if: always()
