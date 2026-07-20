@@ -39,6 +39,11 @@ class CustomerResponse(BaseModel):
     name: str
     phone: str | None
     instagram_username: str | None
+    instagram_scoped_id: str | None = None
+    source: str = "MANUAL"
+    lifecycle_status: str = "CUSTOMER"
+    profile_status: str = "INCOMPLETE"
+    source_direct_conversation_id: UUID | None = None
     city: str | None
     region: str | None
     total_orders: int
