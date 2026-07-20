@@ -7,7 +7,8 @@ from app.dependencies.rbac import get_workspace_id, require_min_role, require_ro
 from app.models.role import RoleName
 from app.models.user import User
 from app.repositories.ai_direct_repository import AIRepository
-from app.schemas.ai_direct import AIAnalysisResponse, AISuggestionResponse, AISuggestionPatch, RejectRequest, AISettingsResponse, AISettingsUpdate, AIHealthResponse
+from app.schemas.ai_direct import AIAnalysisResponse, AISuggestionResponse, AISuggestionPatch, RejectRequest, AISettingsResponse, AISettingsUpdate
+from app.schemas.ai_health import AIHealthResponse
 from app.ai.services.ai_action_service import AIActionService
 from app.ai.exceptions import AIError
 
