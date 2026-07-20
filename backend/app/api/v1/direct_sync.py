@@ -15,8 +15,8 @@ from app.integrations.meta_instagram.schemas import (
     InstagramHistorySyncRequest,
     InstagramHistorySyncResponse,
 )
-from app.integrations.meta_instagram.services.history_sync_service import (
-    InstagramHistorySyncService,
+from app.integrations.meta_instagram.services.history_sync_visibility_service import (
+    InstagramHistorySyncVisibilityService as InstagramHistorySyncService,
 )
 from app.models.role import RoleName
 from app.models.user import User
