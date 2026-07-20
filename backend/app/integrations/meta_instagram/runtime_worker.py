@@ -5,7 +5,9 @@ import logging
 import os
 
 from app.database.session import SessionLocal
-from app.integrations.meta_instagram.services.history_sync_service import InstagramHistorySyncService
+from app.integrations.meta_instagram.services.history_sync_visibility_service import (
+    InstagramHistorySyncVisibilityService as InstagramHistorySyncService,
+)
 from app.integrations.meta_instagram.services.webhook_processor_service import InstagramWebhookProcessorService
 
 logger = logging.getLogger(__name__)
