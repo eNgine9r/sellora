@@ -153,9 +153,9 @@ class FinanceService:
 
         warnings: list[FinanceDataQualityWarning] = [
             self._warning(
-                "advertising_manual_csv_source",
-                "Advertising spend uses manual/CSV metrics only until Advertising runtime/staging blockers are resolved.",
-                "Рекламні витрати беруться лише з ручних або CSV-метрик, доки runtime/staging блокери Advertising не закриті.",
+                "finance_uses_order_allocated_costs",
+                "Finance net profit uses costs allocated to orders. Campaign spend in Advertising is a separate source and may differ until all spend is allocated.",
+                "Чистий прибуток у Finance використовує витрати, розподілені на замовлення. Витрати кампаній у Advertising є окремим джерелом і можуть відрізнятися, доки всі витрати не розподілено.",
             ),
             self._warning(
                 "meta_ads_not_active",
@@ -179,8 +179,27 @@ class FinanceService:
         if missing_cost_count:
             warnings.append(self._warning("missing_product_cost", f"Product cost is missing for {missing_cost_count} order item(s), so COGS may be understated.", f"Для {missing_cost_count} позицій замовлень відсутня собівартість, тому COGS може бути заниженим."))
 
-        ad_spend = self._sum(metric.spend for metric in ad_metrics)
-        shipping_cost, missing_shipping_count = self._calculate_shipping_cost(valid_orders, shipments)
+        ad_spend = self._sum(getattr(order, "ad_cost", MONEY_ZERO) for order in valid_orders)
+        reported_campaign_spend = self._sum(metric.spend for metric in ad_metrics)
+        if reported_campaign_spend != ad_spend:
+            warnings.append(
+                self._warning(
+                    "campaign_spend_not_fully_allocated",
+                    f"Advertising reports contain {reported_campaign_spend} of campaign spend, while {ad_spend} is allocated to orders and used in Finance net profit.",
+                    f"Звіти Advertising містять {reported_campaign_spend} витрат кампаній, тоді як {ad_spend} розподілено на замовлення та використано в чистому прибутку Finance.",
+                )
+            )
+
+        shipping_cost = self._sum(getattr(order, "shipping_cost", MONEY_ZERO) for order in valid_orders)
+        provider_shipping_cost, missing_shipping_count = self._calculate_shipping_cost(valid_orders, shipments)
+        if provider_shipping_cost != shipping_cost:
+            warnings.append(
+                self._warning(
+                    "shipment_cost_differs_from_order_allocation",
+                    f"Shipment records contain {provider_shipping_cost} of delivery cost, while {shipping_cost} is allocated to orders and used in the canonical net-profit formula.",
+                    f"У записах відправлень міститься {provider_shipping_cost} вартості доставки, тоді як {shipping_cost} розподілено на замовлення та використано в канонічній формулі чистого прибутку.",
+                )
+            )
         manual_shipping_adjustments = self._sum(adjustment.amount for adjustment in adjustments if adjustment.type == FinanceAdjustmentType.SHIPPING_ADJUSTMENT.value)
         shipping_cost += manual_shipping_adjustments
         if missing_shipping_count:
@@ -190,7 +209,9 @@ class FinanceService:
         refunds = MONEY_ZERO
         if excluded_orders:
             warnings.append(self._warning("cancelled_refunded_orders_excluded", "Cancelled, returned, and refunded orders are excluded from revenue; add a manual REFUND adjustment only when money was actually returned and must reduce profit.", "Скасовані, повернені та відшкодовані замовлення виключені з доходу; додавайте ручне REFUND-коригування лише коли кошти реально повернені й мають зменшити прибуток."))
-        other_expenses = MONEY_ZERO
+        cod_fees = self._sum(getattr(order, "cod_fee", MONEY_ZERO) for order in valid_orders)
+        order_other_costs = self._sum(getattr(order, "other_cost", MONEY_ZERO) for order in valid_orders)
+        other_expenses = cod_fees + order_other_costs
 
         manual_expenses = self._sum(adjustment.amount for adjustment in adjustments if adjustment.type in {FinanceAdjustmentType.EXPENSE.value, FinanceAdjustmentType.OTHER.value, FinanceAdjustmentType.CORRECTION.value})
         manual_refunds = self._sum(adjustment.amount for adjustment in adjustments if adjustment.type == FinanceAdjustmentType.REFUND.value)
@@ -237,8 +258,9 @@ class FinanceService:
         return [
             self._breakdown_item("revenue", "Revenue", summary.revenue, "income", summary.revenue),
             self._breakdown_item("cogs", "COGS", summary.cogs, "expense", summary.revenue),
-            self._breakdown_item("ad_spend", "Ad spend", summary.ad_spend, "expense", summary.revenue),
+            self._breakdown_item("ad_spend", "Allocated ad cost", summary.ad_spend, "expense", summary.revenue),
             self._breakdown_item("shipping_cost", "Shipping cost", summary.shipping_cost, "expense", summary.revenue),
+            self._breakdown_item("other_expenses", "COD and other order costs", summary.other_expenses, "expense", summary.revenue),
             self._breakdown_item("manual_expenses", "Manual expenses", summary.manual_expenses, "expense", summary.revenue),
             self._breakdown_item("manual_refunds", "Manual refunds", summary.manual_refunds, "expense", summary.revenue),
             self._breakdown_item("manual_discounts", "Manual discounts", summary.manual_discounts, "expense", summary.revenue),
