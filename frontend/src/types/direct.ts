@@ -47,6 +47,26 @@ export type DirectMessage = {
   reaction_updated_at?: string | null;
 };
 
+export type DirectLiveEvent = {
+  message_id: string;
+  conversation_id: string;
+  participant_display_name?: string | null;
+  participant_username?: string | null;
+  text_preview: string;
+  received_at: string;
+  unread_count: number;
+  order_intent: boolean;
+  order_intent_confidence: number;
+  order_intent_reason?: string | null;
+};
+
+export type DirectLiveSummary = {
+  server_time: string;
+  unread_total: number;
+  order_intent_count: number;
+  events: DirectLiveEvent[];
+};
+
 export type InstagramHistorySync = {
   id: string;
   workspace_id: string;

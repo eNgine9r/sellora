@@ -1,8 +1,16 @@
 import { apiRequest } from "@/services/api";
-import { DirectConversation, DirectMessage, InstagramHistorySync, MessageOperation } from "@/types/direct";
+import {
+  DirectConversation,
+  DirectLiveSummary,
+  DirectMessage,
+  InstagramHistorySync,
+  MessageOperation,
+} from "@/types/direct";
 
 export function fetchDirectConversations() { return apiRequest<DirectConversation[]>("/direct/conversations"); }
 export function fetchDirectMessages(conversationId: string) { return apiRequest<DirectMessage[]>(`/direct/conversations/${conversationId}/message-timeline`); }
+export function fetchDirectLiveSummary() { return apiRequest<DirectLiveSummary>("/direct/live-summary?limit=30"); }
+export function markDirectConversationRead(conversationId: string) { return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/read`, { method: "POST" }); }
 export function refreshDirectParticipantProfile(conversationId: string) { return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/participant-profile/refresh`, { method: "POST" }); }
 export function fetchInstagramHistorySync() { return apiRequest<InstagramHistorySync | null>("/direct/history-sync"); }
 export function startInstagramHistorySync(conversationLimit = 100, messagesPerConversation = 20) {
