@@ -4,6 +4,12 @@ import { CurrentUser, TokenPair, WorkspaceMembership } from "@/types/auth";
 const DEV_API_BASE_URL = "http://localhost:8000/api/v1";
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? (process.env.NODE_ENV === "production" ? "/api/v1" : DEV_API_BASE_URL);
 
+const DEFAULT_AUTH_REQUEST_TIMEOUT_MS = 12_000;
+const configuredAuthTimeout = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? DEFAULT_AUTH_REQUEST_TIMEOUT_MS);
+export const AUTH_REQUEST_TIMEOUT_MS = Number.isFinite(configuredAuthTimeout) && configuredAuthTimeout >= 1_000
+  ? configuredAuthTimeout
+  : DEFAULT_AUTH_REQUEST_TIMEOUT_MS;
+
 export class AuthNetworkError extends Error {
   constructor() {
     super("AUTH_NETWORK_UNAVAILABLE");
@@ -24,6 +30,18 @@ const CURRENT_USER_KEY = "sellora.current_user";
 const CURRENT_WORKSPACE_ID_KEY = "sellora.current_workspace_id";
 function isBrowser() {
   return typeof window !== "undefined";
+}
+
+async function fetchWithAuthTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch {
+    throw new AuthNetworkError();
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export const authStorage = {
@@ -80,24 +98,22 @@ export const authStorage = {
 };
 
 export async function loginWithPassword(email: string, password: string): Promise<TokenPair> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-  } catch {
-    throw new AuthNetworkError();
-  }
+  const response = await fetchWithAuthTimeout(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
   if (!response.ok) {
-    throw new InvalidCredentialsError();
+    if (response.status === 401 || response.status === 422) {
+      throw new InvalidCredentialsError();
+    }
+    throw new AuthNetworkError();
   }
   return response.json() as Promise<TokenPair>;
 }
 
 export async function refreshAccessToken(refreshToken: string): Promise<TokenPair> {
-  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+  const response = await fetchWithAuthTimeout(`${API_BASE_URL}/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh_token: refreshToken }),
@@ -109,7 +125,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<TokenPai
 }
 
 export async function fetchCurrentUser(accessToken: string): Promise<CurrentUser> {
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+  const response = await fetchWithAuthTimeout(`${API_BASE_URL}/auth/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) {
