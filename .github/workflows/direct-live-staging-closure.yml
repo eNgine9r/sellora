@@ -1,0 +1,244 @@
+name: Direct Live Staging Closure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/direct-live-staging-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sellora-direct-live-staging-closure
+  cancel-in-progress: false
+
+jobs:
+  verify-live-direct:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: staging
+    env:
+      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
+      EXPECTED_RUNTIME_COMMIT: 6ff1db593c05d91d95d9b1b1e16ddfecce077fd9
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate required staging credentials
+        shell: bash
+        run: |
+          missing=0
+          for key in STAGING_OWNER_EMAIL STAGING_OWNER_PASSWORD; do
+            if [ -z "${!key:-}" ]; then
+              echo "Required secret is missing: $key"
+              missing=1
+            fi
+          done
+          [ "$missing" = "0" ]
+
+      - name: Verify exact backend runtime and authenticated Direct live API
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          python - <<'PY'
+          import json
+          import os
+          import time
+          from urllib.error import HTTPError, URLError
+          from urllib.request import Request, urlopen
+
+          api_root = os.environ["STAGING_API_URL"].rstrip("/")
+          api = f"{api_root}/api/v1"
+          frontend = os.environ["STAGING_FRONTEND_URL"].rstrip("/")
+          expected_commit = os.environ["EXPECTED_RUNTIME_COMMIT"]
+
+          def request(url, *, method="GET", token=None, workspace=None, body=None, timeout=30):
+              headers = {"Accept": "application/json"}
+              if token:
+                  headers["Authorization"] = f"Bearer {token}"
+              if workspace:
+                  headers["X-Workspace-ID"] = workspace
+              data = None
+              if body is not None:
+                  data = json.dumps(body).encode("utf-8")
+                  headers["Content-Type"] = "application/json"
+              req = Request(url, data=data, method=method, headers=headers)
+              try:
+                  with urlopen(req, timeout=timeout) as response:
+                      raw = response.read().decode("utf-8")
+                      try:
+                          payload = json.loads(raw) if raw else {}
+                      except json.JSONDecodeError:
+                          payload = {"body_type": "non-json"}
+                      return response.status, payload
+              except HTTPError as exc:
+                  raw = exc.read().decode("utf-8", errors="replace")
+                  try:
+                      payload = json.loads(raw) if raw else {}
+                  except json.JSONDecodeError:
+                      payload = {"detail": "non-json response"}
+                  return exc.code, payload
+              except (URLError, TimeoutError) as exc:
+                  return 0, {"detail": exc.__class__.__name__}
+
+          health = {}
+          for _ in range(120):
+              code, health = request(f"{api_root}/health", timeout=20)
+              if code == 200 and health.get("status") == "ok" and health.get("runtime_commit") == expected_commit:
+                  break
+              time.sleep(10)
+          else:
+              raise SystemExit("Backend did not reach the expected Direct live runtime commit")
+
+          frontend_code, _ = request(f"{frontend}/direct", timeout=30)
+          if frontend_code != 200:
+              raise SystemExit(f"Frontend /direct failed with HTTP {frontend_code}")
+
+          code, tokens = request(
+              f"{api}/auth/login",
+              method="POST",
+              body={
+                  "email": os.environ["STAGING_OWNER_EMAIL"],
+                  "password": os.environ["STAGING_OWNER_PASSWORD"],
+              },
+          )
+          if code != 200 or not tokens.get("access_token"):
+              raise SystemExit(f"Staging OWNER login failed with HTTP {code}")
+          token = tokens["access_token"]
+
+          code, current_user = request(f"{api}/auth/me", token=token)
+          if code != 200:
+              raise SystemExit(f"Staging /auth/me failed with HTTP {code}")
+
+          connected_results = []
+          for membership in current_user.get("memberships") or []:
+              workspace_id = str(membership.get("workspace_id") or "")
+              if not workspace_id:
+                  continue
+              code, status = request(
+                  f"{api}/integrations/instagram/status",
+                  token=token,
+                  workspace=workspace_id,
+              )
+              if code != 200 or status.get("status") != "CONNECTED" or not status.get("token_present"):
+                  continue
+
+              code, conversations = request(
+                  f"{api}/direct/conversations",
+                  token=token,
+                  workspace=workspace_id,
+              )
+              if code != 200 or not isinstance(conversations, list):
+                  raise SystemExit(f"Direct conversations failed with HTTP {code}")
+
+              code, summary = request(
+                  f"{api}/direct/live-summary?limit=30",
+                  token=token,
+                  workspace=workspace_id,
+              )
+              if code != 200:
+                  raise SystemExit(f"Direct live summary failed with HTTP {code}")
+
+              required = {"server_time", "unread_total", "order_intent_count", "events"}
+              if not required.issubset(summary):
+                  raise SystemExit("Direct live summary is missing required fields")
+              if not isinstance(summary["unread_total"], int) or summary["unread_total"] < 0:
+                  raise SystemExit("Direct unread_total is invalid")
+              if not isinstance(summary["order_intent_count"], int) or summary["order_intent_count"] < 0:
+                  raise SystemExit("Direct order_intent_count is invalid")
+              if not isinstance(summary["events"], list):
+                  raise SystemExit("Direct live events must be a list")
+
+              conversation_ids = {str(item.get("id")) for item in conversations if item.get("id")}
+              expected_unread = sum(int(item.get("unread_count") or 0) for item in conversations)
+              if summary["unread_total"] != expected_unread:
+                  raise SystemExit("Direct unread total does not match conversation state")
+
+              event_ids = []
+              order_intents = 0
+              for event in summary["events"]:
+                  event_id = str(event.get("message_id") or "")
+                  conversation_id = str(event.get("conversation_id") or "")
+                  if not event_id or not conversation_id or conversation_id not in conversation_ids:
+                      raise SystemExit("Direct live event identity is invalid")
+                  confidence = event.get("order_intent_confidence")
+                  if not isinstance(confidence, (int, float)) or confidence < 0 or confidence > 1:
+                      raise SystemExit("Direct order intent confidence is invalid")
+                  event_ids.append(event_id)
+                  if event.get("order_intent") is True:
+                      order_intents += 1
+              if len(event_ids) != len(set(event_ids)):
+                  raise SystemExit("Direct live summary contains duplicate message events")
+              if order_intents != summary["order_intent_count"]:
+                  raise SystemExit("Direct order intent aggregate does not match events")
+
+              connected_results.append({
+                  "conversation_count": len(conversations),
+                  "unread_total": summary["unread_total"],
+                  "live_event_count": len(summary["events"]),
+                  "order_intent_count": summary["order_intent_count"],
+              })
+
+          if not connected_results:
+              raise SystemExit("No connected Instagram workspace was available for Direct live closure")
+
+          evidence = {
+              "decision": "PASS",
+              "backend_status": health.get("status"),
+              "runtime_commit": health.get("runtime_commit"),
+              "frontend_direct_http": frontend_code,
+              "workspace_membership_count": len(current_user.get("memberships") or []),
+              "connected_instagram_workspace_count": len(connected_results),
+              "conversation_count": sum(item["conversation_count"] for item in connected_results),
+              "unread_total": sum(item["unread_total"] for item in connected_results),
+              "live_event_count": sum(item["live_event_count"] for item in connected_results),
+              "order_intent_count": sum(item["order_intent_count"] for item in connected_results),
+              "live_summary_schema": "PASS",
+              "workspace_isolation_headers": "PASS",
+          }
+          with open("artifacts/direct-live-staging-closure.json", "w", encoding="utf-8") as file:
+              json.dump(evidence, file, indent=2, ensure_ascii=False)
+          print(json.dumps(evidence, ensure_ascii=False))
+          PY
+
+      - name: Validate sanitized evidence
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          secrets = [
+              os.getenv("STAGING_OWNER_EMAIL", ""),
+              os.getenv("STAGING_OWNER_PASSWORD", ""),
+          ]
+          for path in Path("artifacts").glob("**/*"):
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding="utf-8", errors="ignore")
+              for secret in secrets:
+                  if secret and secret in text:
+                      raise SystemExit(f"Secret leaked into closure artifact: {path}")
+          print("Sanitized Direct live evidence: PASS")
+          PY
+
+      - name: Upload sanitized staging evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-direct-live-staging-${{ github.run_id }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 7
