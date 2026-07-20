@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import {
   FilterBar,
@@ -58,6 +59,9 @@ const ITEM_EDIT_STATUSES: OrderStatus[] = ["NEW", "CONFIRMED"];
 export default function OrdersPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const directPrefillOpened = useRef(false);
   const {
     currentUser,
     currentWorkspace,
@@ -71,18 +75,17 @@ export default function OrdersPage() {
   const [search, setSearch] = useState("");
   const [orderSort, setOrderSort] = useState("newest");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] =
-    useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [archivingOrder, setArchivingOrder] = useState<Order | null>(null);
-  const enabled =
-    authStatus === "authenticated" &&
-    Boolean(currentUser) &&
-    Boolean(workspaceId);
-  const canEdit =
-    currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
+  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
+  const canEdit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
+  const requestedCreate = searchParams.get("create") === "1";
+  const requestedCustomerId = searchParams.get("customer_id");
+  const sourceDirectConversationId = searchParams.get("direct_conversation_id");
+  const requestedOrderId = searchParams.get("order_id");
 
   const ordersQuery = useQuery({
     queryKey: ["orders", workspaceId, status],
@@ -126,33 +129,22 @@ export default function OrdersPage() {
   });
   const invalidateOrderState = () => {
     queryClient.invalidateQueries({ queryKey: ["orders", workspaceId] });
-    queryClient.invalidateQueries({
-      queryKey: ["orders-dashboard", workspaceId],
-    });
+    queryClient.invalidateQueries({ queryKey: ["orders-dashboard", workspaceId] });
     queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
     queryClient.invalidateQueries({ queryKey: ["analytics", workspaceId] });
     queryClient.invalidateQueries({ queryKey: ["inventory", workspaceId] });
-    queryClient.invalidateQueries({
-      queryKey: ["product-variants", workspaceId],
-    });
+    queryClient.invalidateQueries({ queryKey: ["product-variants", workspaceId] });
     queryClient.invalidateQueries({ queryKey: ["shipments", workspaceId] });
   };
   const statusMutation = useMutation({
-    mutationFn: ({
-      orderId,
-      nextStatus,
-    }: {
-      orderId: string;
-      nextStatus: OrderStatus;
-    }) => changeOrderStatus(workspaceId, orderId, nextStatus),
+    mutationFn: ({ orderId, nextStatus }: { orderId: string; nextStatus: OrderStatus }) => changeOrderStatus(workspaceId, orderId, nextStatus),
     onSuccess: (order) => {
       setSelectedOrder(order);
       invalidateOrderState();
     },
   });
   const updateMutation = useMutation({
-    mutationFn: (values: Parameters<typeof updateOrder>[2]) =>
-      updateOrder(workspaceId, editingOrder?.id ?? "", values),
+    mutationFn: (values: Parameters<typeof updateOrder>[2]) => updateOrder(workspaceId, editingOrder?.id ?? "", values),
     onSuccess: (order) => {
       setEditingOrder(null);
       setSelectedOrder(order);
@@ -185,8 +177,7 @@ export default function OrdersPage() {
           .join(" ")
           .toLowerCase();
         const matchesSearch = !query || searchable.includes(query);
-        const matchesPayment =
-          !paymentStatus || order.payment_status === paymentStatus;
+        const matchesPayment = !paymentStatus || order.payment_status === paymentStatus;
         return matchesSearch && matchesPayment;
       })
       .sort((left, right) => {
@@ -194,8 +185,7 @@ export default function OrdersPage() {
         const rightRevenue = Number(right.revenue ?? 0);
         const leftProfit = Number(left.net_profit ?? 0);
         const rightProfit = Number(right.net_profit ?? 0);
-        if (orderSort === "oldest")
-          return left.created_at.localeCompare(right.created_at);
+        if (orderSort === "oldest") return left.created_at.localeCompare(right.created_at);
         if (orderSort === "revenueDesc") return rightRevenue - leftRevenue;
         if (orderSort === "revenueAsc") return leftRevenue - rightRevenue;
         if (orderSort === "profitDesc") return rightProfit - leftProfit;
@@ -203,14 +193,9 @@ export default function OrdersPage() {
         return right.created_at.localeCompare(left.created_at);
       });
   }, [ordersQuery.data, paymentStatus, search, orderSort]);
-  const paginatedOrders = useMemo(
-    () => paginateItems(filteredOrders, page, pageSize),
-    [filteredOrders, page, pageSize],
-  );
+  const paginatedOrders = useMemo(() => paginateItems(filteredOrders, page, pageSize), [filteredOrders, page, pageSize]);
   const hasAnyOrders = (ordersQuery.data?.length ?? 0) > 0;
-  const hasActiveFilters = Boolean(
-    search.trim() || status || paymentStatus || orderSort !== "newest",
-  );
+  const hasActiveFilters = Boolean(search.trim() || status || paymentStatus || orderSort !== "newest");
 
   useEffect(() => {
     setPage(1);
@@ -221,12 +206,24 @@ export default function OrdersPage() {
     setEditingOrder(null);
     setArchivingOrder(null);
     setIsCreateOpen(false);
+    directPrefillOpened.current = false;
   }, [workspaceId]);
 
   useEffect(() => {
-    setPage((currentPage) =>
-      clampPage(currentPage, pageSize, filteredOrders.length),
-    );
+    if (!enabled || !requestedCreate || !requestedCustomerId || directPrefillOpened.current) return;
+    if (!customersQuery.data?.some((customer) => customer.id === requestedCustomerId)) return;
+    directPrefillOpened.current = true;
+    setIsCreateOpen(true);
+  }, [customersQuery.data, enabled, requestedCreate, requestedCustomerId]);
+
+  useEffect(() => {
+    if (!requestedOrderId || !ordersQuery.data?.length) return;
+    const requestedOrder = ordersQuery.data.find((order) => order.id === requestedOrderId);
+    if (requestedOrder) setSelectedOrder(requestedOrder);
+  }, [ordersQuery.data, requestedOrderId]);
+
+  useEffect(() => {
+    setPage((currentPage) => clampPage(currentPage, pageSize, filteredOrders.length));
   }, [filteredOrders.length, pageSize]);
 
   const orders = ordersQuery.data ?? [];
@@ -238,226 +235,167 @@ export default function OrdersPage() {
 
   return (
     <WorkspacePage>
-        <WorkspaceHeader
-          title={t("orders.title")}
-          description={t("orders.subtitle")}
-          actions={<Button disabled={!enabled} onClick={() => setIsCreateOpen(true)}>{t("orders.create")}</Button>}
+      <WorkspaceHeader
+        title={t("orders.title")}
+        description={sourceDirectConversationId && requestedCreate ? "Оформлення замовлення з Instagram Direct із автоматичним доповненням клієнта." : t("orders.subtitle")}
+        actions={<Button disabled={!enabled} onClick={() => { directPrefillOpened.current = true; setIsCreateOpen(true); }}>{t("orders.create")}</Button>}
+      />
+      <CompactSummary layout="five-balanced" items={[
+        { label: t("orders.summary.all"), value: allOrders },
+        { label: t("orders.summary.new"), value: newOrders },
+        { label: t("orders.summary.awaitingPayment"), value: awaitingPayment },
+        { label: t("orders.summary.readyToShip"), value: readyToShip },
+        { label: t("orders.summary.problematic"), value: problematicOrders },
+      ]} />
+      <FilterBar>
+        <SearchInput value={search} onChange={setSearch} placeholder={t("orders.searchPlaceholder")} />
+        <select
+          className="min-h-10 w-full min-w-0 max-w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          value={status}
+          onChange={(event) => setStatus(event.target.value as OrderStatus | "")}
+        >
+          {STATUSES.map((item) => <option key={item || "all"} value={item}>{item ? t(`statuses.order.${item}`) : t("common.allStatuses")}</option>)}
+        </select>
+        <select
+          className="min-h-10 w-full min-w-0 max-w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          value={paymentStatus}
+          onChange={(event) => setPaymentStatus(event.target.value as PaymentStatus | "")}
+        >
+          <option value="">{t("orders.allPaymentStatuses")}</option>
+          {(["PENDING", "PAID", "COD", "REFUNDED"] as PaymentStatus[]).map((item) => <option key={item} value={item}>{t(`statuses.payment.${item}`)}</option>)}
+        </select>
+        <SortSelect
+          value={orderSort}
+          onChange={setOrderSort}
+          options={[
+            { value: "newest", label: t("sort.newest") },
+            { value: "oldest", label: t("sort.oldest") },
+            { value: "revenueDesc", label: t("sort.revenueDesc") },
+            { value: "revenueAsc", label: t("sort.revenueAsc") },
+            { value: "profitDesc", label: t("sort.profitDesc") },
+            { value: "profitAsc", label: t("sort.profitAsc") },
+          ]}
         />
-        <CompactSummary layout="five-balanced" items={[
-          { label: t("orders.summary.all"), value: allOrders },
-          { label: t("orders.summary.new"), value: newOrders },
-          { label: t("orders.summary.awaitingPayment"), value: awaitingPayment },
-          { label: t("orders.summary.readyToShip"), value: readyToShip },
-          { label: t("orders.summary.problematic"), value: problematicOrders },
-        ]} />
-        <FilterBar>
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder={t("orders.searchPlaceholder")}
-          />
-          <select
-            className="min-h-10 w-full min-w-0 max-w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            value={status}
-            onChange={(event) =>
-              setStatus(event.target.value as OrderStatus | "")
-            }
+        <ResetFiltersButton onClick={() => { setSearch(""); setStatus(""); setPaymentStatus(""); setOrderSort("newest"); setPage(1); }} />
+      </FilterBar>
+      <MetricCard
+        label={t("orders.todayLabel")}
+        value={formatMoney(dashboardQuery.data?.revenue_today, currencyCode)}
+        helper={t("orders.todaySummary", { count: dashboardQuery.data?.orders_today ?? 0, revenue: formatMoney(dashboardQuery.data?.revenue_today, currencyCode), profit: formatMoney(dashboardQuery.data?.profit_today, currencyCode) })}
+        tone="info"
+      />
+      <WorkspaceSplitView
+        panelOpen={Boolean(selectedOrder)}
+        panel={selectedOrder ? (
+          <EntitySidePanel
+            open={Boolean(selectedOrder)}
+            title={selectedOrder.order_number ?? t("orders.details")}
+            description={`${t("orders.profit")}: ${formatMoney(selectedOrder.net_profit, currencyCode)}`}
+            onClose={() => setSelectedOrder(null)}
+            footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingOrder(selectedOrder)}>{t("orders.edit")}</Button>{["NEW", "CANCELLED"].includes(selectedOrder.status) ? <Button variant="danger" onClick={() => setArchivingOrder(selectedOrder)}>{t("orders.archive")}</Button> : null}</div> : undefined}
           >
-            {STATUSES.map((item) => (
-              <option key={item || "all"} value={item}>
-                {item ? t(`statuses.order.${item}`) : t("common.allStatuses")}
-              </option>
-            ))}
-          </select>
-          <select
-            className="min-h-10 w-full min-w-0 max-w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            value={paymentStatus}
-            onChange={(event) =>
-              setPaymentStatus(event.target.value as PaymentStatus | "")
-            }
-          >
-            <option value="">{t("orders.allPaymentStatuses")}</option>
-            {(["PENDING", "PAID", "COD", "REFUNDED"] as PaymentStatus[]).map(
-              (item) => (
-                <option key={item} value={item}>
-                  {t(`statuses.payment.${item}`)}
-                </option>
-              ),
+            <OrderDetails
+              order={selectedOrder}
+              currencyCode={currencyCode}
+              shipment={shipmentQuery.data}
+              onStatusChange={(nextStatus) => statusMutation.mutate({ orderId: selectedOrder.id, nextStatus })}
+            />
+          </EntitySidePanel>
+        ) : null}
+      >
+        {ordersQuery.isLoading ? (
+          <LoadingSkeleton rows={5} title={t("orders.loading")} />
+        ) : ordersQuery.isError ? (
+          <ErrorState title={t("orders.loadError")} description={safeApiErrorMessage(ordersQuery.error, t("orders.loadError"))} onRetry={() => void ordersQuery.refetch()} />
+        ) : (
+          <div className="orders-pagination-section grid min-w-0 gap-4">
+            {filteredOrders.length === 0 ? (
+              <EmptyState
+                title={hasAnyOrders && hasActiveFilters ? t("orders.pagination.filteredEmptyTitle") : t("orders.pagination.emptyTitle")}
+                description={hasAnyOrders && hasActiveFilters ? t("orders.pagination.filteredEmptyDescription") : t("orders.pagination.emptyDescription")}
+                action={!hasAnyOrders ? <Button onClick={() => { directPrefillOpened.current = true; setIsCreateOpen(true); }}>{t("orders.create")}</Button> : null}
+              />
+            ) : (
+              <OrderTable
+                orders={paginatedOrders}
+                currencyCode={currencyCode}
+                selectedOrderId={selectedOrder?.id}
+                onSelect={setSelectedOrder}
+                onEdit={canEdit ? setEditingOrder : undefined}
+                onArchive={canEdit ? setArchivingOrder : undefined}
+              />
             )}
-          </select>
-          <SortSelect
-            value={orderSort}
-            onChange={setOrderSort}
-            options={[
-              { value: "newest", label: t("sort.newest") },
-              { value: "oldest", label: t("sort.oldest") },
-              { value: "revenueDesc", label: t("sort.revenueDesc") },
-              { value: "revenueAsc", label: t("sort.revenueAsc") },
-              { value: "profitDesc", label: t("sort.profitDesc") },
-              { value: "profitAsc", label: t("sort.profitAsc") },
-            ]}
-          />
-          <ResetFiltersButton
-            onClick={() => {
-              setSearch("");
-              setStatus("");
-              setPaymentStatus("");
-              setOrderSort("newest");
-              setPage(1);
+            {filteredOrders.length > 0 ? (
+              <PaginationControls
+                page={page}
+                pageSize={pageSize}
+                totalItems={filteredOrders.length}
+                onPageChange={setPage}
+                onPageSizeChange={(nextPageSize) => setPageSize(nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number])}
+              />
+            ) : null}
+          </div>
+        )}
+      </WorkspaceSplitView>
+      {isCreateOpen ? (
+        <FormDialog
+          title={sourceDirectConversationId && requestedCreate ? "Оформити замовлення з Direct" : t("orders.create")}
+          description={sourceDirectConversationId && requestedCreate ? "Контакти та адреса після успішного створення автоматично доповнять картку клієнта." : t("orders.createDescription")}
+          size="xl"
+          onClose={() => { setIsCreateOpen(false); if (requestedCreate) router.replace("/orders"); }}
+        >
+          <OrderFulfillmentWizard
+            workspaceId={workspaceId}
+            variants={variantsQuery.data ?? []}
+            products={productsQuery.data ?? []}
+            inventory={inventoryQuery.data ?? []}
+            customers={customersQuery.data ?? []}
+            campaigns={campaignsQuery.data ?? []}
+            currencyCode={currencyCode}
+            showProfit={currentWorkspace?.role === "OWNER"}
+            initialCustomerId={requestedCreate ? requestedCustomerId : null}
+            sourceDirectConversationId={requestedCreate ? sourceDirectConversationId : null}
+            onSuccess={(result) => {
+              setSelectedOrder(result.order);
+              invalidateOrderState();
+              queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
+              queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });
+              if (sourceDirectConversationId) {
+                queryClient.invalidateQueries({ queryKey: ["direct-customer-automation", workspaceId, sourceDirectConversationId] });
+              }
             }}
           />
-        </FilterBar>
-        <MetricCard
-          label={t("orders.todayLabel")}
-          value={formatMoney(dashboardQuery.data?.revenue_today, currencyCode)}
-          helper={t("orders.todaySummary", { count: dashboardQuery.data?.orders_today ?? 0, revenue: formatMoney(dashboardQuery.data?.revenue_today, currencyCode), profit: formatMoney(dashboardQuery.data?.profit_today, currencyCode) })}
-          tone="info"
-        />
-        <WorkspaceSplitView
-          panelOpen={Boolean(selectedOrder)}
-          panel={selectedOrder ? (
-            <EntitySidePanel
-              open={Boolean(selectedOrder)}
-              title={selectedOrder.order_number ?? t("orders.details")}
-              description={`${t("orders.profit")}: ${formatMoney(selectedOrder.net_profit, currencyCode)}`}
-              onClose={() => setSelectedOrder(null)}
-              footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingOrder(selectedOrder)}>{t("orders.edit")}</Button>{["NEW", "CANCELLED"].includes(selectedOrder.status) ? <Button variant="danger" onClick={() => setArchivingOrder(selectedOrder)}>{t("orders.archive")}</Button> : null}</div> : undefined}
-            >
-              <OrderDetails
-                order={selectedOrder}
-                currencyCode={currencyCode}
-                shipment={shipmentQuery.data}
-                onStatusChange={(nextStatus) => statusMutation.mutate({ orderId: selectedOrder.id, nextStatus })}
-              />
-            </EntitySidePanel>
-          ) : null}
-        >
-          {ordersQuery.isLoading ? (
-            <LoadingSkeleton rows={5} title={t("orders.loading")} />
-          ) : ordersQuery.isError ? (
-            <ErrorState title={t("orders.loadError")} description={safeApiErrorMessage(ordersQuery.error, t("orders.loadError"))} onRetry={() => void ordersQuery.refetch()} />
-          ) : (
-            <div className="orders-pagination-section grid min-w-0 gap-4">
-              {filteredOrders.length === 0 ? (
-                <EmptyState
-                  title={
-                    hasAnyOrders && hasActiveFilters
-                      ? t("orders.pagination.filteredEmptyTitle")
-                      : t("orders.pagination.emptyTitle")
-                  }
-                  description={
-                    hasAnyOrders && hasActiveFilters
-                      ? t("orders.pagination.filteredEmptyDescription")
-                      : t("orders.pagination.emptyDescription")
-                  }
-                  action={
-                    !hasAnyOrders ? (
-                      <Button onClick={() => setIsCreateOpen(true)}>{t("orders.create")}</Button>
-                    ) : null
-                  }
-                />
-              ) : (
-                <OrderTable
-                  orders={paginatedOrders}
-                  currencyCode={currencyCode}
-                  selectedOrderId={selectedOrder?.id}
-                  onSelect={setSelectedOrder}
-                  onEdit={canEdit ? setEditingOrder : undefined}
-                  onArchive={canEdit ? setArchivingOrder : undefined}
-                />
-              )}
-              {filteredOrders.length > 0 ? (
-                <PaginationControls
-                  page={page}
-                  pageSize={pageSize}
-                  totalItems={filteredOrders.length}
-                  onPageChange={setPage}
-                  onPageSizeChange={(nextPageSize) =>
-                    setPageSize(
-                      nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number],
-                    )
-                  }
-                />
-              ) : null}
-            </div>
-          )}
-        </WorkspaceSplitView>
-        {isCreateOpen ? (
-          <FormDialog
-            title={t("orders.create")}
-            description={t("orders.createDescription")}
-            size="xl"
-            onClose={() => setIsCreateOpen(false)}
-          >
-            <OrderFulfillmentWizard
-              workspaceId={workspaceId}
-              variants={variantsQuery.data ?? []}
-              products={productsQuery.data ?? []}
-              inventory={inventoryQuery.data ?? []}
-              customers={customersQuery.data ?? []}
-              campaigns={campaignsQuery.data ?? []}
-              currencyCode={currencyCode}
-              showProfit={currentWorkspace?.role === "OWNER"}
-              onSuccess={(result) => {
-                setSelectedOrder(result.order);
-                invalidateOrderState();
-                queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
-              }}
-            />
-          </FormDialog>
-        ) : null}
-        {editingOrder ? (
-          <FormDialog
-            title={t("orders.edit")}
-            description={t("orders.editDescription")}
-            size="xl"
-            onClose={() => setEditingOrder(null)}
-          >
-            <OrderForm
-              variants={variantsQuery.data ?? []}
-              products={productsQuery.data ?? []}
-              inventory={inventoryQuery.data ?? []}
-              customers={customersQuery.data ?? []}
-              campaigns={campaignsQuery.data ?? []}
-              currencyCode={currencyCode}
-              initialOrder={editingOrder}
-              lockedItems={!ITEM_EDIT_STATUSES.includes(editingOrder.status)}
-              submitLabel={t("actions.save")}
-              showProfit={currentWorkspace?.role === "OWNER"}
-              onSubmit={(values) =>
-                updateMutation.mutate(
-                  values as Parameters<typeof updateOrder>[2],
-                )
-              }
-            />
-            {updateMutation.isError ? (
-              <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-100">
-                {safeApiErrorMessage(
-                  updateMutation.error,
-                  t("orders.updateError"),
-                )}
-              </p>
-            ) : null}
-          </FormDialog>
-        ) : null}
-        {archivingOrder ? (
-          <ConfirmActionDialog
-            title={t("orders.archiveTitle")}
-            description={t("orders.archiveDescription")}
-            actionLabel={t("orders.archive")}
-            isSubmitting={archiveMutation.isPending}
-            error={
-              archiveMutation.isError
-                ? safeApiErrorMessage(
-                    archiveMutation.error,
-                    t("errors.deleteFailed"),
-                  )
-                : null
-            }
-            onCancel={() => setArchivingOrder(null)}
-            onConfirm={() => archiveMutation.mutate()}
+        </FormDialog>
+      ) : null}
+      {editingOrder ? (
+        <FormDialog title={t("orders.edit")} description={t("orders.editDescription")} size="xl" onClose={() => setEditingOrder(null)}>
+          <OrderForm
+            variants={variantsQuery.data ?? []}
+            products={productsQuery.data ?? []}
+            inventory={inventoryQuery.data ?? []}
+            customers={customersQuery.data ?? []}
+            campaigns={campaignsQuery.data ?? []}
+            currencyCode={currencyCode}
+            initialOrder={editingOrder}
+            lockedItems={!ITEM_EDIT_STATUSES.includes(editingOrder.status)}
+            submitLabel={t("actions.save")}
+            showProfit={currentWorkspace?.role === "OWNER"}
+            onSubmit={(values) => updateMutation.mutate(values as Parameters<typeof updateOrder>[2])}
           />
-        ) : null}
+          {updateMutation.isError ? <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-100">{safeApiErrorMessage(updateMutation.error, t("orders.updateError"))}</p> : null}
+        </FormDialog>
+      ) : null}
+      {archivingOrder ? (
+        <ConfirmActionDialog
+          title={t("orders.archiveTitle")}
+          description={t("orders.archiveDescription")}
+          actionLabel={t("orders.archive")}
+          isSubmitting={archiveMutation.isPending}
+          error={archiveMutation.isError ? safeApiErrorMessage(archiveMutation.error, t("errors.deleteFailed")) : null}
+          onCancel={() => setArchivingOrder(null)}
+          onConfirm={() => archiveMutation.mutate()}
+        />
+      ) : null}
     </WorkspacePage>
   );
 }
