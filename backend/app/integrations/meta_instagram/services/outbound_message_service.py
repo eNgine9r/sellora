@@ -78,7 +78,7 @@ class InstagramOutboundMessageService:
         if existing:
             msg = existing
         else:
-            msg = DirectMessageRepository(self.db).create(DirectMessage(workspace_id=workspace_id, conversation_id=op.conversation_id, direction=DirectMessageDirection.OUTBOUND.value, sender_type=DirectMessageSenderType.MANAGER.value, message_type=DirectMessageType.TEXT.value, text=message_text, received_at=datetime.now(UTC), sent_at=datetime.now(UTC), processing_status="SENT", is_synthetic=False, provider="INSTAGRAM", provider_message_id=result.provider_message_id, delivery_status="SENT", sent_by_user_id=op.created_by))
+            msg = DirectMessageRepository(self.db).create(DirectMessage(workspace_id=workspace_id, conversation_id=op.conversation_id, direction=DirectMessageDirection.OUTBOUND.value, sender_type=DirectMessageSenderType.MANAGER.value, message_type=DirectMessageType.TEXT.value, text=message_text, received_at=datetime.now(UTC), sent_at=datetime.now(UTC), processing_status="SENT", is_synthetic=False, provider="INSTAGRAM", provider_message_id=result.provider_message_id, delivery_status="PROVIDER_ACCEPTED", sent_by_user_id=op.created_by))
         op.status=MetaMessageOperationStatus.COMPLETED.value; op.provider_request_id=result.provider_request_id; op.provider_message_id=result.provider_message_id; op.direct_message_id=msg.id; op.completed_at=datetime.now(UTC); op.provider_succeeded_at=datetime.now(UTC); op.safe_result_metadata={"provider_status": result.raw_status}
         conversation = DirectConversationRepository(self.db).get(workspace_id, op.conversation_id)
         if conversation: conversation.last_outbound_message_at = datetime.now(UTC); conversation.last_message_at = datetime.now(UTC)
