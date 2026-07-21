@@ -24,6 +24,7 @@ export function LeadForm({ leadSources, campaigns = [], onSubmit, isSubmitting =
   const { t } = useI18n();
   const [values, setValues] = useState<LeadFormValues>({ name: "" });
   const [validationError, setValidationError] = useState<string | null>(null);
+  const expectedRevenueLabel = t("advertising.revenue") === "Revenue" ? "Expected revenue" : "Очікуваний дохід";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,7 +63,7 @@ export function LeadForm({ leadSources, campaigns = [], onSubmit, isSubmitting =
           {campaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name} · {campaign.platform}</option>)}
         </Select>
       </FormField>
-      <FormField label={t("analytics.revenue")}>
+      <FormField label={expectedRevenueLabel}>
         <Input inputMode="decimal" min="0" step="0.01" type="number" value={values.expected_revenue ?? ""} onChange={(event) => setValues({ ...values, expected_revenue: event.target.value })} />
       </FormField>
       <FormField label={t("orders.notes")}>
