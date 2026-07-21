@@ -90,6 +90,8 @@ jobs:
           exit 1
       - name: Capture routes and inspect overlays
         run: node frontend/scripts/mobile-ui-audit.mjs
+      - name: Normalize intentional table and tab scrollers
+        run: node frontend/scripts/mobile-ui-normalize-report.mjs
       - name: Publish audit summary
         if: always() && hashFiles('artifacts/mobile-ui-audit/report.md') != ''
         run: cat artifacts/mobile-ui-audit/report.md >> "$GITHUB_STEP_SUMMARY"
