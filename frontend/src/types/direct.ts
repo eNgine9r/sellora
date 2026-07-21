@@ -115,6 +115,44 @@ export type DirectCustomerFinalizeOrderPayload = DirectCustomerCompletePayload &
   order_id: string;
 };
 
+export type DirectCustomerExtractionData = {
+  recipient_name?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  region?: string | null;
+  delivery_provider: string;
+  delivery_point_type: string;
+  warehouse_number?: string | null;
+  warehouse_text?: string | null;
+  nova_poshta_city_ref?: string | null;
+  nova_poshta_warehouse_ref?: string | null;
+  city_verified: boolean;
+  warehouse_verified: boolean;
+  recipient_name_confidence: number;
+  phone_confidence: number;
+  city_confidence: number;
+  delivery_provider_confidence: number;
+  warehouse_confidence: number;
+  overall_confidence: number;
+  clarification_required: boolean;
+  missing_fields: string[];
+  conflicts: string[];
+  applied_fields: string[];
+  notes?: string | null;
+};
+
+export type DirectCustomerExtraction = {
+  analysis_id: string;
+  conversation_id: string;
+  status: "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED_SAFE" | string;
+  data?: DirectCustomerExtractionData | null;
+  source_message_count: number;
+  safe_error_code?: string | null;
+  applied: boolean;
+  created_at: string;
+  completed_at?: string | null;
+};
+
 export type InstagramHistorySync = {
   id: string;
   workspace_id: string;
