@@ -4,6 +4,7 @@ import process from "node:process";
 import { chromium } from "playwright";
 
 const baseUrl = (process.env.MOBILE_AUDIT_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
+const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://sellora-api-staging.onrender.com/api/v1").replace(/\/$/, "");
 const email = process.env.STAGING_OWNER_EMAIL;
 const password = process.env.STAGING_OWNER_PASSWORD;
 const outputRoot = path.resolve(process.cwd(), "artifacts/mobile-ui-audit");
@@ -27,10 +28,52 @@ const routes = [
 
 const unsafeAction = /ТТН|видал|архів|зберег|підтверд|відправ|викон|синхрон|оновити статус/i;
 const safeDialogAction = /^(створити|додати|редагувати|імпортувати|налаштувати)/i;
-const report = { baseUrl, generatedAt: new Date().toISOString(), viewports: [], public: [], authenticated: false };
+const report = { baseUrl, apiBaseUrl, generatedAt: new Date().toISOString(), viewports: [], public: [], authenticated: false, fatalError: null };
 
 function slug(route) {
   return route === "/" ? "landing" : route.replace(/^\//, "").replaceAll("/", "--") || "root";
+}
+
+function writeReport() {
+  fs.writeFileSync(path.join(outputRoot, "report.json"), JSON.stringify(report, null, 2));
+  const lines = [
+    "# Sellora Mobile UI Audit",
+    "",
+    `Generated: ${report.generatedAt}`,
+    `Base URL: ${baseUrl}`,
+    `Authenticated: ${report.authenticated ? "yes" : "no"}`,
+    report.fatalError ? `Fatal error: ${report.fatalError}` : "",
+    "",
+    "| Viewport | Route | Status | Horizontal overflow | Dialog |",
+    "|---|---|---|---:|---|",
+  ].filter(Boolean);
+  for (const viewport of report.viewports) {
+    for (const entry of viewport.routes) {
+      lines.push(`| ${viewport.name} | \`${entry.route}\` | ${entry.status} | ${entry.overflow?.documentOverflow ?? "—"} px | ${entry.dialog ? (entry.dialog.withinViewport ? "PASS" : "OUTSIDE") : "not opened"} |`);
+    }
+  }
+  fs.writeFileSync(path.join(outputRoot, "report.md"), `${lines.join("\n")}\n`);
+}
+
+async function fetchJson(url, init, label) {
+  const response = await fetch(url, init);
+  if (!response.ok) throw new Error(`${label} failed with HTTP ${response.status}`);
+  return response.json();
+}
+
+async function createAuthState() {
+  if (!email || !password) throw new Error("STAGING_OWNER_EMAIL and STAGING_OWNER_PASSWORD are required for protected-route audit");
+  const tokens = await fetchJson(`${apiBaseUrl}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  }, "Staging login");
+  const user = await fetchJson(`${apiBaseUrl}/auth/me`, {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  }, "Current user lookup");
+  const workspaceId = user.memberships?.find((membership) => typeof membership.workspace_id === "string" && membership.workspace_id.trim())?.workspace_id ?? null;
+  if (!workspaceId) throw new Error("Authenticated staging owner has no active workspace membership");
+  return { tokens, user, workspaceId };
 }
 
 async function inspectViewport(page) {
@@ -60,14 +103,16 @@ async function inspectDialog(page) {
   const dialog = page.locator('[role="dialog"]').last();
   if (!(await dialog.isVisible().catch(() => false))) return null;
   return dialog.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
+    const panel = element.querySelector(".sellora-dialog-panel") ?? element;
+    const rect = panel.getBoundingClientRect();
     const viewport = { width: window.innerWidth, height: window.innerHeight };
     return {
       left: Math.round(rect.left), top: Math.round(rect.top), right: Math.round(rect.right), bottom: Math.round(rect.bottom),
       width: Math.round(rect.width), height: Math.round(rect.height),
       withinViewport: rect.left >= -1 && rect.top >= -1 && rect.right <= viewport.width + 1 && rect.bottom <= viewport.height + 1,
-      scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
-      scrollHeight: element.scrollHeight, clientHeight: element.clientHeight,
+      scrollWidth: panel.scrollWidth, clientWidth: panel.clientWidth,
+      scrollHeight: panel.scrollHeight, clientHeight: panel.clientHeight,
+      horizontalOverflow: Math.max(0, panel.scrollWidth - panel.clientWidth),
     };
   });
 }
@@ -95,26 +140,31 @@ async function openSafeDialog(page, routeName, viewportName) {
 
 const browser = await chromium.launch({ headless: true, args: ["--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"] });
 try {
-  const context = await browser.newContext({ viewport: viewports[0] });
-  const page = await context.newPage();
-  page.setDefaultTimeout(20_000);
-
+  const publicContext = await browser.newContext({ viewport: viewports[0] });
+  const publicPage = await publicContext.newPage();
+  publicPage.setDefaultTimeout(20_000);
   for (const publicRoute of ["/", "/login"]) {
-    await page.goto(`${baseUrl}${publicRoute}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-    await page.waitForTimeout(500);
+    await publicPage.goto(`${baseUrl}${publicRoute}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    await publicPage.waitForTimeout(500);
     const file = path.join(screenshotsRoot, "public", `${slug(publicRoute)}.png`);
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    await page.screenshot({ path: file, fullPage: true });
-    report.public.push({ route: publicRoute, screenshot: path.relative(outputRoot, file), ...(await inspectViewport(page)) });
+    await publicPage.screenshot({ path: file, fullPage: true });
+    report.public.push({ route: publicRoute, screenshot: path.relative(outputRoot, file), ...(await inspectViewport(publicPage)) });
   }
+  await publicContext.close();
 
-  if (!email || !password) throw new Error("STAGING_OWNER_EMAIL and STAGING_OWNER_PASSWORD are required for protected-route audit");
-  await page.goto(`${baseUrl}/login`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await page.locator('input[type="email"], input[name="email"]').first().fill(email);
-  await page.locator('input[type="password"], input[name="password"]').first().fill(password);
-  await page.locator('button[type="submit"]').first().click();
-  await page.waitForFunction(() => window.location.pathname !== "/login", null, { timeout: 90_000 });
-  await page.waitForTimeout(1000);
+  const authState = await createAuthState();
+  const context = await browser.newContext({ viewport: viewports[0] });
+  await context.addInitScript(({ tokens, user, workspaceId }) => {
+    window.localStorage.setItem("sellora.access_token", tokens.access_token);
+    window.localStorage.setItem("sellora.refresh_token", tokens.refresh_token);
+    window.localStorage.setItem("sellora.current_user", JSON.stringify(user));
+    window.localStorage.setItem("sellora.current_workspace_id", workspaceId);
+  }, authState);
+  const page = await context.newPage();
+  page.setDefaultTimeout(20_000);
+  await page.goto(`${baseUrl}/dashboard`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.waitForFunction(() => window.location.pathname !== "/login", null, { timeout: 30_000 });
   report.authenticated = true;
 
   for (const viewport of viewports) {
@@ -134,7 +184,7 @@ try {
         entry.screenshot = path.relative(outputRoot, file);
         entry.overflow = await inspectViewport(page);
         entry.dialog = await openSafeDialog(page, routeName, viewport.name);
-        if (entry.overflow.documentOverflow > 1 || entry.overflow.offenders.length > 0 || (entry.dialog && !entry.dialog.withinViewport)) entry.status = "ISSUE";
+        if (entry.overflow.documentOverflow > 1 || entry.overflow.offenders.length > 0 || (entry.dialog && (!entry.dialog.withinViewport || entry.dialog.horizontalOverflow > 1))) entry.status = "ISSUE";
       } catch (error) {
         entry.status = "ERROR";
         entry.error = error instanceof Error ? error.message.slice(0, 500) : String(error);
@@ -142,17 +192,15 @@ try {
       viewportReport.routes.push(entry);
     }
     report.viewports.push(viewportReport);
+    writeReport();
   }
-
-  fs.writeFileSync(path.join(outputRoot, "report.json"), JSON.stringify(report, null, 2));
-  const lines = ["# Sellora Mobile UI Audit", "", `Generated: ${report.generatedAt}`, `Base URL: ${baseUrl}`, "", "| Viewport | Route | Status | Horizontal overflow | Dialog |", "|---|---|---|---:|---|"];
-  for (const viewport of report.viewports) {
-    for (const entry of viewport.routes) lines.push(`| ${viewport.name} | \`${entry.route}\` | ${entry.status} | ${entry.overflow?.documentOverflow ?? "—"} px | ${entry.dialog ? (entry.dialog.withinViewport ? "PASS" : "OUTSIDE") : "not opened"} |`);
-  }
-  fs.writeFileSync(path.join(outputRoot, "report.md"), `${lines.join("\n")}\n`);
 
   const issues = report.viewports.flatMap((viewport) => viewport.routes).filter((entry) => entry.status !== "PASS");
   console.log(`Mobile UI audit complete: ${report.viewports.length} viewports, ${routes.length} protected routes, ${issues.length} entries need review.`);
+} catch (error) {
+  report.fatalError = error instanceof Error ? error.message.slice(0, 800) : String(error);
+  writeReport();
+  throw error;
 } finally {
   await browser.close();
 }
