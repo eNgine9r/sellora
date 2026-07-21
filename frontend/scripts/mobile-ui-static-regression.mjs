@@ -30,7 +30,7 @@ const forbidden = [
   ["src/components/ui/overlay.tsx", "aria-label=\"Close\"", "non-localized close label"],
   ["src/components/ui/primitives.tsx", "min-h-8", "undersized shared button"],
   ["src/components/form-dialog.tsx", "fixed inset-0", "duplicated form overlay"],
-  ["src/components/confirm-action-dialog.tsx", "Cancel", "English confirmation action"],
+  ["src/components/confirm-action-dialog.tsx", "Working…", "English confirmation progress action"],
   ["src/components/edit-record-dialog.tsx", "Saving…", "English edit progress action"],
   ["src/components/edit-record-dialog.tsx", "Save changes", "English edit submit action"],
   ["src/components/filter-controls.tsx", "bg-blue", "page-local blue filter action"],
