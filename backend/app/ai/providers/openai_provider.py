@@ -85,8 +85,10 @@ class OpenAIProvider(AIProvider):
                     raise AIError("AI provider unavailable", "AI_PROVIDER_UNAVAILABLE") from exc
 
                 if response.status_code == 429 and attempt < self.max_retries:
-                    await asyncio.sleep(min(2**attempt, 4))
-                    continue
+                    error_code = self._provider_error_code(response)
+                    if error_code not in {"insufficient_quota", "billing_hard_limit_reached"}:
+                        await asyncio.sleep(min(2**attempt, 4))
+                        continue
                 if response.status_code >= 500 and attempt < self.max_retries:
                     await asyncio.sleep(min(2**attempt, 4))
                     continue
@@ -125,8 +127,8 @@ class OpenAIProvider(AIProvider):
             raw_status=str(body.get("status") or "completed"),
         )
 
-    @staticmethod
-    def _raise_for_status(response: httpx.Response) -> None:
+    @classmethod
+    def _raise_for_status(cls, response: httpx.Response) -> None:
         if response.status_code < 400:
             return
         if response.status_code == 401:
@@ -134,10 +136,25 @@ class OpenAIProvider(AIProvider):
         if response.status_code == 403:
             raise AIError("AI provider request is forbidden", "AI_PROVIDER_FORBIDDEN")
         if response.status_code == 429:
+            provider_code = cls._provider_error_code(response)
+            if provider_code in {"insufficient_quota", "billing_hard_limit_reached"}:
+                raise AIError("AI provider billing quota is unavailable", "AI_BILLING_QUOTA_EXCEEDED")
             raise AIError("AI provider rate limit exceeded", "AI_RATE_LIMITED")
         if response.status_code >= 500:
             raise AIError("AI provider unavailable", "AI_PROVIDER_UNAVAILABLE")
         raise AIError("AI provider rejected the request", "AI_PROVIDER_REQUEST_INVALID")
+
+    @staticmethod
+    def _provider_error_code(response: httpx.Response) -> str | None:
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        error = payload.get("error") if isinstance(payload, dict) else None
+        if not isinstance(error, dict):
+            return None
+        value = error.get("code") or error.get("type")
+        return str(value) if value else None
 
     @staticmethod
     def _output_text(body: dict[str, Any]) -> str:

@@ -1,19 +1,34 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 import logging
 import os
 
+from sqlalchemy import select
+
 from app.ai.services.direct_customer_data_extraction_service import (
     DirectCustomerDataExtractionService,
+    PROMPT_KEY as CUSTOMER_EXTRACTION_PROMPT_KEY,
 )
 from app.database.session import SessionLocal
 from app.integrations.meta_instagram.services.history_sync_visibility_service import (
     InstagramHistorySyncVisibilityService as InstagramHistorySyncService,
 )
 from app.integrations.meta_instagram.services.webhook_processor_service import InstagramWebhookProcessorService
+from app.models.ai_direct import AIAnalysis, AIAnalysisStatus
 
 logger = logging.getLogger(__name__)
+
+
+AI_EXTRACTION_COOLDOWNS = {
+    "AI_RATE_LIMITED": timedelta(minutes=15),
+    "AI_BILLING_QUOTA_EXCEEDED": timedelta(hours=6),
+    "AI_PROVIDER_CREDENTIAL_INVALID": timedelta(hours=6),
+    "AI_PROVIDER_FORBIDDEN": timedelta(hours=6),
+    "AI_PROVIDER_UNAVAILABLE": timedelta(minutes=5),
+    "AI_REQUEST_TIMEOUT": timedelta(minutes=5),
+}
 
 
 def webhook_worker_enabled() -> bool:
@@ -50,9 +65,29 @@ async def process_history_sync_job() -> str | None:
             raise
 
 
+def _customer_extraction_cooldown_active(db) -> bool:
+    latest_failure = db.execute(
+        select(AIAnalysis)
+        .where(
+            AIAnalysis.prompt_key == CUSTOMER_EXTRACTION_PROMPT_KEY,
+            AIAnalysis.status == AIAnalysisStatus.FAILED_SAFE.value,
+            AIAnalysis.safe_error_code.in_(tuple(AI_EXTRACTION_COOLDOWNS)),
+        )
+        .order_by(AIAnalysis.completed_at.desc().nullslast(), AIAnalysis.created_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if latest_failure is None:
+        return False
+    cooldown = AI_EXTRACTION_COOLDOWNS.get(latest_failure.safe_error_code)
+    failure_time = latest_failure.completed_at or latest_failure.created_at
+    return bool(cooldown and failure_time and datetime.now(UTC) < failure_time + cooldown)
+
+
 async def process_customer_data_extraction_job() -> str | None:
     with SessionLocal() as db:
         try:
+            if _customer_extraction_cooldown_active(db):
+                return None
             status = await DirectCustomerDataExtractionService(db).process_next()
             db.commit()
             return status
