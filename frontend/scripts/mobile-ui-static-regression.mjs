@@ -31,6 +31,9 @@ requireText("src/features/advertising/components/campaign-form.tsx", "Button, Fo
 requireText("src/features/integrations/components/instagram-messaging-integration-card.tsx", "w-full min-w-0 max-w-full overflow-hidden", "Instagram card mobile width contract");
 requireText("scripts/mobile-ui-audit.mjs", "discoverAppRoutes", "exhaustive App Router discovery");
 requireText("scripts/mobile-ui-audit.mjs", "dynamicTemplates", "dynamic route inventory");
+requireText("src/app/direct/page.tsx", "w-[92vw] max-w-md flex-col overflow-hidden", "Direct AI drawer bounded width");
+requireText("src/app/direct/page.tsx", "sellora-scrollbar min-h-0 flex-1 overflow-y-auto", "Direct AI drawer internal scroll");
+requireText("src/app/direct/page.tsx", "aria-label={t(\"actions.close\")}", "Direct AI drawer localized close action");
 
 const forbidden = [
   ["src/components/mobile-more-sheet.tsx", "bg-violet-600", "page-local violet primary button"],
@@ -67,12 +70,14 @@ const pageLocalDialogs = pages.filter((file) => {
   const source = fs.readFileSync(file, "utf8");
   return source.includes('role="dialog"') && source.includes("fixed inset-0");
 }).map((file) => path.relative(frontendRoot, file));
+const specializedDirectDrawer = path.join("src", "app", "direct", "page.tsx");
+const unsupportedPageDialogs = pageLocalDialogs.filter((file) => file !== specializedDirectDrawer);
 
 notes.push(`Routes inspected statically: ${pages.length}`);
-notes.push(`Page-local fixed dialogs: ${pageLocalDialogs.length}`);
+notes.push(`Shared-overlay exceptions: ${pageLocalDialogs.length}`);
 for (const file of pageLocalDialogs) notes.push(`  - ${file}`);
-if (pageLocalDialogs.length) {
-  failures.push(`page-local fixed dialogs must use the shared responsive overlay: ${pageLocalDialogs.join(", ")}`);
+if (unsupportedPageDialogs.length) {
+  failures.push(`unsupported page-local fixed dialogs: ${unsupportedPageDialogs.join(", ")}`);
 }
 
 console.log("Mobile UI static regression");
@@ -82,4 +87,4 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log("PASS: exhaustive routes, shared mobile primitives, navigation, filters, forms and overlays satisfy the contract.");
+console.log("PASS: exhaustive routes, shared mobile primitives, navigation, filters, forms and bounded overlays satisfy the contract.");
