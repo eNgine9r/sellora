@@ -4,6 +4,9 @@ import asyncio
 import logging
 import os
 
+from app.ai.services.direct_customer_data_extraction_service import (
+    DirectCustomerDataExtractionService,
+)
 from app.database.session import SessionLocal
 from app.integrations.meta_instagram.services.history_sync_visibility_service import (
     InstagramHistorySyncVisibilityService as InstagramHistorySyncService,
@@ -47,6 +50,17 @@ async def process_history_sync_job() -> str | None:
             raise
 
 
+async def process_customer_data_extraction_job() -> str | None:
+    with SessionLocal() as db:
+        try:
+            status = await DirectCustomerDataExtractionService(db).process_next()
+            db.commit()
+            return status
+        except Exception:
+            db.rollback()
+            raise
+
+
 async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
     interval = webhook_poll_seconds()
     logger.info("Instagram webhook worker started", extra={"poll_seconds": interval})
@@ -71,6 +85,18 @@ async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
             raise
         except Exception:
             logger.exception("Instagram history sync job failed")
+
+        try:
+            extraction_status = await process_customer_data_extraction_job()
+            if extraction_status:
+                logger.info(
+                    "Direct customer data extraction processed",
+                    extra={"status": extraction_status},
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Direct customer data extraction failed")
 
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval)

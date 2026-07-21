@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     meta_outbound_workspace_rate_limit: int = Field(default=30, ge=1, le=600, alias="META_OUTBOUND_WORKSPACE_RATE_LIMIT")
     meta_outbound_conversation_rate_limit: int = Field(default=5, ge=1, le=120, alias="META_OUTBOUND_CONVERSATION_RATE_LIMIT")
 
-
     ai_provider: str = Field(default="openai", alias="AI_PROVIDER")
+    ai_api_base_url: str = Field(default="https://api.openai.com/v1", alias="AI_API_BASE_URL")
     ai_api_key: str | None = Field(default=None, alias="AI_API_KEY")
     ai_default_model: str = Field(default="gpt-4.1-mini", alias="AI_DEFAULT_MODEL")
     ai_fast_model: str = Field(default="gpt-4.1-mini", alias="AI_FAST_MODEL")
@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     ai_default_daily_token_limit: int = Field(default=100000, ge=1, le=5000000, alias="AI_DEFAULT_DAILY_TOKEN_LIMIT")
     ai_default_monthly_budget_usd: float = Field(default=25.0, ge=0, le=10000, alias="AI_DEFAULT_MONTHLY_BUDGET_USD")
     ai_feature_enabled: bool = Field(default=False, alias="AI_FEATURE_ENABLED")
+    ai_customer_data_extraction_enabled: bool = Field(default=True, alias="AI_CUSTOMER_DATA_EXTRACTION_ENABLED")
 
     initial_admin_email: str = Field(default="admin@sellora.local", alias="INITIAL_ADMIN_EMAIL")
     initial_admin_password: str = Field(default="ChangeMe123!", alias="INITIAL_ADMIN_PASSWORD")
