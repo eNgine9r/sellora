@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.ai import router as ai_router
 from app.api.v1.direct import router as direct_router
 from app.api.v1.direct_customer_automation import router as direct_customer_automation_router
+from app.api.v1.direct_customer_extraction import router as direct_customer_extraction_router
 from app.api.v1.direct_live import router as direct_live_router
 from app.api.v1.direct_sync import router as direct_sync_router
 
@@ -34,6 +35,7 @@ api_router = APIRouter()
 api_router.include_router(ai_router)
 api_router.include_router(direct_router)
 api_router.include_router(direct_customer_automation_router)
+api_router.include_router(direct_customer_extraction_router)
 api_router.include_router(direct_live_router)
 api_router.include_router(direct_sync_router)
 api_router.include_router(advertising_router)
