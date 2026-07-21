@@ -3,6 +3,7 @@ import {
   DirectConversation,
   DirectCustomerAutomationState,
   DirectCustomerCompletePayload,
+  DirectCustomerExtraction,
   DirectCustomerFinalizeOrderPayload,
   DirectLiveSummary,
   DirectMessage,
@@ -27,6 +28,20 @@ export function finalizeDirectCustomerOrder(conversationId: string, payload: Dir
   return apiRequest<DirectCustomerAutomationState>(`/direct/conversations/${conversationId}/customer-automation/finalize-order`, {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+export function fetchDirectCustomerExtraction(conversationId: string) {
+  return apiRequest<DirectCustomerExtraction | null>(`/direct/conversations/${conversationId}/customer-data-extraction`);
+}
+export function extractDirectCustomerData(conversationId: string) {
+  return apiRequest<DirectCustomerExtraction>(`/direct/conversations/${conversationId}/customer-data-extraction/extract`, {
+    method: "POST",
+  });
+}
+export function applyDirectCustomerExtraction(conversationId: string, analysisId: string, overwriteFields: string[] = []) {
+  return apiRequest<DirectCustomerExtraction>(`/direct/conversations/${conversationId}/customer-data-extraction/apply`, {
+    method: "POST",
+    body: JSON.stringify({ analysis_id: analysisId, overwrite_fields: overwriteFields }),
   });
 }
 export function fetchInstagramHistorySync() { return apiRequest<InstagramHistorySync | null>("/direct/history-sync"); }
