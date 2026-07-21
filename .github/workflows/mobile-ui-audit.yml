@@ -1,0 +1,93 @@
+name: Mobile UI Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/mobile-ui-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-ui-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile-ui-audit:
+    name: screenshots-and-boundaries
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_API_BASE_URL: https://sellora-api-staging.onrender.com/api/v1
+      NEXT_PUBLIC_API_TIMEOUT_MS: "90000"
+      MOBILE_AUDIT_BASE_URL: http://127.0.0.1:3000
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+    steps:
+      - name: Checkout audit branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install browser audit runtime
+        working-directory: frontend
+        run: |
+          npm install --no-save --package-lock=false playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Build branch frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Start branch frontend
+        working-directory: frontend
+        run: |
+          nohup npm run start -- -p 3000 > "$RUNNER_TEMP/sellora-mobile-ui-server.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/sellora-mobile-ui-server.pid"
+
+      - name: Wait for local frontend
+        shell: bash
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3000/login > /dev/null; then
+              echo "Local Sellora frontend is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/sellora-mobile-ui-server.log"
+          exit 1
+
+      - name: Capture routes and inspect overlays
+        run: node frontend/scripts/mobile-ui-audit.mjs
+
+      - name: Publish audit summary
+        if: always() && hashFiles('artifacts/mobile-ui-audit/report.md') != ''
+        run: cat artifacts/mobile-ui-audit/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload screenshots and machine-readable report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sellora-mobile-ui-audit-${{ github.run_id }}
+          path: artifacts/mobile-ui-audit
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Print server log on failure
+        if: failure()
+        run: tail -n 200 "$RUNNER_TEMP/sellora-mobile-ui-server.log" || true
