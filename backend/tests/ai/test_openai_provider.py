@@ -86,6 +86,31 @@ async def test_openai_provider_maps_rate_limit_to_safe_error() -> None:
 
 
 @pytest.mark.asyncio
+async def test_openai_provider_maps_insufficient_quota_separately() -> None:
+    provider = OpenAIProvider(
+        "test-key",
+        transport=httpx.MockTransport(
+            lambda _request: httpx.Response(
+                429,
+                json={
+                    "error": {
+                        "message": "You exceeded your current quota.",
+                        "type": "insufficient_quota",
+                        "code": "insufficient_quota",
+                    }
+                },
+            )
+        ),
+        max_retries=1,
+    )
+
+    with pytest.raises(AIError) as error:
+        await provider.generate_structured_response(_request())
+
+    assert error.value.safe_code == "AI_BILLING_QUOTA_EXCEEDED"
+
+
+@pytest.mark.asyncio
 async def test_openai_provider_requires_credential() -> None:
     provider = OpenAIProvider(None, max_retries=0)
 
