@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useId } from "react";
+import { ReactNode, useEffect, useId, useState } from "react";
 import { Card, IconButton, PageHeader, StatusBadge, Button } from "@/components/ui/primitives";
 import { Drawer } from "@/components/ui/overlay";
 import { X } from "lucide-react";
@@ -8,6 +8,20 @@ import { useI18n } from "@/i18n/provider";
 import { cn } from "@/services/utils";
 
 type MetricTone = "neutral" | "success" | "warning" | "danger" | "info";
+
+function useDesktopLayout() {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  return isDesktop;
+}
 
 export function WorkspacePage({ children, className }: { children: ReactNode; className?: string }) {
   return <main className={cn("min-w-0 overflow-x-hidden px-4 py-4 text-text-primary sm:px-5 sm:py-5 lg:px-6", className)}><div className="grid min-w-0 w-full gap-4 lg:gap-5">{children}</div></main>;
@@ -41,7 +55,6 @@ export function CompactSummary({ items, layout = "auto" }: { items: { label: str
   })}</section>;
 }
 
-
 export function WorkspaceSplitView({ children, panelOpen = false, panel, sidePanel }: { children: ReactNode; panelOpen?: boolean; panel?: ReactNode; sidePanel?: ReactNode }) {
   const activePanel = panel ?? sidePanel;
   const isOpen = panelOpen && Boolean(activePanel);
@@ -54,6 +67,8 @@ export function WorkspaceSplitView({ children, panelOpen = false, panel, sidePan
 export function EntitySidePanel({ title, description, open, onClose, children, footer }: { title: string; description?: string; open: boolean; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
   const titleId = useId();
   const { t } = useI18n();
+  const isDesktop = useDesktopLayout();
+
   return <>
     {open ? <aside aria-labelledby={titleId} data-entity-side-panel="desktop" className="hidden max-h-[calc(100dvh-var(--topbar-height,72px)-32px)] min-w-0 flex-col overflow-hidden rounded-3xl border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)] lg:sticky lg:top-4 lg:flex lg:animate-in lg:fade-in-0 lg:slide-in-from-right-2 motion-reduce:animate-none">
       <header className="flex items-start justify-between gap-4 border-b border-border-subtle bg-surface-1/95 p-4">
@@ -63,7 +78,7 @@ export function EntitySidePanel({ title, description, open, onClose, children, f
       <div className="sellora-scrollbar min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
       {footer ? <footer className="border-t border-border-subtle bg-surface-1/95 p-4">{footer}</footer> : null}
     </aside> : null}
-    <div className="lg:hidden"><Drawer open={open} onClose={onClose} title={title} description={description} footer={footer}>{children}</Drawer></div>
+    {!isDesktop ? <Drawer open={open} onClose={onClose} title={title} description={description} footer={footer}>{children}</Drawer> : null}
   </>;
 }
 
