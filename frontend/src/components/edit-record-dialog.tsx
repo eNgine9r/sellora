@@ -1,11 +1,39 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Modal } from "@/components/ui/overlay";
+import { Button, FormField, Input, Select, Textarea } from "@/components/ui/primitives";
+import { useI18n } from "@/i18n/provider";
 
 type EditField = { name: string; label: string; type?: "text" | "number" | "date" | "select" | "textarea"; options?: { value: string; label: string }[] };
 
 export function EditRecordDialog({ title, fields, initialValues, isSubmitting = false, submitError, onClose, onSubmit }: { title: string; fields: EditField[]; initialValues: object; isSubmitting?: boolean; submitError?: string | null; onClose: () => void; onSubmit: (values: Record<string, string>) => void }) {
+  const { t } = useI18n();
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((field) => [field.name, (initialValues as Record<string, unknown>)[field.name] == null ? "" : String((initialValues as Record<string, unknown>)[field.name])])));
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); onSubmit(values); }
-  return <div className="sellora-dialog-overlay fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-slate-950/60 p-3 backdrop-blur-sm sm:p-4"><div className="mx-auto flex min-h-full w-full items-center justify-center mobile-safe-bottom"><section className="sellora-dialog-panel max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-[720px] min-w-0 overflow-y-auto overflow-x-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-900 sm:w-full sm:max-h-[calc(100dvh-3rem)] sm:p-6"><div className="mb-5 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><h2 className="break-words text-xl font-black text-slate-950 dark:text-white">{title}</h2><button className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-bold text-slate-700 dark:border-white/10 dark:text-slate-100" onClick={onClose} type="button">Cancel</button></div><form className="grid min-w-0 gap-4 overflow-x-hidden" onSubmit={submit} noValidate>{fields.map((field) => <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200" key={field.name}>{field.label}{field.type === "textarea" ? <textarea className="min-h-24 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} /> : field.type === "select" ? <select className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}>{field.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input className="min-h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 py-2" inputMode={field.type === "number" ? "decimal" : undefined} type={field.type === "date" ? "date" : "text"} value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} />}</label>)}{submitError ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-100">{submitError}</p> : null}<button className="min-h-11 w-full rounded-md bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={isSubmitting} type="submit">{isSubmitting ? "Saving…" : "Save changes"}</button></form></section></div></div>;
+
+  return (
+    <Modal open title={title} onClose={onClose} size="lg">
+      <form className="grid min-w-0 gap-4 overflow-x-hidden" onSubmit={submit} noValidate>
+        {fields.map((field) => (
+          <FormField label={field.label} key={field.name}>
+            {field.type === "textarea" ? (
+              <Textarea value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} />
+            ) : field.type === "select" ? (
+              <Select value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}>
+                {field.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </Select>
+            ) : (
+              <Input inputMode={field.type === "number" ? "decimal" : undefined} type={field.type === "date" ? "date" : "text"} value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} />
+            )}
+          </FormField>
+        ))}
+        {submitError ? <p className="rounded-2xl border border-danger/25 bg-[var(--danger-surface)] px-3 py-2 text-sm font-bold text-[var(--danger-foreground)]">{submitError}</p> : null}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Button variant="secondary" disabled={isSubmitting} onClick={onClose} type="button">{t("actions.cancel")}</Button>
+          <Button loading={isSubmitting} type="submit">{t("actions.saveChanges")}</Button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
