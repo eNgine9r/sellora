@@ -16,16 +16,16 @@ const buttonVariants: Record<Variant, string> = {
 };
 
 const buttonSizes: Record<Size, string> = {
-  sm: "min-h-8 rounded-xl px-3 text-xs",
-  md: "min-h-10 rounded-2xl px-4 text-sm",
-  lg: "min-h-11 rounded-2xl px-5 text-sm",
+  sm: "min-h-10 rounded-xl px-3 text-xs",
+  md: "min-h-11 rounded-2xl px-4 text-sm",
+  lg: "min-h-12 rounded-2xl px-5 text-sm",
 };
 
 export function Button({ className, variant = "primary", size = "md", loading = false, disabled, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size; loading?: boolean }) {
   return (
     <button
       className={twMerge(
-        "inline-flex min-w-0 items-center justify-center gap-2 font-black transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:cursor-not-allowed disabled:opacity-55",
+        "inline-flex min-w-0 items-center justify-center gap-2 whitespace-nowrap font-black transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:cursor-not-allowed disabled:opacity-55",
         buttonVariants[variant],
         buttonSizes[size],
         className,
@@ -40,15 +40,15 @@ export function Button({ className, variant = "primary", size = "md", loading = 
 }
 
 export function IconButton({ className, variant = "secondary", loading = false, disabled, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; loading?: boolean }) {
-  return <Button className={twMerge("h-10 w-10 p-0", className)} variant={variant} disabled={disabled} loading={loading} {...props}>{children}</Button>;
+  return <Button className={twMerge("h-11 w-11 min-h-11 min-w-11 p-0", className)} variant={variant} disabled={disabled} loading={loading} {...props}>{children}</Button>;
 }
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <section className={twMerge("rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-5 shadow-[var(--shadow-card)]", className)}>{children}</section>;
+  return <section className={twMerge("rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)] sm:p-5", className)}>{children}</section>;
 }
 
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
-  return <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-end md:justify-between"><div className="min-w-0"><h1 className="text-2xl font-black tracking-[-0.03em] text-text-primary md:text-3xl">{title}</h1>{description ? <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">{description}</p> : null}</div>{actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}</div>;
+  return <div className="grid min-w-0 gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"><div className="min-w-0"><h1 className="break-words text-2xl font-black tracking-[-0.03em] text-text-primary md:text-3xl">{title}</h1>{description ? <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">{description}</p> : null}</div>{actions ? <div className="grid min-w-0 gap-2 sm:flex sm:shrink-0 sm:flex-wrap sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">{actions}</div> : null}</div>;
 }
 
 export function StatusBadge({ children, tone = "info" }: { children: ReactNode; tone?: "success" | "warning" | "danger" | "info" | "neutral" }) {
@@ -57,17 +57,17 @@ export function StatusBadge({ children, tone = "info" }: { children: ReactNode; 
 }
 
 export function FormField({ label, hint, error, children }: { label: string; hint?: string; error?: string | null; children: ReactNode }) {
-  return <label className="grid gap-2 text-sm font-bold text-text-primary"><span>{label}</span>{children}{hint && !error ? <span className="text-xs font-semibold text-text-muted">{hint}</span> : null}{error ? <span className="inline-flex items-center gap-1 text-xs font-bold text-danger"><AlertCircle className="h-3.5 w-3.5" />{error}</span> : null}</label>;
+  return <label className="grid min-w-0 gap-2 text-sm font-bold text-text-primary"><span>{label}</span>{children}{hint && !error ? <span className="text-xs font-semibold text-text-muted">{hint}</span> : null}{error ? <span className="inline-flex items-center gap-1 text-xs font-bold text-danger"><AlertCircle className="h-3.5 w-3.5" />{error}</span> : null}</label>;
 }
 
-const controlClass = "h-10 w-full min-w-0 rounded-2xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary outline-none transition placeholder:text-text-muted hover:border-border-strong focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/30 disabled:cursor-not-allowed disabled:opacity-55 aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/25";
+const controlClass = "h-11 min-h-11 w-full min-w-0 rounded-2xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary outline-none transition placeholder:text-text-muted hover:border-border-strong focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/30 disabled:cursor-not-allowed disabled:opacity-55 aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/25";
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) { return <input {...props} className={twMerge(controlClass, props.className)} />; }
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) { return <select {...props} className={twMerge(controlClass, props.className)} />; }
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) { return <textarea {...props} className={twMerge(controlClass, "min-h-28 py-3", props.className)} />; }
 export function Checkbox(props: InputHTMLAttributes<HTMLInputElement>) { return <input type="checkbox" {...props} className={twMerge("h-4 w-4 rounded border-border-strong bg-surface-2 text-primary focus:ring-2 focus:ring-focus-ring/40", props.className)} />; }
 
-export function FilterBar({ children, className }: { children: ReactNode; className?: string }) { return <div className={twMerge("flex min-w-0 flex-col gap-3 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-3 md:flex-row md:items-center", className)}>{children}</div>; }
-export function Tabs({ tabs, active, onChange }: { tabs: { id: string; label: string }[]; active: string; onChange: (id: string) => void }) { return <div className="inline-flex rounded-2xl border border-border-subtle bg-surface-1 p-1">{tabs.map((tab) => <button key={tab.id} className={twMerge("min-h-8 rounded-xl px-3 text-sm font-black text-text-secondary transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring", active === tab.id && "bg-surface-3 text-text-primary")} onClick={() => onChange(tab.id)} type="button">{tab.label}</button>)}</div>; }
+export function FilterBar({ children, className }: { children: ReactNode; className?: string }) { return <div className={twMerge("flex min-w-0 flex-col gap-3 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-3 md:flex-row md:flex-wrap md:items-center [&>*]:min-w-0", className)}>{children}</div>; }
+export function Tabs({ tabs, active, onChange }: { tabs: { id: string; label: string }[]; active: string; onChange: (id: string) => void }) { return <div className="sellora-scrollbar flex max-w-full overflow-x-auto rounded-2xl border border-border-subtle bg-surface-1 p-1">{tabs.map((tab) => <button key={tab.id} className={twMerge("min-h-10 shrink-0 rounded-xl px-3 text-sm font-black text-text-secondary transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring", active === tab.id && "bg-surface-3 text-text-primary")} onClick={() => onChange(tab.id)} type="button">{tab.label}</button>)}</div>; }
 
 export function DataTable({ children, state }: { children: ReactNode; state?: "default" | "loading" | "empty" | "filtered-empty" | "error" }) { return <div className="min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)]"><div className="sellora-scrollbar min-w-0 overflow-x-auto">{state && state !== "default" ? <StatePanel state={state} /> : children}</div></div>; }
 function StatePanel({ state }: { state: Exclude<NonNullable<Parameters<typeof DataTable>[0]["state"]>, "default"> }) { const copy = { loading: ["Завантаження даних…", "Підготовлюємо таблицю."], empty: ["Даних ще немає", "Створіть перший запис або імпортуйте історичні дані."], "filtered-empty": ["Нічого не знайдено", "Спробуйте змінити фільтри або пошуковий запит."], error: ["Не вдалося завантажити таблицю", "Оновіть сторінку або спробуйте пізніше."] }[state]; return <div className="grid min-h-56 place-items-center p-6 text-center"><div><Inbox className="mx-auto h-8 w-8 text-text-muted" /><h3 className="mt-3 font-black text-text-primary">{copy[0]}</h3><p className="mt-1 text-sm text-text-secondary">{copy[1]}</p></div></div>; }
