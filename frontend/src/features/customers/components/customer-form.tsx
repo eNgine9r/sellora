@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useI18n } from "@/i18n/provider";
 import { buildCustomerCreatePayload } from "@/lib/payload-builders";
 import { CustomerCreatePayload } from "@/services/crm";
+import { Button, FormField, Input } from "@/components/ui/primitives";
 
 export type CustomerFormValues = {
   name: string;
@@ -31,31 +32,25 @@ export function CustomerForm({ onSubmit, isSubmitting = false, submitError }: { 
 
   return (
     <form className="grid min-w-0 gap-4 overflow-x-hidden" onSubmit={submit} noValidate>
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
-        {t("tables.name")}
-        <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} />
-      </label>
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
-        {t("tables.phone")}
-        <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.phone ?? ""} onChange={(event) => setValues({ ...values, phone: event.target.value })} />
-      </label>
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
-        {t("tables.instagram")}
-        <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.instagram_username ?? ""} onChange={(event) => setValues({ ...values, instagram_username: event.target.value })} />
-      </label>
+      <FormField label={t("tables.name")} error={validationError}>
+        <Input required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} />
+      </FormField>
+      <FormField label={t("tables.phone")}>
+        <Input inputMode="tel" value={values.phone ?? ""} onChange={(event) => setValues({ ...values, phone: event.target.value })} />
+      </FormField>
+      <FormField label={t("tables.instagram")}>
+        <Input autoCapitalize="none" value={values.instagram_username ?? ""} onChange={(event) => setValues({ ...values, instagram_username: event.target.value })} />
+      </FormField>
       <div className="grid min-w-0 gap-4 md:grid-cols-2">
-        <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
-          {t("shipments.city")}
-          <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.city ?? ""} onChange={(event) => setValues({ ...values, city: event.target.value })} />
-        </label>
-        <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700">
-          {t("customers.region")}
-          <input className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.region ?? ""} onChange={(event) => setValues({ ...values, region: event.target.value })} />
-        </label>
+        <FormField label={t("shipments.city")}>
+          <Input value={values.city ?? ""} onChange={(event) => setValues({ ...values, city: event.target.value })} />
+        </FormField>
+        <FormField label={t("customers.region")}>
+          <Input value={values.region ?? ""} onChange={(event) => setValues({ ...values, region: event.target.value })} />
+        </FormField>
       </div>
-      {validationError ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">{validationError}</p> : null}
-      {submitError ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">{submitError}</p> : null}
-      <button className="min-h-11 w-full rounded-md bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={isSubmitting} type="submit">{isSubmitting ? t("customers.creating") : t("customers.create")}</button>
+      {submitError ? <p className="rounded-2xl border border-danger/25 bg-[var(--danger-surface)] px-3 py-2 text-sm font-bold text-[var(--danger-foreground)]">{submitError}</p> : null}
+      <Button className="w-full" loading={isSubmitting} type="submit">{t("customers.create")}</Button>
     </form>
   );
 }

@@ -8,6 +8,7 @@ import { FormDialog } from "@/components/form-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
 import { Button, CompactSummary, DrawerTabs, EntitySidePanel, FieldGrid, FieldItem, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
+import { Select } from "@/components/ui/primitives";
 import { PaginationControls, clampPage, paginateItems } from "@/components/pagination-controls";
 import { ProductForm } from "@/features/products/components/product-form";
 import { ProductTable } from "@/features/products/components/product-table";
@@ -219,11 +220,11 @@ export default function ProductsPage() {
           />
           <FilterBar>
             <SearchInput value={search} onChange={setSearch} placeholder={categoryFilter === "all" ? t("products.searchProducts") : t("products.searchInCategory")} />
-            <select className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
+            <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
               <option value="all">{t("products.allStatuses")}</option>
               <option value="active">{t("products.active")}</option>
               <option value="inactive">{t("products.inactive")}</option>
-            </select>
+            </Select>
             <SortSelect value={productSort} onChange={setProductSort} options={[{ value: "newest", label: t("sort.newest") }, { value: "oldest", label: t("sort.oldest") }, { value: "nameAsc", label: t("sort.nameAsc") }, { value: "nameDesc", label: t("sort.nameDesc") }]} />
             <ResetFiltersButton onClick={() => { setSearch(""); setCategoryFilter("all"); setStatusFilter("all"); setProductSort("newest"); }} />
           </FilterBar>
@@ -261,9 +262,9 @@ export default function ProductsPage() {
                 <h2 className="text-lg font-semibold">{t("products.manageVariants")}</h2>
                 <p className="mt-1 text-sm text-text-muted">{t("products.variantsDescription")}</p>
               </div>
-              <button className="min-h-10 rounded-xl border border-border-subtle px-4 py-2 text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-60" disabled={!enabled} onClick={() => setDialog("variant")}>
+              <Button variant="secondary" disabled={!enabled} onClick={() => setDialog("variant")}>
                 {t("products.createVariant")}
-              </button>
+              </Button>
             </div>
             <div className="sellora-scrollbar mt-3 overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
@@ -271,10 +272,10 @@ export default function ProductsPage() {
                   <tr>
                     <th className="px-3 py-2">SKU</th>
                     <th className="px-3 py-2">{t("inventory.product")}</th>
-                    <th className="px-3 py-2">Color</th>
-                    <th className="px-3 py-2">Size</th>
-                    <th className="px-3 py-2">Price</th>
-                    <th className="px-3 py-2">Barcode</th>
+                    <th className="px-3 py-2">{t("products.color")}</th>
+                    <th className="px-3 py-2">{t("products.size")}</th>
+                    <th className="px-3 py-2">{t("products.sellingPrice")}</th>
+                    <th className="px-3 py-2">{t("products.barcode")}</th>
                     <th className="px-3 py-2">{t("tables.status")}</th>
                     <th className="px-3 py-2">{t("tables.actions")}</th>
                   </tr>
@@ -292,12 +293,12 @@ export default function ProductsPage() {
                       <td className="px-3 py-2">
                         {canEdit ? (
                           <div className="flex flex-wrap gap-2">
-                            <button aria-label={`Edit variant ${variant.sku}`} className="min-h-10 rounded-xl border border-border-subtle px-3 py-2 font-semibold text-text-primary" onClick={() => setEditingVariant(variant)}>
+                            <Button aria-label={`${t("products.editVariant")} ${variant.sku}`} size="sm" variant="secondary" onClick={() => setEditingVariant(variant)}>
                               {t("products.editVariant")}
-                            </button>
-                            <button aria-label={`Archive variant ${variant.sku}`} className="min-h-10 rounded-xl border border-danger-foreground/30 px-3 py-2 font-semibold text-danger-foreground" onClick={() => setArchivingVariant(variant)}>
+                            </Button>
+                            <Button aria-label={`${t("products.archive")} ${variant.sku}`} size="sm" variant="danger" onClick={() => setArchivingVariant(variant)}>
                               {t("products.archive")}
-                            </button>
+                            </Button>
                           </div>
                         ) : (
                           <span className="text-xs font-semibold uppercase text-text-muted">{t("common.readOnly")}</span>

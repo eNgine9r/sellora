@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "mobile:audit:static": "node scripts/mobile-ui-static-regression.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.80.0",
