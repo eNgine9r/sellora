@@ -268,6 +268,121 @@ jobs:
           print(json.dumps(evidence, ensure_ascii=False))
           PY
 
+      - name: Verify Direct AI customer data extraction
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from urllib.error import HTTPError, URLError
+          from urllib.request import Request, urlopen
+
+          api = f"{os.environ['STAGING_API_URL'].rstrip('/')}/api/v1"
+
+          def request(path, *, method="GET", token=None, workspace=None, body=None):
+              headers = {"Accept": "application/json"}
+              if token:
+                  headers["Authorization"] = f"Bearer {token}"
+              if workspace:
+                  headers["X-Workspace-ID"] = workspace
+              data = None
+              if body is not None:
+                  data = json.dumps(body).encode("utf-8")
+                  headers["Content-Type"] = "application/json"
+              req = Request(f"{api}{path}", data=data, method=method, headers=headers)
+              try:
+                  with urlopen(req, timeout=90) as response:
+                      raw = response.read().decode("utf-8")
+                      return response.status, json.loads(raw) if raw else {}
+              except HTTPError as exc:
+                  raw = exc.read().decode("utf-8", errors="replace")
+                  try:
+                      payload = json.loads(raw) if raw else {}
+                  except json.JSONDecodeError:
+                      payload = {"detail": "non-json response"}
+                  return exc.code, payload
+              except (URLError, TimeoutError) as exc:
+                  return 0, {"detail": exc.__class__.__name__}
+
+          code, tokens = request(
+              "/auth/login",
+              method="POST",
+              body={
+                  "email": os.environ["STAGING_OWNER_EMAIL"],
+                  "password": os.environ["STAGING_OWNER_PASSWORD"],
+              },
+          )
+          if code != 200 or not tokens.get("access_token"):
+              raise SystemExit(f"Staging OWNER login failed with HTTP {code}")
+          token = tokens["access_token"]
+
+          code, current_user = request("/auth/me", token=token)
+          if code != 200:
+              raise SystemExit(f"Staging /auth/me failed with HTTP {code}")
+
+          evidence = {
+              "attempted": False,
+              "http_status": None,
+              "analysis_status": None,
+              "safe_error_code": None,
+              "source_message_count": 0,
+              "has_name": False,
+              "has_phone": False,
+              "has_city": False,
+              "has_warehouse": False,
+              "city_verified": False,
+              "warehouse_verified": False,
+              "applied_field_count": 0,
+          }
+
+          stop = False
+          for membership in current_user.get("memberships") or []:
+              workspace_id = str(membership.get("workspace_id") or "")
+              if not workspace_id:
+                  continue
+              code, conversations = request(
+                  "/direct/conversations",
+                  token=token,
+                  workspace=workspace_id,
+              )
+              if code != 200 or not isinstance(conversations, list):
+                  continue
+              for conversation in conversations:
+                  if conversation.get("channel") != "INSTAGRAM" or not conversation.get("id"):
+                      continue
+                  code, result = request(
+                      f"/direct/conversations/{conversation['id']}/customer-data-extraction/extract",
+                      method="POST",
+                      token=token,
+                      workspace=workspace_id,
+                  )
+                  evidence["attempted"] = True
+                  evidence["http_status"] = code
+                  if isinstance(result, dict):
+                      evidence["analysis_status"] = result.get("status")
+                      evidence["safe_error_code"] = result.get("safe_error_code")
+                      evidence["source_message_count"] = int(result.get("source_message_count") or 0)
+                      data = result.get("data") or {}
+                      evidence["has_name"] = bool(data.get("recipient_name"))
+                      evidence["has_phone"] = bool(data.get("phone"))
+                      evidence["has_city"] = bool(data.get("city"))
+                      evidence["has_warehouse"] = bool(data.get("warehouse_number") or data.get("warehouse_text"))
+                      evidence["city_verified"] = bool(data.get("city_verified"))
+                      evidence["warehouse_verified"] = bool(data.get("warehouse_verified"))
+                      evidence["applied_field_count"] = len(data.get("applied_fields") or [])
+                      if code != 200 and not evidence["safe_error_code"]:
+                          detail = result.get("detail")
+                          evidence["safe_error_code"] = detail if isinstance(detail, str) else None
+                  stop = True
+                  break
+              if stop:
+                  break
+
+          with open("artifacts/direct-ai-customer-extraction.json", "w", encoding="utf-8") as file:
+              json.dump(evidence, file, indent=2, ensure_ascii=False)
+          print(json.dumps(evidence, ensure_ascii=False))
+          PY
+
       - name: Validate sanitized deployment evidence
         if: always()
         shell: bash
