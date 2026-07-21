@@ -1,11 +1,13 @@
 "use client";
 
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Inbox, Loader2 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "brand";
 type Size = "sm" | "md" | "lg";
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size; loading?: boolean };
+type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; loading?: boolean };
 
 const buttonVariants: Record<Variant, string> = {
   primary: "bg-primary text-primary-foreground shadow-[var(--shadow-control)] hover:bg-primary-hover active:bg-primary-active",
@@ -21,9 +23,10 @@ const buttonSizes: Record<Size, string> = {
   lg: "min-h-12 rounded-2xl px-5 text-sm",
 };
 
-export function Button({ className, variant = "primary", size = "md", loading = false, disabled, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size; loading?: boolean }) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({ className, variant = "primary", size = "md", loading = false, disabled, children, ...props }, ref) {
   return (
     <button
+      ref={ref}
       className={twMerge(
         "inline-flex min-w-0 items-center justify-center gap-2 whitespace-nowrap font-black transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:cursor-not-allowed disabled:opacity-55",
         buttonVariants[variant],
@@ -37,11 +40,11 @@ export function Button({ className, variant = "primary", size = "md", loading = 
       {children}
     </button>
   );
-}
+});
 
-export function IconButton({ className, variant = "secondary", loading = false, disabled, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; loading?: boolean }) {
-  return <Button className={twMerge("h-11 w-11 min-h-11 min-w-11 p-0", className)} variant={variant} disabled={disabled} loading={loading} {...props}>{children}</Button>;
-}
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton({ className, variant = "secondary", loading = false, disabled, children, ...props }, ref) {
+  return <Button ref={ref} className={twMerge("h-11 w-11 min-h-11 min-w-11 p-0", className)} variant={variant} disabled={disabled} loading={loading} {...props}>{children}</Button>;
+});
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return <section className={twMerge("rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)] sm:p-5", className)}>{children}</section>;
