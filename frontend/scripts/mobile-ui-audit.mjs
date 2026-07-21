@@ -46,7 +46,7 @@ const publicRoutes = discovered.routes.filter((route) => route === "/" || route 
 const protectedRoutes = discovered.routes.filter((route) => !publicRoutes.includes(route));
 
 const unsafeAction = /ТТН|видал|архів|зберег|підтверд|відправ|викон|синхрон|оновити статус/i;
-const safeDialogAction = /^(створити|додати|редагувати|імпортувати|налаштувати)/i;
+const safeDialogAction = /^(створити|додати|редагувати|імпортувати|налаштувати|відкрити)/i;
 const report = { baseUrl, apiBaseUrl, generatedAt: new Date().toISOString(), discoveredRoutes: discovered.routes, protectedRoutes, publicRoutes, dynamicTemplates: discovered.dynamicTemplates, viewports: [], public: [], authenticated: false, fatalError: null };
 
 function slug(route) {
@@ -61,6 +61,11 @@ function writeReport() {
     `Generated: ${report.generatedAt}`,
     `Base URL: ${baseUrl}`,
     `Authenticated: ${report.authenticated ? "yes" : "no"}`,
+    `Discovered static routes: ${report.discoveredRoutes.length}`,
+    `Public routes: ${report.publicRoutes.length}`,
+    `Protected routes: ${report.protectedRoutes.length}`,
+    `Dynamic templates inventoried: ${report.dynamicTemplates.length}`,
+    report.dynamicTemplates.length ? `Dynamic templates: ${report.dynamicTemplates.join(", ")}` : "Dynamic templates: none",
     report.fatalError ? `Fatal error: ${report.fatalError}` : "",
     "",
     "| Viewport | Route | Status | Horizontal overflow | Dialog |",
@@ -122,7 +127,7 @@ async function inspectDialog(page) {
   const dialog = page.locator('[role="dialog"]').last();
   if (!(await dialog.isVisible().catch(() => false))) return null;
   return dialog.evaluate((element) => {
-    const panel = element.querySelector(".sellora-dialog-panel") ?? element;
+    const panel = element.querySelector(".sellora-dialog-panel, aside") ?? element;
     const rect = panel.getBoundingClientRect();
     const viewport = { width: window.innerWidth, height: window.innerHeight };
     return {
@@ -138,11 +143,13 @@ async function inspectDialog(page) {
 
 async function openSafeDialog(page, routeName, viewportName) {
   const buttons = page.locator("button:visible");
-  const count = Math.min(await buttons.count(), 80);
+  const count = Math.min(await buttons.count(), 100);
   for (let index = 0; index < count; index += 1) {
     const button = buttons.nth(index);
     const text = (await button.innerText().catch(() => "")).trim().replace(/\s+/g, " ");
-    if (!safeDialogAction.test(text) || unsafeAction.test(text)) continue;
+    const ariaLabel = (await button.getAttribute("aria-label").catch(() => "")) ?? "";
+    const actionText = text || ariaLabel;
+    if (!safeDialogAction.test(actionText) || unsafeAction.test(actionText)) continue;
     if (await button.isDisabled().catch(() => true)) continue;
     await button.click({ timeout: 3000 }).catch(() => null);
     await page.waitForTimeout(350);
@@ -152,7 +159,7 @@ async function openSafeDialog(page, routeName, viewportName) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     await page.screenshot({ path: file, fullPage: false });
     await page.keyboard.press("Escape").catch(() => null);
-    return { trigger: text, screenshot: path.relative(outputRoot, file), ...metrics };
+    return { trigger: actionText, screenshot: path.relative(outputRoot, file), ...metrics };
   }
   return null;
 }
@@ -215,7 +222,7 @@ try {
   }
 
   const issues = report.viewports.flatMap((viewport) => viewport.routes).filter((entry) => entry.status !== "PASS");
-  console.log(`Mobile UI audit complete: ${report.viewports.length} viewports, ${routes.length} protected routes, ${issues.length} entries need review.`);
+  console.log(`Mobile UI audit complete: ${report.viewports.length} viewports, ${protectedRoutes.length} protected routes, ${issues.length} entries need review.`);
 } catch (error) {
   report.fatalError = error instanceof Error ? error.message.slice(0, 800) : String(error);
   writeReport();
