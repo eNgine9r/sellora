@@ -1,0 +1,44 @@
+name: Product Page Mobile Patch
+
+on:
+  push:
+    branches: [fix/mobile-ui-standardization]
+    paths: [.github/workflows/product-page-mobile-patch.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/mobile-ui-standardization
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Standardize product page controls and labels
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('frontend/src/app/products/page.tsx')
+          s = p.read_text()
+          s = s.replace('import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";', 'import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";\nimport { Select } from "@/components/ui/primitives";')
+          s = s.replace('<select className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>', '<Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>')
+          s = s.replace('</select>\n            <SortSelect', '</Select>\n            <SortSelect', 1)
+          s = s.replace('<button className="min-h-10 rounded-xl border border-border-subtle px-4 py-2 text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-60" disabled={!enabled} onClick={() => setDialog("variant")}>\n                {t("products.createVariant")}\n              </button>', '<Button variant="secondary" disabled={!enabled} onClick={() => setDialog("variant")}>\n                {t("products.createVariant")}\n              </Button>')
+          s = s.replace('<th className="px-3 py-2">Color</th>', '<th className="px-3 py-2">{t("products.color")}</th>')
+          s = s.replace('<th className="px-3 py-2">Size</th>', '<th className="px-3 py-2">{t("products.size")}</th>')
+          s = s.replace('<th className="px-3 py-2">Price</th>', '<th className="px-3 py-2">{t("products.sellingPrice")}</th>')
+          s = s.replace('<th className="px-3 py-2">Barcode</th>', '<th className="px-3 py-2">{t("products.barcode")}</th>')
+          s = s.replace('<button aria-label={`Edit variant ${variant.sku}`} className="min-h-10 rounded-xl border border-border-subtle px-3 py-2 font-semibold text-text-primary" onClick={() => setEditingVariant(variant)}>\n                              {t("products.editVariant")}\n                            </button>', '<Button aria-label={`${t("products.editVariant")} ${variant.sku}`} size="sm" variant="secondary" onClick={() => setEditingVariant(variant)}>\n                              {t("products.editVariant")}\n                            </Button>')
+          s = s.replace('<button aria-label={`Archive variant ${variant.sku}`} className="min-h-10 rounded-xl border border-danger-foreground/30 px-3 py-2 font-semibold text-danger-foreground" onClick={() => setArchivingVariant(variant)}>\n                              {t("products.archive")}\n                            </button>', '<Button aria-label={`${t("products.archive")} ${variant.sku}`} size="sm" variant="danger" onClick={() => setArchivingVariant(variant)}>\n                              {t("products.archive")}\n                            </Button>')
+          p.write_text(s)
+          PY
+      - name: Commit product page patch
+        run: |
+          git config user.name "sellora-mobile-ui-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add frontend/src/app/products/page.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: standardize product variant table controls"
+          git push origin HEAD:fix/mobile-ui-standardization
