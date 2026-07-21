@@ -23,6 +23,12 @@ requireText("src/components/form-dialog.tsx", "<Modal open", "form dialog shared
 requireText("src/components/confirm-action-dialog.tsx", "<ConfirmationDialog open", "confirmation shared overlay");
 requireText("src/components/edit-record-dialog.tsx", "actions.saveChanges", "localized edit action");
 requireText("src/components/filter-controls.tsx", "FilterBar as SharedFilterBar", "shared filter primitives");
+requireText("src/features/leads/components/lead-form.tsx", "Button, FormField, Input, Select, Textarea", "lead form shared controls");
+requireText("src/features/customers/components/customer-form.tsx", "Button, FormField, Input", "customer form shared controls");
+requireText("src/features/products/components/product-form.tsx", "Button, FormField, Input, Select, Textarea", "product form shared controls");
+requireText("src/features/products/components/product-variant-form.tsx", "Button, FormField, Input, Select", "variant form shared controls");
+requireText("src/features/advertising/components/campaign-form.tsx", "Button, FormField, Input, Select, Textarea", "campaign form shared controls");
+requireText("src/features/integrations/components/instagram-messaging-integration-card.tsx", "w-full min-w-0 max-w-full overflow-hidden", "Instagram card mobile width contract");
 
 const forbidden = [
   ["src/components/mobile-more-sheet.tsx", "bg-violet-600", "page-local violet primary button"],
@@ -34,6 +40,13 @@ const forbidden = [
   ["src/components/edit-record-dialog.tsx", "Saving…", "English edit progress action"],
   ["src/components/edit-record-dialog.tsx", "Save changes", "English edit submit action"],
   ["src/components/filter-controls.tsx", "bg-blue", "page-local blue filter action"],
+  ["src/features/leads/components/lead-form.tsx", "bg-blue", "page-local lead submit action"],
+  ["src/features/customers/components/customer-form.tsx", "bg-blue", "page-local customer submit action"],
+  ["src/features/products/components/product-form.tsx", "bg-blue", "page-local product submit action"],
+  ["src/features/products/components/product-variant-form.tsx", "bg-blue", "page-local variant submit action"],
+  ["src/features/advertising/components/campaign-form.tsx", "bg-blue", "page-local campaign submit action"],
+  ["src/features/leads/components/lead-form.tsx", "Create lead", "English lead submit copy"],
+  ["src/features/products/components/product-variant-form.tsx", "Create variant", "English variant submit copy"],
 ];
 for (const [relative, needle, label] of forbidden) {
   if (read(relative).includes(needle)) failures.push(`${label}: found ${JSON.stringify(needle)} in ${relative}`);
@@ -64,4 +77,4 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log("PASS: shared mobile primitives, navigation, filters and overlays satisfy the contract.");
+console.log("PASS: shared mobile primitives, navigation, filters, forms and overlays satisfy the contract.");
