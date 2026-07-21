@@ -19,16 +19,35 @@ const viewports = [
   { name: "430x932", width: 430, height: 932 },
 ];
 
-const routes = [
-  "/dashboard", "/leads", "/direct", "/customers", "/orders", "/products",
-  "/inventory", "/shipments", "/advertising", "/finance", "/analytics",
-  "/reports", "/calendar", "/notes", "/insights", "/settings",
-  "/settings/workspace", "/settings/team", "/settings/integrations", "/settings/import",
-];
+function walkPages(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const target = path.join(directory, entry.name);
+    return entry.isDirectory() ? walkPages(target) : [target];
+  });
+}
+
+function discoverAppRoutes() {
+  const appRoot = path.join(path.resolve(path.dirname(new URL(import.meta.url).pathname), ".."), "src", "app");
+  const dynamicTemplates = [];
+  const routes = walkPages(appRoot)
+    .filter((file) => file.endsWith(`${path.sep}page.tsx`))
+    .map((file) => {
+      const relativeDirectory = path.relative(appRoot, path.dirname(file)).split(path.sep).filter((segment) => !segment.startsWith("(") && !segment.startsWith("@"));
+      const route = relativeDirectory.length ? `/${relativeDirectory.join("/")}` : "/";
+      if (route.includes("[") || route.includes("]")) dynamicTemplates.push(route);
+      return route;
+    })
+    .filter((route) => !route.includes("[") && !route.includes("]"));
+  return { routes: [...new Set(routes)].sort(), dynamicTemplates: [...new Set(dynamicTemplates)].sort() };
+}
+
+const discovered = discoverAppRoutes();
+const publicRoutes = discovered.routes.filter((route) => route === "/" || route === "/login" || route.startsWith("/legal/"));
+const protectedRoutes = discovered.routes.filter((route) => !publicRoutes.includes(route));
 
 const unsafeAction = /ТТН|видал|архів|зберег|підтверд|відправ|викон|синхрон|оновити статус/i;
 const safeDialogAction = /^(створити|додати|редагувати|імпортувати|налаштувати)/i;
-const report = { baseUrl, apiBaseUrl, generatedAt: new Date().toISOString(), viewports: [], public: [], authenticated: false, fatalError: null };
+const report = { baseUrl, apiBaseUrl, generatedAt: new Date().toISOString(), discoveredRoutes: discovered.routes, protectedRoutes, publicRoutes, dynamicTemplates: discovered.dynamicTemplates, viewports: [], public: [], authenticated: false, fatalError: null };
 
 function slug(route) {
   return route === "/" ? "landing" : route.replace(/^\//, "").replaceAll("/", "--") || "root";
@@ -143,7 +162,7 @@ try {
   const publicContext = await browser.newContext({ viewport: viewports[0] });
   const publicPage = await publicContext.newPage();
   publicPage.setDefaultTimeout(20_000);
-  for (const publicRoute of ["/", "/login"]) {
+  for (const publicRoute of publicRoutes) {
     await publicPage.goto(`${baseUrl}${publicRoute}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await publicPage.waitForTimeout(500);
     const file = path.join(screenshotsRoot, "public", `${slug(publicRoute)}.png`);
@@ -170,7 +189,7 @@ try {
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     const viewportReport = { ...viewport, routes: [] };
-    for (const route of routes) {
+    for (const route of protectedRoutes) {
       const routeName = slug(route);
       const entry = { route, status: "PASS", screenshot: null, overflow: null, dialog: null, error: null };
       try {
