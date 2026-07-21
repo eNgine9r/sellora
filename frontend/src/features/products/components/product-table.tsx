@@ -1,5 +1,7 @@
 "use client";
 
+import { Archive, Pencil } from "lucide-react";
+import { IconButton } from "@/components/ui/primitives";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
@@ -15,7 +17,7 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
   return (
     <div className="w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
       <div className="sellora-scrollbar hidden max-w-full overflow-x-auto lg:block">
-        <table className="w-full min-w-[820px] divide-y divide-border-subtle text-sm dark:divide-white/10">
+        <table className="w-full min-w-[760px] divide-y divide-border-subtle text-sm dark:divide-white/10">
           <thead className="bg-surface-2 text-left text-xs font-black uppercase tracking-wide text-text-muted">
             <tr>
               <th className="px-4 py-3">{t("inventory.productImage")}</th>
@@ -24,21 +26,21 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
               <th className="px-4 py-3">SKU</th>
               <th className="px-4 py-3">{t("tables.status")}</th>
               <th className="px-4 py-3">{t("tables.created")}</th>
-              <th className="px-4 py-3">{t("tables.actions")}</th>
+              <th className="w-[92px] px-4 py-3 text-center">{t("tables.actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
             {products.map((product) => {
               const image = primaryImage(product);
               return (
-                <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.04]">
+                <tr key={product.id} className={`cursor-pointer hover:bg-surface-hover ${selectedProductId === product.id ? "bg-surface-selected" : ""}`} onClick={() => onSelect?.(product)}>
                   <td className="px-4 py-3">{image ? <RemoteImage className="h-12 w-12 rounded-lg" src={image.image_url} alt={image.alt_text ?? product.name} /> : <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-400 dark:bg-white/10">IMG</div>}</td>
                   <td className="max-w-[240px] truncate px-4 py-3 font-medium text-slate-900 dark:text-white">{product.name}</td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{displayCategory(product.category, t)}</td>
                   <td className="max-w-[160px] truncate px-4 py-3 text-slate-700 dark:text-slate-200">{product.sku ?? "—"}</td>
                   <td className="px-4 py-3 text-slate-700"><span className={statusBadgeClass(product.is_active ? "success" : "neutral")}>{product.is_active ? t("products.active") : t("products.inactive")}</span></td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{new Date(product.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3"><div className="flex flex-wrap gap-2">{onEdit ? <button aria-label={`${t("products.edit")} ${product.name}`} className="rounded-lg border border-slate-300 px-3 py-2 font-semibold dark:border-white/10" onClick={() => onEdit(product)}>{t("products.edit")}</button> : <span className="text-slate-400">{t("common.readOnly")}</span>}{onArchive ? <button aria-label={`${t("products.archive")} ${product.name}`} className="rounded-lg border border-rose-200 px-3 py-2 font-semibold text-rose-700 dark:border-rose-400/40 dark:text-rose-200" onClick={() => onArchive(product)}>{t("products.archive")}</button> : null}</div></td>
+                  <td className="px-4 py-3"><div className="flex items-center justify-center gap-1" onClick={(event) => event.stopPropagation()}>{onEdit ? <IconButton variant="ghost" title={t("products.edit")} aria-label={`${t("products.edit")} ${product.name}`} onClick={() => onEdit(product)}><Pencil className="h-4 w-4" /></IconButton> : <span className="text-xs text-text-muted">{t("common.readOnly")}</span>}{onArchive ? <IconButton variant="danger" title={t("products.archive")} aria-label={`${t("products.archive")} ${product.name}`} onClick={() => onArchive(product)}><Archive className="h-4 w-4" /></IconButton> : null}</div></td>
                 </tr>
               );
             })}
@@ -53,11 +55,7 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
             <article className={`min-w-0 rounded-2xl border p-4 ${selectedProductId === product.id ? "border-primary bg-surface-selected" : "border-border-subtle bg-surface-1"}`} onClick={() => onSelect?.(product)} key={product.id}>
               <div className="flex min-w-0 gap-3">
                 {image ? <RemoteImage className="h-16 w-16 shrink-0 rounded-xl" src={image.image_url} alt={image.alt_text ?? product.name} /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-400 dark:bg-white/10">IMG</div>}
-                <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-lg font-black text-text-primary">{product.name}</h3>
-                  <p className="text-sm text-text-secondary">{displayCategory(product.category, t)}</p>
-                  <p className="truncate text-sm text-text-secondary">SKU: {product.sku ?? "—"}</p>
-                </div>
+                <div className="min-w-0 flex-1"><h3 className="truncate text-lg font-black text-text-primary">{product.name}</h3><p className="text-sm text-text-secondary">{displayCategory(product.category, t)}</p><p className="truncate text-sm text-text-secondary">SKU: {product.sku ?? "—"}</p></div>
                 <span className={`${statusBadgeClass(product.is_active ? "success" : "neutral")} shrink-0`}>{product.is_active ? t("products.active") : t("products.inactive")}</span>
               </div>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row" onClick={(event) => event.stopPropagation()}>{onEdit ? <button className="min-h-11 rounded-xl border border-border-subtle px-4 py-3 font-bold dark:border-white/10" onClick={() => onEdit(product)}>{t("products.edit")}</button> : null}{onArchive ? <button className="min-h-11 rounded-xl border border-danger-foreground/30 px-4 py-3 font-bold text-danger-foreground" onClick={() => onArchive(product)}>{t("products.archive")}</button> : null}</div>
@@ -69,4 +67,5 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
     </div>
   );
 }
+
 // Regression compatibility markers: Edit product; Archive product.
