@@ -14,7 +14,9 @@ import {
   useState,
 } from "react";
 
-import { fetchDirectLiveSummary } from "@/services/direct";
+import { DirectCustomerExtractionPanel } from "@/components/direct-customer-extraction-panel";
+import { useAuth } from "@/hooks/use-auth";
+import { fetchDirectConversations, fetchDirectLiveSummary } from "@/services/direct";
 import { DirectLiveEvent, DirectLiveSummary } from "@/types/direct";
 
 
@@ -53,10 +55,12 @@ export function DirectLiveProvider({ workspaceId, children }: { workspaceId: str
   const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
+  const { currentWorkspace } = useAuth();
   const initialized = useRef(false);
   const knownMessageIds = useRef(new Set<string>());
   const [toastEvent, setToastEvent] = useState<DirectLiveEvent | null>(null);
   const [permission, setPermission] = useState<BrowserNotificationPermission>("unsupported");
+  const [requestedConversationId, setRequestedConversationId] = useState<string | null>(null);
 
   const liveQuery = useQuery({
     queryKey: ["direct-live-summary", workspaceId],
@@ -68,12 +72,33 @@ export function DirectLiveProvider({ workspaceId, children }: { workspaceId: str
     staleTime: 1000,
     retry: 3,
   });
+  const conversationsQuery = useQuery({
+    queryKey: ["direct-conversations", workspaceId],
+    queryFn: fetchDirectConversations,
+    enabled: Boolean(workspaceId && pathname.startsWith("/direct")),
+    refetchInterval: 2000,
+    refetchIntervalInBackground: true,
+  });
 
   useEffect(() => {
     initialized.current = false;
     knownMessageIds.current.clear();
     setToastEvent(null);
+    setRequestedConversationId(null);
   }, [workspaceId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !pathname.startsWith("/direct")) {
+      setRequestedConversationId(null);
+      return;
+    }
+    const readConversation = () => {
+      setRequestedConversationId(new URLSearchParams(window.location.search).get("conversation"));
+    };
+    readConversation();
+    const interval = window.setInterval(readConversation, 500);
+    return () => window.clearInterval(interval);
+  }, [pathname]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) {
@@ -107,6 +132,9 @@ export function DirectLiveProvider({ workspaceId, children }: { workspaceId: str
     void queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });
     void queryClient.invalidateQueries({
       predicate: (query) => query.queryKey[0] === "direct-messages" && query.queryKey[1] === workspaceId,
+    });
+    void queryClient.invalidateQueries({
+      predicate: (query) => query.queryKey[0] === "direct-customer-extraction" && query.queryKey[1] === workspaceId,
     });
 
     const newest = fresh[fresh.length - 1];
@@ -148,6 +176,14 @@ export function DirectLiveProvider({ workspaceId, children }: { workspaceId: str
     () => new Set((liveQuery.data?.events ?? []).filter((event) => event.order_intent).map((event) => event.conversation_id)),
     [liveQuery.data?.events],
   );
+  const selectedConversationId = useMemo(() => {
+    const conversations = conversationsQuery.data ?? [];
+    if (requestedConversationId && conversations.some((item) => item.id === requestedConversationId)) {
+      return requestedConversationId;
+    }
+    return conversations[0]?.id ?? null;
+  }, [conversationsQuery.data, requestedConversationId]);
+  const canManage = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
 
   const value = useMemo<DirectLiveContextValue>(() => ({
     summary: liveQuery.data,
@@ -162,6 +198,13 @@ export function DirectLiveProvider({ workspaceId, children }: { workspaceId: str
   return (
     <DirectLiveContext.Provider value={value}>
       {children}
+      {pathname.startsWith("/direct") ? (
+        <DirectCustomerExtractionPanel
+          workspaceId={workspaceId}
+          conversationId={selectedConversationId}
+          canManage={canManage}
+        />
+      ) : null}
       {toastEvent ? (
         <div className="fixed right-4 top-20 z-[80] w-[min(92vw,420px)] overflow-hidden rounded-3xl border border-border-subtle bg-surface-1 shadow-2xl" role="status" aria-live="polite" data-direct-live-toast>
           <button

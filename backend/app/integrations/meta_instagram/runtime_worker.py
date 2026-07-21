@@ -4,6 +4,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 import logging
 import os
+import time
 
 from sqlalchemy import select
 
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 AI_EXTRACTION_COOLDOWNS = {
-    "AI_RATE_LIMITED": timedelta(minutes=15),
+    "AI_RATE_LIMITED": timedelta(minutes=1),
     "AI_BILLING_QUOTA_EXCEEDED": timedelta(hours=6),
     "AI_PROVIDER_CREDENTIAL_INVALID": timedelta(hours=6),
     "AI_PROVIDER_FORBIDDEN": timedelta(hours=6),
@@ -41,6 +42,14 @@ def webhook_poll_seconds() -> float:
         return min(max(float(raw), 1.0), 60.0)
     except ValueError:
         return 5.0
+
+
+def customer_extraction_poll_seconds() -> float:
+    raw = os.getenv("AI_CUSTOMER_DATA_EXTRACTION_POLL_SECONDS", "30")
+    try:
+        return min(max(float(raw), 10.0), 300.0)
+    except ValueError:
+        return 30.0
 
 
 def process_webhook_batch() -> int:
@@ -98,7 +107,15 @@ async def process_customer_data_extraction_job() -> str | None:
 
 async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
     interval = webhook_poll_seconds()
-    logger.info("Instagram webhook worker started", extra={"poll_seconds": interval})
+    extraction_interval = customer_extraction_poll_seconds()
+    next_extraction_at = 0.0
+    logger.info(
+        "Instagram webhook worker started",
+        extra={
+            "poll_seconds": interval,
+            "ai_customer_extraction_poll_seconds": extraction_interval,
+        },
+    )
     while not stop_event.is_set():
         try:
             processed = await asyncio.to_thread(process_webhook_batch)
@@ -121,17 +138,20 @@ async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
         except Exception:
             logger.exception("Instagram history sync job failed")
 
-        try:
-            extraction_status = await process_customer_data_extraction_job()
-            if extraction_status:
-                logger.info(
-                    "Direct customer data extraction processed",
-                    extra={"status": extraction_status},
-                )
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            logger.exception("Direct customer data extraction failed")
+        monotonic_now = time.monotonic()
+        if monotonic_now >= next_extraction_at:
+            next_extraction_at = monotonic_now + extraction_interval
+            try:
+                extraction_status = await process_customer_data_extraction_job()
+                if extraction_status:
+                    logger.info(
+                        "Direct customer data extraction processed",
+                        extra={"status": extraction_status},
+                    )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Direct customer data extraction failed")
 
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval)

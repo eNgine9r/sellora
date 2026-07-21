@@ -30,6 +30,7 @@ def _http_error(exc: Exception) -> HTTPException:
         "AI_PROVIDER_UNAVAILABLE",
         "AI_PROVIDER_CREDENTIAL_INVALID",
         "AI_PROVIDER_FORBIDDEN",
+        "AI_BILLING_QUOTA_EXCEEDED",
         "AI_REQUEST_TIMEOUT",
         "AI_RATE_LIMITED",
     }:
