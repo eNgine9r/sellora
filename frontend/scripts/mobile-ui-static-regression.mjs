@@ -1,0 +1,58 @@
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+
+const frontendRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const read = (relative) => fs.readFileSync(path.join(frontendRoot, relative), "utf8");
+const failures = [];
+const notes = [];
+
+function requireText(relative, expected, label) {
+  const source = read(relative);
+  if (!source.includes(expected)) failures.push(`${label}: missing ${JSON.stringify(expected)} in ${relative}`);
+}
+
+requireText("src/components/app-shell.tsx", "floating-capsule five-primary-links profile-sheet subtle-active-state", "mobile navigation contract");
+requireText("src/components/app-shell.tsx", "bottom-[max(0.75rem,env(safe-area-inset-bottom))]", "bottom navigation safe area");
+requireText("src/components/ui/primitives.tsx", "min-h-11", "minimum touch target");
+requireText("src/components/ui/overlay.tsx", "max-h-[96dvh]", "overlay viewport boundary");
+requireText("src/components/ui/overlay.tsx", "overflow-x-hidden overflow-y-auto overscroll-contain", "overlay internal scrolling");
+requireText("src/components/ui/bottom-sheet.tsx", "max-h-[94dvh]", "bottom sheet viewport boundary");
+requireText("src/components/mobile-more-sheet.tsx", "border-border-subtle bg-surface-2", "mobile action tokenization");
+
+const forbidden = [
+  ["src/components/mobile-more-sheet.tsx", "bg-violet-600", "page-local violet primary button"],
+  ["src/components/mobile-more-sheet.tsx", "bg-red-50", "page-local destructive button"],
+  ["src/components/ui/overlay.tsx", "aria-label=\"Close\"", "non-localized close label"],
+  ["src/components/ui/primitives.tsx", "min-h-8", "undersized shared button"],
+];
+for (const [relative, needle, label] of forbidden) {
+  if (read(relative).includes(needle)) failures.push(`${label}: found ${JSON.stringify(needle)} in ${relative}`);
+}
+
+function walk(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const target = path.join(directory, entry.name);
+    return entry.isDirectory() ? walk(target) : [target];
+  });
+}
+
+const appRoot = path.join(frontendRoot, "src", "app");
+const pages = walk(appRoot).filter((file) => file.endsWith(`${path.sep}page.tsx`));
+const pageLocalDialogs = pages.filter((file) => {
+  const source = fs.readFileSync(file, "utf8");
+  return source.includes('role="dialog"') && source.includes("fixed inset-0");
+}).map((file) => path.relative(frontendRoot, file));
+
+notes.push(`Routes inspected statically: ${pages.length}`);
+notes.push(`Page-local fixed dialogs requiring future migration: ${pageLocalDialogs.length}`);
+for (const file of pageLocalDialogs) notes.push(`  - ${file}`);
+
+console.log("Mobile UI static regression");
+for (const note of notes) console.log(note);
+if (failures.length) {
+  console.error("\nFAILED");
+  for (const failure of failures) console.error(`- ${failure}`);
+  process.exit(1);
+}
+console.log("PASS: shared mobile primitives, navigation and overlays satisfy the contract.");
