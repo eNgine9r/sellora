@@ -5,6 +5,7 @@ import { useI18n } from "@/i18n/provider";
 import { buildProductCreatePayload } from "@/lib/payload-builders";
 import { translatedCategoryOptions } from "@/lib/categories";
 import { ProductCreatePayload } from "@/services/products";
+import { Button, FormField, Input, Select, Textarea } from "@/components/ui/primitives";
 
 export type ProductFormValues = {
   name: string;
@@ -15,15 +16,7 @@ export type ProductFormValues = {
   image_url?: string;
 };
 
-export function ProductForm({
-  onSubmit,
-  isSubmitting = false,
-  submitError,
-}: {
-  onSubmit: (values: ProductCreatePayload) => void;
-  isSubmitting?: boolean;
-  submitError?: string | null;
-}) {
+export function ProductForm({ onSubmit, isSubmitting = false, submitError }: { onSubmit: (values: ProductCreatePayload) => void; isSubmitting?: boolean; submitError?: string | null }) {
   const { t } = useI18n();
   const categoryOptions = translatedCategoryOptions(t);
   const [values, setValues] = useState<ProductFormValues>({ name: "", category: "other" });
@@ -42,37 +35,28 @@ export function ProductForm({
 
   return (
     <form className="grid min-w-0 gap-4 overflow-x-hidden" onSubmit={submit} noValidate>
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-        {t("tables.name")}
-        <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} />
-      </label>
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-        SKU
-        <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.sku ?? ""} onChange={(event) => setValues({ ...values, sku: event.target.value })} />
-      </label>
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-        {t("products.productCategory")}
-        <select className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.category ?? "other"} onChange={(event) => setValues({ ...values, category: event.target.value })}>
+      <FormField label={t("tables.name")} error={validationError}>
+        <Input required value={values.name} onChange={(event) => setValues({ ...values, name: event.target.value })} />
+      </FormField>
+      <FormField label="SKU">
+        <Input value={values.sku ?? ""} onChange={(event) => setValues({ ...values, sku: event.target.value })} />
+      </FormField>
+      <FormField label={t("products.productCategory")}>
+        <Select value={values.category ?? "other"} onChange={(event) => setValues({ ...values, category: event.target.value })}>
           {categoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
-      </label>
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-        {t("products.brand")}
-        <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.brand ?? ""} onChange={(event) => setValues({ ...values, brand: event.target.value })} />
-      </label>
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-        {t("products.primaryImageUrl")}
-        <input className="min-h-11 min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.image_url ?? ""} onChange={(event) => setValues({ ...values, image_url: event.target.value })} />
-      </label>
-      <label className="grid min-w-0 gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-        {t("products.description")}
-        <textarea className="min-w-0 rounded-md border border-slate-300 px-3 py-2" value={values.description ?? ""} onChange={(event) => setValues({ ...values, description: event.target.value })} />
-      </label>
-      {validationError ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-100">{validationError}</p> : null}
-      {submitError ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-100">{submitError}</p> : null}
-      <button className="min-h-11 w-full rounded-md bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={isSubmitting} type="submit">
-        {isSubmitting ? t("common.loading") : t("products.create")}
-      </button>
+        </Select>
+      </FormField>
+      <FormField label={t("products.brand")}>
+        <Input value={values.brand ?? ""} onChange={(event) => setValues({ ...values, brand: event.target.value })} />
+      </FormField>
+      <FormField label={t("products.primaryImageUrl")}>
+        <Input inputMode="url" type="url" value={values.image_url ?? ""} onChange={(event) => setValues({ ...values, image_url: event.target.value })} />
+      </FormField>
+      <FormField label={t("products.description")}>
+        <Textarea value={values.description ?? ""} onChange={(event) => setValues({ ...values, description: event.target.value })} />
+      </FormField>
+      {submitError ? <p className="rounded-2xl border border-danger/25 bg-[var(--danger-surface)] px-3 py-2 text-sm font-bold text-[var(--danger-foreground)]">{submitError}</p> : null}
+      <Button className="w-full" loading={isSubmitting} type="submit">{t("products.create")}</Button>
     </form>
   );
 }
