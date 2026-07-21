@@ -1,9 +1,10 @@
 name: Direct AI Shared Drawer Patch
 
 on:
-  push:
-    branches: [fix/mobile-ui-standardization]
+  pull_request:
+    branches: [main]
     paths: [.github/workflows/direct-ai-shared-drawer-patch.yml]
+  workflow_dispatch:
 
 permissions:
   contents: write
