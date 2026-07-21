@@ -29,6 +29,8 @@ requireText("src/features/products/components/product-form.tsx", "Button, FormFi
 requireText("src/features/products/components/product-variant-form.tsx", "Button, FormField, Input, Select", "variant form shared controls");
 requireText("src/features/advertising/components/campaign-form.tsx", "Button, FormField, Input, Select, Textarea", "campaign form shared controls");
 requireText("src/features/integrations/components/instagram-messaging-integration-card.tsx", "w-full min-w-0 max-w-full overflow-hidden", "Instagram card mobile width contract");
+requireText("scripts/mobile-ui-audit.mjs", "discoverAppRoutes", "exhaustive App Router discovery");
+requireText("scripts/mobile-ui-audit.mjs", "dynamicTemplates", "dynamic route inventory");
 
 const forbidden = [
   ["src/components/mobile-more-sheet.tsx", "bg-violet-600", "page-local violet primary button"],
@@ -67,8 +69,11 @@ const pageLocalDialogs = pages.filter((file) => {
 }).map((file) => path.relative(frontendRoot, file));
 
 notes.push(`Routes inspected statically: ${pages.length}`);
-notes.push(`Page-local fixed dialogs requiring future migration: ${pageLocalDialogs.length}`);
+notes.push(`Page-local fixed dialogs: ${pageLocalDialogs.length}`);
 for (const file of pageLocalDialogs) notes.push(`  - ${file}`);
+if (pageLocalDialogs.length) {
+  failures.push(`page-local fixed dialogs must use the shared responsive overlay: ${pageLocalDialogs.join(", ")}`);
+}
 
 console.log("Mobile UI static regression");
 for (const note of notes) console.log(note);
@@ -77,4 +82,4 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log("PASS: shared mobile primitives, navigation, filters, forms and overlays satisfy the contract.");
+console.log("PASS: exhaustive routes, shared mobile primitives, navigation, filters, forms and overlays satisfy the contract.");
