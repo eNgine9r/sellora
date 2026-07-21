@@ -1,0 +1,88 @@
+name: Direct AI Shared Drawer Patch
+
+on:
+  push:
+    branches: [fix/mobile-ui-standardization]
+    paths: [.github/workflows/direct-ai-shared-drawer-patch.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/mobile-ui-standardization
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Move Direct AI panel to shared responsive Drawer
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('frontend/src/app/direct/page.tsx')
+          s = p.read_text()
+          s = s.replace('  X,\n', '')
+          s = s.replace('import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";', 'import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";\nimport { Drawer } from "@/components/ui/overlay";')
+          old = '''      {aiPanelOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={t("direct.aiPanel")}>
+          <button
+            type="button"
+            className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm"
+            aria-label={t("actions.close")}
+            onClick={() => setAiPanelOpen(false)}
+          />
+          <aside className="absolute inset-y-0 right-0 flex w-[92vw] max-w-md flex-col overflow-hidden bg-surface-1 shadow-2xl">
+            <header className="flex items-center justify-between border-b border-border-subtle p-4">
+              <div className="flex items-center gap-2">
+                <Bot className="h-5 w-5 text-primary" />
+                <h2 className="font-black">{t("direct.aiPanel")}</h2>
+              </div>
+              <button
+                type="button"
+                className="rounded-2xl p-2 text-text-secondary hover:bg-surface-hover"
+                onClick={() => setAiPanelOpen(false)}
+                aria-label={t("actions.close")}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </header>
+            <div className="sellora-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
+              <AiPanel
+                loading={suggestionsQuery.isLoading}
+                suggestions={suggestionsQuery.data ?? []}
+                onAnalyze={() => analysisMutation.mutate()}
+                analyzing={analysisMutation.isPending}
+                connectionStatus={statusQuery.data?.status ?? "DISCONNECTED"}
+                embedded
+              />
+            </div>
+          </aside>
+        </div>
+      ) : null}'''
+          new = '''      <Drawer
+        open={aiPanelOpen}
+        title={t("direct.aiPanel")}
+        onClose={() => setAiPanelOpen(false)}
+      >
+        <AiPanel
+          loading={suggestionsQuery.isLoading}
+          suggestions={suggestionsQuery.data ?? []}
+          onAnalyze={() => analysisMutation.mutate()}
+          analyzing={analysisMutation.isPending}
+          connectionStatus={statusQuery.data?.status ?? "DISCONNECTED"}
+          embedded
+        />
+      </Drawer>'''
+          if old not in s:
+            raise SystemExit('Direct AI panel block not found')
+          p.write_text(s.replace(old, new))
+          PY
+      - name: Remove one-time workflow and commit patch
+        run: |
+          git rm .github/workflows/direct-ai-shared-drawer-patch.yml
+          git config user.name "sellora-mobile-ui-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add frontend/src/app/direct/page.tsx
+          git commit -m "fix: use shared Drawer for Direct AI panel"
+          git push origin HEAD:fix/mobile-ui-standardization
