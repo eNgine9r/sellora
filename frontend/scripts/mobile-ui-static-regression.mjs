@@ -19,12 +19,21 @@ requireText("src/components/ui/overlay.tsx", "max-h-[96dvh]", "overlay viewport 
 requireText("src/components/ui/overlay.tsx", "overflow-x-hidden overflow-y-auto overscroll-contain", "overlay internal scrolling");
 requireText("src/components/ui/bottom-sheet.tsx", "max-h-[94dvh]", "bottom sheet viewport boundary");
 requireText("src/components/mobile-more-sheet.tsx", "border-border-subtle bg-surface-2", "mobile action tokenization");
+requireText("src/components/form-dialog.tsx", "<Modal open", "form dialog shared overlay");
+requireText("src/components/confirm-action-dialog.tsx", "<ConfirmationDialog open", "confirmation shared overlay");
+requireText("src/components/edit-record-dialog.tsx", "actions.saveChanges", "localized edit action");
+requireText("src/components/filter-controls.tsx", "FilterBar as SharedFilterBar", "shared filter primitives");
 
 const forbidden = [
   ["src/components/mobile-more-sheet.tsx", "bg-violet-600", "page-local violet primary button"],
   ["src/components/mobile-more-sheet.tsx", "bg-red-50", "page-local destructive button"],
   ["src/components/ui/overlay.tsx", "aria-label=\"Close\"", "non-localized close label"],
   ["src/components/ui/primitives.tsx", "min-h-8", "undersized shared button"],
+  ["src/components/form-dialog.tsx", "fixed inset-0", "duplicated form overlay"],
+  ["src/components/confirm-action-dialog.tsx", "Cancel", "English confirmation action"],
+  ["src/components/edit-record-dialog.tsx", "Saving…", "English edit progress action"],
+  ["src/components/edit-record-dialog.tsx", "Save changes", "English edit submit action"],
+  ["src/components/filter-controls.tsx", "bg-blue", "page-local blue filter action"],
 ];
 for (const [relative, needle, label] of forbidden) {
   if (read(relative).includes(needle)) failures.push(`${label}: found ${JSON.stringify(needle)} in ${relative}`);
@@ -55,4 +64,4 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log("PASS: shared mobile primitives, navigation and overlays satisfy the contract.");
+console.log("PASS: shared mobile primitives, navigation, filters and overlays satisfy the contract.");
