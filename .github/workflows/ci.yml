@@ -78,6 +78,9 @@ jobs:
             tests/test_order_fulfillment_workflow.py \
             tests/test_order_fulfillment_api.py \
             tests/test_order_fulfillment_finance.py \
+            tests/test_profit_calculation_service.py \
+            tests/test_product_variant_inventory_archive.py \
+            tests/inventory/test_inventory_operational_invariants.py \
             tests/test_order_fulfillment_consolidation_migration.py \
             tests/integrations/fulfillment/test_fulfillment_provider_reconciliation.py \
             tests/integrations/nova_poshta/test_real_provider_payload.py \
@@ -236,3 +239,23 @@ jobs:
         run: |
           node frontend/scripts/direct-app-shell-regression.mjs
           node frontend/scripts/meta-instagram-regression.mjs
+
+  mobile-discovery:
+    name: mobile-discovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mobile-poc/package-lock.json
+      - name: Install Expo proof-of-concept dependencies
+        working-directory: mobile-poc
+        run: npm ci
+      - name: Validate Expo proof-of-concept
+        working-directory: mobile-poc
+        run: npm run typecheck
