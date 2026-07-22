@@ -22,15 +22,10 @@ from app.schemas.finance import (
     FinancePeriodComparisonResponse,
     FinanceSummaryResponse,
 )
+from app.services.profit_calculation_service import ProfitCalculationService
 
 MONEY_ZERO = Decimal("0.00")
-VALID_REVENUE_STATUSES = {
-    OrderStatus.NEW.value,
-    OrderStatus.CONFIRMED.value,
-    OrderStatus.SHIPPED.value,
-    OrderStatus.DELIVERED.value,
-    OrderStatus.COMPLETED.value,
-}
+VALID_REVENUE_STATUSES = ProfitCalculationService.REVENUE_STATUSES
 PAID_PAYMENT_STATUSES = {PaymentStatus.PAID.value, PaymentStatus.COD.value}
 EXCLUDED_ORDER_STATUSES = {OrderStatus.CANCELLED.value, OrderStatus.RETURNED.value}
 
@@ -169,7 +164,7 @@ class FinanceService:
             ),
         ]
 
-        valid_orders = [order for order in orders if self._is_valid_revenue_order(order)]
+        valid_orders = ProfitCalculationService.included_orders(orders)
         excluded_orders = [order for order in orders if self._is_excluded_order(order)]
         if not valid_orders:
             warnings.append(self._warning("no_orders_in_period", "No valid orders were found for the selected period.", "За вибраний період не знайдено валідних замовлень."))
@@ -300,7 +295,7 @@ class FinanceService:
             raise FinanceServiceError("date_from must be before or equal to date_to")
 
     def _is_valid_revenue_order(self, order: Order) -> bool:
-        return order.status in VALID_REVENUE_STATUSES and order.payment_status != PaymentStatus.REFUNDED.value
+        return ProfitCalculationService.includes_order(order)
 
     def _is_excluded_order(self, order: Order) -> bool:
         return order.status in EXCLUDED_ORDER_STATUSES or order.payment_status == PaymentStatus.REFUNDED.value
