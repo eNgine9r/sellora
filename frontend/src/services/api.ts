@@ -1,7 +1,8 @@
 import { normalizeWorkspaceId } from "@/lib/workspace";
 import { API_BASE_URL, authStorage, refreshAccessToken } from "@/services/auth.service";
 
-let isRefreshing = false;
+let refreshPromise: ReturnType<typeof refreshAccessToken> | null = null;
+const API_REQUEST_TIMEOUT_MS = 20_000;
 
 export type ApiFieldError = {
   field: string;
@@ -41,22 +42,23 @@ function safeEndpointPath(path: string): string {
   return path.split("?")[0].replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, ":id");
 }
 
-export function safeApiErrorMessage(error: unknown, fallback = "Unable to complete request. Please try again."): string {
+export function safeApiErrorMessage(error: unknown, fallback = "Не вдалося виконати дію. Спробуйте ще раз."): string {
   if (!(error instanceof ApiError)) return fallback;
   const endpoint = safeEndpointPath(error.path);
   const firstFieldError = error.fieldErrors[0];
   if (firstFieldError?.field.toLowerCase() === "header.x-workspace-id") {
-    return "Workspace session is invalid. Please log in again.";
+    return "Сесію робочого простору втрачено. Увійдіть знову.";
   }
   if (firstFieldError) {
-    return `Request failed (${error.status}) on ${endpoint}. Field '${firstFieldError.field}' ${firstFieldError.message}.`;
+    return `Запит відхилено (${error.status}, ${endpoint}). Перевірте поле «${firstFieldError.field}».`;
   }
-  if (error.status === 401) return "Session expired. Please log in again.";
-  if (error.status === 403) return "You do not have permission for this action.";
-  if (error.status === 404) return "Record not found.";
-  if (error.status === 422) return `Invalid request for ${endpoint}. Please check the form or filters.`;
-  if (error.status >= 500) return "Server error. Please try again later.";
-  return `${fallback} (${error.status} on ${endpoint}).`;
+  if (error.status === 401) return "Сесія завершилась. Увійдіть знову.";
+  if (error.status === 403) return "У вас немає дозволу на цю дію.";
+  if (error.status === 404) return "Запис не знайдено.";
+  if (error.status === 408) return "Сервер не відповів вчасно. Повторіть спробу.";
+  if (error.status === 422) return `Некоректний запит до ${endpoint}. Перевірте форму або фільтри.`;
+  if (error.status >= 500) return "Помилка сервера. Спробуйте трохи пізніше.";
+  return `${fallback} (${error.status}, ${endpoint}).`;
 }
 
 function redirectToLogin() {
@@ -105,33 +107,49 @@ function headersWithAuth(path: string, initHeaders: HeadersInit | undefined, bod
 }
 
 export async function authenticatedFetch(path: string, init?: RequestInit, retry = true): Promise<Response> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: headersWithAuth(path, init?.headers, init?.body),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
+  const abortFromCaller = () => controller.abort();
+  init?.signal?.addEventListener("abort", abortFromCaller, { once: true });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: headersWithAuth(path, init?.headers, init?.body),
+    });
+  } catch (error) {
+    if (controller.signal.aborted && !init?.signal?.aborted) {
+      throw new ApiError(408, { detail: "REQUEST_TIMEOUT" }, path);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+    init?.signal?.removeEventListener("abort", abortFromCaller);
+  }
 
   if (response.status !== 401 || !retry) {
     return response;
   }
 
   const refreshToken = authStorage.getRefreshToken();
-  if (!refreshToken || isRefreshing) {
+  if (!refreshToken) {
     authStorage.clear();
     redirectToLogin();
     return response;
   }
 
   try {
-    isRefreshing = true;
-    const tokens = await refreshAccessToken(refreshToken);
+    refreshPromise ??= refreshAccessToken(refreshToken).finally(() => {
+      refreshPromise = null;
+    });
+    const tokens = await refreshPromise;
     authStorage.setTokens(tokens);
     return authenticatedFetch(path, init, false);
   } catch {
     authStorage.clear();
     redirectToLogin();
     return response;
-  } finally {
-    isRefreshing = false;
   }
 }
 
