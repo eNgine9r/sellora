@@ -513,7 +513,7 @@ First-run guidance and demo workspace generation are implemented for controlled 
 ## Sprint 8F.1 consolidation limitations — 2026-07-18
 
 - Fulfillment is consolidated back to the canonical `order_fulfillments` table, but external runtime and controlled Nova Poshta smoke evidence remain pending.
-- Provider document cancellation remains safely unsupported unless a durable provider cancellation operation is implemented and validated.
+- Provider document cancellation now uses a separate durable `CANCEL_TTN` operation and only changes the local shipment to `CANCELLED` after provider confirmation. A controlled real provider cancellation smoke test remains required before public launch.
 - PostgreSQL concurrency proof must be collected in CI/runtime; local SQLite-style evidence is not sufficient.
 
 ## Sprint 9 AI limitations

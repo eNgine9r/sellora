@@ -29,7 +29,7 @@ const checks = [
   ["frontend synchronous submit lock", /createInFlight\.current/.test(button) && /onSettled/.test(button)],
   ["manual reconciliation UI exists", /data-nova-poshta-manual-reconciliation/.test(button) && /reconcileNovaPoshtaTtn/.test(button)],
   ["provider refs are not primary raw UI labels", /shipment\.nova_poshta_city_ref \? t\("common\.yes"\)/.test(panel)],
-  ["provider cancellation is not exposed", /status === "CANCELLED" && hasProviderDocument/.test(details)],
+  ["provider-confirmed cancellation is exposed", /cancel-ttn/.test(api) && /cancel_ttn/.test(service) && /delete_internet_document/.test(client) && /const actions = NEXT_ACTIONS\[shipment\.status\]/.test(details)],
   ["readiness API is manager-readable", /\/readiness/.test(integrationApi) && /require_min_role\(RoleName\.MANAGER\)/.test(integrationApi)],
   ["readiness response excludes credential and sender refs", /NovaPoshtaReadinessResponse/.test(integrationApi) && !/class NovaPoshtaReadinessResponse[\s\S]*masked_api_key/.test(file("backend/app/schemas/integration.py"))],
   ["owner can explicitly activate provider writes", /updateNovaPoshtaWritePermission/.test(integrationService) && /onUpdateWritePermission/.test(settingsCard)],

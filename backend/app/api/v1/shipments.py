@@ -105,11 +105,25 @@ def cancel(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), cu
     if shipment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shipment not found")
     if shipment.nova_poshta_document_ref or shipment.nova_poshta_document_number:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Provider cancellation is not supported. Complete the confirmed Nova Poshta/manual cleanup process before changing the local shipment state.",
-        )
+        try:
+            result = NovaPoshtaProviderShipmentService(db).cancel_ttn(workspace_id, shipment_id, current_user.id)
+        except NovaPoshtaServiceError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        if not result.success:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=result.message)
+        cancelled = ShipmentService(db).get(workspace_id, shipment_id)
+        if cancelled is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shipment not found")
+        return cancelled
     return _mark_status(shipment_id, ShipmentStatus.CANCELLED, workspace_id, current_user, db)
+
+
+@router.post("/{shipment_id}/nova-poshta/cancel-ttn", response_model=NovaPoshtaTtnResponse)
+def cancel_nova_poshta_ttn(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> NovaPoshtaTtnResponse:
+    try:
+        return NovaPoshtaProviderShipmentService(db).cancel_ttn(workspace_id, shipment_id, current_user.id)
+    except NovaPoshtaServiceError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
 @router.post("/{shipment_id}/nova-poshta/create-ttn", response_model=NovaPoshtaTtnResponse)

@@ -54,6 +54,7 @@ class NovaPoshtaClientProtocol(Protocol):
     def warehouse_belongs_to_city(self, city_ref: str, warehouse_ref: str) -> bool: ...
     def sender_address_belongs_to_sender(self, sender_ref: str, address_ref: str) -> bool: ...
     def create_internet_document(self, payload: dict): ...
+    def delete_internet_document(self, document_ref: str) -> bool: ...
     def find_internet_document(self, marker: str, date_from: datetime, date_to: datetime): ...
     def get_document_status(self, tracking_number: str) -> str | None: ...
 
@@ -517,7 +518,7 @@ class NovaPoshtaShipmentService:
 
         operation.request_fingerprint = fingerprint
         operation.state = NovaPoshtaOperationState.CALLING_PROVIDER.value
-        operation.attempt_count += 1
+        operation.attempt_count = (operation.attempt_count or 0) + 1
         operation.provider_called_at = datetime.now(UTC)
         operation.last_error_code = None
         operation.last_error_message = None
@@ -630,6 +631,135 @@ class NovaPoshtaShipmentService:
             actor_user_id,
         )
 
+    def cancel_ttn(
+        self,
+        workspace_id: UUID,
+        shipment_id: UUID,
+        actor_user_id: UUID | None,
+    ) -> NovaPoshtaTtnResponse:
+        connection, api_key = self.settings._require_connection(workspace_id)
+        self._current_connection = connection
+        shipment = self._get_shipment_for_update(workspace_id, shipment_id)
+        if shipment is None:
+            raise NovaPoshtaServiceError("Shipment not found")
+        document_ref = shipment.nova_poshta_document_ref or shipment.external_ref
+        tracking_number = shipment.nova_poshta_document_number or shipment.tracking_number
+        if not document_ref:
+            raise NovaPoshtaServiceError("Nova Poshta document does not exist")
+        if not self._provider_writes_allowed():
+            return NovaPoshtaTtnResponse(
+                success=False,
+                message="Nova Poshta provider writes are disabled for this environment.",
+                tracking_number=tracking_number,
+                document_ref=document_ref,
+                operation_state="WRITES_DISABLED",
+                blind_retry_blocked=True,
+                errors=["NOVA_POSHTA_PROVIDER_WRITES_DISABLED"],
+            )
+
+        fingerprint = hashlib.sha256(f"cancel:{workspace_id}:{shipment_id}:{document_ref}".encode()).hexdigest()
+        operation = self._get_or_create_operation(
+            workspace_id,
+            shipment,
+            fingerprint,
+            actor_user_id,
+            operation_type=NovaPoshtaOperationType.CANCEL_TTN,
+        )
+        if operation.state in {NovaPoshtaOperationState.COMPLETED.value, NovaPoshtaOperationState.CANCELLED.value}:
+            return NovaPoshtaTtnResponse(
+                success=True,
+                message="Nova Poshta TTN is already cancelled.",
+                tracking_number=tracking_number,
+                document_ref=document_ref,
+                status=ShipmentStatus.CANCELLED.value,
+                operation_state=NovaPoshtaOperationState.CANCELLED.value,
+                reused_existing_result=True,
+            )
+        if operation.state in {
+            NovaPoshtaOperationState.CALLING_PROVIDER.value,
+            NovaPoshtaOperationState.RECONCILIATION_REQUIRED.value,
+        }:
+            return NovaPoshtaTtnResponse(
+                success=False,
+                message="Nova Poshta cancellation requires provider reconciliation before another attempt.",
+                tracking_number=tracking_number,
+                document_ref=document_ref,
+                operation_state=NovaPoshtaOperationState.RECONCILIATION_REQUIRED.value,
+                manual_reconciliation_required=True,
+                blind_retry_blocked=True,
+                errors=[operation.last_error_code or "NOVA_POSHTA_CANCEL_RECONCILIATION_REQUIRED"],
+            )
+
+        operation.request_fingerprint = fingerprint
+        operation.provider_document_ref = document_ref
+        operation.provider_document_number = tracking_number
+        operation.state = NovaPoshtaOperationState.CALLING_PROVIDER.value
+        operation.attempt_count = (operation.attempt_count or 0) + 1
+        operation.provider_called_at = datetime.now(UTC)
+        operation.last_error_code = None
+        operation.last_error_message = None
+        self.db.commit()
+        try:
+            self.settings.client_factory(api_key).delete_internet_document(document_ref)
+        except NovaPoshtaClientError as exc:
+            if exc.ambiguous:
+                operation.state = NovaPoshtaOperationState.RECONCILIATION_REQUIRED.value
+                operation.last_error_code = exc.code
+                operation.last_error_message = "Provider cancellation result is ambiguous; blind retry is blocked."
+                shipment.nova_poshta_manual_reconciliation_required = True
+                shipment.nova_poshta_last_error_code = exc.code
+                self.db.commit()
+                return NovaPoshtaTtnResponse(
+                    success=False,
+                    message="Nova Poshta cancellation result is ambiguous. Verify the provider cabinet before retrying.",
+                    tracking_number=tracking_number,
+                    document_ref=document_ref,
+                    operation_state=operation.state,
+                    manual_reconciliation_required=True,
+                    blind_retry_blocked=True,
+                    errors=[exc.code],
+                )
+            operation.state = NovaPoshtaOperationState.FAILED_SAFE.value
+            operation.last_error_code = exc.code
+            operation.last_error_message = "Provider explicitly rejected document cancellation."
+            self.db.commit()
+            return NovaPoshtaTtnResponse(
+                success=False,
+                message="Nova Poshta rejected TTN cancellation.",
+                tracking_number=tracking_number,
+                document_ref=document_ref,
+                operation_state=operation.state,
+                errors=[exc.code],
+            )
+
+        now = datetime.now(UTC)
+        operation.state = NovaPoshtaOperationState.CANCELLED.value
+        operation.provider_responded_at = now
+        operation.completed_at = now
+        operation.provider_status = ShipmentStatus.CANCELLED.value
+        shipment.status = ShipmentStatus.CANCELLED.value
+        shipment.external_status = ShipmentStatus.CANCELLED.value
+        shipment.nova_poshta_create_state = NovaPoshtaOperationState.CANCELLED.value
+        shipment.nova_poshta_manual_reconciliation_required = False
+        shipment.nova_poshta_last_error_code = None
+        self.audit_logs.create(
+            workspace_id=workspace_id,
+            user_id=actor_user_id,
+            entity_type="Shipment",
+            entity_id=shipment.id,
+            action="NOVA_POSHTA_TTN_CANCELLED",
+            new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "confirmed": True},
+        )
+        self.db.commit()
+        return NovaPoshtaTtnResponse(
+            success=True,
+            message="Nova Poshta TTN cancelled.",
+            tracking_number=tracking_number,
+            document_ref=document_ref,
+            status=shipment.status,
+            operation_state=operation.state,
+        )
+
     def sync_status(
         self,
         workspace_id: UUID,
@@ -735,8 +865,9 @@ class NovaPoshtaShipmentService:
         shipment,
         fingerprint: str,
         actor_user_id: UUID | None,
+        operation_type: NovaPoshtaOperationType = NovaPoshtaOperationType.CREATE_TTN,
     ) -> NovaPoshtaOperation:
-        operation = self.operations.get_for_update(workspace_id, shipment.id)
+        operation = self.operations.get_for_update(workspace_id, shipment.id, operation_type.value)
         if operation is not None:
             return operation
         operation_id = uuid4()
@@ -744,9 +875,9 @@ class NovaPoshtaShipmentService:
             id=operation_id,
             workspace_id=workspace_id,
             shipment_id=shipment.id,
-            operation_type=NovaPoshtaOperationType.CREATE_TTN.value,
+            operation_type=operation_type.value,
             state=NovaPoshtaOperationState.PREPARED.value,
-            idempotency_key=f"np-create-ttn:{workspace_id}:{shipment.id}",
+            idempotency_key=f"np-{operation_type.value.lower().replace('_', '-')}:{workspace_id}:{shipment.id}",
             request_fingerprint=fingerprint,
             provider_marker=f"SELLORA:{operation_id}",
             actor_user_id=actor_user_id,
@@ -757,7 +888,7 @@ class NovaPoshtaShipmentService:
             self.db.commit()
         except IntegrityError:
             self.db.rollback()
-            existing = self.operations.get_for_update(workspace_id, shipment.id)
+            existing = self.operations.get_for_update(workspace_id, shipment.id, operation_type.value)
             if existing is None:
                 raise
             return existing
