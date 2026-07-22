@@ -20,6 +20,7 @@ from app.schemas.inventory import InventoryTransactionCreate
 from app.schemas.order import OrderCreate, OrderDashboardResponse, OrderStatusUpdate, OrderUpdate
 from app.services.business_utils import snapshot
 from app.services.inventory_service import InventoryService, InventoryServiceError
+from app.services.profit_calculation_service import ProfitCalculationService
 
 
 class OrderServiceError(ValueError):
@@ -255,6 +256,7 @@ class OrderService:
         self._apply_transition_inventory(workspace_id, order, old_status, new_status, actor_user_id)
         old_value = snapshot(order)
         order.status = new_status.value
+        self._recalculate_profit(order)
         if new_status == OrderStatus.COMPLETED:
             order.completed_at = datetime.now(UTC)
             self._update_customer_metrics(workspace_id, order)
@@ -312,7 +314,7 @@ class OrderService:
         return customer
 
     def _recalculate_profit(self, order: Order) -> None:
-        order.net_profit = order.revenue - order.product_cost - order.ad_cost - order.shipping_cost - order.cod_fee - order.other_cost
+        order.net_profit = ProfitCalculationService.order_net_profit(order)
 
     def _add_status_history(self, order: Order, from_status: OrderStatus | None, to_status: OrderStatus, actor_user_id: UUID | None, note: str | None) -> None:
         self.orders.add_status_history(OrderStatusHistory(workspace_id=order.workspace_id, order_id=order.id, from_status=from_status.value if from_status else None, to_status=to_status.value, changed_by=actor_user_id, note=note))
