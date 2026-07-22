@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Sellora",
+    "slug": "sellora-mobile-poc",
+    "scheme": "sellora",
+    "plugins": ["expo-router", "expo-secure-store"],
+    "ios": { "bundleIdentifier": "com.sellora.mobile" },
+    "android": { "package": "com.sellora.mobile" },
+    "experiments": { "typedRoutes": true }
+  }
+}
