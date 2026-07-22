@@ -36,16 +36,11 @@ from app.schemas.analytics import (
     SalesReportDailyRow,
     SalesReportResponse,
 )
+from app.services.profit_calculation_service import ProfitCalculationService
 
 MONEY_ZERO = Decimal("0.00")
 PERCENT_ZERO = Decimal("0.00")
-REVENUE_INCLUDED_STATUSES = {
-    OrderStatus.NEW.value,
-    OrderStatus.CONFIRMED.value,
-    OrderStatus.SHIPPED.value,
-    OrderStatus.DELIVERED.value,
-    OrderStatus.COMPLETED.value,
-}
+REVENUE_INCLUDED_STATUSES = ProfitCalculationService.REVENUE_STATUSES
 
 
 class AnalyticsService:

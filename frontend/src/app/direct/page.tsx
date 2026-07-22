@@ -202,13 +202,14 @@ export default function DirectPage() {
     ensureCustomerMutation.mutate(conversationId);
   }, [automationQuery.data?.stage, canManage, ensureCustomerMutation, orderIntentConversationIds, selectedConversation?.id]);
 
+  const historyStatus = historyQuery.data?.status;
   useEffect(() => {
-    if (!historyQuery.data || !["COMPLETED", "PARTIAL"].includes(historyQuery.data.status)) return;
+    if (!historyStatus || !["COMPLETED", "PARTIAL"].includes(historyStatus)) return;
     queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });
     if (selectedConversation?.id) {
       queryClient.invalidateQueries({ queryKey: ["direct-messages", workspaceId, selectedConversation.id] });
     }
-  }, [historyQuery.data?.status, queryClient, selectedConversation?.id, workspaceId]);
+  }, [historyStatus, queryClient, selectedConversation?.id, workspaceId]);
 
   const handleSelectConversation = (conversationId: string) => {
     setSelectedId(conversationId);

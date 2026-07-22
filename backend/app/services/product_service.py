@@ -75,6 +75,10 @@ class ProductService:
         product = self.get_product(workspace_id, product_id)
         if product is None:
             return False
+        for variant in self.variants.list_for_workspace(workspace_id, product_id):
+            inventory = self.inventory.get_by_variant_for_update(workspace_id, variant.id)
+            if inventory is not None and inventory.reserved_quantity > 0:
+                raise ProductServiceError("Product has reserved inventory. Cancel or complete related orders before archiving it.")
         old_value = snapshot(product)
         self.products.soft_delete(product, actor_user_id)
         self.audit_logs.create(
