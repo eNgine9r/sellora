@@ -7,7 +7,7 @@ from pathlib import Path
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 
-EXPECTED_REVISION = os.getenv("EXPECTED_ALEMBIC_REVISION", "202607130021")
+EXPECTED_REVISION = os.getenv("EXPECTED_ALEMBIC_REVISION", "202607220034")
 
 
 def main() -> int:
