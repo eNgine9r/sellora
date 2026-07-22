@@ -12,6 +12,7 @@ from app.database.mixins import WorkspaceScopedMixin
 
 class NovaPoshtaOperationType(StrEnum):
     CREATE_TTN = "CREATE_TTN"
+    CANCEL_TTN = "CANCEL_TTN"
 
 
 class NovaPoshtaOperationState(StrEnum):
@@ -21,6 +22,7 @@ class NovaPoshtaOperationState(StrEnum):
     COMPLETED = "COMPLETED"
     FAILED_SAFE = "FAILED_SAFE"
     RECONCILIATION_REQUIRED = "RECONCILIATION_REQUIRED"
+    CANCELLED = "CANCELLED"
 
 
 class NovaPoshtaOperation(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, TimestampMixin, Base):

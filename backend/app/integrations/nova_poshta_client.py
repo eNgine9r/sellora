@@ -187,6 +187,16 @@ class NovaPoshtaClient:
             status="CREATED",
         )
 
+    def delete_internet_document(self, document_ref: str) -> bool:
+        """Delete one provider document by its immutable Nova Poshta reference."""
+        self._call(
+            "InternetDocument",
+            "delete",
+            {"DocumentRefs": document_ref},
+            ambiguous_on_transport=True,
+        )
+        return True
+
     def find_internet_document(
         self,
         marker: str,

@@ -7,10 +7,12 @@ import pytest
 
 from app.models.integration_connection import IntegrationConnection, IntegrationProvider, IntegrationStatus
 from app.models.integration_credential import IntegrationCredential
+from app.models.nova_poshta_operation import NovaPoshtaOperationState, NovaPoshtaOperationType
 from app.models.role import RoleName
 from app.models.shipment import Shipment, ShipmentCarrier, ShipmentStatus
 from app.schemas.integration import NovaPoshtaSettingsRequest, NovaPoshtaWritePermissionRequest
 from app.services.nova_poshta_service import NovaPoshtaDirectoryService, NovaPoshtaSettingsService, NovaPoshtaShipmentService
+from app.integrations.nova_poshta_client import NovaPoshtaClientError
 from app.utils.secrets import decrypt_secret, encrypt_secret, mask_secret
 from app.dependencies.rbac import require_min_role
 
@@ -48,7 +50,7 @@ class FakeAudit:
 
 class FakeClient:
     def __init__(self, credential, fail=False, fail_create=False, fail_status=False, sender_error=None):
-        self.credential = credential; self.fail = fail; self.fail_create = fail_create; self.fail_status = fail_status; self.sender_error = sender_error; self.create_called = False; self.last_payload = None
+        self.credential = credential; self.fail = fail; self.fail_create = fail_create; self.fail_status = fail_status; self.sender_error = sender_error; self.create_called = False; self.delete_called = False; self.last_payload = None
     def test_connection(self):
         if self.fail: raise RuntimeError("failed")
         return True
@@ -75,6 +77,20 @@ class FakeClient:
     def get_document_status(self, tracking_number):
         if self.fail_status: raise RuntimeError("raw status failure")
         return "Delivered"
+    def delete_internet_document(self, document_ref):
+        self.delete_called = True
+        if self.fail_create:
+            raise NovaPoshtaClientError("ambiguous", code="NOVA_POSHTA_PROVIDER_RESPONSE_AMBIGUOUS", ambiguous=True)
+        return True
+
+
+class FakeOperations:
+    def __init__(self): self.items = {}
+    def get_for_update(self, workspace_id, shipment_id, operation_type=NovaPoshtaOperationType.CREATE_TTN.value):
+        return self.items.get((workspace_id, shipment_id, operation_type))
+    def create(self, operation):
+        self.items[(operation.workspace_id, operation.shipment_id, operation.operation_type)] = operation
+        return operation
 
 
 def _settings_service(client_factory=None):
@@ -548,3 +564,45 @@ def test_request_fingerprint_uses_provider_formatted_payload() -> None:
     assert payload["SendersPhone"] == "380671234567"
     assert payload["RecipientsPhone"] == "380671234567"
     assert "067 123" not in fingerprint
+
+
+def test_cancel_ttn_is_provider_confirmed_and_idempotent(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    client = FakeClient("credential")
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.CREATED.value, nova_poshta_document_ref="doc-ref", nova_poshta_document_number="TTN-001", tracking_number="TTN-001")
+    service = _shipment_service(shipment)
+    service.settings.client_factory = lambda credential: client
+    service.settings.test_connection(shipment.workspace_id, uuid4())
+    service.settings.set_write_permission(shipment.workspace_id, NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+    service.operations = FakeOperations()
+
+    first = service.cancel_ttn(shipment.workspace_id, shipment.id, uuid4())
+    second = service.cancel_ttn(shipment.workspace_id, shipment.id, uuid4())
+
+    assert first.success and second.success
+    assert client.delete_called
+    assert second.reused_existing_result
+    assert shipment.status == ShipmentStatus.CANCELLED.value
+    operation = service.operations.get_for_update(shipment.workspace_id, shipment.id, NovaPoshtaOperationType.CANCEL_TTN.value)
+    assert operation.state == NovaPoshtaOperationState.CANCELLED.value
+    assert operation.attempt_count == 1
+
+
+def test_cancel_ttn_ambiguous_result_blocks_blind_retry(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    client = FakeClient("credential", fail_create=True)
+    shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.CREATED.value, nova_poshta_document_ref="doc-ref", nova_poshta_document_number="TTN-001", tracking_number="TTN-001")
+    service = _shipment_service(shipment)
+    service.settings.client_factory = lambda credential: client
+    service.settings.test_connection(shipment.workspace_id, uuid4())
+    service.settings.set_write_permission(shipment.workspace_id, NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+    service.operations = FakeOperations()
+
+    first = service.cancel_ttn(shipment.workspace_id, shipment.id, uuid4())
+    second = service.cancel_ttn(shipment.workspace_id, shipment.id, uuid4())
+
+    assert not first.success and not second.success
+    assert first.manual_reconciliation_required and second.blind_retry_blocked
+    operation = service.operations.get_for_update(shipment.workspace_id, shipment.id, NovaPoshtaOperationType.CANCEL_TTN.value)
+    assert operation.attempt_count == 1
+    assert shipment.status == ShipmentStatus.CREATED.value

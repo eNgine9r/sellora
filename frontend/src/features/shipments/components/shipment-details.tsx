@@ -30,7 +30,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shipment: Shipment; workspaceId: string; onStatusChange: (status: ShipmentStatus) => void }) {
   const { t, formatStatus } = useI18n();
   const hasProviderDocument = Boolean(shipment.nova_poshta_document_ref || shipment.nova_poshta_document_number);
-  const actions = NEXT_ACTIONS[shipment.status].filter((status) => !(status === "CANCELLED" && hasProviderDocument));
+  const actions = NEXT_ACTIONS[shipment.status];
   const trackingNumber = shipment.nova_poshta_document_number ?? shipment.tracking_number;
   return (
     <div className="grid min-w-0 gap-5">

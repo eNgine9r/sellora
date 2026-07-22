@@ -5,7 +5,7 @@ This ledger prevents documentation-only approval. A sprint is `APPROVED` only wh
 | Sprint | Engineering closure | Runtime/external gate | Current decision |
 | --- | --- | --- | --- |
 | 11 Security & Runtime | RBAC/tenant tests, frontend timeout, refresh mutex, localized errors, exact-commit workflows | Render/Vercel exact `main`, packaged Alembic head, browser matrix | Runtime gate required |
-| 12 Fulfillment & Nova Poshta | Existing prepare/execute/reconcile/cancel, idempotency and mobile wizard coverage | One controlled real TTN create/cancel or shipped parcel evidence | Real provider gate required |
+| 12 Fulfillment & Nova Poshta | Prepare/execute/reconcile, durable provider-confirmed TTN cancellation, idempotency and mobile wizard coverage | One controlled real TTN create/cancel or shipped parcel evidence | Engineering closure in progress; real provider gate required |
 | 13 Inventory | Row locks, reservation lifecycle, archive guards, database invariant, audit trail | PostgreSQL concurrency suite on packaged head | Engineering-ready |
 | 14 Finance | Canonical `ProfitCalculationService` shared by Orders/Finance/Analytics | Cross-surface staging equality for one period/workspace | Engineering-ready |
 | 15 Controlled Pilot | Onboarding, support, incident, rollback, backup and reporting runbooks | 3–5 consented real pilot workspaces and restore drill | Pilot remains gated |
