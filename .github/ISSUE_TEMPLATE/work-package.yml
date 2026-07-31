@@ -1,0 +1,84 @@
+name: Work Package
+description: Create a scoped, implementation-ready Sellora task
+title: "[WP] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for one vertical, reviewable Work Package. One Issue should map to one branch and one focused Pull Request.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and verified current behavior
+      description: Separate observed facts from assumptions.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Business or user outcome
+      description: Describe the complete result, not only a page or file change.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List the modules and behavior included.
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: State what this Issue must not expand into.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and decisions
+      description: Link prerequisite Issues, PRs, credentials, services or architecture decisions.
+  - type: textarea
+    id: directories
+    attributes:
+      label: Permitted directories
+      description: Changes outside these paths require a documented dependency reason.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use a checklist with objectively verifiable outcomes.
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification commands and runtime evidence
+      description: Define targeted checks, completion checks and staging/browser/API evidence.
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Mandatory constraints
+      options:
+        - label: Workspace isolation and backend RBAC are preserved.
+          required: true
+        - label: No secrets, personal data or production data will be committed.
+          required: true
+        - label: Unrelated refactors and hidden fallback/mock behavior are out of scope.
+          required: true
+        - label: Project state and checkpoint files will be updated before completion.
+          required: true

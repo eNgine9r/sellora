@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "project": "Sellora",
+  "sprint": "PROCESS-ADOPTION-1",
+  "task": "SELLORA-232",
+  "issue": 232,
+  "status": "in_progress",
+  "timestamp": "2026-07-31T22:15:00+03:00",
+  "summary": "Workflow foundation is being introduced on a dedicated feature branch.",
+  "next_action": "Review and merge the operating-standard Pull Request, then execute SELLORA-233."
+}
