@@ -190,7 +190,9 @@ try {
       await expect(m.page).toHaveURL(/\/orders\?create=1/);
       await expect(m.page.getByRole("dialog")).toBeVisible();
       await m.page.keyboard.press("Escape"); await expect(m.page.getByRole("dialog")).toHaveCount(0);
-      await m.page.getByRole("button", { name: "Оновити", exact: true }).click();
+      const fetchCount = m.api.filter((key) => key === "GET /api/v1/orders").length;
+      await m.page.locator("main select").first().selectOption("NEW");
+      await expect.poll(() => m.api.filter((key) => key === "GET /api/v1/orders").length).toBeGreaterThan(fetchCount);
       await expect(m.page.getByRole("dialog")).toHaveCount(0);
       await m.assertClean(); await m.context.close();
       checks.push(`${width}/${theme}: layout, overflow, mobile selection/back, quick create/close/refetch`);
@@ -206,7 +208,9 @@ try {
     await expect(s.reply()).toHaveValue("Збережіть цю чернетку");
     await s.reply().fill("Змінена чернетка");
     await expect(s.page.getByRole("button", { name: "Підтвердити відправлення", exact: true })).toBeDisabled();
-    await s.assertClean(); await s.context.close(); checks.push(`${status}: draft retained, blind retry blocked after edits`);
+    await s.page.reload(); await s.reply().fill("Після перезавантаження");
+    await expect(s.page.getByRole("button", { name: "Підтвердити відправлення", exact: true })).toBeDisabled();
+    await s.assertClean(); await s.context.close(); checks.push(`${status}: draft retained, blind retry blocked after edits/reload`);
   }
 
   const analyst = await fixture({ width: 1440, height: 900 }, { role: "ANALYST" });

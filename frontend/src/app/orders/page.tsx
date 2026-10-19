@@ -238,7 +238,7 @@ export default function OrdersPage() {
       <WorkspaceHeader
         title={t("orders.title")}
         description={sourceDirectConversationId && requestedCreate ? "Оформлення замовлення з Instagram Direct із автоматичним доповненням клієнта." : t("orders.subtitle")}
-        actions={<Button disabled={!enabled} onClick={() => { directPrefillOpened.current = true; setIsCreateOpen(true); }}>{t("orders.create")}</Button>}
+        actions={<Button disabled={!enabled || !canEdit} onClick={() => { if (!canEdit) return; directPrefillOpened.current = true; setIsCreateOpen(true); }}>{t("orders.create")}</Button>}
       />
       <CompactSummary layout="five-balanced" items={[
         { label: t("orders.summary.all"), value: allOrders },

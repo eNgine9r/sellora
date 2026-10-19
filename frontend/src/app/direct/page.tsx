@@ -28,6 +28,7 @@ import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states"
 import { Drawer } from "@/components/ui/overlay";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
+import { ApiError } from "@/services/api";
 import { fetchAISuggestions } from "@/services/ai";
 import {
   ensureDirectCustomer,
@@ -52,6 +53,14 @@ import {
 } from "@/types/direct";
 
 const ACTIVE_HISTORY_STATUSES = new Set(["PENDING", "RUNNING", "RETRY_PENDING"]);
+const SEND_GUARD_PREFIX = "sellora.direct-send-guard:";
+const BLOCKED_SEND_STATUSES = new Set(["SENDING", "RETRY_PENDING", "RECONCILIATION_REQUIRED", "UNKNOWN"]);
+function restoredSendGuards(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return Object.fromEntries(Object.keys(window.sessionStorage).filter((key) => key.startsWith(SEND_GUARD_PREFIX)).map((key) => [key.slice(SEND_GUARD_PREFIX.length), window.sessionStorage.getItem(key) ?? "UNKNOWN"]));
+  } catch { return {}; }
+}
 
 export default function DirectPage() {
   const { t } = useI18n();
@@ -65,7 +74,16 @@ export default function DirectPage() {
   type Draft = { text: string; revision: number };
   type ReplyContext = { workspaceId: string; conversationId: string; key: string; text: string; revision: number };
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
-  const [outcomes, setOutcomes] = useState<Record<string, string>>({});
+  const [outcomes, setOutcomes] = useState<Record<string, string>>(restoredSendGuards);
+  const recordSendOutcome = (key: string, status: string) => {
+    // Persist only a non-PII safety guard, never message text. Navigation/reload
+    // must not turn an ambiguous provider result into permission to send again.
+    try {
+      if (BLOCKED_SEND_STATUSES.has(status) || !["SENT", "FAILED_SAFE"].includes(status)) window.sessionStorage.setItem(SEND_GUARD_PREFIX + key, status);
+      else window.sessionStorage.removeItem(SEND_GUARD_PREFIX + key);
+    } catch { /* Private storage can be unavailable; the in-memory guard remains. */ }
+    setOutcomes((current) => ({ ...current, [key]: status }));
+  };
   const [preparations, setPreparations] = useState<Record<string, { revision: number; result?: PrepareResult; error?: boolean }>>({});
   const profileRefreshAttempted = useRef(new Set<string>());
   const readAttempted = useRef(new Set<string>());
@@ -144,9 +162,9 @@ export default function DirectPage() {
   });
   const sendMutation = useMutation({
     mutationFn: (variables: ReplyContext) => sendDirectReply(variables.conversationId, variables.text, crypto.randomUUID()),
-    onMutate: (variables) => setOutcomes((current) => ({ ...current, [variables.key]: "SENDING" })),
+    onMutate: (variables) => recordSendOutcome(variables.key, "SENDING"),
     onSuccess: (result, variables) => {
-      setOutcomes((current) => ({ ...current, [variables.key]: result.status }));
+      recordSendOutcome(variables.key, result.status);
       if (result.status === "SENT") {
         setDrafts((current) => {
           if ((current[variables.key]?.revision ?? 0) !== variables.revision) return current;
@@ -157,7 +175,7 @@ export default function DirectPage() {
       void queryClient.invalidateQueries({ queryKey: ["direct-conversations", variables.workspaceId] });
     },
     // A lost response can follow provider acceptance. Never offer a blind retry.
-    onError: (_error, variables) => setOutcomes((current) => ({ ...current, [variables.key]: "UNKNOWN" })),
+    onError: (error, variables) => recordSendOutcome(variables.key, error instanceof ApiError && [400, 403, 404, 422, 429].includes(error.status) ? "FAILED_SAFE" : "UNKNOWN"),
   });
   const profileMutation = useMutation({
     mutationFn: (conversationId: string) => refreshDirectParticipantProfile(conversationId),
@@ -319,8 +337,8 @@ export default function DirectPage() {
           setReplyText={setReplyText}
           onPrepare={() => { const context = replyContext(); if (context) prepareMutation.mutate(context); }}
           onSend={() => { const context = replyContext(); if (context && !sendMutation.isPending && (!outcome || ["SENT", "FAILED_SAFE"].includes(outcome))) sendMutation.mutate(context); }}
-          onRefreshProfile={() => selectedConversation && profileMutation.mutate(selectedConversation.id)}
-          profileRefreshing={profileMutation.isPending}
+          onRefreshProfile={() => canManage && selectedConversation && profileMutation.mutate(selectedConversation.id)}
+          profileRefreshing={!canManage || profileMutation.isPending}
           sendDisabled={
             !canManage
             || Boolean(outcome && !["SENT", "FAILED_SAFE"].includes(outcome))
