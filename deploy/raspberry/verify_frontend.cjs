@@ -2,6 +2,8 @@
 const assert = require("node:assert/strict");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE);
 
+let step = "initialize";
+let diagnostics = {};
 async function main() {
   const frontend = new URL(process.env.FRONTEND_URL);
   const api = new URL(process.env.TARGET_API_URL);
@@ -14,16 +16,24 @@ async function main() {
     const serverErrors = [];
     const networkFailures = [];
     const pageErrors = [];
+    const authRequests = [];
+    const authResponses = [];
+    diagnostics = { serverErrors, networkFailures, pageErrors, authRequests, authResponses };
+    page.on("request", request => { const u = new URL(request.url()); if (u.hostname.includes("btc-radar") && u.pathname.includes("auth")) authRequests.push({path:u.pathname,method:request.method()}); });
     page.on("pageerror", error => pageErrors.push(error.name));
     page.on("response", response => {
       const url = new URL(response.url());
+      if (url.hostname.includes("btc-radar") && url.pathname.includes("auth")) authResponses.push({path:url.pathname,status:response.status()});
       if (url.origin === api.origin && response.status() >= 500) serverErrors.push(response.status());
     });
     page.on("requestfailed", request => {
       if (new URL(request.url()).origin === api.origin) networkFailures.push(request.failure()?.errorText || "FAILED");
     });
+    step = "load_login";
     const initial = await page.goto(frontend.origin + "/login", { waitUntil: "domcontentloaded", timeout: 45000 });
     assert.equal(initial.status(), 200);
+    await page.waitForLoadState("networkidle", { timeout: 20000 });
+    step = "fill_credentials";
     await page.locator('input[type="email"]').fill(process.env.STAGING_OWNER_EMAIL);
     await page.locator('input[type="password"]').fill(process.env.STAGING_OWNER_PASSWORD);
     const loginResponse = page.waitForResponse(response =>
@@ -32,9 +42,15 @@ async function main() {
     const currentUserResponse = page.waitForResponse(response =>
       response.url() === api.href.replace(/\/$/, "") + "/auth/me" &&
       response.status() === 200, { timeout: 45000 });
+    const authResponsesReady = Promise.all([loginResponse, currentUserResponse]);
+    authResponsesReady.catch(() => {});
+    step = "submit_login";
     await page.locator('button[type="submit"]').click();
-    assert.equal((await loginResponse).status(), 200);
-    assert.equal((await currentUserResponse).status(), 200);
+    step = "await_api_login_and_current_user";
+    const [loginResult, currentUserResult] = await authResponsesReady;
+    assert.equal(loginResult.status(), 200);
+    assert.equal(currentUserResult.status(), 200);
+    step = "authenticated_dashboard";
     await page.waitForURL(url => url.pathname === "/dashboard", { timeout: 45000 });
     await page.locator("main").waitFor({ state: "visible", timeout: 20000 });
     await page.waitForLoadState("networkidle", { timeout: 20000 });
@@ -60,6 +76,6 @@ async function main() {
   }
 }
 main().catch(error => {
-  console.error("PUBLIC_BROWSER_CANARY_FAILED: " + error.name);
+  console.error(JSON.stringify({error:"PUBLIC_BROWSER_CANARY_FAILED",error_type:error.name,step,diagnostics}));
   process.exitCode = 1;
 });
