@@ -51,3 +51,14 @@ Status: IMPLEMENTED; isolated production build and synthetic browser execution p
 - node --check on the changed browser harness/scenario and git diff --check passed. The authored dynamic browser regression has not yet executed; no browser-pass claim.
 
 - Final identity/count-idempotence version: npm run typecheck && npm run lint — exit 0 (13.97s). Repeated node --check for both changed browser modules and git diff --check — passed.
+
+## Review/runtime correction — round 2
+- Root's isolated build of ce36fa5 passed. The browser reached 18 completed check groups, including cost quantity/payload/review, TTN/manual draft confirmation, new inbound/sent scroll, narrow viewport, and legacy link/workspace reset. It then failed only on an ambiguous close-button selector in the final late-callback/remount scenario: both backdrop and header close matched. Switched that scenario to the existing supported Escape close and assert the dialog disappears. This is partial browser evidence, not a full-suite pass.
+- Re-review I2 confirmed and fixed: when conversation or pane disappears (mobile Back), clear the remembered scroll context. Reopening A with its same cached message count initializes the new DOM pane at its newest message again. Added A → Back → A assertions at 375 and 390 for unchanged timeline count, actual newest-message viewport and bottom position, retaining draft ownership checks.
+- Root's synthetic 375 screenshot showed the refresh-profile button squeezing identity to one letter and a US-formatted expiry date. Profile layout now has a bounded avatar/name grid and a separate action row; identity can wrap. Expiry uses the active Ukrainian/English locale with day/month/full year and hour/minute. Node formatter check outputs 19.10.2099, 23:00 for uk-UA. No global date/currency changes.
+- Added narrow profile name-width/button-nonoverlap/date checks and synthetic profile screenshots at the existing 375/390/1440 TTN scenarios. The original composer-bound checks remain.
+- Failure catch now captures a viewport PNG plus bounded URL/recent API/DOM text/error context from still-open pages created only by the fail-closed synthetic fixture, preserving original failure. No real-session or external page capture.
+- Fresh focused typecheck/lint/mobile-static run: exit 0 (13.77s), 29 routes, zero overlay exceptions, PASS. Syntax checks on both changed browser modules and git diff --check passed. Final typecheck/lint after the explicit four-digit-year formatter is recorded below.
+- New exact-SHA build/browser and scoped re-review remain root-owned and pending. Root-owned roadmap documentation is excluded from this correction commit.
+
+- Final round-2 source: npm run typecheck && npm run lint — exit 0 (13.75s). No production build or browser execution on the live Pi.

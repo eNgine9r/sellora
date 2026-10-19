@@ -655,7 +655,10 @@ function MessageThread({
 
   useEffect(() => {
     const element = scrollContainer.current;
-    if (!element || loading || !conversation?.id) return;
+    // EmptyState replaces the pane on mobile Back; a recreated pane needs its
+    // own initial scroll even when the cached conversation/count are unchanged.
+    if (!conversation?.id || !element) { scrollContext.current = null; return; }
+    if (loading) return;
     const context = hasHandoff ? handoffKey ?? conversation.id : conversation.id;
     // Handoff navigation is a one-time scroll intent after initial loading.
     // A child returning null after insertion must not pin later messages to top.
@@ -805,28 +808,28 @@ function messageStatusLabel(message: DirectMessage, t: (key: string) => string) 
 }
 
 function ParticipantProfileCard({ conversation, onRefresh, refreshing }: { conversation: DirectConversation; onRefresh: () => void; refreshing: boolean }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const followers = conversation.participant_follower_count == null ? null : new Intl.NumberFormat("uk-UA").format(conversation.participant_follower_count);
   const profileReady = conversation.participant_profile_status === "READY";
   return (
-    <header className="border-b border-border-subtle p-4">
-      <div className="flex flex-wrap items-start gap-4">
+    <header className="border-b border-border-subtle p-4" data-direct-profile>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
         <ParticipantAvatar conversation={conversation} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-lg font-black">{conversation.participant_display_name ?? t("direct.customer")}</h2>
+            <h2 className="break-words text-lg font-black">{conversation.participant_display_name ?? t("direct.customer")}</h2>
             {conversation.participant_is_verified_user ? <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-1 text-xs font-bold text-sky-600"><BadgeCheck className="h-3.5 w-3.5" />{t("direct.verified")}</span> : null}
           </div>
-          <p className="text-sm text-text-secondary">{conversation.participant_username ? `@${conversation.participant_username}` : t("direct.usernameUnavailable")}</p>
+          <p className="break-words text-sm text-text-secondary" data-direct-profile-username>{conversation.participant_username ? `@${conversation.participant_username}` : t("direct.usernameUnavailable")}</p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-text-secondary">
             {followers ? <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-1"><Users className="h-3.5 w-3.5" />{t("direct.followers", { count: followers })}</span> : null}
             {conversation.participant_is_user_follow_business === true ? <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-700">{t("direct.followsShop")}</span> : null}
             {conversation.participant_is_business_follow_user === true ? <span className="rounded-full bg-violet-500/15 px-2 py-1 text-primary">{t("direct.shopFollows")}</span> : null}
           </div>
         </div>
-        {conversation.channel === "INSTAGRAM" ? <Button variant="secondary" onClick={onRefresh} disabled={refreshing}>{refreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4" />}{profileReady ? t("direct.refreshProfile") : t("direct.loadProfile")}</Button> : null}
+        {conversation.channel === "INSTAGRAM" ? <Button className="col-span-2 w-full sm:w-auto sm:justify-self-start" variant="secondary" onClick={onRefresh} disabled={refreshing}>{refreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4" />}{profileReady ? t("direct.refreshProfile") : t("direct.loadProfile")}</Button> : null}
       </div>
-      <p className="mt-3 text-sm text-text-secondary">{conversation.channel === "INSTAGRAM" ? "Instagram" : t("direct.synthetic")} · {conversation.messaging_window_expires_at ? t("direct.windowUntil", { date: new Date(conversation.messaging_window_expires_at).toLocaleString() }) : t("direct.windowUnavailable")}</p>
+      <p className="mt-3 text-sm text-text-secondary">{conversation.channel === "INSTAGRAM" ? "Instagram" : t("direct.synthetic")} · {conversation.messaging_window_expires_at ? t("direct.windowUntil", { date: new Date(conversation.messaging_window_expires_at).toLocaleString(locale === "uk" ? "uk-UA" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) }) : t("direct.windowUnavailable")}</p>
       {conversation.channel === "INSTAGRAM" && !profileReady ? <p className="mt-2 rounded-2xl bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-700">{conversation.participant_profile_status === "RETRY_PENDING" ? t("direct.profileRetry") : conversation.participant_profile_status === "UNAVAILABLE" ? t("direct.profileUnavailable") : t("direct.profileLoading")}</p> : null}
     </header>
   );

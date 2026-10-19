@@ -102,6 +102,18 @@ export async function runFulfillmentScenarios({ fixture, base, expect, a, b, wor
     await expect(f.page.getByRole("button", { name: "Підтвердити відправлення", exact: true })).toBeVisible();
     noSend(f);
     await f.page.screenshot({ path: path.join(output, `fulfillment-ttn-${width}.png`), fullPage: true });
+    await f.page.getByRole("button", { name: "Клієнт і замовлення", exact: true }).click();
+    const profile = f.page.locator("[data-direct-profile]");
+    await expect(profile.getByRole("heading", { name: "Олена Тестова", exact: true })).toBeInViewport();
+    await expect(profile).toContainText(/19[.]10[.]2099/);
+    if (width < 1024) {
+      const identity = await profile.locator("[data-direct-profile-username]").boundingBox();
+      const update = await profile.getByRole("button", { name: "Оновити профіль", exact: true }).boundingBox();
+      const name = await profile.getByRole("heading", { name: "Олена Тестова", exact: true }).boundingBox();
+      expect(name.width).toBeGreaterThan(120);
+      expect(update.y).toBeGreaterThanOrEqual(identity.y + identity.height);
+    }
+    await f.page.screenshot({ path: path.join(output, `fulfillment-profile-${width}.png`), fullPage: false });
     await f.assertClean(); await f.context.close();
   }
   checks.push("TTN insertion into empty drafts on 375/390/1440 (dark/light), neutral wording and composer bounds");
@@ -142,7 +154,8 @@ export async function runFulfillmentScenarios({ fixture, base, expect, a, b, wor
   await late.page.getByRole("link", { name: "Оформити замовлення", exact: true }).click();
   await expect(late.page.getByRole("dialog")).toBeVisible();
   late.state.releaseSend();
-  await late.page.getByRole("dialog").getByRole("button", { name: /Закрити/ }).click();
+  await late.page.keyboard.press("Escape");
+  await expect(late.page.getByRole("dialog")).toHaveCount(0);
   await late.page.locator('a[href="/direct"]').first().click();
   await late.card(a).click(); await expect(late.reply()).toHaveValue("Нова редакція до переходу");
   await late.card(b).click(); await expect(late.reply()).toHaveValue("");

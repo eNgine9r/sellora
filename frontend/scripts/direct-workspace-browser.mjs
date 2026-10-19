@@ -26,6 +26,7 @@ const conversations = [
 ].map((item) => ({ ...item, status: "OPEN", priority: "NORMAL", ai_processing_status: "IDLE", participant_profile_status: "READY", messaging_window_expires_at: "2099-10-19T20:00:00Z", last_message_at: "2026-10-19T10:00:00Z" }));
 const failures = [];
 const checks = [];
+const fixturePages = [];
 let server;
 let browser;
 await mkdir(output, { recursive: true });
@@ -107,6 +108,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
     return respond({ detail: "Unexpected synthetic fixture request" }, 500);
   });
   const page = await context.newPage();
+  fixturePages.push({ page, api, unexpected, errors });
   page.on("pageerror", (error) => errors.push(error.message));
   const card = (id) => page.locator(`[data-conversation-id="${id}"]`);
   const reply = () => page.getByRole("textbox", { name: "Відповідь менеджера" });
@@ -242,6 +244,12 @@ try {
       if (width < 1024) {
         await expect(m.page.locator("[data-direct-list]")).toBeHidden();
         await m.page.getByRole("button", { name: "Назад до діалогів", exact: true }).click();
+        // The same cached conversation recreates its pane with the same count.
+        await m.card(a).click();
+        await expect(m.page.locator("[data-direct-live-thread]").getByText("Синтетичне повідомлення 24", { exact: true })).toBeInViewport();
+        await expect.poll(() => m.page.locator("[data-direct-live-thread]").evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(4);
+        await expect(m.reply()).toHaveValue("Мобільна чернетка");
+        await m.page.getByRole("button", { name: "Назад до діалогів", exact: true }).click();
         await expect(m.card(b)).toBeVisible(); await m.card(b).click(); await expect(m.reply()).toHaveValue("");
         await m.page.getByRole("button", { name: "Назад до діалогів", exact: true }).click(); await m.card(a).click();
         await expect(m.reply()).toHaveValue("Мобільна чернетка");
@@ -372,6 +380,19 @@ try {
   console.log(`Direct synthetic browser gate passed (${checks.length} scenarios).`);
 } catch (error) {
   failures.push(error.stack || String(error));
+  // Only pages created by the fail-closed synthetic fixture are eligible.
+  let index = 0;
+  for (const { page, api, unexpected, errors } of fixturePages) {
+    if (page.isClosed() || !page.url().startsWith(origin + "/")) continue;
+    try {
+      const prefix = `failure-${++index}`;
+      await page.screenshot({ path: path.join(output, `${prefix}.png`), fullPage: false, timeout: 5000 });
+      await writeFile(path.join(output, `${prefix}.json`), JSON.stringify({
+        syntheticOnly: true, url: page.url(), api: api.slice(-60), unexpected, errors,
+        body: (await page.locator("body").innerText({ timeout: 3000 })).slice(0, 12000),
+      }, null, 2));
+    } catch (captureError) { failures.push(`Synthetic failure capture: ${captureError.message}`); }
+  }
   throw error;
 } finally {
   await writeFile(path.join(output, "result.json"), JSON.stringify({ syntheticOnly: true, checks, failures }, null, 2));
