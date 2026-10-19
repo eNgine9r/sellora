@@ -1,0 +1,50 @@
+{
+  "image_id": "sha256:8646b17d0e07f8d57bec481b5e71ba4ea5c315d3bc8b7c4a68017d9f2ac7129a",
+  "revision": "8c2a9b2c83056a8f8719c5b06ddedb6c65314fb4",
+  "architecture": "arm64",
+  "empty_schema_blocked_without_writes": true,
+  "database_revision": "202607220036",
+  "anonymous_protected_endpoint_statuses": {
+    "/api/v1/auth/me": 401,
+    "/api/v1/onboarding/status": 401
+  },
+  "health": {
+    "status": "ok",
+    "runtime_commit": "8c2a9b2c83056a8f8719c5b06ddedb6c65314fb4",
+    "process_started_at": "2026-10-19T10:59:19.764380+00:00",
+    "meta_webhook_worker_enabled": false,
+    "meta_webhook_processing_enabled": true,
+    "meta_webhook_worker_running": false
+  },
+  "outbound_and_ai_disabled": true,
+  "read_only_root": true,
+  "storage_writable": true,
+  "resource_limits_verified": true,
+  "loopback_binding": true,
+  "verified_at": "2026-10-19",
+  "verification_host": "nexolab-edge-01",
+  "target_host": "btc-radar",
+  "target_deployment_completed": false,
+  "test_resources_removed": true,
+  "focused_tests": {
+    "passed": 22,
+    "command": "python -m pytest -p no:cacheprovider tests/test_raspberry_startup.py tests/test_health_runtime_identity.py tests/integrations/meta_instagram/test_runtime_worker.py -q"
+  },
+  "additional_checks": [
+    "Native ARM64 Docker build completed",
+    "Packaged Alembic revision and API route verifiers passed",
+    "Raw env dollar sign preserved in actual Compose container"
+  ],
+  "remaining_gates": [
+    "Authenticated target deployment channel unavailable: RDC reports btc-radar offline",
+    "Verify current Render runtime commit and live database revision",
+    "Privately preserve environment, encryption/signing keys and backup recovery",
+    "Verify HTTPS ingress, OAuth/webhooks, authorized login/workspace isolation, existing attachments and Direct history",
+    "Coordinate single worker ownership and frontend/callback cutover"
+  ],
+  "limitations": [
+    "Synthetic disposable PostgreSQL only; no live Supabase or customer data used",
+    "No deployment to btc-radar, production traffic cutover or real Direct/Meta Ads verification performed",
+    "Native Instagram labels and confirmed sales reconciliation are not implemented by this deployment package"
+  ]
+}

@@ -7,6 +7,16 @@ on:
       - "backend/**"
       - ".github/workflows/render-staging-deploy.yml"
   workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [deploy, export-raspberry, verify-raspberry, verify-browser]
+        default: deploy
+        description: Existing staging deployment or encrypted Raspberry migration
+      migration_recipient_cert:
+        type: string
+        required: false
+        description: Public certificate generated on the target Raspberry
 
 permissions:
   contents: read
@@ -16,7 +26,71 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  export-raspberry:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'export-raspberry'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: staging
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Encrypt existing Render configuration for btc-radar
+        run: python3 deploy/raspberry/export_render_config.py
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          MIGRATION_RECIPIENT_CERT: ${{ inputs.migration_recipient_cert }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sellora-btc-radar-encrypted-config
+          path: migration-encrypted/sellora-config.cms
+          retention-days: 1
+          if-no-files-found: error
+      - name: Remove encrypted temporary bundle
+        if: always()
+        run: rm -rf migration-encrypted
+
+  verify-raspberry:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'verify-raspberry'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: staging
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify authenticated Raspberry API without customer mutations
+        run: python3 deploy/raspberry/verify_target.py
+        env:
+          TARGET_API_URL: https://btc-radar.tail7f9b04.ts.net/api/v1
+          TARGET_EXPECTED_HOST: btc-radar.tail7f9b04.ts.net
+          STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+          STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+
+  verify-browser:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'verify-browser'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    environment: staging
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install pinned browser test runtime without deployment credentials
+        run: |
+          npm install --prefix "$RUNNER_TEMP/sellora-canary-browser" --ignore-scripts --no-audit --no-fund playwright@1.52.0
+          "$RUNNER_TEMP/sellora-canary-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Verify public browser login to the Raspberry API
+        run: node deploy/raspberry/verify_frontend.cjs
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/sellora-canary-browser/node_modules/playwright
+          FRONTEND_URL: https://sellora-web-staging.vercel.app
+          TARGET_API_URL: https://sellora-web-staging.vercel.app/api/v1
+          STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+          STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+
   deploy-and-verify:
+    if: github.event_name != 'workflow_dispatch' || inputs.operation == 'deploy'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: staging

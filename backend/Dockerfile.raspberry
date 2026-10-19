@@ -1,0 +1,21 @@
+FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
+COPY app ./app
+COPY alembic ./alembic
+COPY scripts ./scripts
+COPY alembic.ini ./
+ARG SELLORA_REVISION
+RUN test -n "$SELLORA_REVISION" \
+    && printf '%s\n' "$SELLORA_REVISION" > /app/RELEASE_REVISION \
+    && python scripts/verify_alembic_revision.py \
+    && python scripts/verify_sprint_8b_routes.py \
+    && mkdir -p /app/storage/imports \
+    && chown -R 10001:10001 /app/storage
+LABEL org.opencontainers.image.revision="$SELLORA_REVISION"
+ENV RENDER_GIT_COMMIT="$SELLORA_REVISION"
+USER 10001:10001
+EXPOSE 10000
+CMD ["python", "scripts/start_raspberry.py"]

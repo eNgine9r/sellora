@@ -1,0 +1,53 @@
+name: sellora-rpi
+services:
+  backend:
+    image: ${SELLORA_IMAGE:?Set SELLORA_IMAGE to the verified ARM64 release image}
+    platform: linux/arm64
+    env_file:
+      - path: ${SELLORA_ENV_FILE:?Set the absolute path to the private backend env file}
+        required: true
+        format: raw
+    environment:
+      ENVIRONMENT: production
+      PORT: "10000"
+      PGCONNECT_TIMEOUT: "10"
+      IMPORT_STORAGE_PATH: /app/storage/imports
+      META_INSTAGRAM_WEBHOOK_WORKER_ENABLED: "${SELLORA_WORKER_ENABLED:-false}"
+      META_INSTAGRAM_SEND_ENABLED: "${SELLORA_SEND_ENABLED:-false}"
+      META_INSTAGRAM_AUTO_SEND_ENABLED: "false"
+      META_INSTAGRAM_AUTO_ANALYSIS_ENABLED: "false"
+      AI_FEATURE_ENABLED: "false"
+      AI_CUSTOMER_DATA_EXTRACTION_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${SELLORA_PORT:-18000}:10000"
+    volumes:
+      - storage:/app/storage
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    cpus: 1.0
+    mem_limit: 768m
+    pids_limit: 128
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import json,urllib.request; r=urllib.request.urlopen('http://127.0.0.1:10000/health', timeout=5); assert json.load(r)['status']=='ok'"
+      interval: 30s
+      timeout: 6s
+      start_period: 60s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+volumes:
+  storage:
