@@ -1,5 +1,5 @@
 import { apiRequest } from "@/services/api";
-import { AdCampaign, AdCampaignCreate, AdMetric, AdMetricCreate, AdvertisingSummary, AdvertisingTrendPoint, CampaignPerformance } from "@/types/advertising";
+import { CrmAttributionReport, AdCampaign, AdCampaignCreate, AdMetric, AdMetricCreate, AdvertisingSummary, AdvertisingTrendPoint, CampaignPerformance } from "@/types/advertising";
 
 function authHeaders(workspaceId?: string, token?: string) { return { ...(workspaceId ? { "X-Workspace-ID": workspaceId } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) }; }
 function rangeQuery(startDate?: string, endDate?: string, extra?: Record<string, string | number | undefined>) { const params = new URLSearchParams(); if (startDate?.trim()) params.set("start_date", startDate.trim()); if (endDate?.trim()) params.set("end_date", endDate.trim()); Object.entries(extra ?? {}).forEach(([key, value]) => { if (value !== undefined && String(value).trim()) params.set(key, String(value).trim()); }); const query = params.toString(); return query ? `?${query}` : ""; }
@@ -15,3 +15,5 @@ export const fetchAdvertisingTrend = (workspaceId: string, token?: string, start
 
 export const deleteAdCampaign = (workspaceId: string, campaignId: string, token?: string) => apiRequest<void>(`/advertising/campaigns/${campaignId}`, { method: "DELETE", headers: authHeaders(workspaceId, token) });
 export const deleteAdMetric = (workspaceId: string, metricId: string, token?: string) => apiRequest<void>(`/advertising/metrics/${metricId}`, { method: "DELETE", headers: authHeaders(workspaceId, token) });
+
+export const fetchCrmAttribution = (workspaceId: string, token?: string, startDate?: string, endDate?: string) => apiRequest<CrmAttributionReport>(`/advertising/crm-attribution${rangeQuery(startDate, endDate)}`, { headers: authHeaders(workspaceId, token) });

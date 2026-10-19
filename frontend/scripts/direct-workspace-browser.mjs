@@ -5,6 +5,8 @@ import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createAdvertisingFixture } from "./advertising-browser-fixture.mjs";
+import { runAdvertisingScenarios } from "./advertising-browser-scenarios.mjs";
 import { createFulfillmentFixture } from "./fulfillment-browser-fixture.mjs";
 import { runFulfillmentScenarios } from "./fulfillment-browser-scenarios.mjs";
 const require = createRequire(process.env.PLAYWRIGHT_RUNTIME_PACKAGE || import.meta.url);
@@ -31,7 +33,7 @@ let server;
 let browser;
 await mkdir(output, { recursive: true });
 
-async function fixture(viewport, { role = "OWNER", theme = "light", delayedSuggestions = false, multiWorkspace = false, fulfillment = false } = {}) {
+async function fixture(viewport, { role = "OWNER", theme = "light", delayedSuggestions = false, multiWorkspace = false, fulfillment = false, advertising = false } = {}) {
   const context = await browser.newContext({ viewport, colorScheme: theme, serviceWorkers: "block" });
   const user = { id: "22222222-2222-4222-8222-222222222222", email: "synthetic@example.invalid", first_name: "Тест", last_name: "Sellora", is_active: true, last_login_at: null, memberships: [{ workspace_id: workspaceId, workspace_name: "Синтетичний магазин", workspace_slug: "synthetic", role, currency_code: "UAH" }] };
   if (multiWorkspace) user.memberships.push({ ...user.memberships[0], workspace_id: secondWorkspaceId, workspace_name: "Другий синтетичний магазин", workspace_slug: "synthetic-second" });
@@ -47,6 +49,8 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
   const state = { sendStatus: "COMPLETED", holdSend: false, releaseSend: null, prepareError: false, releaseSuggestions: null, operationStatus: null, holdStatus: false, releaseStatus: null, abortSend: false, statusRequests: 0, extraTimeline: [], appendSentTimeline: false, holdAutomation: false, releaseAutomation: null };
   const fulfillmentFixture = fulfillment ? createFulfillmentFixture({ workspaceId, conversationId: a }) : null;
   state.fulfillment = fulfillmentFixture;
+  const advertisingFixture = advertising ? createAdvertisingFixture({ workspaceId }) : null;
+  state.advertising = advertisingFixture;
   const operations = new Map();
   let operationSequence = 0;
   const suggestionsReady = delayedSuggestions ? new Promise((resolve) => { state.releaseSuggestions = resolve; }) : Promise.resolve();
@@ -79,6 +83,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
       return respond({ id: operation.id, conversation_id: operation.conversationId, status, manual_reconciliation_required: !["COMPLETED", "FAILED_SAFE", "CANCELLED"].includes(status), blind_retry_blocked: !["COMPLETED", "FAILED_SAFE", "CANCELLED"].includes(status) });
     }
     if (request.method() === "GET" && url.pathname.endsWith("/customer-automation") && state.holdAutomation) await new Promise((resolve) => { state.releaseAutomation = resolve; });
+    if (advertisingFixture && await advertisingFixture.handle({ key, requestWorkspace, respond, request, url })) return;
     if (fulfillmentFixture && await fulfillmentFixture.handle({ key, requestWorkspace, respond, request })) return;
     const match = url.pathname.match(/^\/api\/v1\/direct\/conversations\/([^/]+)\/(.+)$/);
     if (match && scopedConversations.some((item) => item.id === match[1])) {
@@ -378,6 +383,7 @@ try {
   expect(analyst.api.filter((key) => key.startsWith("POST "))).toEqual([]);
   await analyst.assertClean(); await analyst.context.close(); checks.push("analyst write controls and quick-create permission");
   await runFulfillmentScenarios({ fixture, base, expect, a, b, workspaceId, output, checks });
+  await runAdvertisingScenarios({ fixture, base, expect, output, checks, workspaceId });
   console.log(`Direct synthetic browser gate passed (${checks.length} scenarios).`);
 } catch (error) {
   failures.push(error.stack || String(error));
