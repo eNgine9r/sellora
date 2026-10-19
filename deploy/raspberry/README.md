@@ -10,7 +10,7 @@ See [verification-2026-10-19.json](verification-2026-10-19.json) for the native 
 
 - Docker Engine and Compose 2.30+ on the target host.
 - Confirm ARM64, disk space, memory, existing ports and services before deployment.
-- One API process, capped at 1 CPU, 768 MiB RAM and 128 PIDs.
+- One API process with 1 CPU and 128 PID cgroup limits. The standard Compose file requests a 768 MiB memory cgroup limit; btc-radar requires the documented no-memcg override, which limits virtual address space rather than resident memory.
 - Bind the API to loopback port 18000. A separately verified HTTPS reverse proxy is required for Vercel, OAuth and Meta webhooks.
 - Public ingress is not created by this package. Preserve authentication and route only Sellora traffic; do not replace existing NEXUS/BTC Radar routing.
 - No local PostgreSQL, frontend, pgAdmin, Redis or unrelated service is started.
@@ -80,7 +80,7 @@ Verify:
 4. Stop the old Instagram worker before enabling it on Raspberry. Preserve pending webhook jobs in the shared database.
 5. Set SELLORA_WORKER_ENABLED to the previously approved worker state. Keep SELLORA_SEND_ENABLED=false during the migration. Auto-sends and AI activity stay off.
 6. Recreate only the Sellora backend and verify worker state through /health.
-7. Update Vercel's NEXT_PUBLIC_API_BASE_URL and rebuild the frontend. Update the matching Meta OAuth redirect/webhook URLs when the backend URL changes; verify the challenge and subscriptions with the existing app.
+7. Set Vercel's server-side SELLORA_API_UPSTREAM_URL to the backend API base and rebuild the frontend. The legacy absolute NEXT_PUBLIC_API_BASE_URL is accepted as a server-side fallback; browser requests use same-origin /api/v1 through the Next.js rewrite. Update the matching Meta OAuth redirect/webhook URLs when the backend URL changes; verify the challenge and subscriptions with the existing app.
 8. Verify one authorized canary: incoming event, one stored message, one history entry, and no duplicate processing. Do not send a customer message or fabricate a purchase to test.
 9. Observe queue errors, authentication, database connectivity, resources and Direct behavior before retiring Render.
 
@@ -88,9 +88,13 @@ Restoring manual sends or AI behavior is a separately reviewed change. Advertisi
 
 ## Rollback
 
-Disable the Raspberry worker first. Restore the previous Vercel API URL and Meta callbacks, verify routing, then resume the previous Render worker. Keep only one worker owner active. Preserve the Raspberry storage volume and pending jobs; do not run compose down -v, drop tables, delete tokens, or downgrade the shared database.
+Disable the Raspberry worker first. Restore the previous Vercel deployment/upstream and Meta callbacks, verify routing, then resume the previous Render worker. Keep only one worker owner active. Preserve the Raspberry storage volume and pending jobs; do not run compose down -v, drop tables, delete tokens, or downgrade the shared database.
 
 This package prepares deployment. Target-host installation, private environment transfer, backup recovery, HTTPS/OAuth validation and cutover must each have recorded evidence before migration can be called complete.
+
+## Verified frontend proxy
+
+The deployed frontend uses same-origin /api/v1 requests; its server forwards them to the configured backend. API responses use Cache-Control: no-store. The external Chromium canary verified login, the current user and dashboard with direct tailnet/localhost requests blocked (Actions run 39306467890). The authenticated read-only API canary also passed through the Vercel proxy (Actions run 39312335737). These checks establish browser/API access; they do not establish Meta callback delivery, old-worker retirement, existing attachment access or a completed live Instagram cutover.
 
 ## Hosts without a memory cgroup
 
