@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useI18n } from "@/i18n/provider";
-import { formatMoney } from "@/lib/currency";
+import { normalizeCurrencyCode } from "@/lib/currency";
 import { fetchDirectOrderProposal } from "@/services/direct";
 import { OrderProposalLine, ProposalItemSelection } from "@/types/order-proposal";
 
@@ -17,7 +17,10 @@ export function DirectOrderProducts({ workspaceId, conversationId, currencyCode,
   workspaceId: string; conversationId: string; currencyCode: string;
   onApply: (items: ProposalItemSelection[]) => string | null;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const numberLocale = locale === "uk" ? "uk-UA" : "en-US";
+  const priceFormat = new Intl.NumberFormat(numberLocale, { style: "currency", currency: normalizeCurrencyCode(currencyCode), minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const stockFormat = new Intl.NumberFormat(numberLocale);
   const queryClient = useQueryClient();
   const queryKey = ["direct-order-proposal", workspaceId, conversationId];
   const [selections, setSelections] = useState<Record<string, Selection>>({});
@@ -81,7 +84,11 @@ export function DirectOrderProducts({ workspaceId, conversationId, currencyCode,
           {line.evidence.map((evidence) => <blockquote className="break-words text-xs text-text-secondary" key={evidence.message_id}>{evidence.snippet}</blockquote>)}
           {line.source === "ANALYSIS_CONTEXT" ? <p className="text-xs text-text-secondary">{t("proposal.contextOnly")}</p> : null}
           {line.candidates.length ? <>
-            <label className="grid gap-1 text-sm font-semibold">{t("proposal.variant")}<select aria-label={t("proposal.variant")} className={control} value={selected.variantId} onChange={(event) => update(line, { variantId: event.target.value })}><option value="">{t("proposal.chooseCandidate")}</option>{line.candidates.map((item) => <option value={item.variant_id} key={item.variant_id}>{[item.product_name, item.sku, item.color, item.size].filter(Boolean).join(" · ")} · {item.price == null ? t("proposal.unknownPrice") : formatMoney(item.price, currencyCode)} · {t("orders.available")}: {item.available_quantity ?? t("proposal.unknownStock")}</option>)}</select></label>
+            <label className="grid gap-1 text-sm font-semibold">{t("proposal.variant")}<select aria-label={t("proposal.variant")} className={control} value={selected.variantId} onChange={(event) => update(line, { variantId: event.target.value })}><option value="">{t("proposal.chooseCandidate")}</option>{line.candidates.map((item) => <option value={item.variant_id} key={item.variant_id}>{[item.product_name, item.sku, item.color, item.size].filter(Boolean).join(" · ")}</option>)}</select></label>
+            {candidate ? <dl className="grid min-w-0 grid-cols-2 gap-2 text-sm" data-proposal-selected-details>
+              <div className="min-w-0"><dt className="text-xs text-text-secondary">{t("proposal.currentPrice")}</dt><dd className="m-0 break-words font-bold" data-proposal-price>{candidate.price == null ? t("proposal.unknownPrice") : priceFormat.format(Number(candidate.price))}</dd></div>
+              <div className="min-w-0"><dt className="text-xs text-text-secondary">{t("orders.available")}</dt><dd className="m-0 break-words font-bold" data-proposal-stock>{candidate.available_quantity == null ? t("proposal.unknownStock") : stockFormat.format(candidate.available_quantity)}</dd></div>
+            </dl> : null}
             <label className="grid gap-1 text-sm font-semibold">{t("orders.quantity")}<input className={control} type="number" min="1" max="999" value={selected.quantity} onChange={(event) => update(line, { quantity: event.target.value })} /></label>
             {candidate?.price == null && candidate ? <label className="grid gap-1 text-sm font-semibold">{t("proposal.manualPrice")}<input className={control} type="number" min="0" step="0.01" value={selected.manualPrice} onChange={(event) => update(line, { manualPrice: event.target.value })} /></label> : null}
             {line.requires_review ? <label className="flex items-start gap-2 text-sm"><input className="mt-1" type="checkbox" checked={selected.reviewedVersion === verifiedVersion} onChange={(event) => update(line, { reviewedVersion: event.target.checked ? verifiedVersion : null })} />{t("proposal.reviewed")}</label> : null}

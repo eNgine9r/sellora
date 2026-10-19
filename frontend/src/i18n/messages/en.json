@@ -651,6 +651,7 @@
     "ordersUnavailable": "Customer orders are unavailable in the current API."
   },
   "orders": {
+    "detailLinkError": "Could not open the order. Check access or open it from the list.",
     "title": "Orders",
     "subtitle": "Create orders and track payment, profit, and delivery statuses.",
     "create": "Create order",
@@ -2447,6 +2448,7 @@
     }
   },
   "proposal": {
+    "currentPrice": "Current price",
     "title": "Products from conversation",
     "refresh": "Refresh proposal",
     "help": "Review SKU, variant, quantity and price. Only your action adds items; opening this panel runs no analysis or stock reservation.",

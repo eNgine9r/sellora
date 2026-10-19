@@ -33,6 +33,13 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
     const proposal = wizard.locator("[data-direct-order-products]");
     const row = proposal.locator("[data-proposal-line]").first();
     await expect(row.getByRole("combobox")).toHaveValue(ff.variantId);
+    const visibleDetails = row.locator("[data-proposal-selected-details]");
+    await visibleDetails.scrollIntoViewIfNeeded();
+    await expect(visibleDetails.locator("[data-proposal-price]")).toContainText(/100,00\s*(?:грн|₴)/);
+    await expect(visibleDetails.locator("[data-proposal-price]")).toBeInViewport();
+    await expect(visibleDetails.locator("[data-proposal-stock]")).toHaveText("20");
+    await expect(visibleDetails.locator("[data-proposal-stock]")).toBeInViewport();
+    if (width === 375) await f.page.screenshot({ path: path.join(output, "proposal-selected-375.png"), fullPage: false });
     expect(ff.state.payloads).toHaveLength(0);
     noRecognitionWrite(f);
     for (const [quantity, message] of [["-1", "Кількість має бути цілим"], ["21", "недостатньо доступного"]]) {
@@ -99,6 +106,8 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
   await expect(proposal).toContainText("Після аналізу діалог змінився");
   await expect(proposal.getByRole("combobox")).toHaveValue("");
   await proposal.getByRole("combobox").selectOption(extraVariantId);
+  await expect(proposal.locator("[data-proposal-price]")).toHaveText("Ціна невідома");
+  await expect(proposal.locator("[data-proposal-stock]")).toHaveText("4");
   await proposal.getByRole("button", { name: "Додати вибрані товари", exact: true }).click();
   await expect(proposal.getByRole("alert")).toContainText("Підтвердьте перевірку");
   await proposal.getByRole("checkbox").check();
@@ -170,10 +179,12 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
   df.state.extraInventory = [{ id: "drift-stock", product_variant_id: extraVariantId, stock_quantity: 20, reserved_quantity: 0 }];
   df.state.proposal = { ...empty(a), lines: [
     { ...inbound(df), candidates: [candidate(df, { price: "130" })] },
-    { ...inbound(df), id: "inbound-null-price", mention_text: "SYN-L", candidates: [candidate(df, { variant_id: extraVariantId, sku: "SYN-L", price: null })] },
+    { ...inbound(df), id: "inbound-null-price", mention_text: "SYN-L", candidates: [candidate(df, { variant_id: extraVariantId, sku: "SYN-L", price: null, available_quantity: null })] },
   ] };
   const dw = await openStep2(drift);
   const dp = dw.locator("[data-direct-order-products]");
+  await expect(dp.locator("[data-proposal-price]").nth(1)).toHaveText("Ціна невідома");
+  await expect(dp.locator("[data-proposal-stock]").nth(1)).toHaveText("невідомо");
   await dp.getByLabel("Ціна продажу (вкажіть вручну)", { exact: true }).fill("123");
   await dp.getByRole("button", { name: "Додати вибрані товари", exact: true }).click();
   const di = dw.locator("[data-order-item]");
@@ -206,6 +217,98 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
   await expect(drift.page.getByRole("dialog")).toHaveCount(1);
   noRecognitionWrite(drift); await drift.assertClean(); await drift.context.close();
   checks.push("fresh proposal price130 beats cached catalog100; explicit manual123 for proposal-null beats cached300; refresh/reapply preserves existing edited prices/cost and actual payload; mobile completion keeps sole wizard, explicit Open order replaces it with details");
+
+  const filtered = await fixture({ width: 375, height: 900 }, { fulfillment: true });
+  const of = filtered.state.fulfillment;
+  const otherOrder = { ...of.order, id: "18181818-1818-4818-8818-181818181818", order_number: "SYN-SHIPPED", status: "SHIPPED" };
+  of.state.extraOrders = [otherOrder];
+  await filtered.page.goto(`${base}/orders`);
+  const statusFilter = filtered.page.getByRole("combobox").filter({ has: filtered.page.locator('option[value="SHIPPED"]') });
+  await statusFilter.selectOption("SHIPPED");
+  await expect(filtered.page.getByRole("heading", { name: "SYN-SHIPPED", exact: true })).toBeVisible();
+  await filtered.page.getByRole("button", { name: "Створити замовлення", exact: true }).first().click();
+  const manualWizard = filtered.page.getByRole("dialog", { name: "Створити замовлення", exact: true });
+  await manualWizard.getByRole("button", { name: /^Олена Тестова/ }).click();
+  await manualWizard.getByLabel("Місто", { exact: true }).fill("Ки");
+  await manualWizard.getByRole("button", { name: "Київ", exact: true }).click();
+  await manualWizard.getByRole("button", { name: "Відділення №1", exact: true }).click();
+  await manualWizard.getByRole("button", { name: "Продовжити", exact: true }).click();
+  await manualWizard.locator("[data-order-item]").getByRole("combobox").selectOption(of.variantId);
+  await manualWizard.getByRole("button", { name: "Продовжити", exact: true }).click();
+  await manualWizard.getByRole("button", { name: "Створити замовлення і ТТН", exact: true }).click();
+  await expect(manualWizard.getByRole("link", { name: "Відкрити замовлення", exact: true })).toBeVisible();
+  expect(of.order.status).toBe("NEW");
+  await expect(statusFilter).toHaveValue("SHIPPED");
+  await manualWizard.getByRole("link", { name: "Відкрити замовлення", exact: true }).click();
+  await expect(manualWizard).toHaveCount(0);
+  const exactDetails = filtered.page.getByRole("dialog", { name: "SYN-1001", exact: true });
+  await expect(exactDetails).toBeVisible();
+  expect(of.state.orderDetailRequests).toBe(1);
+  await expect(filtered.page.getByRole("dialog")).toHaveCount(1);
+  await exactDetails.locator("header").getByRole("button", { name: "Закрити", exact: true }).click();
+  await expect(filtered.page).not.toHaveURL(/order_id=/);
+  await filtered.page.getByRole("button", { name: "Створити замовлення", exact: true }).first().click();
+  await expect(manualWizard).toBeVisible();
+  await manualWizard.getByLabel("Ім’я отримувача", { exact: true }).fill("Чернетка нового замовлення");
+  // Trigger the actual TanStack visibility listener with changed server data,
+  // so structural sharing cannot hide the dismissed-order replay regression.
+  otherOrder.notes = "Синтетичне оновлення після закриття";
+  const filteredReads = of.state.orderListRequests;
+  const refreshedList = filtered.page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === "/api/v1/orders" && url.searchParams.get("status") === "SHIPPED" && response.status() === 200;
+  });
+  await filtered.page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
+  const listResponse = await refreshedList;
+  expect((await listResponse.json()).map((order) => order.id)).toEqual([otherOrder.id]);
+  await expect.poll(() => of.state.orderListRequests).toBeGreaterThan(filteredReads);
+  await expect(manualWizard).toBeVisible();
+  await expect(manualWizard.getByLabel("Ім’я отримувача", { exact: true })).toHaveValue("Чернетка нового замовлення");
+  await expect(filtered.page.getByRole("dialog")).toHaveCount(1);
+  await expect(exactDetails).toHaveCount(0);
+  expect(of.state.orderDetailRequests).toBe(1);
+  noRecognitionWrite(filtered); await filtered.assertClean(); await filtered.context.close();
+  checks.push("SHIPPED-filtered create NEW -> exact by-ID Open order; dismiss consumes intent; changed list refetch leaves later explicit mobile create as sole dialog");
+
+  for (const invalid of ["404", "wrong-workspace", "wrong-id"]) {
+    const invalidTarget = await fixture({ width: 375, height: 900 }, { fulfillment: true });
+    const target = invalidTarget.state.fulfillment;
+    if (invalid === "404") target.state.failReads = true;
+    else target.state.orderDetailOverride = { ...target.order, [invalid === "wrong-workspace" ? "workspace_id" : "id"]: "19191919-1919-4919-8919-191919191919" };
+    await invalidTarget.page.goto(`${base}/orders?order_id=${target.orderId}`);
+    await expect(invalidTarget.page.locator("[data-order-detail-error]")).toBeVisible();
+    await expect(invalidTarget.page.getByRole("dialog")).toHaveCount(0);
+    expect(target.state.orderDetailRequests).toBe(1);
+    expect(target.state.readWorkspaces).toEqual([workspaceId]);
+    noRecognitionWrite(invalidTarget); await invalidTarget.assertClean(); await invalidTarget.context.close();
+  }
+  checks.push("by-ID404, wrong workspace and wrong ID fail visibly without false order selection");
+
+  for (const change of ["create", "workspace"]) {
+    const lateOrder = await fixture({ width: 375, height: 900 }, { fulfillment: true, multiWorkspace: change === "workspace" });
+    const target = lateOrder.state.fulfillment;
+    target.state.holdOrderDetail = true;
+    await lateOrder.page.goto(`${base}/orders?order_id=${target.orderId}`);
+    await expect.poll(() => typeof target.state.releaseOrderDetail).toBe("function");
+    const release = target.state.releaseOrderDetail;
+    const oldResponse = lateOrder.page.waitForResponse((response) => response.url().endsWith(`/orders/${target.orderId}`) && response.request().headers()["x-workspace-id"] === workspaceId && response.status() === 200);
+    if (change === "create") {
+      await lateOrder.page.getByRole("button", { name: "Створити замовлення", exact: true }).first().click();
+      await expect(lateOrder.page.getByRole("dialog", { name: "Створити замовлення", exact: true })).toBeVisible();
+      await expect(lateOrder.page).not.toHaveURL(/order_id=/);
+    } else {
+      await lateOrder.page.locator(".account-profile-trigger").click();
+      await lateOrder.page.getByRole("button", { name: /Другий синтетичний магазин/ }).click();
+      await expect(lateOrder.page.locator("[data-order-detail-error]")).toBeVisible();
+    }
+    target.state.holdOrderDetail = false; release();
+    await (await oldResponse).finished();
+    await expect(lateOrder.page.getByRole("dialog", { name: "SYN-1001", exact: true })).toHaveCount(0);
+    await expect(lateOrder.page.getByRole("dialog")).toHaveCount(change === "create" ? 1 : 0);
+    expect(target.state.readWorkspaces[0]).toBe(workspaceId);
+    noRecognitionWrite(lateOrder); await lateOrder.assertClean(); await lateOrder.context.close();
+  }
+  checks.push("late prior order navigation cannot replace explicit create or cross workspace ownership after scoped404");
 
   const fallback = await fixture({ width: 390, height: 900 }, { fulfillment: true });
   const sf = fallback.state.fulfillment; sf.state.holdProposal = true;
