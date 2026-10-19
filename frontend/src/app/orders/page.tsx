@@ -210,7 +210,8 @@ export default function OrdersPage() {
   }, [workspaceId]);
 
   useEffect(() => {
-    if (!enabled || !canEdit || !requestedCreate || directPrefillOpened.current) return;
+    if (!requestedCreate) { directPrefillOpened.current = false; return; }
+    if (!enabled || !canEdit || directPrefillOpened.current) return;
     if (requestedCustomerId && !customersQuery.data?.some((customer) => customer.id === requestedCustomerId)) return;
     directPrefillOpened.current = true;
     setIsCreateOpen(true);

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { useDirectLive } from "@/components/direct-live-provider";
@@ -35,6 +35,7 @@ import {
   fetchDirectConversations,
   fetchDirectCustomerAutomation,
   fetchDirectMessages,
+  fetchMessageOperation,
   fetchInstagramHistorySync,
   markDirectConversationRead,
   prepareDirectReply,
@@ -54,11 +55,22 @@ import {
 
 const ACTIVE_HISTORY_STATUSES = new Set(["PENDING", "RUNNING", "RETRY_PENDING"]);
 const SEND_GUARD_PREFIX = "sellora.direct-send-guard:";
-const BLOCKED_SEND_STATUSES = new Set(["SENDING", "RETRY_PENDING", "RECONCILIATION_REQUIRED", "UNKNOWN"]);
-function restoredSendGuards(): Record<string, string> {
-  if (typeof window === "undefined") return {};
+type SendGuard = { status: string; operationId?: string; editorId?: string; revision?: number; blindRetryBlocked?: boolean; manualReconciliationRequired?: boolean };
+const TERMINAL_SEND_STATUSES = new Set(["COMPLETED", "FAILED_SAFE", "CANCELLED"]);
+function sendSettled(guard?: SendGuard) {
+  return Boolean(guard && TERMINAL_SEND_STATUSES.has(guard.status) && !guard.blindRetryBlocked && !guard.manualReconciliationRequired);
+}
+function restoredSendGuards(workspaceId?: string): Record<string, SendGuard> {
+  if (typeof window === "undefined" || !workspaceId) return {};
   try {
-    return Object.fromEntries(Object.keys(window.sessionStorage).filter((key) => key.startsWith(SEND_GUARD_PREFIX)).map((key) => [key.slice(SEND_GUARD_PREFIX.length), window.sessionStorage.getItem(key) ?? "UNKNOWN"]));
+    return Object.fromEntries(Object.keys(window.sessionStorage).filter((key) => key.startsWith(SEND_GUARD_PREFIX + workspaceId + ":")).map((key) => {
+      const stored = window.sessionStorage.getItem(key) ?? "UNKNOWN";
+      let guard: SendGuard;
+      try { guard = JSON.parse(stored) as SendGuard; } catch { guard = { status: "UNKNOWN" }; }
+      if (!guard || typeof guard.status !== "string") guard = { status: "UNKNOWN" };
+      if (guard.status === "SENDING" && !guard.operationId) guard = { ...guard, status: "UNKNOWN" };
+      return [key.slice(SEND_GUARD_PREFIX.length), guard];
+    }));
   } catch { return {}; }
 }
 
@@ -72,18 +84,9 @@ export default function DirectPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   type Draft = { text: string; revision: number };
-  type ReplyContext = { workspaceId: string; conversationId: string; key: string; text: string; revision: number };
+  type ReplyContext = { workspaceId: string; conversationId: string; key: string; text: string; revision: number; editorId: string };
+  const [editorId] = useState(() => crypto.randomUUID());
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
-  const [outcomes, setOutcomes] = useState<Record<string, string>>(restoredSendGuards);
-  const recordSendOutcome = (key: string, status: string) => {
-    // Persist only a non-PII safety guard, never message text. Navigation/reload
-    // must not turn an ambiguous provider result into permission to send again.
-    try {
-      if (BLOCKED_SEND_STATUSES.has(status) || !["SENT", "FAILED_SAFE"].includes(status)) window.sessionStorage.setItem(SEND_GUARD_PREFIX + key, status);
-      else window.sessionStorage.removeItem(SEND_GUARD_PREFIX + key);
-    } catch { /* Private storage can be unavailable; the in-memory guard remains. */ }
-    setOutcomes((current) => ({ ...current, [key]: status }));
-  };
   const [preparations, setPreparations] = useState<Record<string, { revision: number; result?: PrepareResult; error?: boolean }>>({});
   const profileRefreshAttempted = useRef(new Set<string>());
   const readAttempted = useRef(new Set<string>());
@@ -91,6 +94,20 @@ export default function DirectPage() {
 
   const workspaceId = currentWorkspace?.workspace_id;
   const canManage = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
+  // Query cache keeps in-flight operation ownership across Direct route remounts.
+  const guardsQuery = useQuery({
+    queryKey: ["direct-send-guards", workspaceId],
+    queryFn: () => restoredSendGuards(workspaceId),
+    initialData: () => restoredSendGuards(workspaceId),
+    enabled: false,
+  });
+  const recordSendOutcome = useCallback((owner: { workspaceId: string; key: string }, guard: SendGuard) => {
+    try {
+      if (sendSettled(guard)) window.sessionStorage.removeItem(SEND_GUARD_PREFIX + owner.key);
+      else window.sessionStorage.setItem(SEND_GUARD_PREFIX + owner.key, JSON.stringify(guard));
+    } catch { /* Storage-disabled browsers retain the shared query-cache guard. */ }
+    queryClient.setQueryData<Record<string, SendGuard>>(["direct-send-guards", owner.workspaceId], (current) => ({ ...current, [owner.key]: guard }));
+  }, [queryClient]);
   const conversationsQuery = useQuery({
     queryKey: ["direct-conversations", workspaceId],
     queryFn: fetchDirectConversations,
@@ -138,19 +155,49 @@ export default function DirectPage() {
   const draftKey = `${workspaceId ?? ""}:${selectedConversation?.id ?? ""}`;
   const draft = drafts[draftKey] ?? { text: "", revision: 0 };
   const replyText = draft.text;
-  const outcome = outcomes[draftKey];
+  const guard = guardsQuery.data?.[draftKey];
+  const outcome = guard?.status;
+  const sendBlocked = Boolean(guard && !sendSettled(guard));
   const preparation = preparations[draftKey];
   const replyContext = (): ReplyContext | null => workspaceId && selectedConversation && canManage
-    ? { workspaceId, conversationId: selectedConversation.id, key: draftKey, text: draft.text, revision: draft.revision }
+    ? { workspaceId, conversationId: selectedConversation.id, key: draftKey, text: draft.text, revision: draft.revision, editorId }
     : null;
   const setReplyText = (text: string) => {
     if (!canManage || !selectedConversation) return;
     setDrafts((current) => ({ ...current, [draftKey]: { text, revision: (current[draftKey]?.revision ?? 0) + 1 } }));
-    setOutcomes((current) => {
-      if (!["SENT", "FAILED_SAFE"].includes(current[draftKey])) return current;
-      const next = { ...current }; delete next[draftKey]; return next;
-    });
+    if (workspaceId && sendSettled(guard)) {
+      queryClient.setQueryData<Record<string, SendGuard>>(["direct-send-guards", workspaceId], (current) => {
+        const next = { ...current }; delete next[draftKey]; return next;
+      });
+    }
   };
+  const operationQuery = useQuery({
+    queryKey: ["direct-send-status", workspaceId, selectedConversation?.id, guard?.operationId],
+    queryFn: () => fetchMessageOperation(guard!.operationId!),
+    enabled: Boolean(workspaceId && selectedConversation && guard?.operationId && sendBlocked),
+    refetchInterval: sendBlocked && guard?.operationId ? 5000 : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    retry: false,
+  });
+  useEffect(() => {
+    const operation = operationQuery.data;
+    if (!workspaceId || !selectedConversation || !guard?.operationId || !operation || sendSettled(guard)) return;
+    if (operation.id !== guard.operationId || operation.conversation_id !== selectedConversation.id) return;
+    const settledGuard: SendGuard = { ...guard, status: operation.status, blindRetryBlocked: operation.blind_retry_blocked, manualReconciliationRequired: operation.manual_reconciliation_required };
+    if (guard.status !== settledGuard.status || guard.blindRetryBlocked !== settledGuard.blindRetryBlocked || guard.manualReconciliationRequired !== settledGuard.manualReconciliationRequired) {
+      recordSendOutcome({ workspaceId, key: draftKey }, settledGuard);
+    }
+    // Recovery can settle a guard from an earlier page, but cannot erase a new
+    // editor's draft or a newer revision in this editor.
+    if (sendSettled(settledGuard) && settledGuard.status === "COMPLETED" && guard.editorId === editorId && guard.revision != null) {
+      setDrafts((current) => {
+        if ((current[draftKey]?.revision ?? 0) !== guard.revision) return current;
+        return { ...current, [draftKey]: { text: "", revision: guard.revision! + 1 } };
+      });
+    }
+  }, [draftKey, editorId, guard, operationQuery.data, recordSendOutcome, selectedConversation, workspaceId]);
+
   const analysisMutation = useMutation({
     mutationFn: ({ conversationId }: ReplyContext) => runDirectAnalysis(conversationId),
     onSuccess: (_result, variables) => queryClient.invalidateQueries({ queryKey: ["ai-suggestions", variables.workspaceId, variables.conversationId] }),
@@ -162,10 +209,10 @@ export default function DirectPage() {
   });
   const sendMutation = useMutation({
     mutationFn: (variables: ReplyContext) => sendDirectReply(variables.conversationId, variables.text, crypto.randomUUID()),
-    onMutate: (variables) => recordSendOutcome(variables.key, "SENDING"),
+    onMutate: (variables) => recordSendOutcome(variables, { status: "SENDING", editorId: variables.editorId, revision: variables.revision }),
     onSuccess: (result, variables) => {
-      recordSendOutcome(variables.key, result.status);
-      if (result.status === "SENT") {
+      recordSendOutcome(variables, { status: result.status, operationId: result.operation_id, editorId: variables.editorId, revision: variables.revision });
+      if (result.status === "COMPLETED") {
         setDrafts((current) => {
           if ((current[variables.key]?.revision ?? 0) !== variables.revision) return current;
           return { ...current, [variables.key]: { text: "", revision: variables.revision + 1 } };
@@ -175,7 +222,7 @@ export default function DirectPage() {
       void queryClient.invalidateQueries({ queryKey: ["direct-conversations", variables.workspaceId] });
     },
     // A lost response can follow provider acceptance. Never offer a blind retry.
-    onError: (error, variables) => recordSendOutcome(variables.key, error instanceof ApiError && [400, 403, 404, 422, 429].includes(error.status) ? "FAILED_SAFE" : "UNKNOWN"),
+    onError: (error, variables) => recordSendOutcome(variables, { status: error instanceof ApiError && [400, 403, 404, 422, 429].includes(error.status) ? "FAILED_SAFE" : "UNKNOWN", editorId: variables.editorId, revision: variables.revision }),
   });
   const profileMutation = useMutation({
     mutationFn: (conversationId: string) => refreshDirectParticipantProfile(conversationId),
@@ -262,7 +309,8 @@ export default function DirectPage() {
   };
 
   return (
-    <WorkspacePage className="min-h-full">
+    <WorkspacePage className="min-h-full [&>div]:gap-2 lg:[&>div]:gap-5">
+      <div className={selectedConversation ? "hidden lg:block" : ""}>
       <WorkspaceHeader
         eyebrow={t("direct.kicker")}
         title={t("direct.title")}
@@ -288,11 +336,12 @@ export default function DirectPage() {
           </div>
         }
       />
+      </div>
 
       {historyMutation.isError || profileMutation.isError ? <p role="alert" className="text-sm text-rose-600">{t("direct.actionError")}</p> : null}
-      <HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} />
+      <div className={selectedConversation ? "hidden lg:block" : ""}><HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} /></div>
 
-      <div className="min-[1440px]:hidden">
+      <div className={`${selectedConversation ? "hidden lg:block" : "block"} min-[1440px]:hidden`}>
         <button
           type="button"
           disabled={!selectedConversation}
@@ -303,8 +352,13 @@ export default function DirectPage() {
         </button>
       </div>
 
+      {selectedConversation ? <div className="flex min-w-0 items-center gap-2 lg:hidden" data-direct-mobile-controls>
+        <Button variant="secondary" className="min-w-0 flex-1 px-2 text-xs" onClick={() => { setSelectedId(null); setAiPanelOpen(false); router.replace("/direct", { scroll: false }); }}><ArrowLeft className="h-4 w-4 shrink-0" />{t("direct.backToDialogs")}</Button>
+        <Button variant="secondary" className="px-3 text-xs" onClick={() => setAiPanelOpen(true)} aria-label={t("direct.openAiPanel")}><Bot className="h-4 w-4" />{t("direct.aiShort")}</Button>
+        <Button variant="secondary" className="w-11 shrink-0 px-0" aria-label={historyActive ? t("direct.syncActive") : t("direct.syncHistory")} onClick={() => historyMutation.mutate()} disabled={!canManage || historyMutation.isPending || historyActive || statusQuery.data?.status !== "CONNECTED"}><RefreshCw className={`h-4 w-4 ${historyActive || historyMutation.isPending ? "animate-spin" : ""}`} /></Button>
+      </div> : null}
       <section
-        className="grid h-[max(540px,calc(100dvh-var(--topbar-height,72px)-240px))] min-w-0 gap-3 lg:grid-cols-[280px_minmax(0,1fr)] min-[1440px]:grid-cols-[280px_minmax(0,1fr)_300px]"
+        className={`grid ${selectedConversation ? "h-[calc(100dvh-260px)] min-h-[380px] lg:h-[max(540px,calc(100dvh-var(--topbar-height,72px)-240px))]" : "h-[max(540px,calc(100dvh-var(--topbar-height,72px)-240px))]"} min-w-0 gap-3 lg:grid-cols-[280px_minmax(0,1fr)] min-[1440px]:grid-cols-[280px_minmax(0,1fr)_300px]`}
         data-direct-shell-content
       >
         <div className={`${selectedConversation ? "hidden lg:block" : "block"} min-h-0 overflow-hidden`}>
@@ -321,7 +375,7 @@ export default function DirectPage() {
         />
         </div>
         <div className={`${selectedConversation ? "flex" : "hidden lg:flex"} min-h-0 min-w-0 flex-col`}>
-          {selectedConversation ? <Button variant="secondary" className="mb-2 lg:hidden" onClick={() => { setSelectedId(null); setAiPanelOpen(false); router.replace("/direct", { scroll: false }); }}><ArrowLeft className="h-4 w-4" />{t("direct.backToDialogs")}</Button> : null}
+
         <MessageThread
           conversation={selectedConversation}
           automation={automationQuery.data}
@@ -336,12 +390,12 @@ export default function DirectPage() {
           replyText={replyText}
           setReplyText={setReplyText}
           onPrepare={() => { const context = replyContext(); if (context) prepareMutation.mutate(context); }}
-          onSend={() => { const context = replyContext(); if (context && !sendMutation.isPending && (!outcome || ["SENT", "FAILED_SAFE"].includes(outcome))) sendMutation.mutate(context); }}
+          onSend={() => { const context = replyContext(); if (context && !sendMutation.isPending && !sendBlocked) sendMutation.mutate(context); }}
           onRefreshProfile={() => canManage && selectedConversation && profileMutation.mutate(selectedConversation.id)}
           profileRefreshing={!canManage || profileMutation.isPending}
           sendDisabled={
             !canManage
-            || Boolean(outcome && !["SENT", "FAILED_SAFE"].includes(outcome))
+            || sendBlocked
             || !selectedConversation
             || selectedConversation.channel !== "INSTAGRAM"
             || statusQuery.data?.status !== "CONNECTED"
@@ -350,6 +404,10 @@ export default function DirectPage() {
           prepareResult={preparation?.revision === draft.revision ? preparation.result : undefined}
           prepareError={preparation?.revision === draft.revision && Boolean(preparation.error)}
           sendOutcome={outcome}
+          operationKnown={Boolean(guard?.operationId)}
+          operationChecking={operationQuery.isFetching}
+          operationError={operationQuery.isError}
+          onCheckOperation={() => operationQuery.refetch()}
           sendPending={sendMutation.isPending}
           noAutoSend={t("direct.noAutoSend")}
         />
@@ -486,7 +544,7 @@ function ConversationList({
           {orderedConversations.map((item) => {
             const orderIntent = orderIntentConversationIds.has(item.id);
             return (
-              <button type="button" key={item.id} onClick={() => onSelect(item.id)} aria-pressed={selectedId === item.id} data-conversation-id={item.id} className={`w-full rounded-2xl border p-3 text-left transition ${orderIntent ? "border-amber-500/50 bg-amber-500/10" : selectedId === item.id ? "border-primary bg-primary/10" : "border-border-subtle bg-surface-2"}`}>
+              <button type="button" key={item.id} onClick={() => onSelect(item.id)} aria-pressed={selectedId === item.id} data-conversation-id={item.id} className={`w-full rounded-2xl border p-3 text-left transition ${orderIntent ? "border-warning/50 bg-[var(--warning-surface)]" : selectedId === item.id ? "border-primary bg-primary/10" : "border-border-subtle bg-surface-2"}`}>
                 <div className="flex items-start gap-3">
                   <ParticipantAvatar conversation={item} size="sm" />
                   <div className="min-w-0 flex-1">
@@ -498,7 +556,7 @@ function ConversationList({
                       {item.unread_count ? <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-black text-white">{item.unread_count}</span> : null}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {orderIntent ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-1 text-xs font-black text-amber-700"><ShoppingBag className="h-3 w-3" />Ймовірне замовлення</span> : null}
+                      {orderIntent ? <span className="inline-flex items-center gap-1 rounded-full bg-[var(--warning-surface)] px-2 py-1 text-xs font-black text-[var(--warning-foreground)]"><ShoppingBag className="h-3 w-3" />{t("direct.orderIntent")}</span> : null}
                       {item.linked_order_id ? <span className="rounded-full bg-blue-500/15 px-2 py-1 text-xs font-bold text-blue-700">{t("direct.orderCreated")}</span> : item.linked_customer_id ? <span className="rounded-full bg-cyan-500/15 px-2 py-1 text-xs font-bold text-cyan-700">{t("direct.prospect")}</span> : null}
                       <span className="rounded-full bg-violet-500/15 px-2 py-1 text-xs font-bold text-primary">{item.channel === "INSTAGRAM" ? "Instagram" : t("direct.synthetic")}</span>
 
@@ -544,6 +602,10 @@ function MessageThread({
   prepareResult,
   prepareError,
   sendOutcome,
+  operationKnown,
+  operationChecking,
+  operationError,
+  onCheckOperation,
   sendPending,
   noAutoSend,
 }: {
@@ -567,6 +629,10 @@ function MessageThread({
   prepareResult?: PrepareResult;
   prepareError: boolean;
   sendOutcome?: string;
+  operationKnown: boolean;
+  operationChecking: boolean;
+  operationError: boolean;
+  onCheckOperation: () => void;
   sendPending: boolean;
   noAutoSend: string;
 }) {
@@ -582,6 +648,7 @@ function MessageThread({
   if (!conversation) return <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4"><EmptyState title={t("direct.selectTitle")}  description={t("direct.selectHint")}  /></section>;
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)]">
+      <div className="shrink-0 border-b border-border-subtle px-3 py-2 lg:hidden"><p className="truncate text-sm font-black">{conversation.participant_display_name ?? conversation.participant_username ?? t("direct.customer")}</p></div>
       <div ref={scrollContainer} className="sellora-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto" data-direct-live-thread>
       <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
       <CustomerAutomationCard
@@ -620,7 +687,9 @@ function MessageThread({
         </div>
         {prepareResult ? <p role="status" className="mt-2 text-sm text-text-secondary">{t(prepareResult.ready ? "direct.ready" : "direct.blocked")}</p> : null}
         {prepareError ? <p role="alert" className="mt-2 text-sm text-rose-600">{t("direct.prepareError")}</p> : null}
-        {sendOutcome ? <p role="status" className="mt-2 text-sm text-text-secondary">{t(`direct.sendState.${["SENT", "SENDING", "FAILED_SAFE", "RETRY_PENDING", "RECONCILIATION_REQUIRED"].includes(sendOutcome) ? sendOutcome : "UNKNOWN"}`)}</p> : null}
+        {sendOutcome ? <p role="status" className="mt-2 text-sm text-text-secondary">{t(`direct.sendState.${["COMPLETED", "CANCELLED", "PREPARED", "SENDING", "PROVIDER_SUCCEEDED", "FAILED_SAFE", "RETRY_PENDING", "RECONCILIATION_REQUIRED"].includes(sendOutcome) ? sendOutcome : "UNKNOWN"}`)}</p> : null}
+        {sendOutcome && !TERMINAL_SEND_STATUSES.has(sendOutcome) ? operationKnown ? <Button variant="secondary" onClick={onCheckOperation} disabled={operationChecking}>{t("direct.checkSendStatus")}</Button> : <p className="mt-2 text-xs text-text-muted">{t("direct.unknownSendHelp")}</p> : null}
+        {operationError ? <p role="alert" className="mt-2 text-xs text-rose-600">{t("direct.statusError")}</p> : null}
       </footer>
     </section>
   );
