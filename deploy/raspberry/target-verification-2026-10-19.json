@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-10-19T18:33:08.133378+00:00",
+  "verified_at": "2026-10-19T18:56:21.055398+00:00",
   "host": "btc-radar",
   "image_id": "sha256:8646b17d0e07f8d57bec481b5e71ba4ea5c315d3bc8b7c4a68017d9f2ac7129a",
   "backend_revision": "8c2a9b2c83056a8f8719c5b06ddedb6c65314fb4",
@@ -48,8 +48,8 @@
   "local_import_storage_writable": true,
   "existing_remote_attachments_read_verified": false,
   "frontend_cutover_completed": true,
-  "frontend_current_api": "https://btc-radar.tail7f9b04.ts.net/api/v1",
-  "frontend_target_api": "https://btc-radar.tail7f9b04.ts.net/api/v1",
+  "frontend_current_api": "https://sellora-web-staging.vercel.app/api/v1",
+  "frontend_target_api": "https://sellora-web-staging.vercel.app/api/v1",
   "vercel_environment_permissions": "User updated Config manually; production deployment API succeeded",
   "meta_callbacks_changed": false,
   "worker_cutover_completed": false,
@@ -61,13 +61,13 @@
     "Existing remote attachment read verification"
   ],
   "frontend_previous_api": "https://sellora-api-staging.onrender.com/api/v1",
-  "frontend_deployment": "dpl_4cZBRNggewfsQCdJjd2MY3GgxaM5",
-  "frontend_production_commit": "7233bd245069c97e1060ba93885e7b70bfa12ab2",
+  "frontend_deployment": "dpl_zEUi5VR5fdwmtjNjj2bgEY7NaPER",
+  "frontend_production_commit": "a1a5d5a56bab8a11c21a51918e00e2e45c65630c",
   "frontend_compiled_api_verified": true,
   "allocator_arena_limit": 2,
   "allocator_fix_reason": "Default glibc arenas exhausted virtual address-space guard and prevented new worker threads; bounded arenas preserve the guard and thread operation.",
   "browser_canary": {
-    "run": "https://github.com/eNgine9r/sellora/actions/runs/39303152007",
+    "run": "https://github.com/eNgine9r/sellora/actions/runs/39306467890",
     "public_frontend": "https://sellora-web-staging.vercel.app",
     "login_http": 200,
     "current_user_http": 200,
@@ -76,12 +76,16 @@
     "api_network_failures": 0,
     "browser_page_errors": 0,
     "no_tailnet_client": true,
-    "screenshots_or_auth_state_saved": false
+    "screenshots_or_auth_state_saved": false,
+    "same_origin_api": true,
+    "direct_backend_browser_requests": 0,
+    "tailnet_browser_requests_blocked_by_test": true
   },
   "api_canary_after_allocator_fix": "https://github.com/eNgine9r/sellora/actions/runs/39302342919",
   "meta_callback_management_attempt": {
     "read_http": 401,
     "provider_error_code": 190,
     "mutation_performed": false
-  }
+  },
+  "frontend_server_upstream": "https://btc-radar.tail7f9b04.ts.net/api/v1"
 }

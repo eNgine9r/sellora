@@ -5,6 +5,7 @@
 - [Direct / orders / delivery](order-flow.md)
 - [Desktop and mobile interface](ui.md)
 - [Advertising and attribution](ads.md)
+- [Product mentions to order proposal](order-product-proposal.md)
 - Bounded function records in functions/.
 
 ## Cross-module rules
