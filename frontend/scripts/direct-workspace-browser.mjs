@@ -44,7 +44,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
   const api = [];
   const unexpected = [];
   const errors = [];
-  const state = { sendStatus: "COMPLETED", holdSend: false, releaseSend: null, prepareError: false, releaseSuggestions: null, operationStatus: null, holdStatus: false, releaseStatus: null, abortSend: false, statusRequests: 0, extraTimeline: [], appendSentTimeline: false };
+  const state = { sendStatus: "COMPLETED", holdSend: false, releaseSend: null, prepareError: false, releaseSuggestions: null, operationStatus: null, holdStatus: false, releaseStatus: null, abortSend: false, statusRequests: 0, extraTimeline: [], appendSentTimeline: false, holdAutomation: false, releaseAutomation: null };
   const fulfillmentFixture = fulfillment ? createFulfillmentFixture({ workspaceId, conversationId: a }) : null;
   state.fulfillment = fulfillmentFixture;
   const operations = new Map();
@@ -78,6 +78,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
       const status = state.operationStatus ?? operation.status;
       return respond({ id: operation.id, conversation_id: operation.conversationId, status, manual_reconciliation_required: !["COMPLETED", "FAILED_SAFE", "CANCELLED"].includes(status), blind_retry_blocked: !["COMPLETED", "FAILED_SAFE", "CANCELLED"].includes(status) });
     }
+    if (request.method() === "GET" && url.pathname.endsWith("/customer-automation") && state.holdAutomation) await new Promise((resolve) => { state.releaseAutomation = resolve; });
     if (fulfillmentFixture && await fulfillmentFixture.handle({ key, requestWorkspace, respond, request })) return;
     const match = url.pathname.match(/^\/api\/v1\/direct\/conversations\/([^/]+)\/(.+)$/);
     if (match && scopedConversations.some((item) => item.id === match[1])) {
@@ -390,6 +391,10 @@ try {
       await writeFile(path.join(output, `${prefix}.json`), JSON.stringify({
         syntheticOnly: true, url: page.url(), api: api.slice(-60), unexpected, errors,
         body: (await page.locator("body").innerText({ timeout: 3000 })).slice(0, 12000),
+        scroll: await page.evaluate(() => {
+          const pane = document.querySelector("[data-direct-live-thread]");
+          return pane ? { top: pane.scrollTop, height: pane.scrollHeight, viewport: pane.clientHeight, children: [...pane.children].map((node) => node.getBoundingClientRect().height) } : null;
+        }),
       }, null, 2));
     } catch (captureError) { failures.push(`Synthetic failure capture: ${captureError.message}`); }
   }

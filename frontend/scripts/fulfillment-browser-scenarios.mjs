@@ -88,6 +88,36 @@ export async function runFulfillmentScenarios({ fixture, base, expect, a, b, wor
   checks.push("post-TTN new inbound and explicit sent timeline rows stay visible at newest-message scroll; no persistent handoff-to-top mode");
   checks.push("fulfillment: cost × quantity, invalid/negative/nonfinite costs, zero-cost estimate, step persistence, review totals and actual payload; wizard -> existing shipment -> verified TTN; manual draft survives route and requires confirmation; no send/prepare on navigation");
 
+  for (const manualHeader of [false, true]) {
+    const delayed = await fixture({ width: 375, height: 812 }, { fulfillment: true });
+    delayed.state.holdAutomation = true;
+    await delayed.page.goto(`${base}/direct?conversation=${a}`);
+    await expect.poll(() => typeof delayed.state.releaseAutomation).toBe("function");
+    const pane = delayed.page.locator("[data-direct-live-thread]");
+    const latest = pane.getByText("Синтетичне повідомлення 24", { exact: true });
+    await expect(latest).toBeInViewport();
+    const initialHeight = await pane.evaluate((element) => element.scrollHeight);
+    if (manualHeader) {
+      await delayed.page.getByRole("button", { name: "Клієнт і замовлення", exact: true }).click();
+      await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(0);
+    }
+    delayed.state.holdAutomation = false;
+    delayed.state.releaseAutomation();
+    // Release the actual customer card; its existing extraction portal mounts
+    // asynchronously inside it without changing the cached timeline count.
+    await expect(pane.getByText("AI розпізнавання даних", { exact: true })).toBeAttached();
+    await expect.poll(() => pane.evaluate((element) => element.scrollHeight)).toBeGreaterThan(initialHeight);
+    if (manualHeader) {
+      await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(0);
+    } else {
+      await expect(latest).toBeInViewport();
+      await expect.poll(() => pane.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(4);
+    }
+    noSend(delayed);
+    await delayed.assertClean(); await delayed.context.close();
+  }
+  checks.push("actual delayed customer-card/extraction-portal layout keeps latest-message intent pinned and preserves explicit header-top intent without timeline changes");
+
   for (const width of [375, 390, 1440]) {
     const f = await fixture({ width, height: 900 }, { fulfillment: true, theme: width === 390 ? "dark" : "light" });
     const data = f.state.fulfillment;

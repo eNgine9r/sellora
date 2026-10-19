@@ -650,6 +650,8 @@ function MessageThread({
 }) {
   const { t } = useI18n();
   const scrollContainer = useRef<HTMLDivElement>(null);
+  const scrollContent = useRef<HTMLDivElement>(null);
+  const followLatest = useRef(false);
   const hasHandoff = Boolean(handoff);
   const scrollContext = useRef<{ identity: string; count: number } | null>(null);
 
@@ -657,7 +659,7 @@ function MessageThread({
     const element = scrollContainer.current;
     // EmptyState replaces the pane on mobile Back; a recreated pane needs its
     // own initial scroll even when the cached conversation/count are unchanged.
-    if (!conversation?.id || !element) { scrollContext.current = null; return; }
+    if (!conversation?.id || !element) { scrollContext.current = null; followLatest.current = false; return; }
     if (loading) return;
     const context = hasHandoff ? handoffKey ?? conversation.id : conversation.id;
     // Handoff navigation is a one-time scroll intent after initial loading.
@@ -666,14 +668,36 @@ function MessageThread({
     if (previous?.identity === context && previous.count === messages.length) return;
     const enteringHandoff = hasHandoff && previous?.identity !== context;
     scrollContext.current = { identity: context, count: messages.length };
-    element.scrollTo({ top: enteringHandoff ? 0 : element.scrollHeight, behavior: enteringHandoff ? "auto" : messages.length > 1 ? "smooth" : "auto" });
+    followLatest.current = !enteringHandoff;
+    element.scrollTo({ top: enteringHandoff ? 0 : element.scrollHeight, behavior: "auto" });
   }, [conversation?.id, handoffKey, hasHandoff, loading, messages.length]);
+
+  useEffect(() => {
+    const pane = scrollContainer.current;
+    const content = scrollContent.current;
+    if (!conversation?.id || !pane || !content) return;
+    // The existing extraction portal and composer can change geometry without
+    // changing message count. Keep a latest-message intent pinned to the actual
+    // bottom, while handoff/header/history intent leaves the user's place alone.
+    const observer = new ResizeObserver(() => {
+      if (followLatest.current) pane.scrollTo({ top: pane.scrollHeight, behavior: "auto" });
+    });
+    observer.observe(pane);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [conversation?.id]);
 
   if (!conversation) return <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4"><EmptyState title={t("direct.selectTitle")}  description={t("direct.selectHint")}  /></section>;
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)]">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3 py-2"><p className="min-w-0 truncate text-sm font-black">{conversation.participant_display_name ?? conversation.participant_username ?? t("direct.customer")}</p><Button variant="secondary" className="shrink-0 px-2 text-xs" onClick={() => scrollContainer.current?.scrollTo({ top: 0, behavior: "auto" })}>{t("direct.customerAndOrder")}</Button></div>
-      <div ref={scrollContainer} className="sellora-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto" data-direct-live-thread>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3 py-2"><p className="min-w-0 truncate text-sm font-black">{conversation.participant_display_name ?? conversation.participant_username ?? t("direct.customer")}</p><Button variant="secondary" className="shrink-0 px-2 text-xs" onClick={() => { followLatest.current = false; scrollContainer.current?.scrollTo({ top: 0, behavior: "auto" }); }}>{t("direct.customerAndOrder")}</Button></div>
+      <div ref={scrollContainer} className="sellora-scrollbar min-h-0 flex-1 overflow-y-auto" data-direct-live-thread
+        onWheel={() => { followLatest.current = false; }}
+        onTouchMove={() => { followLatest.current = false; }}
+        onPointerDown={() => { followLatest.current = false; }}
+        onKeyDown={(event) => { if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) followLatest.current = false; }}
+        onScroll={(event) => { const pane = event.currentTarget; if (pane.scrollHeight - pane.clientHeight - pane.scrollTop < 4) followLatest.current = true; }}>
+      <div ref={scrollContent} className="space-y-3">
       {handoff}
       <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
       <CustomerAutomationCard
@@ -701,6 +725,7 @@ function MessageThread({
             </div>
           </div>
         ))}
+      </div>
       </div>
       </div>
       <footer className="shrink-0 border-t border-border-subtle p-3">
