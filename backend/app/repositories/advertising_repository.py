@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, and_, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.ad_campaign import AdCampaign
 from app.models.ad_metric import AdMetric
+from app.models.order import Order
 
 
 class AdCampaignRepository:
@@ -74,3 +75,53 @@ class AdvertisingAnalyticsRepository:
             .order_by(AdMetric.metric_date.asc())
         )
         return list(self.db.execute(stmt).scalars())
+
+    def group_crm_orders(self, workspace_id: UUID, start: date, end: date) -> list:
+        """One row per visible campaign/status/payment; unresolved links stay null.
+
+        Half-open UTC timestamp bounds include the entire selected final date and
+        keep the created_at column unwrapped for the existing indexes.
+        """
+        visible_campaign = and_(
+            Order.campaign_id == AdCampaign.id,
+            AdCampaign.workspace_id == workspace_id,
+            AdCampaign.deleted_at.is_(None),
+        )
+        stmt = (
+            select(
+                AdCampaign.id.label("campaign_id"), AdCampaign.name.label("campaign_name"),
+                AdCampaign.status.label("campaign_status"), Order.status, Order.payment_status,
+                func.count(Order.id).label("orders"), func.sum(Order.revenue).label("revenue"),
+            )
+            .select_from(Order).outerjoin(AdCampaign, visible_campaign)
+            .where(
+                Order.workspace_id == workspace_id, Order.deleted_at.is_(None),
+                Order.created_at >= datetime.combine(start, time.min, tzinfo=UTC),
+                Order.created_at < datetime.combine(end + timedelta(days=1), time.min, tzinfo=UTC),
+            )
+            .group_by(AdCampaign.id, AdCampaign.name, AdCampaign.status, Order.status, Order.payment_status)
+        )
+        return list(self.db.execute(stmt).mappings())
+
+    def group_visible_metrics(self, workspace_id: UUID, start: date, end: date) -> list:
+        # Aggregate independently: never join metrics to orders or order items.
+        stmt = (
+            select(
+                AdCampaign.id.label("campaign_id"), AdCampaign.name.label("campaign_name"),
+                AdCampaign.status.label("campaign_status"),
+                func.sum(AdMetric.spend).label("spend"),
+                func.sum(AdMetric.orders).label("declared_orders"),
+                func.sum(AdMetric.revenue).label("declared_revenue"),
+            )
+            .select_from(AdMetric).join(AdCampaign, and_(
+                AdMetric.campaign_id == AdCampaign.id,
+                AdCampaign.workspace_id == workspace_id,
+                AdCampaign.deleted_at.is_(None),
+            ))
+            .where(
+                AdMetric.workspace_id == workspace_id, AdMetric.deleted_at.is_(None),
+                AdMetric.metric_date >= start, AdMetric.metric_date <= end,
+            )
+            .group_by(AdCampaign.id, AdCampaign.name, AdCampaign.status)
+        )
+        return list(self.db.execute(stmt).mappings())
