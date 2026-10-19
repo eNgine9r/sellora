@@ -218,6 +218,12 @@ export default function OrdersPage() {
   }, [canEdit, customersQuery.data, enabled, requestedCreate, requestedCustomerId]);
 
   useEffect(() => {
+    // A deliberate order-details link replaces the fulfillment dialog.
+    // Catalog/order refetches must not close a later explicitly opened wizard.
+    if (requestedOrderId && !requestedCreate) setIsCreateOpen(false);
+  }, [requestedCreate, requestedOrderId]);
+
+  useEffect(() => {
     if (!requestedOrderId || !ordersQuery.data?.length) return;
     const requestedOrder = ordersQuery.data.find((order) => order.id === requestedOrderId);
     if (requestedOrder) setSelectedOrder(requestedOrder);
@@ -357,8 +363,9 @@ export default function OrdersPage() {
             showProfit={currentWorkspace?.role === "OWNER"}
             initialCustomerId={requestedCreate ? requestedCustomerId : null}
             sourceDirectConversationId={requestedCreate ? sourceDirectConversationId : null}
-            onSuccess={(result) => {
-              setSelectedOrder(result.order);
+            onSuccess={() => {
+              // Keep the wizard's success/TTN actions in the foreground.
+              // Order details open through the existing explicit link.
               invalidateOrderState();
               queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
               queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });

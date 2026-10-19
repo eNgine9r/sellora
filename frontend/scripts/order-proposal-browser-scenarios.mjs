@@ -68,15 +68,10 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
     await expect(wizard.locator("[data-fulfillment-product-cost]")).toContainText(/120[,.]00/);
     await expect(wizard.locator("[data-fulfillment-profit]")).toContainText(/210[,.]00/);
     await wizard.getByRole("button", { name: "Створити замовлення і ТТН", exact: true }).click();
-    if (width < 1024) {
-      // Success selects the order, opening its foreground mobile drawer.
-      // Close only that drawer through its real header action; Escape closes
-      // both overlays and clicking through it would bypass the seller flow.
-      const details = f.page.getByRole("dialog", { name: "SYN-1001", exact: true });
-      await expect(details).toBeVisible();
-      await details.locator("header").getByRole("button", { name: "Закрити", exact: true }).click();
-      await expect(details).toHaveCount(0);
-    }
+    // Completion must leave only the wizard, including on mobile. The TTN
+    // action below is clicked normally without dismissing another overlay.
+    await expect(f.page.getByRole("dialog")).toHaveCount(1);
+    await expect(f.page.getByRole("dialog", { name: "SYN-1001", exact: true })).toHaveCount(0);
     const handoff = wizard.getByRole("link", { name: "Підготувати повідомлення з ТТН", exact: true });
     await expect(handoff).toBeVisible();
     await expect(handoff).toHaveAttribute("href", `/direct?conversation=${a}&ttn_order_id=${ff.orderId}&ttn_shipment_id=${ff.shipmentId}`);
@@ -169,7 +164,7 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
   noRecognitionWrite(reviewed); await reviewed.assertClean(); await reviewed.context.close();
   checks.push("AI review binds to each verified snapshot: COMPLETED -> same-ID STALE -> identical already-STALE refresh requires renewed review, preserving pending selection and applied price/cost/quantity/campaign edits");
 
-  const drift = await fixture({ width: 1280, height: 900 }, { fulfillment: true });
+  const drift = await fixture({ width: 375, height: 900 }, { fulfillment: true });
   const df = drift.state.fulfillment;
   df.state.extraVariants = [{ id: extraVariantId, workspace_id: workspaceId, product_id: df.productId, sku: "SYN-L", price: "300", is_active: true }];
   df.state.extraInventory = [{ id: "drift-stock", product_variant_id: extraVariantId, stock_quantity: 20, reserved_quantity: 0 }];
@@ -203,8 +198,14 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
     { product_variant_id: df.variantId, quantity: 1, unit_price: 177, unit_cost: 40 },
     { product_variant_id: extraVariantId, quantity: 1, unit_price: 123, unit_cost: 0 },
   ]);
+  await expect(drift.page.getByRole("dialog")).toHaveCount(1);
+  await dw.getByRole("link", { name: "Відкрити замовлення", exact: true }).click();
+  await expect(dw).toHaveCount(0);
+  const orderDetails = drift.page.getByRole("dialog", { name: "SYN-1001", exact: true });
+  await expect(orderDetails).toBeVisible();
+  await expect(drift.page.getByRole("dialog")).toHaveCount(1);
   noRecognitionWrite(drift); await drift.assertClean(); await drift.context.close();
-  checks.push("fresh proposal price130 beats cached catalog100; explicit manual123 for proposal-null beats cached300; refresh/reapply preserves existing edited prices/cost and actual payload");
+  checks.push("fresh proposal price130 beats cached catalog100; explicit manual123 for proposal-null beats cached300; refresh/reapply preserves existing edited prices/cost and actual payload; mobile completion keeps sole wizard, explicit Open order replaces it with details");
 
   const fallback = await fixture({ width: 390, height: 900 }, { fulfillment: true });
   const sf = fallback.state.fulfillment; sf.state.holdProposal = true;
