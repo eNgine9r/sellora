@@ -5,6 +5,8 @@ import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createFulfillmentFixture } from "./fulfillment-browser-fixture.mjs";
+import { runFulfillmentScenarios } from "./fulfillment-browser-scenarios.mjs";
 const require = createRequire(process.env.PLAYWRIGHT_RUNTIME_PACKAGE || import.meta.url);
 const { chromium, expect } = require("@playwright/test");
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -28,7 +30,7 @@ let server;
 let browser;
 await mkdir(output, { recursive: true });
 
-async function fixture(viewport, { role = "OWNER", theme = "light", delayedSuggestions = false, multiWorkspace = false } = {}) {
+async function fixture(viewport, { role = "OWNER", theme = "light", delayedSuggestions = false, multiWorkspace = false, fulfillment = false } = {}) {
   const context = await browser.newContext({ viewport, colorScheme: theme, serviceWorkers: "block" });
   const user = { id: "22222222-2222-4222-8222-222222222222", email: "synthetic@example.invalid", first_name: "Тест", last_name: "Sellora", is_active: true, last_login_at: null, memberships: [{ workspace_id: workspaceId, workspace_name: "Синтетичний магазин", workspace_slug: "synthetic", role, currency_code: "UAH" }] };
   if (multiWorkspace) user.memberships.push({ ...user.memberships[0], workspace_id: secondWorkspaceId, workspace_name: "Другий синтетичний магазин", workspace_slug: "synthetic-second" });
@@ -42,6 +44,8 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
   const unexpected = [];
   const errors = [];
   const state = { sendStatus: "COMPLETED", holdSend: false, releaseSend: null, prepareError: false, releaseSuggestions: null, operationStatus: null, holdStatus: false, releaseStatus: null, abortSend: false, statusRequests: 0 };
+  const fulfillmentFixture = fulfillment ? createFulfillmentFixture({ workspaceId, conversationId: a }) : null;
+  state.fulfillment = fulfillmentFixture;
   const operations = new Map();
   let operationSequence = 0;
   const suggestionsReady = delayedSuggestions ? new Promise((resolve) => { state.releaseSuggestions = resolve; }) : Promise.resolve();
@@ -61,7 +65,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
     if (key === "GET /api/v1/auth/me") return respond(user);
     if (key === "GET /api/v1/direct/live-summary" && requestWorkspace === secondWorkspaceId) return respond({ server_time: "2026-10-19T10:00:00Z", unread_total: 0, order_intent_count: 0, events: [] });
     if (key === "GET /api/v1/direct/live-summary") return respond({ server_time: "2026-10-19T10:00:00Z", unread_total: 2, order_intent_count: 1, events: [{ message_id: "synthetic-event", conversation_id: a, participant_display_name: "Олена Тестова", text_preview: "Хочу замовити", order_intent: true, order_intent_confidence: 0.9, unread_count: 2, received_at: "2026-10-19T10:00:00Z" }] });
-    if (key === "GET /api/v1/direct/conversations") return respond(scopedConversations);
+    if (key === "GET /api/v1/direct/conversations") return respond(fulfillmentFixture ? fulfillmentFixture.conversations(scopedConversations) : scopedConversations);
     if (key === "GET /api/v1/direct/history-sync") return respond(null);
     if (key === "GET /api/v1/integrations/instagram/status") return respond({ status: "CONNECTED", token_present: true, webhook_active: true });
     const operationMatch = url.pathname.match(/^\/api\/v1\/direct\/message-operations\/([^/]+)$/);
@@ -73,6 +77,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
       const status = state.operationStatus ?? operation.status;
       return respond({ id: operation.id, conversation_id: operation.conversationId, status, manual_reconciliation_required: !["COMPLETED", "FAILED_SAFE", "CANCELLED"].includes(status), blind_retry_blocked: !["COMPLETED", "FAILED_SAFE", "CANCELLED"].includes(status) });
     }
+    if (fulfillmentFixture && await fulfillmentFixture.handle({ key, requestWorkspace, respond, request })) return;
     const match = url.pathname.match(/^\/api\/v1\/direct\/conversations\/([^/]+)\/(.+)$/);
     if (match && scopedConversations.some((item) => item.id === match[1])) {
       const [, id, action] = match;
@@ -362,6 +367,7 @@ try {
   await analyst.page.goto(`${base}/orders?create=1`); await expect(analyst.page.getByRole("dialog")).toHaveCount(0);
   expect(analyst.api.filter((key) => key.startsWith("POST "))).toEqual([]);
   await analyst.assertClean(); await analyst.context.close(); checks.push("analyst write controls and quick-create permission");
+  await runFulfillmentScenarios({ fixture, base, expect, a, b, workspaceId, output, checks });
   console.log(`Direct synthetic browser gate passed (${checks.length} scenarios).`);
 } catch (error) {
   failures.push(error.stack || String(error));

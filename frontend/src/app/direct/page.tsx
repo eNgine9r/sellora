@@ -20,9 +20,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Button, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
+import { DirectTtnDraft } from "@/components/direct-ttn-draft";
 import { useDirectLive } from "@/components/direct-live-provider";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { Drawer } from "@/components/ui/overlay";
@@ -76,7 +77,7 @@ function restoredSendGuards(workspaceId?: string): Record<string, SendGuard> {
 
 export default function DirectPage() {
   const { t } = useI18n();
-  const { currentWorkspace } = useAuth();
+  const { currentWorkspace, currentUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -86,7 +87,10 @@ export default function DirectPage() {
   type Draft = { text: string; revision: number };
   type ReplyContext = { workspaceId: string; conversationId: string; key: string; text: string; revision: number; editorId: string };
   const [editorId] = useState(() => crypto.randomUUID());
-  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  // Session query cache preserves unsent drafts through the order wizard route.
+  const draftsQuery = useQuery<Record<string, Draft>>({ queryKey: ["direct-drafts", currentUser?.id], queryFn: () => ({}), initialData: {}, enabled: false, gcTime: Infinity });
+  const drafts = draftsQuery.data;
+  const setDrafts = useCallback((update: (current: Record<string, Draft>) => Record<string, Draft>) => queryClient.setQueryData<Record<string, Draft>>(["direct-drafts", currentUser?.id], (current) => update(current ?? {})), [currentUser?.id, queryClient]);
   const [preparations, setPreparations] = useState<Record<string, { revision: number; result?: PrepareResult; error?: boolean }>>({});
   const profileRefreshAttempted = useRef(new Set<string>());
   const readAttempted = useRef(new Set<string>());
@@ -94,6 +98,8 @@ export default function DirectPage() {
 
   const workspaceId = currentWorkspace?.workspace_id;
   const canManage = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
+  const ttnOrderId = searchParams.get("ttn_order_id");
+  const ttnShipmentId = searchParams.get("ttn_shipment_id");
   // Query cache keeps in-flight operation ownership across Direct route remounts.
   const guardsQuery = useQuery({
     queryKey: ["direct-send-guards", workspaceId],
@@ -196,7 +202,7 @@ export default function DirectPage() {
         return { ...current, [draftKey]: { text: "", revision: guard.revision! + 1 } };
       });
     }
-  }, [draftKey, editorId, guard, operationQuery.data, recordSendOutcome, selectedConversation, workspaceId]);
+  }, [draftKey, editorId, guard, operationQuery.data, recordSendOutcome, selectedConversation, setDrafts, workspaceId]);
 
   const analysisMutation = useMutation({
     mutationFn: ({ conversationId }: ReplyContext) => runDirectAnalysis(conversationId),
@@ -377,6 +383,7 @@ export default function DirectPage() {
         <div className={`${selectedConversation ? "flex" : "hidden lg:flex"} min-h-0 min-w-0 flex-col`}>
 
         <MessageThread
+          handoff={canManage && workspaceId && selectedConversation && selectedConversation.id === searchParams.get("conversation") && ttnOrderId && ttnShipmentId ? <DirectTtnDraft key={`${draftKey}:${ttnOrderId}:${ttnShipmentId}`} workspaceId={workspaceId} conversationId={selectedConversation.id} orderId={ttnOrderId} shipmentId={ttnShipmentId} draftText={replyText} onInsert={setReplyText} /> : null}
           conversation={selectedConversation}
           automation={automationQuery.data}
           automationLoading={automationQuery.isLoading}
@@ -582,6 +589,7 @@ function DirectEmptyState({ instagramStatus }: { instagramStatus?: { status: str
 type PrepareResult = { ready: boolean; blockers: string[]; warnings: string[]; message_preview: string };
 
 function MessageThread({
+  handoff,
   conversation,
   automation,
   automationLoading,
@@ -609,6 +617,7 @@ function MessageThread({
   sendPending,
   noAutoSend,
 }: {
+  handoff?: ReactNode;
   conversation?: DirectConversation | null;
   automation?: DirectCustomerAutomationState;
   automationLoading: boolean;
@@ -638,18 +647,20 @@ function MessageThread({
 }) {
   const { t } = useI18n();
   const scrollContainer = useRef<HTMLDivElement>(null);
+  const hasHandoff = Boolean(handoff);
 
   useEffect(() => {
     const element = scrollContainer.current;
     if (!element) return;
-    element.scrollTo({ top: element.scrollHeight, behavior: messages.length > 1 ? "smooth" : "auto" });
-  }, [conversation?.id, messages.length]);
+    element.scrollTo({ top: hasHandoff ? 0 : element.scrollHeight, behavior: hasHandoff ? "auto" : messages.length > 1 ? "smooth" : "auto" });
+  }, [conversation?.id, hasHandoff, messages.length]);
 
   if (!conversation) return <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4"><EmptyState title={t("direct.selectTitle")}  description={t("direct.selectHint")}  /></section>;
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)]">
-      <div className="shrink-0 border-b border-border-subtle px-3 py-2 lg:hidden"><p className="truncate text-sm font-black">{conversation.participant_display_name ?? conversation.participant_username ?? t("direct.customer")}</p></div>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3 py-2"><p className="min-w-0 truncate text-sm font-black">{conversation.participant_display_name ?? conversation.participant_username ?? t("direct.customer")}</p><Button variant="secondary" className="shrink-0 px-2 text-xs" onClick={() => scrollContainer.current?.scrollTo({ top: 0, behavior: "auto" })}>{t("direct.customerAndOrder")}</Button></div>
       <div ref={scrollContainer} className="sellora-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto" data-direct-live-thread>
+      {handoff}
       <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
       <CustomerAutomationCard
         conversation={conversation}

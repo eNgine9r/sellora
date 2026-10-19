@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
@@ -17,7 +18,7 @@ import { useI18n } from "@/i18n/provider";
 import { buildShipmentUpdatePayload } from "@/lib/payload-builders";
 import { safeApiErrorMessage } from "@/services/api";
 import { fetchOrders } from "@/services/orders";
-import { changeShipmentStatus, createShipment, deleteShipment, fetchShipmentSummary, fetchShipments, updateShipment } from "@/services/shipments";
+import { changeShipmentStatus, createShipment, deleteShipment, fetchOrderShipment, fetchShipment, fetchShipmentSummary, fetchShipments, updateShipment } from "@/services/shipments";
 import { Shipment, ShipmentCarrier, ShipmentStatus } from "@/types/shipments";
 
 const STATUSES: (ShipmentStatus | "")[] = ["", "DRAFT", "CREATED", "IN_TRANSIT", "ARRIVED", "DELIVERED", "RETURNED", "CANCELLED"];
@@ -31,6 +32,10 @@ function shipmentNeedsAction(shipment: Shipment) {
 export default function ShipmentsPage() {
   const { t, formatStatus } = useI18n();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const requestedShipmentId = searchParams.get("shipment_id");
+  const requestedOrderId = searchParams.get("order_id");
+  const appliedLink = useRef("");
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
@@ -49,6 +54,12 @@ export default function ShipmentsPage() {
   const [archivingShipment, setArchivingShipment] = useState<Shipment | null>(null);
 
   const shipmentsQuery = useQuery({ queryKey: ["shipments", workspaceId, status, search], queryFn: () => fetchShipments(workspaceId, status, search), enabled });
+  const linkedShipmentQuery = useQuery({
+    queryKey: ["shipment-deep-link", workspaceId, requestedShipmentId, requestedOrderId],
+    queryFn: () => requestedShipmentId ? fetchShipment(workspaceId, requestedShipmentId) : fetchOrderShipment(workspaceId, requestedOrderId!),
+    enabled: enabled && Boolean(requestedShipmentId || requestedOrderId),
+    retry: false,
+  });
   const summaryQuery = useQuery({ queryKey: ["shipments-summary", workspaceId], queryFn: () => fetchShipmentSummary(workspaceId), enabled });
   const ordersQuery = useQuery({ queryKey: ["orders", workspaceId, "shipment-select"], queryFn: () => fetchOrders(workspaceId, ""), enabled });
   const invalidateShipmentState = () => {
@@ -89,14 +100,6 @@ export default function ShipmentsPage() {
   const hasActiveFilters = Boolean(search.trim() || status || carrier || ttnFilter || shipmentSort !== "newest");
 
   useEffect(() => {
-    const orderId = new URLSearchParams(window.location.search).get("order_id") ?? undefined;
-    if (orderId) {
-      setInitialOrderId(orderId);
-      setIsCreateOpen(true);
-    }
-  }, []);
-
-  useEffect(() => {
     setPage(1);
   }, [search, status, carrier, ttnFilter, shipmentSort, pageSize]);
 
@@ -110,7 +113,25 @@ export default function ShipmentsPage() {
     setArchivingShipment(null);
     setIsCreateOpen(false);
     setInitialOrderId(undefined);
+    appliedLink.current = "";
   }, [workspaceId]);
+
+  useEffect(() => {
+    if (!enabled || linkedShipmentQuery.isPending || linkedShipmentQuery.isFetching || linkedShipmentQuery.isError || !(requestedShipmentId || requestedOrderId)) return;
+    const key = `${workspaceId}:${requestedShipmentId ?? ""}:${requestedOrderId ?? ""}`;
+    if (appliedLink.current === key) return;
+    appliedLink.current = key;
+    const shipment = linkedShipmentQuery.data;
+    if (shipment) {
+      if (shipment.workspace_id !== workspaceId || (requestedShipmentId && shipment.id !== requestedShipmentId) || (!requestedShipmentId && shipment.order_id !== requestedOrderId)) return;
+      setSelectedShipment(shipment);
+      setIsCreateOpen(false);
+    } else if (!requestedShipmentId && requestedOrderId && canEdit) {
+      // Legacy order link creates only after the scoped GET proves no shipment exists.
+      setInitialOrderId(requestedOrderId);
+      setIsCreateOpen(true);
+    }
+  }, [canEdit, enabled, linkedShipmentQuery.data, linkedShipmentQuery.isError, linkedShipmentQuery.isFetching, linkedShipmentQuery.isPending, requestedOrderId, requestedShipmentId, workspaceId]);
 
   const allShipments = shipmentsQuery.data?.length ?? 0;
   const readyShipments = (shipmentsQuery.data ?? []).filter((shipment) => shipment.status === "DRAFT" || shipment.status === "CREATED").length;
@@ -120,6 +141,8 @@ export default function ShipmentsPage() {
   return (
     <WorkspacePage>
         <WorkspaceHeader title={t("shipments.title")} description={t("shipments.subtitle")} actions={canEdit ? <Button onClick={() => setIsCreateOpen(true)}>{t("shipments.create")}</Button> : undefined} />
+        {enabled && (requestedShipmentId || requestedOrderId) && (linkedShipmentQuery.isPending || linkedShipmentQuery.isFetching) ? <p role="status">{t("fulfillment.shipmentLinkLoading")}</p> : null}
+        {linkedShipmentQuery.isError ? <ErrorState title={t("fulfillment.shipmentLinkError")} description={t("fulfillment.shipmentLinkError")} onRetry={() => void linkedShipmentQuery.refetch()} /> : null}
         <CompactSummary layout="five-balanced" items={[{ label: t("shipments.summary.all"), value: allShipments }, { label: t("shipments.summary.ready"), value: readyShipments }, { label: t("shipments.inTransit"), value: summaryQuery.data?.in_transit_count ?? 0 }, { label: t("shipments.summary.delivered"), value: deliveredShipments || (summaryQuery.data?.delivered_today ?? 0) }, { label: t("shipments.summary.problems"), value: problemShipments || (summaryQuery.data?.returned_this_month ?? 0) }]} />
         <FilterBar>
           <SearchInput value={search} onChange={setSearch} placeholder={t("shipments.searchPlaceholder")} />

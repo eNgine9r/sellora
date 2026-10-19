@@ -2171,8 +2171,28 @@
       "city": "Select a city from the Nova Poshta directory.",
       "warehouse": "Select a branch or parcel locker from the directory.",
       "items": "Add a product, quantity and price.",
-      "stock": "One of the products does not have enough available stock."
-    }
+      "stock": "One of the products does not have enough available stock.",
+      "unitCost": "Enter a finite non-negative unit cost for every item (zero is allowed).",
+      "costs": "Costs and amounts must be finite non-negative numbers."
+    },
+    "prepareTtnMessage": "Prepare tracking message",
+    "otherCostsTotal": "Other costs",
+    "totalCosts": "Total costs",
+    "incompleteCosts": "Incomplete estimate: at least one item has zero unit cost. Enter its cost for a more accurate profit estimate.",
+    "directLinkWarning": "The order was created, but its Direct link needs to be synchronized again.",
+    "directLinked": "The conversation, customer and order are linked.",
+    "returnDirect": "Return to Direct",
+    "fromDirect": "Creating an order from Instagram Direct. The customer is selected; entered contact and address details will update their record.",
+    "ttnDraftLoading": "Verifying order and shipment…",
+    "ttnDraftError": "Could not verify the conversation, order and shipment link. Your draft is unchanged.",
+    "ttnDraftPreview": "A Nova Poshta shipping document has been created for order {order}: {ttn}.",
+    "ttnDraftNotice": "A tracking number does not confirm carrier handoff. The message remains a draft until you send it.",
+    "insertTtnDraft": "Insert into draft",
+    "replaceDraftTitle": "Replace the current draft?",
+    "replaceDraftDescription": "This conversation has unsent text. Confirm replacing it with the verified tracking message.",
+    "replaceDraft": "Replace draft",
+    "shipmentLinkLoading": "Opening shipment…",
+    "shipmentLinkError": "Could not open the shipment. Please try again."
   },
   "workspace": {
     "demo": {
@@ -2303,7 +2323,8 @@
     "orderIntent": "Likely order",
     "checkSendStatus": "Refresh send status",
     "unknownSendHelp": "The server did not confirm the result. Check the message in Instagram and contact the responsible manager. Sending again remains blocked.",
-    "statusError": "Could not check the result. Sending again remains blocked."
+    "statusError": "Could not check the result. Sending again remains blocked.",
+    "customerAndOrder": "Customer and order"
   },
   "instagramSettings": {
     "title": "Instagram Direct",

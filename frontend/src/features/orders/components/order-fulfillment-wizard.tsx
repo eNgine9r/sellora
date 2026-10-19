@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CitySearchSelect } from "@/features/integrations/components/city-search-select";
 import { WarehouseSearchSelect } from "@/features/integrations/components/warehouse-search-select";
 import { useI18n } from "@/i18n/provider";
+import { ttnDraftHref } from "@/lib/ttn-draft";
 import { formatMoney } from "@/lib/currency";
 import { fetchCustomerAddresses } from "@/services/crm-completion";
 import { finalizeDirectCustomerOrder } from "@/services/direct";
@@ -17,9 +18,9 @@ import { Customer } from "@/types/crm";
 import { OrderFulfillmentPayload, OrderFulfillmentResult } from "@/types/order-fulfillment";
 import { Inventory, Product, ProductVariant } from "@/types/products";
 
-type WizardItem = { key: string; product_variant_id: string; quantity: string; unit_price: string };
+type WizardItem = { key: string; product_variant_id: string; quantity: string; unit_price: string; unit_cost: string };
 const newKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-const emptyItem = (): WizardItem => ({ key: newKey(), product_variant_id: "", quantity: "1", unit_price: "" });
+const emptyItem = (): WizardItem => ({ key: newKey(), product_variant_id: "", quantity: "1", unit_price: "", unit_cost: "0" });
 const inputClass = "min-h-11 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring";
 
 function normalizeUaPhonePreview(value: string) {
@@ -122,7 +123,7 @@ export function OrderFulfillmentWizard({
             nova_poshta_warehouse_ref: warehouseRef,
           });
         } catch {
-          setAutomationWarning("Замовлення створено, але зв’язок із Direct потребує повторної синхронізації.");
+          setAutomationWarning(t("fulfillment.directLinkWarning"));
         }
       }
       setResult(nextResult);
@@ -177,6 +178,8 @@ export function OrderFulfillmentWizard({
   const total = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
   const normalizedPhone = normalizeUaPhonePreview(recipientPhone);
   const normalizedCustomerPhone = normalizeUaPhonePreview(customerPhone);
+  const productCosts = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_cost || 0), 0);
+  const incompleteCosts = items.some((item) => Number(item.unit_cost) <= 0);
   const costs = Number(shippingCost || 0) + Number(adCost || 0) + Number(codFee || 0) + Number(otherCost || 0);
   const canCreateTtn = readinessQuery.data?.provider_writes_enabled === true;
   const writeBlockers = readinessQuery.data?.write_blockers ?? [];
@@ -219,7 +222,9 @@ export function OrderFulfillmentWizard({
       if (!warehouseRef || !warehouse.trim()) return t("fulfillment.validation.warehouse");
     }
     if (nextStep > 2) {
-      if (!items.length || items.some((item) => !item.product_variant_id || Number(item.quantity) < 1 || Number(item.unit_price) < 0)) return t("fulfillment.validation.items");
+      if (!items.length || items.some((item) => !item.product_variant_id || !Number.isInteger(Number(item.quantity)) || Number(item.quantity) < 1 || !item.unit_price.trim() || !Number.isFinite(Number(item.unit_price)) || Number(item.unit_price) < 0)) return t("fulfillment.validation.items");
+      if (items.some((item) => !item.unit_cost.trim() || !Number.isFinite(Number(item.unit_cost)) || !Number.isFinite(Number(item.unit_cost) * Number(item.quantity)) || Number(item.unit_cost) < 0)) return t("fulfillment.validation.unitCost");
+      if (![total, productCosts, costs, productCosts + costs].every(Number.isFinite) || [shippingCost, adCost, codFee, otherCost, codAmount, declaredValue].some((value) => !Number.isFinite(Number(value)) || Number(value) < 0)) return t("fulfillment.validation.costs");
       for (const item of items) {
         const stock = inventoryByVariant.get(item.product_variant_id);
         if (stock && stock.stock_quantity - stock.reserved_quantity < Number(item.quantity)) return t("fulfillment.validation.stock");
@@ -262,7 +267,7 @@ export function OrderFulfillmentWizard({
       warehouse: warehouse.trim(),
       warehouse_number: warehouseNumber || null,
       save_address_as_default: saveAddress,
-      items: items.map((item) => ({ product_variant_id: item.product_variant_id, quantity: Number(item.quantity), unit_price: Number(item.unit_price), unit_cost: 0 })),
+      items: items.map((item) => ({ product_variant_id: item.product_variant_id, quantity: Number(item.quantity), unit_price: Number(item.unit_price), unit_cost: Number(item.unit_cost) })),
       payment_status: paymentStatus,
       cod_amount: paymentStatus === "COD" ? Number(codAmount || total) : 0,
       declared_value: Number(declaredValue || total),
@@ -284,7 +289,7 @@ export function OrderFulfillmentWizard({
         <div className={`rounded-2xl border p-5 ${success ? "border-emerald-300 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-500/15" : reconciliation ? "border-amber-300 bg-amber-50 dark:border-amber-400/30 dark:bg-amber-500/15" : "border-blue-300 bg-blue-50 dark:border-blue-400/30 dark:bg-blue-500/15"}`}>
           <h3 className="text-xl font-black text-text-primary">{t(`fulfillment.result.${result.result_code}`)}</h3>
           <p className="mt-2 text-sm text-text-secondary">{result.order.order_number}</p>
-          {sourceDirectConversationId && !automationWarning ? <p className="mt-2 text-sm font-bold text-emerald-700">Діалог, клієнт і замовлення автоматично пов’язані.</p> : null}
+          {sourceDirectConversationId && !automationWarning ? <p className="mt-2 text-sm font-bold text-emerald-700">{t("fulfillment.directLinked")}</p> : null}
           {automationWarning ? <p className="mt-2 text-sm font-bold text-amber-700">{automationWarning}</p> : null}
           {result.tracking_number ? <p className="mt-3 text-2xl font-black text-text-primary">{result.tracking_number}</p> : null}
           {result.provider_error_code ? <p className="mt-3 text-sm font-semibold text-text-secondary">{t("fulfillment.providerActionRequired")}</p> : null}
@@ -292,9 +297,10 @@ export function OrderFulfillmentWizard({
         <div className="grid gap-2 sm:grid-cols-3">
           {result.retry_available && canCreateTtn ? <button className={inputClass} type="button" onClick={() => { submitLock.current = false; setResult(null); submit(true); }}>{t("fulfillment.retryTtn")}</button> : null}
           {result.tracking_number ? <button className={inputClass} type="button" onClick={() => void navigator.clipboard.writeText(result.tracking_number || "")}>{t("fulfillment.copyTtn")}</button> : null}
-          {sourceDirectConversationId ? <Link className={`${inputClass} flex items-center justify-center`} href={`/direct?conversation=${encodeURIComponent(sourceDirectConversationId)}`}>Повернутися в Direct</Link> : null}
+          {sourceDirectConversationId ? <Link className={`${inputClass} flex items-center justify-center`} href={`/direct?conversation=${encodeURIComponent(sourceDirectConversationId)}`}>{t("fulfillment.returnDirect")}</Link> : null}
+          {success && result.tracking_number && sourceDirectConversationId && !automationWarning ? <Link className={`${inputClass} flex items-center justify-center`} href={ttnDraftHref(sourceDirectConversationId, result.order.id, result.shipment.id)}>{t("fulfillment.prepareTtnMessage")}</Link> : null}
           <Link className={`${inputClass} flex items-center justify-center`} href={`/orders?order_id=${result.order.id}`}>{t("fulfillment.openOrder")}</Link>
-          <Link className={`${inputClass} flex items-center justify-center`} href={`/shipments?order_id=${result.order.id}`}>{t("fulfillment.openShipment")}</Link>
+          <Link className={`${inputClass} flex items-center justify-center`} href={`/shipments?shipment_id=${encodeURIComponent(result.shipment.id)}`}>{t("fulfillment.openShipment")}</Link>
         </div>
       </div>
     );
@@ -302,7 +308,7 @@ export function OrderFulfillmentWizard({
 
   return (
     <div className="grid min-w-0 gap-4" data-direct-order-wizard={sourceDirectConversationId ? "true" : undefined}>
-      {sourceDirectConversationId ? <div className="rounded-xl border border-violet-300 bg-violet-50 p-3 text-sm font-semibold text-violet-900 dark:border-violet-400/30 dark:bg-violet-500/15 dark:text-violet-100">Замовлення створюється з Instagram Direct. Клієнт уже вибраний; введені контактні дані та адреса автоматично доповнять його картку.</div> : null}
+      {sourceDirectConversationId ? <div className="rounded-xl border border-violet-300 bg-violet-50 p-3 text-sm font-semibold text-violet-900 dark:border-violet-400/30 dark:bg-violet-500/15 dark:text-violet-100">{t("fulfillment.fromDirect")}</div> : null}
       <ol className="grid grid-cols-3 gap-2" aria-label={t("fulfillment.progress")}>
         {[1, 2, 3].map((number) => <li className={`rounded-xl px-2 py-2 text-center text-xs font-bold ${step === number ? "bg-primary text-primary-foreground" : step > number ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-100" : "bg-surface-2 text-text-secondary"}`} key={number}>{number}. {t(`fulfillment.step${number}`)}</li>)}
       </ol>
@@ -339,11 +345,12 @@ export function OrderFulfillmentWizard({
             {items.map((item) => {
               const stock = inventoryByVariant.get(item.product_variant_id);
               const available = stock ? stock.stock_quantity - stock.reserved_quantity : null;
-              return <article className="grid gap-3 rounded-2xl border border-border-subtle p-3 sm:grid-cols-[1fr_110px_140px_auto] sm:items-end" key={item.key}>
+              return <article className="grid gap-3 rounded-2xl border border-border-subtle p-3 sm:grid-cols-2 sm:items-end" key={item.key}>
                 <label className="grid gap-1 text-sm font-semibold">{t("fulfillment.product")}<select className={inputClass} value={item.product_variant_id} onChange={(event) => selectVariant(item, event.target.value)}><option value="">{t("orders.selectVariant")}</option>{variants.filter((variant) => variant.is_active).map((variant) => { const product = productById.get(variant.product_id); const rowStock = inventoryByVariant.get(variant.id); const rowAvailable = rowStock ? rowStock.stock_quantity - rowStock.reserved_quantity : 0; return <option key={variant.id} value={variant.id}>{product?.name || variant.sku} · {variant.sku} · {t("orders.available")}: {rowAvailable}</option>; })}</select>{available != null ? <span className="text-xs text-text-secondary">{t("orders.available")}: {available}</span> : null}</label>
                 <label className="grid gap-1 text-sm font-semibold">{t("orders.quantity")}<input className={inputClass} min="1" type="number" value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: event.target.value })} /></label>
                 <label className="grid gap-1 text-sm font-semibold">{t("orders.unitPrice")}<input className={inputClass} min="0" step="0.01" type="number" value={item.unit_price} onChange={(event) => updateItem(item.key, { unit_price: event.target.value })} /></label>
-                <button className="min-h-11 rounded-xl border border-danger/30 px-3 text-danger disabled:opacity-40" disabled={items.length === 1} type="button" onClick={() => setItems((current) => current.filter((row) => row.key !== item.key))}>×</button>
+                <label className="grid gap-1 text-sm font-semibold">{t("orders.unitCost")}<input className={inputClass} min="0" step="0.01" type="number" value={item.unit_cost} onChange={(event) => updateItem(item.key, { unit_cost: event.target.value })} /></label>
+                <button aria-label={t("actions.removeItem")} className="min-h-11 rounded-xl border border-danger/30 px-3 text-danger disabled:opacity-40" disabled={items.length === 1} type="button" onClick={() => setItems((current) => current.filter((row) => row.key !== item.key))}>×</button>
               </article>;
             })}
           </section>
@@ -357,7 +364,7 @@ export function OrderFulfillmentWizard({
 
         {step === 3 ? <section className="grid gap-4">
           <div className="grid gap-3 rounded-2xl border border-border-subtle p-4 sm:grid-cols-2"><div><span className="text-xs text-text-muted">{t("orders.customerSelector")}</span><strong className="block">{selectedCustomer?.name || customerName}</strong><span className="text-sm text-text-secondary">{normalizedPhone}</span></div><div><span className="text-xs text-text-muted">{t("fulfillment.delivery")}</span><strong className="block">{city}</strong><span className="text-sm text-text-secondary">{warehouse}</span></div><div><span className="text-xs text-text-muted">{t("orders.items")}</span><strong className="block">{items.length}</strong></div><div><span className="text-xs text-text-muted">{t("tables.payment")}</span><strong className="block">{formatStatus("payment", paymentStatus)}</strong></div></div>
-          <div className="rounded-2xl bg-surface-2 p-4"><div className="flex items-center justify-between text-lg"><span>{t("fulfillment.total")}</span><strong>{formatMoney(total, currencyCode)}</strong></div>{paymentStatus === "COD" ? <div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("fulfillment.codAmount")}</span><span>{formatMoney(codAmount || total, currencyCode)}</span></div> : null}{showProfit ? <div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("orders.estimatedProfit")}</span><span>{formatMoney(total - costs, currencyCode)}</span></div> : null}</div>
+          <div className="rounded-2xl bg-surface-2 p-4"><div className="flex items-center justify-between text-lg"><span>{t("fulfillment.total")}</span><strong>{formatMoney(total, currencyCode)}</strong></div>{paymentStatus === "COD" ? <div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("fulfillment.codAmount")}</span><span>{formatMoney(codAmount || total, currencyCode)}</span></div> : null}{showProfit ? <><div className="mt-2 flex justify-between text-sm text-text-secondary" data-fulfillment-product-cost><span>{t("orders.productCost")}</span><span>{formatMoney(productCosts, currencyCode)}</span></div><div className="mt-2 flex justify-between text-sm text-text-secondary" data-fulfillment-other-costs><span>{t("fulfillment.otherCostsTotal")}</span><span>{formatMoney(costs, currencyCode)}</span></div><div className="mt-2 flex justify-between text-sm text-text-secondary" data-fulfillment-total-costs><span>{t("fulfillment.totalCosts")}</span><span>{formatMoney(productCosts + costs, currencyCode)}</span></div><div className="mt-2 flex justify-between text-sm text-text-secondary" data-fulfillment-profit><span>{t("orders.estimatedProfit")}</span><span>{formatMoney(total - productCosts - costs, currencyCode)}</span></div></> : null}{incompleteCosts ? <p className="mt-3 text-sm font-semibold text-amber-700 dark:text-amber-200">{t("fulfillment.incompleteCosts")}</p> : null}</div>
           {readinessQuery.isLoading ? <div className="rounded-xl border border-blue-300 bg-blue-50 p-3 text-sm font-semibold text-blue-900 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-100">{t("fulfillment.readinessLoading")}</div> : null}
           {readinessQuery.isError ? <div className="grid gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100" role="alert"><strong>{t("fulfillment.readinessLoadFailed")}</strong><Link className="w-fit font-black underline underline-offset-4" href="/settings/integrations">{t("fulfillment.openIntegrationSettings")}</Link></div> : null}
           {!readinessQuery.isLoading && !readinessQuery.isError && !canCreateTtn ? <div className="grid gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100"><strong>{t("fulfillment.readinessTitle")}</strong><p>{t("fulfillment.readinessHelp")}</p>{writeBlockers.length ? <ul className="list-disc space-y-1 pl-5 font-semibold">{writeBlockers.map((blocker) => <li key={blocker}>{t(`fulfillment.blockers.${blocker}`)}</li>)}</ul> : null}<Link className="w-fit font-black underline underline-offset-4" href="/settings/integrations">{t("fulfillment.openIntegrationSettings")}</Link></div> : null}
