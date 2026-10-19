@@ -2,6 +2,10 @@
 
 This backend-only deployment keeps the Vercel frontend and existing Supabase PostgreSQL database. It does not modify Render deployment files, database schema, Meta callbacks, campaign settings, or customer messages. Target: btc-radar, Linux ARM64.
 
+## Recorded verification
+
+See [verification-2026-10-19.json](verification-2026-10-19.json) for the native ARM64 image, disposable PostgreSQL results and outstanding deployment gates. This evidence was collected on nexolab-edge-01, not btc-radar. The tested backend source revision is recorded separately from later test/documentation commits.
+
 ## Requirements and boundaries
 
 - Docker Engine and Compose 2.30+ on the target host.
@@ -35,6 +39,14 @@ Use a clean, committed checkout and retain the full image ID/digest for rollback
     docker build --platform linux/arm64 --build-arg SELLORA_REVISION="$SELLORA_REVISION" -f backend/Dockerfile.raspberry -t "sellora-backend:$SELLORA_REVISION" backend
 
 The runtime commit is read from a file baked into the image, so a copied Render runtime variable cannot misidentify the release. The base Python image is pinned by digest. Application dependencies retain the existing repository requirements policy. Transfer the verified image privately to the target, or pull it from an already authorized private registry.
+
+## Repeat the isolated release check
+
+With the already built image available locally:
+
+    python3 deploy/raspberry/smoke_test.py --image "sellora-backend:<verified-commit>" --expected-revision "<verified-commit>"
+
+This check creates its own PostgreSQL 16 container, private synthetic credentials, temporary volume and a dedicated Docker network. It never accepts a live DATABASE_URL or uses the private production env file. It verifies that an empty database blocks startup without creating tables, explicitly upgrades only its disposable database, then checks the actual Compose deployment, release identity, disabled worker, authenticated-route protection, storage ownership and resource limits. All test containers, volumes and temporary files are removed on exit. Docker Engine, Compose 2.30+, Python 3 and a cached/pullable postgres:16-alpine image are required. The test publishes a temporary loopback port only.
 
 ## Preview without changing the current backend
 

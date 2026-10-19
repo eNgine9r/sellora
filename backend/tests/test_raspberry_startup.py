@@ -59,6 +59,7 @@ def test_matching_database_revision_is_accepted():
 
 
 def test_database_errors_never_expose_connection_details(monkeypatch, capsys):
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "b" * 40)
     monkeypatch.setattr(startup, "image_revision", lambda: "a" * 40)
     monkeypatch.setattr(startup, "validate_environment", lambda env: None)
     monkeypatch.setattr(startup, "packaged_heads", lambda: ("head",))
@@ -73,6 +74,7 @@ def test_database_errors_never_expose_connection_details(monkeypatch, capsys):
 
 
 def test_no_server_is_started_when_schema_is_outdated(monkeypatch):
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "b" * 40)
     monkeypatch.setattr(startup, "image_revision", lambda: "a" * 40)
     monkeypatch.setattr(startup, "validate_environment", lambda env: None)
     monkeypatch.setattr(startup, "packaged_heads", lambda: ("new",))
@@ -84,6 +86,7 @@ def test_no_server_is_started_when_schema_is_outdated(monkeypatch):
 
 
 def test_success_starts_one_worker_without_query_string_access_logs(monkeypatch):
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "b" * 40)
     monkeypatch.setattr(startup, "image_revision", lambda: "a" * 40)
     monkeypatch.setattr(startup, "validate_environment", lambda env: None)
     monkeypatch.setattr(startup, "packaged_heads", lambda: ("head",))
@@ -99,6 +102,7 @@ def test_success_starts_one_worker_without_query_string_access_logs(monkeypatch)
 
 
 def test_release_identity_is_read_from_image_not_copied_render_environment(monkeypatch, tmp_path):
+    monkeypatch.chdir(startup.PROJECT_ROOT)
     (tmp_path / "RELEASE_REVISION").write_text("a" * 40 + "\n")
     monkeypatch.setattr(startup, "PROJECT_ROOT", tmp_path)
     monkeypatch.setenv("RENDER_GIT_COMMIT", "b" * 40)
