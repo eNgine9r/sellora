@@ -30,6 +30,7 @@ class OrderCreate(BaseModel):
 
 class OrderUpdate(BaseModel):
     customer_id: UUID | None = None
+    campaign_id: UUID | None = Field(default=None, description="Omit to preserve campaign attribution; null clears it. A supplied campaign must be visible in the order workspace.")
     payment_status: PaymentStatus | None = None
     ad_cost: Decimal | None = Field(default=None, ge=0)
     shipping_cost: Decimal | None = Field(default=None, ge=0)
