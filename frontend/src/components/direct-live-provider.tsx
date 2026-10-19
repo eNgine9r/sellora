@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellRing, ShoppingBag, X } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   createContext,
   ReactNode,
@@ -60,14 +60,15 @@ export function DirectLiveProvider({ workspaceId, children }: { workspaceId: str
   const knownMessageIds = useRef(new Set<string>());
   const [toastEvent, setToastEvent] = useState<DirectLiveEvent | null>(null);
   const [permission, setPermission] = useState<BrowserNotificationPermission>("unsupported");
-  const [requestedConversationId, setRequestedConversationId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const requestedConversationId = searchParams.get("conversation");
 
   const liveQuery = useQuery({
     queryKey: ["direct-live-summary", workspaceId],
     queryFn: fetchDirectLiveSummary,
     enabled: Boolean(workspaceId),
-    refetchInterval: 2000,
-    refetchIntervalInBackground: true,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     staleTime: 1000,
     retry: 3,
@@ -76,29 +77,16 @@ export function DirectLiveProvider({ workspaceId, children }: { workspaceId: str
     queryKey: ["direct-conversations", workspaceId],
     queryFn: fetchDirectConversations,
     enabled: Boolean(workspaceId && pathname.startsWith("/direct")),
-    refetchInterval: 2000,
-    refetchIntervalInBackground: true,
+    // The page owns polling; this observer only shares its cached conversations.
+    staleTime: 5000,
+    refetchIntervalInBackground: false,
   });
 
   useEffect(() => {
     initialized.current = false;
     knownMessageIds.current.clear();
     setToastEvent(null);
-    setRequestedConversationId(null);
   }, [workspaceId]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !pathname.startsWith("/direct")) {
-      setRequestedConversationId(null);
-      return;
-    }
-    const readConversation = () => {
-      setRequestedConversationId(new URLSearchParams(window.location.search).get("conversation"));
-    };
-    readConversation();
-    const interval = window.setInterval(readConversation, 500);
-    return () => window.clearInterval(interval);
-  }, [pathname]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) {
@@ -181,7 +169,7 @@ export function DirectLiveProvider({ workspaceId, children }: { workspaceId: str
     if (requestedConversationId && conversations.some((item) => item.id === requestedConversationId)) {
       return requestedConversationId;
     }
-    return conversations[0]?.id ?? null;
+    return null;
   }, [conversationsQuery.data, requestedConversationId]);
   const canManage = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
 

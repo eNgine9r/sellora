@@ -1,0 +1,229 @@
+// Synthetic-only browser gate. Every API call, including mount-time writes, is intercepted.
+import { createRequire } from "node:module";
+import { spawn } from "node:child_process";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const require = createRequire(process.env.PLAYWRIGHT_RUNTIME_PACKAGE || import.meta.url);
+const { chromium, expect } = require("@playwright/test");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const output = path.join(root, "artifacts/direct-modernization");
+const base = process.env.DIRECT_TEST_BASE_URL || "http://127.0.0.1:3100";
+const origin = new URL(base).origin;
+const workspaceId = "11111111-1111-4111-8111-111111111111";
+const a = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const b = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const c = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const conversations = [
+  { id: a, participant_display_name: "Олена Тестова", participant_username: "olena_fixture", channel: "INSTAGRAM", unread_count: 2 },
+  { id: b, participant_display_name: "Марія Синтетична", participant_username: "maria_fixture", channel: "SYNTHETIC", unread_count: 0 },
+  { id: c, participant_display_name: "Софія Приклад", participant_username: "sofia_fixture", channel: "INSTAGRAM", unread_count: 0 },
+].map((item) => ({ ...item, status: "OPEN", priority: "NORMAL", ai_processing_status: "IDLE", participant_profile_status: "READY", messaging_window_expires_at: "2099-10-19T20:00:00Z", last_message_at: "2026-10-19T10:00:00Z" }));
+const failures = [];
+const checks = [];
+let server;
+let browser;
+await mkdir(output, { recursive: true });
+
+async function fixture(viewport, { role = "OWNER", theme = "light", delayedSuggestions = false } = {}) {
+  const context = await browser.newContext({ viewport, colorScheme: theme, serviceWorkers: "block" });
+  const user = { id: "22222222-2222-4222-8222-222222222222", email: "synthetic@example.invalid", first_name: "Тест", last_name: "Sellora", is_active: true, last_login_at: null, memberships: [{ workspace_id: workspaceId, workspace_name: "Синтетичний магазин", workspace_slug: "synthetic", role, currency_code: "UAH" }] };
+  await context.addInitScript(({ user, workspaceId, theme }) => {
+    localStorage.setItem("sellora.access_token", "synthetic-browser-fixture");
+    localStorage.setItem("sellora.current_user", JSON.stringify(user));
+    localStorage.setItem("sellora.current_workspace_id", workspaceId);
+    localStorage.setItem("sellora.theme-mode", theme);
+  }, { user, workspaceId, theme });
+  const api = [];
+  const unexpected = [];
+  const errors = [];
+  const state = { sendStatus: "SENT", holdSend: false, releaseSend: null, prepareError: false, releaseSuggestions: null };
+  const suggestionsReady = delayedSuggestions ? new Promise((resolve) => { state.releaseSuggestions = resolve; }) : Promise.resolve();
+  await context.route("**/*", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.origin !== origin) {
+      unexpected.push(`External request: ${url.origin}${url.pathname}`);
+      await route.abort(); return;
+    }
+    if (!url.pathname.startsWith("/api/")) { await route.continue(); return; }
+    const key = `${request.method()} ${url.pathname}`;
+    api.push(key);
+    const respond = (data, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(data) });
+    if (key === "GET /api/v1/auth/me") return respond(user);
+    if (key === "GET /api/v1/direct/live-summary") return respond({ server_time: "2026-10-19T10:00:00Z", unread_total: 2, order_intent_count: 1, events: [{ message_id: "synthetic-event", conversation_id: a, participant_display_name: "Олена Тестова", text_preview: "Хочу замовити", order_intent: true, order_intent_confidence: 0.9, unread_count: 2, received_at: "2026-10-19T10:00:00Z" }] });
+    if (key === "GET /api/v1/direct/conversations") return respond(conversations);
+    if (key === "GET /api/v1/direct/history-sync") return respond(null);
+    if (key === "GET /api/v1/integrations/instagram/status") return respond({ status: "CONNECTED", token_present: true, webhook_active: true });
+    const match = url.pathname.match(/^\/api\/v1\/direct\/conversations\/([^/]+)\/(.+)$/);
+    if (match && [a, b, c].includes(match[1])) {
+      const [, id, action] = match;
+      if (request.method() === "GET" && action === "message-timeline") return respond(Array.from({ length: 24 }, (_, index) => ({ id: `${id}-${index}`, conversation_id: id, direction: index % 2 ? "OUTBOUND" : "INBOUND", text: `Синтетичне повідомлення ${index + 1}`, received_at: "2026-10-19T10:00:00Z", delivery_status: index % 2 ? "PROVIDER_ACCEPTED" : "RECEIVED" })));
+      if (request.method() === "GET" && action === "customer-automation") return respond({ conversation_id: id, customer: null, linked_order_id: null, stage: "CUSTOMER_READY", missing_fields: [], can_create_order: true, profile_complete: false, created_automatically: false });
+      if (request.method() === "GET" && action === "customer-data-extraction") return respond(null);
+      if (request.method() === "GET" && action === "suggestions") {
+        if (id === a) await suggestionsReady;
+        return respond(id === a ? [{ id: "suggestion-a", title: "Чернетка", draft_text: "Пізня AI-чернетка", suggestion_type: "REPLY_DRAFT" }] : []);
+      }
+      if (request.method() === "POST" && action === "read") return respond({ ...conversations.find((item) => item.id === id), unread_count: 0 });
+      if (request.method() === "POST" && action === "reply/prepare") return state.prepareError ? respond({ detail: "Synthetic failure" }, 503) : respond({ ready: true, blockers: [], warnings: [], message_preview: JSON.parse(request.postData()).message_text });
+      if (request.method() === "POST" && action === "reply/send") {
+        if (state.holdSend) await new Promise((resolve) => { state.releaseSend = resolve; });
+        return respond({ operation_id: "synthetic-operation", status: state.sendStatus, provider_message_id: state.sendStatus === "SENT" ? "synthetic-provider-message" : null });
+      }
+      if (request.method() === "POST" && action === "analyze") return respond({});
+    }
+    if (request.method() === "GET" && ["/api/v1/orders", "/api/v1/products", "/api/v1/products/variants", "/api/v1/customers", "/api/v1/inventory", "/api/v1/advertising/campaigns"].includes(url.pathname)) return respond([]);
+    if (key === "GET /api/v1/orders/dashboard") return respond({ revenue_today: 0, profit_today: 0, orders_today: 0 });
+    if (key === "GET /api/v1/integrations/nova-poshta/readiness") return respond({ ready: false, can_create_ttn: false, blockers: [], warnings: [], missing_fields: [], checks: {} });
+    unexpected.push(key);
+    return respond({ detail: "Unexpected synthetic fixture request" }, 500);
+  });
+  const page = await context.newPage();
+  page.on("pageerror", (error) => errors.push(error.message));
+  const card = (id) => page.locator(`[data-conversation-id="${id}"]`);
+  const reply = () => page.getByRole("textbox", { name: "Відповідь менеджера" });
+  const assertClean = async () => {
+    expect(unexpected).toEqual([]);
+    expect(errors).toEqual([]);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(2);
+  };
+  return { context, page, card, reply, api, state, assertClean };
+}
+
+try {
+  if (!process.env.DIRECT_TEST_BASE_URL) {
+    server = spawn(process.execPath, [path.join(root, "frontend/node_modules/next/dist/bin/next"), "start", "-p", "3100", "--hostname", "127.0.0.1"], { cwd: path.join(root, "frontend"), stdio: "inherit" });
+    let ready = false;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      try { if ((await fetch(`${base}/login`)).ok) { ready = true; break; } } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    if (!ready) throw new Error("Synthetic Next server did not become ready");
+  }
+  browser = await chromium.launch({ headless: true });
+  const f = await fixture({ width: 1280, height: 900 }, { delayedSuggestions: true });
+  await f.page.goto(`${base}/direct`);
+  await expect(f.card(a)).toBeVisible();
+  expect(f.api.filter((key) => key.startsWith("POST "))).toEqual([]);
+  expect(f.api.some((key) => key.includes("message-timeline") || key.includes("customer-data-extraction"))).toBe(false);
+  const search = f.page.getByRole("textbox", { name: "Пошук за іменем або нікнеймом" });
+  await search.fill("@maria_fixture");
+  await expect(f.card(b)).toBeVisible(); await expect(f.card(a)).toHaveCount(0);
+  await search.fill("Олена"); await expect(f.card(a)).toBeVisible(); await expect(f.card(b)).toHaveCount(0);
+  await search.fill("");
+  const filters = f.page.getByRole("group", { name: "Фільтри діалогів" });
+  await filters.getByRole("button", { name: /^Непрочитані/ }).click(); await expect(f.card(a)).toBeVisible(); await expect(f.card(b)).toHaveCount(0);
+  await filters.getByRole("button", { name: /^Instagram/ }).click(); await expect(f.card(c)).toBeVisible(); await expect(f.card(b)).toHaveCount(0);
+  await filters.getByRole("button", { name: /^Замовлення/ }).click(); await expect(f.card(a)).toBeVisible(); await expect(f.card(c)).toHaveCount(0);
+  await search.fill("немає збігів"); await expect(f.page.getByText("Нічого не знайдено", { exact: true })).toBeVisible();
+  await f.page.getByRole("button", { name: "Скинути фільтри" }).click(); await expect(f.card(b)).toBeVisible();
+  expect(f.api.filter((key) => key.startsWith("POST "))).toEqual([]);
+  await f.card(a).click(); await f.reply().fill("Чернетка Олени");
+  f.state.releaseSuggestions();
+  await f.page.getByRole("button", { name: "Відкрити AI-панель" }).click();
+  await expect(f.page.getByRole("button", { name: "Вставити чернетку" })).toBeVisible();
+  await f.page.keyboard.press("Escape");
+  await expect(f.reply()).toHaveValue("Чернетка Олени");
+  await f.reply().fill("");
+  await f.page.getByRole("button", { name: "Оновити", exact: true }).click();
+  await expect(f.reply()).toHaveValue("");
+  await f.reply().fill("Чернетка Олени");
+  f.state.prepareError = true;
+  await f.page.getByRole("button", { name: "Перевірити відправлення", exact: true }).click();
+  await expect(f.page.getByText("Не вдалося перевірити відправлення. Спробуйте ще раз.", { exact: true })).toBeVisible();
+  f.state.prepareError = false;
+  await f.reply().fill("Оновлена чернетка Олени");
+  await expect(f.page.getByText("Не вдалося перевірити відправлення. Спробуйте ще раз.", { exact: true })).toHaveCount(0);
+  await f.reply().fill("Чернетка Олени");
+  await f.page.getByRole("button", { name: "Перевірити відправлення", exact: true }).click();
+  await expect(f.page.getByText("Готово до ручного підтвердження", { exact: true })).toBeVisible();
+  await f.card(b).click(); await expect(f.reply()).toHaveValue("");
+  await expect(f.page.getByText("Готово до ручного підтвердження", { exact: true })).toHaveCount(0);
+  await f.reply().fill("Чернетка Марії");
+  await f.card(a).click(); await expect(f.reply()).toHaveValue("Чернетка Олени");
+  f.state.holdSend = true;
+  await f.page.getByRole("button", { name: "Підтвердити відправлення", exact: true }).click();
+  await expect.poll(() => typeof f.state.releaseSend).toBe("function");
+  await f.card(b).click(); await f.reply().fill("Нова чернетка Марії");
+  f.state.releaseSend();
+  await expect(f.reply()).toHaveValue("Нова чернетка Марії");
+  await f.card(a).click(); await expect(f.reply()).toHaveValue("");
+  await f.reply().fill("Нова відповідь");
+  f.state.holdSend = false; f.state.sendStatus = "FAILED_SAFE";
+  await f.page.getByRole("button", { name: "Підтвердити відправлення", exact: true }).click();
+  await expect(f.page.getByText("Повідомлення не відправлено. Можна перевірити й повторити.", { exact: true })).toBeVisible();
+  await expect(f.reply()).toHaveValue("Нова відповідь");
+  f.state.sendStatus = "RETRY_PENDING";
+  await f.page.getByRole("button", { name: "Підтвердити відправлення", exact: true }).click();
+  await expect(f.page.getByRole("button", { name: "Підтвердити відправлення", exact: true })).toBeDisabled();
+  await expect(f.reply()).toHaveValue("Нова відповідь");
+  await f.page.screenshot({ path: path.join(output, "1280-list-thread.png"), fullPage: true });
+  await f.assertClean(); await f.context.close();
+  checks.push("search/name/username; all four filters/counts; filtered reset; no invisible first-thread requests; draft isolation; late AI; late SENT; FAILED_SAFE and RETRY_PENDING");
+
+  for (const width of [375, 390, 1440]) {
+    for (const theme of width === 1440 ? ["light", "dark"] : ["light"]) {
+      const m = await fixture({ width, height: 900 }, { theme });
+      await m.page.goto(`${base}/direct`); await expect(m.card(a)).toBeVisible();
+      if (width < 1024) {
+        await expect(m.page.locator('.mobile-bottom-nav a[href="/direct"]')).toBeVisible();
+        await expect(m.reply()).toHaveCount(0);
+        if (width === 375) await m.page.screenshot({ path: path.join(output, "375-inbox.png"), fullPage: true });
+      }
+      await m.card(a).click(); await expect(m.reply()).toBeVisible();
+      await m.reply().fill("Мобільна чернетка");
+      if (width < 1024) {
+        await expect(m.page.locator("[data-direct-list]")).toBeHidden();
+        if (width === 375) await m.page.screenshot({ path: path.join(output, "375-thread.png"), fullPage: true });
+        await m.page.getByRole("button", { name: "Назад до діалогів", exact: true }).click();
+        await expect(m.card(b)).toBeVisible(); await m.card(b).click(); await expect(m.reply()).toHaveValue("");
+        await m.page.getByRole("button", { name: "Назад до діалогів", exact: true }).click(); await m.card(a).click();
+        await expect(m.reply()).toHaveValue("Мобільна чернетка");
+      } else {
+        await expect(m.page.locator("[data-direct-ai-panel]").first()).toBeVisible();
+        await m.page.screenshot({ path: path.join(output, `1440-wide-ai-${theme}.png`), fullPage: true });
+      }
+      await m.assertClean();
+      await m.page.getByRole("button", { name: "Створити замовлення", exact: true }).first().click();
+      await expect(m.page).toHaveURL(/\/orders\?create=1/);
+      await expect(m.page.getByRole("dialog")).toBeVisible();
+      await m.page.keyboard.press("Escape"); await expect(m.page.getByRole("dialog")).toHaveCount(0);
+      await m.page.getByRole("button", { name: "Оновити", exact: true }).click();
+      await expect(m.page.getByRole("dialog")).toHaveCount(0);
+      await m.assertClean(); await m.context.close();
+      checks.push(`${width}/${theme}: layout, overflow, mobile selection/back, quick create/close/refetch`);
+    }
+  }
+
+  for (const status of ["RECONCILIATION_REQUIRED", "UNKNOWN"]) {
+    const s = await fixture({ width: 1280, height: 900 });
+    await s.page.goto(`${base}/direct?conversation=${a}`); await s.reply().fill("Збережіть цю чернетку");
+    s.state.sendStatus = status;
+    await s.page.getByRole("button", { name: "Підтвердити відправлення", exact: true }).click();
+    await expect(s.page.getByRole("button", { name: "Підтвердити відправлення", exact: true })).toBeDisabled();
+    await expect(s.reply()).toHaveValue("Збережіть цю чернетку");
+    await s.reply().fill("Змінена чернетка");
+    await expect(s.page.getByRole("button", { name: "Підтвердити відправлення", exact: true })).toBeDisabled();
+    await s.assertClean(); await s.context.close(); checks.push(`${status}: draft retained, blind retry blocked after edits`);
+  }
+
+  const analyst = await fixture({ width: 1440, height: 900 }, { role: "ANALYST" });
+  await analyst.page.goto(`${base}/direct?conversation=${c}`);
+  await expect(analyst.reply()).toBeDisabled();
+  await expect(analyst.page.getByRole("button", { name: "Проаналізувати діалог" }).first()).toBeDisabled();
+  await expect(analyst.page.getByRole("button", { name: "Перевірити відправлення" })).toBeDisabled();
+  await expect(analyst.page.getByRole("button", { name: "Підтвердити відправлення" })).toBeDisabled();
+  await analyst.page.goto(`${base}/orders?create=1`); await expect(analyst.page.getByRole("dialog")).toHaveCount(0);
+  expect(analyst.api.filter((key) => key.startsWith("POST "))).toEqual([]);
+  await analyst.assertClean(); await analyst.context.close(); checks.push("analyst write controls and quick-create permission");
+  console.log(`Direct synthetic browser gate passed (${checks.length} scenarios).`);
+} catch (error) {
+  failures.push(error.stack || String(error));
+  throw error;
+} finally {
+  await writeFile(path.join(output, "result.json"), JSON.stringify({ syntheticOnly: true, checks, failures }, null, 2));
+  await browser?.close();
+  server?.kill("SIGTERM");
+}

@@ -39,7 +39,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, m
   const { t } = useI18n();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const validMemberships = currentUser?.memberships ?? [];
-  const createOrder = () => router.push("/orders");
+  const createOrder = () => router.push("/orders?create=1");
   const { summary, isLive, isError, permission, requestBrowserNotifications, openConversation } = useDirectLive();
   const unreadTotal = summary?.unread_total ?? 0;
 

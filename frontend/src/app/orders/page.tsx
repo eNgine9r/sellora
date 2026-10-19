@@ -210,11 +210,11 @@ export default function OrdersPage() {
   }, [workspaceId]);
 
   useEffect(() => {
-    if (!enabled || !requestedCreate || !requestedCustomerId || directPrefillOpened.current) return;
-    if (!customersQuery.data?.some((customer) => customer.id === requestedCustomerId)) return;
+    if (!enabled || !canEdit || !requestedCreate || directPrefillOpened.current) return;
+    if (requestedCustomerId && !customersQuery.data?.some((customer) => customer.id === requestedCustomerId)) return;
     directPrefillOpened.current = true;
     setIsCreateOpen(true);
-  }, [customersQuery.data, enabled, requestedCreate, requestedCustomerId]);
+  }, [canEdit, customersQuery.data, enabled, requestedCreate, requestedCustomerId]);
 
   useEffect(() => {
     if (!requestedOrderId || !ordersQuery.data?.length) return;

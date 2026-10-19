@@ -83,7 +83,7 @@ export function DirectCustomerExtractionPanel({
       const status = query.state.data?.status;
       return status === "QUEUED" || status === "PROCESSING" ? 1500 : 4000;
     },
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
   });
 
   const refreshRelatedData = async () => {

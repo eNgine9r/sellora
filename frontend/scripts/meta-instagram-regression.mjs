@@ -11,6 +11,8 @@ const directTypes = read("src/types/direct.ts");
 const directPage = read("src/app/direct/page.tsx");
 const callbackPage = read("src/app/settings/integrations/instagram/callback/page.tsx");
 const uk = read("src/i18n/messages/uk.json");
+const directCopy = JSON.parse(uk).direct;
+const localizedDirectCopy = (...keys) => keys.every((key) => directPage.includes(`direct.${key}`) && typeof directCopy[key] === "string");
 const checks = [
   ["Instagram settings route exists", settingsPage.includes("InstagramIntegrationPage") && settingsPage.includes("startInstagramConnect")],
   ["Instagram frontend uses backend API only", service.includes("/integrations/instagram/status") && !service.includes("META_APP_SECRET") && !service.includes("access_token")],
@@ -26,12 +28,12 @@ const checks = [
   ["Direct reply prepare/send services exist", directService.includes("reply/prepare") && directService.includes("reply/send") && directService.includes("Idempotency-Key")],
   ["Participant profile refresh uses backend endpoint only", directService.includes("participant-profile/refresh") && !directService.includes("graph.instagram.com")],
   ["Participant profile contract includes safe Meta fields", directTypes.includes("participant_profile_picture_url") && directTypes.includes("participant_follower_count") && directTypes.includes("participant_is_verified_user") && directTypes.includes("participant_is_user_follow_business")],
-  ["Direct page renders profile identity and truthful fallback", directPage.includes("ParticipantProfileCard") && directPage.includes("ParticipantAvatar") && directPage.includes("Username поки недоступний") && directPage.includes("Meta не надала дані профілю")],
-  ["Direct page shows potential customer indicators", directPage.includes("підписників") && directPage.includes("Підписаний на магазин") && directPage.includes("Verified")],
+  ["Direct page renders profile identity and truthful fallback", directPage.includes("ParticipantProfileCard") && directPage.includes("ParticipantAvatar") && localizedDirectCopy("usernameUnavailable", "profileUnavailable")],
+  ["Direct page shows potential customer indicators", localizedDirectCopy("followers", "followsShop", "verified")],
   ["History sync uses backend endpoints and bounded limits", directService.includes("/direct/history-sync") && directService.includes("conversation_limit") && directService.includes("messages_per_conversation") && directService.includes("message-timeline")],
-  ["History sync progress is visible in Direct", directPage.includes("Синхронізувати історію") && directPage.includes("HistorySyncBanner") && directPage.includes("messages_unavailable")],
+  ["History sync progress is visible in Direct", localizedDirectCopy("syncHistory") && directPage.includes("HistorySyncBanner") && directPage.includes("messages_unavailable")],
   ["Message state contract includes seen edit and reaction", directTypes.includes("seen_at") && directTypes.includes("edit_count") && directTypes.includes("reaction_updated_at")],
-  ["Direct avoids unsupported delivered claim", !directPage.includes("DELIVERED") && !directTypes.includes('"DELIVERED"') && directPage.includes("Прийнято Meta") && directPage.includes("Прочитано")],
+  ["Direct avoids unsupported delivered claim", !directPage.includes("DELIVERED") && !directTypes.includes('"DELIVERED"') && localizedDirectCopy("accepted", "seen")],
   ["Direct production page has no hardcoded sample conversations", !directPage.includes("@olena.shop") && !directPage.includes("@ira_style") && !directPage.includes("conversations = [")],
   ["Direct production page still has no uncontrolled Instagram send button", !directPage.includes("Send Instagram") && !directPage.includes("Відправити в Instagram")],
   ["Operation reconciliation service marker exists", directService.includes("reconcileMessageOperation") && directService.includes("message-operations")],
