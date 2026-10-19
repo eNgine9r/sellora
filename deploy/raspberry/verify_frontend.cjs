@@ -9,21 +9,31 @@ async function main() {
   const api = new URL(process.env.TARGET_API_URL);
   assert.equal(frontend.protocol, "https:");
   assert.equal(api.protocol, "https:");
+  assert.equal(api.origin, frontend.origin, "Browser API must remain on the frontend origin");
   const browser = await chromium.launch({ headless: true });
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const directBackendRequests = [];
+    await context.route("**/*", route => {
+      const url = new URL(route.request().url());
+      if (url.hostname.endsWith(".ts.net") || ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
+        directBackendRequests.push(url.hostname);
+        return route.abort("blockedbyclient");
+      }
+      return route.continue();
+    });
     const page = await context.newPage();
     const serverErrors = [];
     const networkFailures = [];
     const pageErrors = [];
     const authRequests = [];
     const authResponses = [];
-    diagnostics = { serverErrors, networkFailures, pageErrors, authRequests, authResponses };
-    page.on("request", request => { const u = new URL(request.url()); if (u.hostname.includes("btc-radar") && u.pathname.includes("auth")) authRequests.push({path:u.pathname,method:request.method()}); });
+    diagnostics = { serverErrors, networkFailures, pageErrors, authRequests, authResponses, directBackendRequests };
+    page.on("request", request => { const u = new URL(request.url()); if (u.origin === api.origin && u.pathname.includes("auth")) authRequests.push({path:u.pathname,method:request.method()}); });
     page.on("pageerror", error => pageErrors.push(error.name));
     page.on("response", response => {
       const url = new URL(response.url());
-      if (url.hostname.includes("btc-radar") && url.pathname.includes("auth")) authResponses.push({path:url.pathname,status:response.status()});
+      if (url.origin === api.origin && url.pathname.includes("auth")) authResponses.push({path:url.pathname,status:response.status()});
       if (url.origin === api.origin && response.status() >= 500) serverErrors.push(response.status());
     });
     page.on("requestfailed", request => {
@@ -57,6 +67,7 @@ async function main() {
     assert.deepEqual(serverErrors, []);
     assert.deepEqual(networkFailures, []);
     assert.deepEqual(pageErrors, []);
+    assert.deepEqual(directBackendRequests, [], "No browser access to tailnet or local API hosts");
     console.log(JSON.stringify({
       public_frontend: frontend.origin,
       public_api: api.href,
@@ -68,6 +79,8 @@ async function main() {
       api_network_failures: networkFailures.length,
       browser_page_errors: pageErrors.length,
       no_tailnet_client: true,
+      same_origin_api: true,
+      direct_backend_browser_requests: directBackendRequests.length,
       screenshots_or_auth_state_saved: false
     }));
     await context.close();
