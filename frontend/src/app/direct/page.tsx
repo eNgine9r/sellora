@@ -383,6 +383,7 @@ export default function DirectPage() {
         <div className={`${selectedConversation ? "flex" : "hidden lg:flex"} min-h-0 min-w-0 flex-col`}>
 
         <MessageThread
+          handoffKey={ttnOrderId && ttnShipmentId ? `${draftKey}:${ttnOrderId}:${ttnShipmentId}` : undefined}
           handoff={canManage && workspaceId && selectedConversation && selectedConversation.id === searchParams.get("conversation") && ttnOrderId && ttnShipmentId ? <DirectTtnDraft key={`${draftKey}:${ttnOrderId}:${ttnShipmentId}`} workspaceId={workspaceId} conversationId={selectedConversation.id} orderId={ttnOrderId} shipmentId={ttnShipmentId} draftText={replyText} onInsert={setReplyText} /> : null}
           conversation={selectedConversation}
           automation={automationQuery.data}
@@ -589,6 +590,7 @@ function DirectEmptyState({ instagramStatus }: { instagramStatus?: { status: str
 type PrepareResult = { ready: boolean; blockers: string[]; warnings: string[]; message_preview: string };
 
 function MessageThread({
+  handoffKey,
   handoff,
   conversation,
   automation,
@@ -617,6 +619,7 @@ function MessageThread({
   sendPending,
   noAutoSend,
 }: {
+  handoffKey?: string;
   handoff?: ReactNode;
   conversation?: DirectConversation | null;
   automation?: DirectCustomerAutomationState;
@@ -648,12 +651,20 @@ function MessageThread({
   const { t } = useI18n();
   const scrollContainer = useRef<HTMLDivElement>(null);
   const hasHandoff = Boolean(handoff);
+  const scrollContext = useRef<{ identity: string; count: number } | null>(null);
 
   useEffect(() => {
     const element = scrollContainer.current;
-    if (!element) return;
-    element.scrollTo({ top: hasHandoff ? 0 : element.scrollHeight, behavior: hasHandoff ? "auto" : messages.length > 1 ? "smooth" : "auto" });
-  }, [conversation?.id, hasHandoff, messages.length]);
+    if (!element || loading || !conversation?.id) return;
+    const context = hasHandoff ? handoffKey ?? conversation.id : conversation.id;
+    // Handoff navigation is a one-time scroll intent after initial loading.
+    // A child returning null after insertion must not pin later messages to top.
+    const previous = scrollContext.current;
+    if (previous?.identity === context && previous.count === messages.length) return;
+    const enteringHandoff = hasHandoff && previous?.identity !== context;
+    scrollContext.current = { identity: context, count: messages.length };
+    element.scrollTo({ top: enteringHandoff ? 0 : element.scrollHeight, behavior: enteringHandoff ? "auto" : messages.length > 1 ? "smooth" : "auto" });
+  }, [conversation?.id, handoffKey, hasHandoff, loading, messages.length]);
 
   if (!conversation) return <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4"><EmptyState title={t("direct.selectTitle")}  description={t("direct.selectHint")}  /></section>;
   return (

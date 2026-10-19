@@ -17,7 +17,9 @@ export async function runFulfillmentScenarios({ fixture, base, expect, a, b, wor
   await wizard.getByRole("button", { name: "Київ", exact: true }).click();
   await wizard.getByRole("button", { name: "Відділення №1", exact: true }).click();
   await wizard.getByRole("button", { name: "Продовжити", exact: true }).click();
-  await wizard.getByLabel("Товар і варіант", { exact: true }).selectOption(ff.variantId);
+  const variant = wizard.getByRole("combobox", { name: /^Товар і варіант/ });
+  await expect(variant).toBeVisible();
+  await variant.selectOption(ff.variantId);
   await wizard.getByLabel("Кількість", { exact: true }).fill("3");
   const cost = () => wizard.getByLabel("Собівартість", { exact: true });
   for (const invalid of ["-1", "", "1e309"]) {
@@ -68,8 +70,22 @@ export async function runFulfillmentScenarios({ fixture, base, expect, a, b, wor
   await full.page.getByRole("button", { name: "Замінити чернетку", exact: true }).click();
   await expect(full.reply()).toHaveValue("Для замовлення SYN-1001 створено накладну Нової пошти: 20400000000000.");
   noSend(full);
+  // Navigation/insertion never sends. Only this explicit manager click may send.
+  // New inbound and sent timeline rows must resume ordinary newest-message scroll.
+  full.state.extraTimeline.push({ id: "synthetic-inbound-after-ttn", conversation_id: a, direction: "INBOUND", text: "Нове вхідне після ТТН", received_at: "2026-10-19T10:01:00Z", delivery_status: "RECEIVED" });
+  const pane = full.page.locator("[data-direct-live-thread]");
+  await expect(full.page.getByText("Нове вхідне після ТТН", { exact: true })).toBeInViewport({ timeout: 10000 });
+  await expect.poll(() => pane.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(4);
+  full.state.appendSentTimeline = true;
+  await full.page.getByRole("button", { name: "Підтвердити відправлення", exact: true }).click();
+  await expect(full.reply()).toHaveValue("");
+  await expect(pane.getByText("Для замовлення SYN-1001 створено накладну Нової пошти: 20400000000000.", { exact: true })).toBeInViewport({ timeout: 10000 });
+  await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBeGreaterThan(100);
+  expect(full.api.filter((key) => /reply\/send$/.test(key))).toHaveLength(1);
+  expect(full.api.filter((key) => /reply\/prepare$/.test(key))).toHaveLength(0);
   expect(ff.state.readWorkspaces.every((id) => id === workspaceId)).toBe(true);
   await full.assertClean(); await full.context.close();
+  checks.push("post-TTN new inbound and explicit sent timeline rows stay visible at newest-message scroll; no persistent handoff-to-top mode");
   checks.push("fulfillment: cost × quantity, invalid/negative/nonfinite costs, zero-cost estimate, step persistence, review totals and actual payload; wizard -> existing shipment -> verified TTN; manual draft survives route and requires confirmation; no send/prepare on navigation");
 
   for (const width of [375, 390, 1440]) {
@@ -98,6 +114,8 @@ export async function runFulfillmentScenarios({ fixture, base, expect, a, b, wor
     await expect(f.page.locator("[data-direct-ttn-draft]").getByRole("alert")).toBeVisible();
     await f.reply().fill("Залишити ручну чернетку");
     await expect(f.page.getByRole("button", { name: "Вставити в чернетку", exact: true })).toHaveCount(0);
+    f.state.extraTimeline.push({ id: `synthetic-inbound-after-${broken}`, conversation_id: a, direction: "INBOUND", text: `Нове повідомлення після помилки ${broken}`, received_at: "2026-10-19T10:02:00Z", delivery_status: "RECEIVED" });
+    await expect(f.page.getByText(`Нове повідомлення після помилки ${broken}`, { exact: true })).toBeInViewport({ timeout: 10000 });
     noSend(f); await f.assertClean(); await f.context.close();
   }
   const legacy = await fixture({ width: 1280, height: 900 }, { fulfillment: true, multiWorkspace: true });

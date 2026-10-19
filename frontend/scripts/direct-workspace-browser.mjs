@@ -43,7 +43,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
   const api = [];
   const unexpected = [];
   const errors = [];
-  const state = { sendStatus: "COMPLETED", holdSend: false, releaseSend: null, prepareError: false, releaseSuggestions: null, operationStatus: null, holdStatus: false, releaseStatus: null, abortSend: false, statusRequests: 0 };
+  const state = { sendStatus: "COMPLETED", holdSend: false, releaseSend: null, prepareError: false, releaseSuggestions: null, operationStatus: null, holdStatus: false, releaseStatus: null, abortSend: false, statusRequests: 0, extraTimeline: [], appendSentTimeline: false };
   const fulfillmentFixture = fulfillment ? createFulfillmentFixture({ workspaceId, conversationId: a }) : null;
   state.fulfillment = fulfillmentFixture;
   const operations = new Map();
@@ -81,7 +81,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
     const match = url.pathname.match(/^\/api\/v1\/direct\/conversations\/([^/]+)\/(.+)$/);
     if (match && scopedConversations.some((item) => item.id === match[1])) {
       const [, id, action] = match;
-      if (request.method() === "GET" && action === "message-timeline") return respond(Array.from({ length: 24 }, (_, index) => ({ id: `${id}-${index}`, conversation_id: id, direction: index % 2 ? "OUTBOUND" : "INBOUND", text: `Синтетичне повідомлення ${index + 1}`, received_at: "2026-10-19T10:00:00Z", delivery_status: index % 2 ? "PROVIDER_ACCEPTED" : "RECEIVED" })));
+      if (request.method() === "GET" && action === "message-timeline") return respond([...Array.from({ length: 24 }, (_, index) => ({ id: `${id}-${index}`, conversation_id: id, direction: index % 2 ? "OUTBOUND" : "INBOUND", text: `Синтетичне повідомлення ${index + 1}`, received_at: "2026-10-19T10:00:00Z", delivery_status: index % 2 ? "PROVIDER_ACCEPTED" : "RECEIVED" })), ...state.extraTimeline.filter((message) => message.conversation_id === id)]);
       if (request.method() === "GET" && action === "customer-automation") return respond({ conversation_id: id, customer: null, linked_order_id: null, stage: "CUSTOMER_READY", missing_fields: [], can_create_order: true, profile_complete: false, created_automatically: false });
       if (request.method() === "GET" && action === "customer-data-extraction") return respond(null);
       if (request.method() === "GET" && action === "suggestions") {
@@ -95,6 +95,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
         if (state.holdSend) await new Promise((resolve) => { state.releaseSend = resolve; });
         const operationId = `33333333-3333-4333-8333-${String(++operationSequence).padStart(12, "0")}`;
         operations.set(operationId, { id: operationId, conversationId: id, workspaceId: requestWorkspace, status: state.sendStatus });
+        if (state.appendSentTimeline && state.sendStatus === "COMPLETED") state.extraTimeline.push({ id: `synthetic-sent-${operationSequence}`, conversation_id: id, direction: "OUTBOUND", text: JSON.parse(request.postData()).message_text, received_at: "2026-10-19T10:01:00Z", delivery_status: "PROVIDER_ACCEPTED" });
         return respond({ operation_id: operationId, status: state.sendStatus, provider_message_id: state.sendStatus === "COMPLETED" ? "synthetic-provider-message" : null });
       }
       if (request.method() === "POST" && action === "analyze") return respond({});
