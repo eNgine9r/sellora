@@ -10,6 +10,10 @@ import { runAdvertisingScenarios } from "./advertising-browser-scenarios.mjs";
 import { createFulfillmentFixture } from "./fulfillment-browser-fixture.mjs";
 import { runFulfillmentScenarios } from "./fulfillment-browser-scenarios.mjs";
 import { runOrderProposalScenarios } from "./order-proposal-browser-scenarios.mjs";
+// Default CI keeps the complete gate. The explicit bounded mode helps debug
+// newly authored proposal scenarios against an already-built application.
+const suite = process.env.DIRECT_TEST_SUITE ?? "full";
+if (!["full", "proposal"].includes(suite)) throw new Error(`Unknown DIRECT_TEST_SUITE: ${suite}`);
 const require = createRequire(process.env.PLAYWRIGHT_RUNTIME_PACKAGE || import.meta.url);
 const { chromium, expect } = require("@playwright/test");
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -163,6 +167,7 @@ try {
     if (!ready) throw new Error("Owned synthetic Next server did not become ready");
   }
   browser = await chromium.launch({ headless: true });
+  if (suite === "full") {
   const f = await fixture({ width: 1280, height: 900 }, { delayedSuggestions: true });
   await f.page.goto(`${base}/direct`);
   await expect(f.card(a)).toBeVisible();
@@ -386,8 +391,9 @@ try {
   await analyst.assertClean(); await analyst.context.close(); checks.push("analyst write controls and quick-create permission");
   await runFulfillmentScenarios({ fixture, base, expect, a, b, workspaceId, output, checks });
   await runAdvertisingScenarios({ fixture, base, expect, output, checks, workspaceId });
+  }
   await runOrderProposalScenarios({ fixture, base, expect, a, b, workspaceId, output, checks });
-  console.log(`Direct synthetic browser gate passed (${checks.length} scenarios).`);
+  console.log(`Direct synthetic browser gate passed (suite=${suite}, ${checks.length} scenarios).`);
 } catch (error) {
   failures.push(error.stack || String(error));
   // Only pages created by the fail-closed synthetic fixture are eligible.
@@ -409,7 +415,7 @@ try {
   }
   throw error;
 } finally {
-  await writeFile(path.join(output, "result.json"), JSON.stringify({ syntheticOnly: true, checks, failures }, null, 2));
+  await writeFile(path.join(output, "result.json"), JSON.stringify({ syntheticOnly: true, suite, checks, failures }, null, 2));
   await browser?.close();
   server?.kill("SIGTERM");
 }

@@ -14,7 +14,7 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
       await f.page.getByRole("button", { name: "Клієнт і замовлення", exact: true }).click();
       await f.page.getByRole("link", { name: "Оформити замовлення", exact: true }).click();
     } else await f.page.goto(`${base}/orders?create=1&customer_id=${ff.customerId}&direct_conversation_id=${a}`);
-    const wizard = f.page.getByRole("dialog");
+    const wizard = f.page.getByRole("dialog", { name: "Оформити замовлення з Direct", exact: true });
     await expect(wizard).toBeVisible();
     await wizard.getByLabel("Місто", { exact: true }).fill("Ки");
     await wizard.getByRole("button", { name: "Київ", exact: true }).click();
@@ -68,10 +68,22 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
     await expect(wizard.locator("[data-fulfillment-product-cost]")).toContainText(/120[,.]00/);
     await expect(wizard.locator("[data-fulfillment-profit]")).toContainText(/210[,.]00/);
     await wizard.getByRole("button", { name: "Створити замовлення і ТТН", exact: true }).click();
-    await expect(wizard.getByRole("link", { name: "Підготувати повідомлення з ТТН", exact: true })).toBeVisible();
+    if (width < 1024) {
+      // Success selects the order, opening its foreground mobile drawer.
+      // Close only that drawer through its real header action; Escape closes
+      // both overlays and clicking through it would bypass the seller flow.
+      const details = f.page.getByRole("dialog", { name: "SYN-1001", exact: true });
+      await expect(details).toBeVisible();
+      await details.locator("header").getByRole("button", { name: "Закрити", exact: true }).click();
+      await expect(details).toHaveCount(0);
+    }
+    const handoff = wizard.getByRole("link", { name: "Підготувати повідомлення з ТТН", exact: true });
+    await expect(handoff).toBeVisible();
+    await expect(handoff).toHaveAttribute("href", `/direct?conversation=${a}&ttn_order_id=${ff.orderId}&ttn_shipment_id=${ff.shipmentId}`);
+    await expect(wizard.getByRole("link", { name: "Відкрити відправлення", exact: true })).toHaveAttribute("href", `/shipments?shipment_id=${ff.shipmentId}`);
     expect(ff.state.payloads).toHaveLength(1);
     expect(ff.state.payloads[0]).toMatchObject({ campaign_id: campaignId, items: [{ product_variant_id: ff.variantId, quantity: 3, unit_price: 110, unit_cost: 40 }] });
-    await wizard.getByRole("link", { name: "Підготувати повідомлення з ТТН", exact: true }).click();
+    await handoff.click();
     await expect(f.reply()).toHaveValue("Ручна чернетка до товарів");
     await f.page.getByRole("button", { name: "Вставити в чернетку", exact: true }).click();
     await f.page.getByRole("button", { name: "Замінити чернетку", exact: true }).click();
