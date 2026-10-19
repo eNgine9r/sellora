@@ -3,6 +3,8 @@ services:
     # Fallback for kernels booted with cgroup_disable=memory.
     # RLIMIT_AS bounds one API process, not container-wide resident memory.
     mem_limit: 0
+    environment:
+      MALLOC_ARENA_MAX: "2"
     command:
       - python
       - -c

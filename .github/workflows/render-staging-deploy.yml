@@ -10,7 +10,7 @@ on:
     inputs:
       operation:
         type: choice
-        options: [deploy, export-raspberry, verify-raspberry]
+        options: [deploy, export-raspberry, verify-raspberry, verify-browser]
         default: deploy
         description: Existing staging deployment or encrypted Raspberry migration
       migration_recipient_cert:
@@ -64,6 +64,28 @@ jobs:
         env:
           TARGET_API_URL: https://btc-radar.tail7f9b04.ts.net/api/v1
           TARGET_EXPECTED_HOST: btc-radar.tail7f9b04.ts.net
+          STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+          STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+
+  verify-browser:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'verify-browser'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    environment: staging
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install pinned browser test runtime without deployment credentials
+        run: |
+          npm install --prefix "$RUNNER_TEMP/sellora-canary-browser" --ignore-scripts --no-audit --no-fund playwright@1.52.0
+          "$RUNNER_TEMP/sellora-canary-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Verify public browser login to the Raspberry API
+        run: node deploy/raspberry/verify_frontend.cjs
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/sellora-canary-browser/node_modules/playwright
+          FRONTEND_URL: https://sellora-web-staging.vercel.app
+          TARGET_API_URL: https://btc-radar.tail7f9b04.ts.net/api/v1
           STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
           STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
 
