@@ -7,6 +7,16 @@ on:
       - "backend/**"
       - ".github/workflows/render-staging-deploy.yml"
   workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [deploy, export-raspberry]
+        default: deploy
+        description: Existing staging deployment or encrypted Raspberry migration
+      migration_recipient_cert:
+        type: string
+        required: false
+        description: Public certificate generated on the target Raspberry
 
 permissions:
   contents: read
@@ -16,7 +26,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  export-raspberry:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'export-raspberry'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: staging
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Encrypt existing Render configuration for btc-radar
+        run: python3 deploy/raspberry/export_render_config.py
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          MIGRATION_RECIPIENT_CERT: ${{ inputs.migration_recipient_cert }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sellora-btc-radar-encrypted-config
+          path: migration-encrypted/sellora-config.cms
+          retention-days: 1
+          if-no-files-found: error
+      - name: Remove encrypted temporary bundle
+        if: always()
+        run: rm -rf migration-encrypted
+
   deploy-and-verify:
+    if: inputs.operation != 'export-raspberry'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: staging
