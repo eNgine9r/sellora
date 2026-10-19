@@ -80,13 +80,17 @@ def main() -> None:
     for key in ("DATABASE_URL", "SECRET_KEY", "JWT_SECRET"):
         if not merged.get(key):
             raise RuntimeError("Required backend configuration missing: " + key)
-    deploys = get("/services/" + sid + "/deploys?limit=1")
+    deploys = get("/services/" + sid + "/deploys?limit=20")
     latest = deploys[0].get("deploy", deploys[0]) if deploys else {}
+    live = next((x.get("deploy", x) for x in deploys if x.get("deploy", x).get("status") == "live"), {})
     bundle = {
         "format": 1,
         "target": "btc-radar",
         "source": {
             "service_id": sid, "service_name": service["name"],
+            "suspended": service.get("suspended"),
+            "live_deploy_id": live.get("id"),
+            "live_deploy_commit": live.get("commit", {}).get("id"),
             "latest_deploy_id": latest.get("id"),
             "latest_deploy_status": latest.get("status"),
             "latest_deploy_commit": latest.get("commit", {}).get("id"),
