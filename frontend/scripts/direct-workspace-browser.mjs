@@ -9,6 +9,7 @@ import { createAdvertisingFixture } from "./advertising-browser-fixture.mjs";
 import { runAdvertisingScenarios } from "./advertising-browser-scenarios.mjs";
 import { createFulfillmentFixture } from "./fulfillment-browser-fixture.mjs";
 import { runFulfillmentScenarios } from "./fulfillment-browser-scenarios.mjs";
+import { runOrderProposalScenarios } from "./order-proposal-browser-scenarios.mjs";
 const require = createRequire(process.env.PLAYWRIGHT_RUNTIME_PACKAGE || import.meta.url);
 const { chromium, expect } = require("@playwright/test");
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -91,6 +92,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
       if (request.method() === "GET" && action === "message-timeline") return respond([...Array.from({ length: 24 }, (_, index) => ({ id: `${id}-${index}`, conversation_id: id, direction: index % 2 ? "OUTBOUND" : "INBOUND", text: `Синтетичне повідомлення ${index + 1}`, received_at: "2026-10-19T10:00:00Z", delivery_status: index % 2 ? "PROVIDER_ACCEPTED" : "RECEIVED" })), ...state.extraTimeline.filter((message) => message.conversation_id === id)]);
       if (request.method() === "GET" && action === "customer-automation") return respond({ conversation_id: id, customer: null, linked_order_id: null, stage: "CUSTOMER_READY", missing_fields: [], can_create_order: true, profile_complete: false, created_automatically: false });
       if (request.method() === "GET" && action === "customer-data-extraction") return respond(null);
+      if (request.method() === "GET" && action === "order-proposal") return respond({ conversation_id: id, analysis_id: null, analysis_created_at: null, analysis_context_message_id: null, analysis_state: "MISSING", catalog_truncated: false, context_truncated: false, lines: [] });
       if (request.method() === "GET" && action === "suggestions") {
         if (id === a) await suggestionsReady;
         return respond(id === a ? [{ id: "suggestion-a", title: "Чернетка", draft_text: "Пізня AI-чернетка", suggestion_type: "REPLY_DRAFT" }] : []);
@@ -105,7 +107,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
         if (state.appendSentTimeline && state.sendStatus === "COMPLETED") state.extraTimeline.push({ id: `synthetic-sent-${operationSequence}`, conversation_id: id, direction: "OUTBOUND", text: JSON.parse(request.postData()).message_text, received_at: "2026-10-19T10:01:00Z", delivery_status: "PROVIDER_ACCEPTED" });
         return respond({ operation_id: operationId, status: state.sendStatus, provider_message_id: state.sendStatus === "COMPLETED" ? "synthetic-provider-message" : null });
       }
-      if (request.method() === "POST" && action === "analyze") return respond({});
+      if (request.method() === "POST" && action === "analyze") return respond({ id: "synthetic-analysis", status: state.analysisStatus ?? "COMPLETED" });
     }
     if (request.method() === "GET" && ["/api/v1/orders", "/api/v1/products", "/api/v1/products/variants", "/api/v1/customers", "/api/v1/inventory", "/api/v1/advertising/campaigns"].includes(url.pathname)) return respond([]);
     if (key === "GET /api/v1/orders/dashboard") return respond({ revenue_today: 0, profit_today: 0, orders_today: 0 });
@@ -384,6 +386,7 @@ try {
   await analyst.assertClean(); await analyst.context.close(); checks.push("analyst write controls and quick-create permission");
   await runFulfillmentScenarios({ fixture, base, expect, a, b, workspaceId, output, checks });
   await runAdvertisingScenarios({ fixture, base, expect, output, checks, workspaceId });
+  await runOrderProposalScenarios({ fixture, base, expect, a, b, workspaceId, output, checks });
   console.log(`Direct synthetic browser gate passed (${checks.length} scenarios).`);
 } catch (error) {
   failures.push(error.stack || String(error));

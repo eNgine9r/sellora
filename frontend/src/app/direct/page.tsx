@@ -205,8 +205,15 @@ export default function DirectPage() {
   }, [draftKey, editorId, guard, operationQuery.data, recordSendOutcome, selectedConversation, setDrafts, workspaceId]);
 
   const analysisMutation = useMutation({
-    mutationFn: ({ conversationId }: ReplyContext) => runDirectAnalysis(conversationId),
-    onSuccess: (_result, variables) => queryClient.invalidateQueries({ queryKey: ["ai-suggestions", variables.workspaceId, variables.conversationId] }),
+    mutationFn: async ({ conversationId }: ReplyContext) => {
+      const result = await runDirectAnalysis(conversationId);
+      if (result.status !== "COMPLETED") throw new Error("DIRECT_ANALYSIS_NOT_COMPLETED");
+      return result;
+    },
+    onSuccess: (_result, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["ai-suggestions", variables.workspaceId, variables.conversationId] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-order-proposal", variables.workspaceId, variables.conversationId] });
+    },
   });
   const prepareMutation = useMutation({
     mutationFn: (variables: ReplyContext) => prepareDirectReply(variables.conversationId, variables.text),

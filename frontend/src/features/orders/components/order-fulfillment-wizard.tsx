@@ -3,6 +3,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DirectOrderProducts } from "./direct-order-products";
+import { ProposalItemSelection } from "@/types/order-proposal";
 import { CitySearchSelect } from "@/features/integrations/components/city-search-select";
 import { WarehouseSearchSelect } from "@/features/integrations/components/warehouse-search-select";
 import { useI18n } from "@/i18n/provider";
@@ -206,9 +208,38 @@ export function OrderFulfillmentWizard({
     setItems((current) => current.map((item) => item.key === key ? { ...item, ...patch } : item));
   }
 
+  function applyProposal(selections: ProposalItemSelection[]): string | null {
+    const additions: WizardItem[] = [];
+    for (const selection of selections) {
+      const variant = variants.find((row) => row.id === selection.variantId && row.is_active && row.workspace_id === workspaceId);
+      const product = products.find((row) => row.id === variant?.product_id && row.is_active && row.workspace_id === workspaceId);
+      if (!variant || !product) return t("proposal.catalogChanged");
+      if (!Number.isInteger(selection.quantity) || selection.quantity < 1 || selection.quantity > 999) return t("proposal.invalidQuantity");
+      const stock = inventoryByVariant.get(variant.id);
+      if (stock && selection.quantity > stock.stock_quantity - stock.reserved_quantity) return t("fulfillment.validation.stock");
+      // The provider-free proposal is fresher than the page catalog cache.
+      // Apply exactly its displayed price/manual entry; do not substitute an old catalog price.
+      const price = selection.unitPrice;
+      if (!price.trim() || !Number.isFinite(Number(price)) || Number(price) < 0) return t("proposal.manualPriceRequired");
+      additions.push({ key: newKey(), product_variant_id: variant.id, quantity: String(selection.quantity), unit_price: price, unit_cost: "0" });
+    }
+    setItems((current) => {
+      const existing = new Set(current.map((item) => item.product_variant_id).filter(Boolean));
+      const next = current.filter((item) => item.product_variant_id || item.unit_price || item.unit_cost !== "0" || item.quantity !== "1");
+      for (const item of additions) {
+        if (existing.has(item.product_variant_id)) continue;
+        existing.add(item.product_variant_id);
+        next.push(item);
+      }
+      return next.length ? next : current;
+    });
+    setError(null);
+    return null;
+  }
+
   function selectVariant(item: WizardItem, variantId: string) {
     const variant = variants.find((row) => row.id === variantId);
-    updateItem(item.key, { product_variant_id: variantId, unit_price: variant?.price || "0" });
+    updateItem(item.key, { product_variant_id: variantId, unit_price: variant?.price == null ? "" : String(variant.price) });
   }
 
   function validateStep(nextStep: number) {
@@ -340,12 +371,13 @@ export function OrderFulfillmentWizard({
         </> : null}
 
         {step === 2 ? <>
+          {sourceDirectConversationId ? <DirectOrderProducts key={`${workspaceId}:${sourceDirectConversationId}`} workspaceId={workspaceId} conversationId={sourceDirectConversationId} currencyCode={currencyCode} onApply={applyProposal} /> : null}
           <section className="grid gap-3">
             <div className="flex items-center justify-between"><h3 className="font-black">{t("orders.items")}</h3><button className="rounded-xl border border-border-subtle px-3 py-2 text-sm font-bold" type="button" onClick={() => setItems((current) => [...current, emptyItem()])}>{t("actions.addItem")}</button></div>
             {items.map((item) => {
               const stock = inventoryByVariant.get(item.product_variant_id);
               const available = stock ? stock.stock_quantity - stock.reserved_quantity : null;
-              return <article className="grid gap-3 rounded-2xl border border-border-subtle p-3 sm:grid-cols-2 sm:items-end" key={item.key}>
+              return <article className="grid gap-3 rounded-2xl border border-border-subtle p-3 sm:grid-cols-2 sm:items-end" key={item.key} data-order-item={item.key}>
                 <label className="grid gap-1 text-sm font-semibold">{t("fulfillment.product")}<select className={inputClass} value={item.product_variant_id} onChange={(event) => selectVariant(item, event.target.value)}><option value="">{t("orders.selectVariant")}</option>{variants.filter((variant) => variant.is_active).map((variant) => { const product = productById.get(variant.product_id); const rowStock = inventoryByVariant.get(variant.id); const rowAvailable = rowStock ? rowStock.stock_quantity - rowStock.reserved_quantity : 0; return <option key={variant.id} value={variant.id}>{product?.name || variant.sku} · {variant.sku} · {t("orders.available")}: {rowAvailable}</option>; })}</select>{available != null ? <span className="text-xs text-text-secondary">{t("orders.available")}: {available}</span> : null}</label>
                 <label className="grid gap-1 text-sm font-semibold">{t("orders.quantity")}<input className={inputClass} min="1" type="number" value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: event.target.value })} /></label>
                 <label className="grid gap-1 text-sm font-semibold">{t("orders.unitPrice")}<input className={inputClass} min="0" step="0.01" type="number" value={item.unit_price} onChange={(event) => updateItem(item.key, { unit_price: event.target.value })} /></label>

@@ -346,6 +346,7 @@ export default function OrdersPage() {
           onClose={() => { setIsCreateOpen(false); if (requestedCreate) router.replace("/orders"); }}
         >
           <OrderFulfillmentWizard
+            key={`${workspaceId}:${requestedCreate ? sourceDirectConversationId ?? "" : ""}`}
             workspaceId={workspaceId}
             variants={variantsQuery.data ?? []}
             products={productsQuery.data ?? []}

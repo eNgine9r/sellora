@@ -27,6 +27,8 @@ from app.repositories.ai_direct_repository import (
     DirectConversationRepository,
     DirectMessageRepository,
 )
+from app.schemas.direct_order_proposal import DirectOrderProposal
+from app.services.direct_order_proposal_service import DirectOrderProposalService, ProposalConversationNotFound
 from app.schemas.ai_direct import (
     AIAnalysisResponse,
     AISuggestionResponse,
@@ -202,6 +204,19 @@ async def analyze(
     db.commit()
     db.refresh(analysis)
     return analysis
+
+
+@router.get("/conversations/{conversation_id}/order-proposal", response_model=DirectOrderProposal)
+def order_proposal(
+    conversation_id: UUID,
+    workspace_id: UUID = Depends(get_workspace_id),
+    _: User = Depends(require_min_role(RoleName.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return DirectOrderProposalService(db).get(workspace_id, conversation_id)
+    except ProposalConversationNotFound as exc:
+        raise HTTPException(404, "Direct conversation not found") from exc
 
 
 @router.get(

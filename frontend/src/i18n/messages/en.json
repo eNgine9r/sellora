@@ -2445,5 +2445,50 @@
       "messages": "Messages",
       "messaging_postbacks": "Button taps"
     }
+  },
+  "proposal": {
+    "title": "Products from conversation",
+    "refresh": "Refresh proposal",
+    "help": "Review SKU, variant, quantity and price. Only your action adds items; opening this panel runs no analysis or stock reservation.",
+    "loading": "Reading saved product context…",
+    "error": "Could not read the proposal. Refresh or choose products manually.",
+    "empty": "No proposed products. Choose products manually below.",
+    "catalogLimit": "The catalog is too large for a reliable proposal. Choose a product manually below.",
+    "contextLimit": "Only bounded recent context was inspected. Verify the choice in the conversation.",
+    "candidateLimit": "Only some alternatives are shown. Clarify the choice or use manual selection.",
+    "contextOnly": "This is analysis context, not a quotation or confirmed customer choice. Check the conversation.",
+    "variant": "Catalog variant",
+    "chooseCandidate": "Choose a variant",
+    "unknownPrice": "Price unknown",
+    "unknownStock": "unknown",
+    "manualPrice": "Sale price (enter manually)",
+    "manualPriceRequired": "Enter a non-negative sale price for a product without a catalog price.",
+    "reviewed": "I checked the product and quantity against the current conversation.",
+    "reviewRequired": "Confirm your review of the recognized product in the conversation.",
+    "invalidQuantity": "Quantity must be a whole number from 1 to 999.",
+    "catalogChanged": "This variant is no longer available in the current catalog. Refresh or choose manually.",
+    "apply": "Add selected products",
+    "applied": "Selection applied. Existing items and their prices, costs and quantities are unchanged.",
+    "state": {
+      "MISSING": "No saved analysis yet. Exact inbound SKUs are shown separately.",
+      "COMPLETED": "Saved analysis is ready for your review.",
+      "STALE": "The conversation changed after analysis. Check every item against current messages.",
+      "FAILED": "The newest analysis did not complete successfully. Use exact SKUs or manual selection.",
+      "MALFORMED": "The newest analysis has no reliable product list. Use exact SKUs or manual selection.",
+      "PENDING": "Saved analysis is not finished. Manual selection is available."
+    },
+    "source": {
+      "ANALYSIS_CONTEXT": "Saved analysis context",
+      "INBOUND_SKU": "Exact SKU from a customer message"
+    },
+    "reason": {
+      "UNKNOWN_SKU": "SKU not found",
+      "SKU_ATTRIBUTE_CONFLICT": "SKU conflicts with color or size",
+      "ATTRIBUTE_CONFLICT": "Color or size does not match",
+      "NO_EXACT_MATCH": "No exact match",
+      "MULTIPLE_VARIANTS": "Choose among multiple variants",
+      "UNIQUE_EXACT_MATCH": "Unique exact match",
+      "CATALOG_LIMIT": "Manual selection required"
+    }
   }
 }
