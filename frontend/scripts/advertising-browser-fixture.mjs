@@ -25,20 +25,20 @@ export function createAdvertisingFixture({ workspaceId }) {
         start_date: url.searchParams.get("start_date") || "2026-09-19",
         end_date: url.searchParams.get("end_date") || "2026-10-19",
         date_basis: "order_created_at_utc", source: "crm_manual_campaign_link", state_basis: "current_state",
-        totals: empty ? totals : { ...totals, placed_orders: 5, placed_revenue: "1400", active_orders: 3, active_revenue: "1200", cancelled_orders: 1, returned_refunded_orders: 1, fulfilled_orders: 3, fulfilled_revenue: "1200", paid_fulfilled_orders: 1, paid_fulfilled_revenue: "500", spend: "100", metric_declared_orders: 1, metric_declared_revenue: "150", crm_period_revenue_to_spend: "12", cost_per_fulfilled_order: "33.33" },
+        totals: empty ? totals : { ...totals, placed_orders: 5, placed_revenue: "1400", active_orders: 3, active_revenue: "1200", cancelled_orders: 1, returned_refunded_orders: 1, fulfilled_orders: 3, fulfilled_revenue: "1200", paid_fulfilled_orders: 1, paid_fulfilled_revenue: "500", spend: "100", metric_declared_orders: 1, metric_declared_revenue: "150", crm_period_revenue_to_spend: "12.00", cost_per_fulfilled_order: "33.33" },
         attributed_orders: empty ? 0 : 4, unattributed_orders: empty ? 0 : 1,
-        attribution_coverage_percent: empty ? null : "80",
+        attribution_coverage_percent: empty ? null : "80.00",
         unattributed: empty ? totals : { ...totals, placed_orders: 1, placed_revenue: "500", active_orders: 1, active_revenue: "500", fulfilled_orders: 1, fulfilled_revenue: "500" },
         campaigns: empty ? [] : [
-          { ...totals, campaign_id: campaignId, campaign_name: "Синтетична реклама", campaign_status: "ACTIVE", placed_orders: 3, placed_revenue: "700", active_orders: 1, active_revenue: "500", cancelled_orders: 1, returned_refunded_orders: 1, fulfilled_orders: 1, fulfilled_revenue: "500", paid_fulfilled_orders: 1, paid_fulfilled_revenue: "500", spend: "100", metric_declared_orders: 1, metric_declared_revenue: "150", crm_period_revenue_to_spend: "5", cost_per_fulfilled_order: "100" },
+          { ...totals, campaign_id: campaignId, campaign_name: "Синтетична реклама", campaign_status: "ACTIVE", placed_orders: 3, placed_revenue: "700", active_orders: 1, active_revenue: "500", cancelled_orders: 1, returned_refunded_orders: 1, fulfilled_orders: 1, fulfilled_revenue: "500", paid_fulfilled_orders: 1, paid_fulfilled_revenue: "500", spend: "100", metric_declared_orders: 1, metric_declared_revenue: "150", crm_period_revenue_to_spend: "5.00", cost_per_fulfilled_order: "100.00" },
           { ...totals, campaign_id: archivedId, campaign_name: "Синтетична історія", campaign_status: "ARCHIVED", placed_orders: 1, placed_revenue: "200", active_orders: 1, active_revenue: "200", fulfilled_orders: 1, fulfilled_revenue: "200" },
         ],
       };
       if (narrow && !empty) {
-        report.totals = { ...totals, placed_orders: 2, placed_revenue: "1000", active_orders: 2, active_revenue: "1000", fulfilled_orders: 2, fulfilled_revenue: "1000", paid_fulfilled_orders: 1, paid_fulfilled_revenue: "500", spend: "100", metric_declared_orders: 1, metric_declared_revenue: "150", crm_period_revenue_to_spend: "10", cost_per_fulfilled_order: "50" };
+        report.totals = { ...totals, placed_orders: 2, placed_revenue: "1000", active_orders: 2, active_revenue: "1000", fulfilled_orders: 2, fulfilled_revenue: "1000", paid_fulfilled_orders: 1, paid_fulfilled_revenue: "500", spend: "543.48", metric_declared_orders: 1, metric_declared_revenue: "150", crm_period_revenue_to_spend: "1.84", cost_per_fulfilled_order: "271.74" };
         report.attributed_orders = 1;
-        report.attribution_coverage_percent = "50";
-        report.campaigns = [{ ...report.campaigns[0], placed_orders: 1, placed_revenue: "500", cancelled_orders: 0, returned_refunded_orders: 0 }];
+        report.attribution_coverage_percent = "50.00";
+        report.campaigns = [{ ...report.campaigns[0], placed_orders: 1, placed_revenue: "500", cancelled_orders: 0, returned_refunded_orders: 0, spend: "543.48", crm_period_revenue_to_spend: "0.92", cost_per_fulfilled_order: "543.48" }];
       }
       return send(report);
     }

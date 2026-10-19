@@ -88,13 +88,14 @@ export default function AdvertisingPage() {
   return (
     <WorkspacePage>
       <WorkspaceHeader title={t("advertising.title")} description={t("advertising.subtitle")} eyebrow={t("advertising.reportEyebrow")} actions={canEditAdvertising ? <div className="flex flex-wrap gap-2"><Button onClick={() => setIsCampaignCreateOpen(true)}>{t("advertising.createCampaign")}</Button><Button variant="secondary" onClick={() => setIsMetricCreateOpen(true)}>{t("advertising.addDailyMetric")}</Button></div> : undefined} />
-      <section className="grid gap-2 rounded-2xl border border-warning/20 bg-warning/10 p-4 text-sm text-warning-foreground" data-advertising-reporting-source="manual-import-meta-future"><p className="font-bold">{t("advertising.dataSourceTitle")}: {t("advertising.manualSource")}</p><p>{t("advertising.manualImportFirst")}</p><p>{t("advertising.futureMetaSync")}</p><p>{t("advertising.formulaSafety")}</p></section>
+      <section className="grid gap-2 rounded-2xl border border-warning/20 bg-warning/10 p-4 text-sm text-warning-foreground" data-advertising-reporting-source="manual-import-meta-future"><p>{t("advertising.manualImportFirst")} <strong>{t("advertising.futureMetaSync")}</strong></p></section>
       <AdvertisingDateRangeFilter startDate={startDate} endDate={endDate} onStartDate={setStartDate} onEndDate={setEndDate} />
       <CrmAttributionSection workspaceId={workspaceId} enabled={enabled} startDate={startDate} endDate={endDate} currencyCode={currencyCode} />
       <details className="rounded-2xl border border-border-subtle bg-surface-1 p-4 text-text-primary" data-advertising-methodology>
         <summary className="cursor-pointer font-bold">{t("advertising.crm.help")}</summary>
         <div className="mt-3 grid gap-3 text-sm">
-          <p>{t("advertising.crm.lifecycle")}</p><p>{t("advertising.crm.fulfilledHelp")}</p><p>{t("advertising.crm.ratioHelp")}</p><p>{t("advertising.crm.sourceHelp")} {t("advertising.attributionOptional")}</p>
+          <p>{t("advertising.crm.lifecycle")}</p><p>{t("advertising.crm.fulfilledHelp")}</p><p>{t("advertising.crm.ratioHelp")}</p><p>{t("advertising.source")}: {t("advertising.manualSource")}. {t("advertising.crm.sourceHelp")} {t("advertising.attributionOptional")}</p>
+          <p>{t("advertising.formulaSafety")}</p>
           <p>{t("advertising.cpaExplanation")} {t("advertising.cplExplanation")} {t("advertising.roasExplanation")}</p>
           <div className="flex flex-wrap gap-3"><a className="font-bold underline" href="/templates/advertising-import-template.csv" download>{t("advertising.templateCta")}</a><a className="font-bold underline" href="/settings/import">{t("advertising.openImportCenter")}</a></div>
           <MetaAdsReadinessCard compact />
