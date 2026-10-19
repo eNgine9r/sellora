@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-10-19T18:04:45.554820+00:00",
+  "verified_at": "2026-10-19T18:33:08.133378+00:00",
   "host": "btc-radar",
   "image_id": "sha256:8646b17d0e07f8d57bec481b5e71ba4ea5c315d3bc8b7c4a68017d9f2ac7129a",
   "backend_revision": "8c2a9b2c83056a8f8719c5b06ddedb6c65314fb4",
@@ -11,7 +11,7 @@
   "health": {
     "status": "ok",
     "runtime_commit": "8c2a9b2c83056a8f8719c5b06ddedb6c65314fb4",
-    "process_started_at": "2026-10-19T18:01:33.129921+00:00",
+    "process_started_at": "2026-10-19T18:25:09.548705+00:00",
     "meta_webhook_worker_enabled": false,
     "meta_webhook_processing_enabled": true,
     "meta_webhook_worker_running": false
@@ -47,18 +47,41 @@
   "existing_tailscale_routes_preserved": true,
   "local_import_storage_writable": true,
   "existing_remote_attachments_read_verified": false,
-  "frontend_cutover_completed": false,
-  "frontend_current_api": "https://sellora-api-staging.onrender.com/api/v1",
+  "frontend_cutover_completed": true,
+  "frontend_current_api": "https://btc-radar.tail7f9b04.ts.net/api/v1",
   "frontend_target_api": "https://btc-radar.tail7f9b04.ts.net/api/v1",
-  "vercel_environment_permissions": "HTTP_403_READ_AND_WRITE",
+  "vercel_environment_permissions": "User updated Config manually; production deployment API succeeded",
   "meta_callbacks_changed": false,
   "worker_cutover_completed": false,
   "customer_messages_sent": false,
   "ad_configuration_changed": false,
   "remaining": [
-    "Vercel environment write access or operator API URL update and frontend rebuild",
     "Meta callback/redirect configuration and end-to-end provider validation",
     "Single-worker ownership cutover and live incoming event canary",
     "Existing remote attachment read verification"
-  ]
+  ],
+  "frontend_previous_api": "https://sellora-api-staging.onrender.com/api/v1",
+  "frontend_deployment": "dpl_4cZBRNggewfsQCdJjd2MY3GgxaM5",
+  "frontend_production_commit": "7233bd245069c97e1060ba93885e7b70bfa12ab2",
+  "frontend_compiled_api_verified": true,
+  "allocator_arena_limit": 2,
+  "allocator_fix_reason": "Default glibc arenas exhausted virtual address-space guard and prevented new worker threads; bounded arenas preserve the guard and thread operation.",
+  "browser_canary": {
+    "run": "https://github.com/eNgine9r/sellora/actions/runs/39303152007",
+    "public_frontend": "https://sellora-web-staging.vercel.app",
+    "login_http": 200,
+    "current_user_http": 200,
+    "authenticated_dashboard_rendered": true,
+    "api_server_errors": 0,
+    "api_network_failures": 0,
+    "browser_page_errors": 0,
+    "no_tailnet_client": true,
+    "screenshots_or_auth_state_saved": false
+  },
+  "api_canary_after_allocator_fix": "https://github.com/eNgine9r/sellora/actions/runs/39302342919",
+  "meta_callback_management_attempt": {
+    "read_http": 401,
+    "provider_error_code": 190,
+    "mutation_performed": false
+  }
 }

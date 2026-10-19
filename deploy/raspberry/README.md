@@ -95,3 +95,5 @@ This package prepares deployment. Target-host installation, private environment 
 ## Hosts without a memory cgroup
 
 Check Docker MemoryLimit support before startup. On btc-radar the existing boot configuration disables the memory controller. The optional no-memcg.yaml override bounds the single API process address space to 768 MiB using the kernel RLIMIT_AS resource limit. CPU and PID cgroup limits remain in effect. This does not provide a container-wide resident-memory limit. Do not claim otherwise or reboot unrelated services as part of this fallback. Add the override as a second Compose file and verify /proc/1/limits and actual API operation.
+
+The fallback also sets MALLOC_ARENA_MAX=2. On ARM64 the default glibc arenas reserved enough virtual address space to reach RLIMIT_AS while resident memory remained around 170 MiB, preventing the API from creating worker threads. Bounding the allocator arenas preserves the address-space guard and leaves room for the application's existing thread pool. Verify actual public login and read requests after applying this override.
