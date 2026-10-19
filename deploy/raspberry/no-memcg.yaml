@@ -1,0 +1,9 @@
+services:
+  backend:
+    # Fallback for kernels booted with cgroup_disable=memory.
+    # RLIMIT_AS bounds one API process, not container-wide resident memory.
+    mem_limit: 0
+    command:
+      - python
+      - -c
+      - "import resource,runpy; resource.setrlimit(resource.RLIMIT_AS,(805306368,805306368)); runpy.run_path('/app/scripts/start_raspberry.py',run_name='__main__')"

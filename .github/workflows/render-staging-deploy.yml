@@ -10,7 +10,7 @@ on:
     inputs:
       operation:
         type: choice
-        options: [deploy, export-raspberry]
+        options: [deploy, export-raspberry, verify-raspberry]
         default: deploy
         description: Existing staging deployment or encrypted Raspberry migration
       migration_recipient_cert:
@@ -50,8 +50,25 @@ jobs:
         if: always()
         run: rm -rf migration-encrypted
 
+  verify-raspberry:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'verify-raspberry'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: staging
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify authenticated Raspberry API without customer mutations
+        run: python3 deploy/raspberry/verify_target.py
+        env:
+          TARGET_API_URL: https://btc-radar.tail7f9b04.ts.net/api/v1
+          TARGET_EXPECTED_HOST: btc-radar.tail7f9b04.ts.net
+          STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+          STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+
   deploy-and-verify:
-    if: inputs.operation != 'export-raspberry'
+    if: github.event_name != 'workflow_dispatch' || inputs.operation == 'deploy'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: staging

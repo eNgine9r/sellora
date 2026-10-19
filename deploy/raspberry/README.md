@@ -91,3 +91,7 @@ Restoring manual sends or AI behavior is a separately reviewed change. Advertisi
 Disable the Raspberry worker first. Restore the previous Vercel API URL and Meta callbacks, verify routing, then resume the previous Render worker. Keep only one worker owner active. Preserve the Raspberry storage volume and pending jobs; do not run compose down -v, drop tables, delete tokens, or downgrade the shared database.
 
 This package prepares deployment. Target-host installation, private environment transfer, backup recovery, HTTPS/OAuth validation and cutover must each have recorded evidence before migration can be called complete.
+
+## Hosts without a memory cgroup
+
+Check Docker MemoryLimit support before startup. On btc-radar the existing boot configuration disables the memory controller. The optional no-memcg.yaml override bounds the single API process address space to 768 MiB using the kernel RLIMIT_AS resource limit. CPU and PID cgroup limits remain in effect. This does not provide a container-wide resident-memory limit. Do not claim otherwise or reboot unrelated services as part of this fallback. Add the override as a second Compose file and verify /proc/1/limits and actual API operation.
