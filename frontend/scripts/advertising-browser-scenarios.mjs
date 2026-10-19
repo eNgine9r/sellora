@@ -41,8 +41,8 @@ export async function runAdvertisingScenarios({ fixture, base, expect, output, c
     await expect(section.locator('time[datetime="2026-10-02"]')).toHaveText("02.10.2026");
     await expect(section.locator("[data-crm-coverage]")).toContainText(/50\s*%/);
     await expect(section.locator("[data-crm-totals]")).toContainText("1,84");
-    await expect(section.locator("[data-crm-totals]")).toContainText(/543,48\s*₴/);
-    await expect(section.locator("[data-crm-totals]")).toContainText(/1\s*000,00\s*₴/);
+    await expect(section.locator("[data-crm-totals]")).toContainText(/(?<![\d,])543,48\s*(?:грн|₴)/);
+    await expect(section.locator("[data-crm-totals]")).toContainText(/(?<!\d)1\s+000,00\s*(?:грн|₴)/);
     await expect.poll(() => ads.requests.some((r) => r.key.endsWith("/crm-attribution") && r.start === "2026-10-01" && r.end === "2026-10-02" && r.workspace === workspaceId)).toBe(true);
     await f.page.screenshot({ path: path.join(output, `advertising-${width}.png`), fullPage: false });
     await f.assertClean();
