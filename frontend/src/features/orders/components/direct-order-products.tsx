@@ -1,16 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
 import { fetchDirectOrderProposal } from "@/services/direct";
 import { OrderProposalLine, ProposalItemSelection } from "@/types/order-proposal";
 
-type Selection = { variantId: string; quantity: string; reviewed: boolean; manualPrice: string };
+type Selection = { variantId: string; quantity: string; reviewedVersion: string | null; manualPrice: string };
 const control = "min-h-11 min-w-0 w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm";
 function initialSelection(line: OrderProposalLine): Selection {
-  return { variantId: !line.requires_review && line.match_status === "MATCHED" ? line.candidates[0]?.variant_id ?? "" : "", quantity: String(line.quantity), reviewed: false, manualPrice: "" };
+  return { variantId: !line.requires_review && line.match_status === "MATCHED" ? line.candidates[0]?.variant_id ?? "" : "", quantity: String(line.quantity), reviewedVersion: null, manualPrice: "" };
 }
 
 export function DirectOrderProducts({ workspaceId, conversationId, currencyCode, onApply }: {
@@ -18,13 +18,22 @@ export function DirectOrderProducts({ workspaceId, conversationId, currencyCode,
   onApply: (items: ProposalItemSelection[]) => string | null;
 }) {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const queryKey = ["direct-order-proposal", workspaceId, conversationId];
   const [selections, setSelections] = useState<Record<string, Selection>>({});
   const [feedback, setFeedback] = useState<{ error: boolean; text: string } | null>(null);
   const query = useQuery({
-    queryKey: ["direct-order-proposal", workspaceId, conversationId],
+    queryKey,
     queryFn: () => fetchDirectOrderProposal(workspaceId, conversationId),
     retry: false,
   });
+  // Include the successful update counter: even an already-stale response with
+  // structurally identical data is a new verification snapshot, not old consent.
+  const snapshotVersion = () => {
+    const state = queryClient.getQueryState(queryKey);
+    return `${state?.dataUpdatedAt ?? 0}:${state?.dataUpdateCount ?? 0}`;
+  };
+  const verifiedVersion = `${query.dataUpdatedAt}:${queryClient.getQueryState(queryKey)?.dataUpdateCount ?? 0}`;
   // No effect copies results into items: only the explicit Apply action may do so.
   const proposal = query.data?.conversation_id === conversationId ? query.data : undefined;
   const selection = (line: OrderProposalLine) => selections[line.id] ?? initialSelection(line);
@@ -42,7 +51,7 @@ export function DirectOrderProducts({ workspaceId, conversationId, currencyCode,
       const quantity = Number(selected.quantity);
       let error = "";
       if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999) error = t("proposal.invalidQuantity");
-      else if (line.requires_review && !selected.reviewed) error = t("proposal.reviewRequired");
+      else if (line.requires_review && selected.reviewedVersion !== snapshotVersion()) error = t("proposal.reviewRequired");
       else if (!candidate) error = t("proposal.catalogChanged");
       else if (candidate.available_quantity != null && quantity > candidate.available_quantity) error = t("fulfillment.validation.stock");
       else if (candidate.price == null && (!selected.manualPrice.trim() || !Number.isFinite(Number(selected.manualPrice)) || Number(selected.manualPrice) < 0)) error = t("proposal.manualPriceRequired");
@@ -75,7 +84,7 @@ export function DirectOrderProducts({ workspaceId, conversationId, currencyCode,
             <label className="grid gap-1 text-sm font-semibold">{t("proposal.variant")}<select aria-label={t("proposal.variant")} className={control} value={selected.variantId} onChange={(event) => update(line, { variantId: event.target.value })}><option value="">{t("proposal.chooseCandidate")}</option>{line.candidates.map((item) => <option value={item.variant_id} key={item.variant_id}>{[item.product_name, item.sku, item.color, item.size].filter(Boolean).join(" · ")} · {item.price == null ? t("proposal.unknownPrice") : formatMoney(item.price, currencyCode)} · {t("orders.available")}: {item.available_quantity ?? t("proposal.unknownStock")}</option>)}</select></label>
             <label className="grid gap-1 text-sm font-semibold">{t("orders.quantity")}<input className={control} type="number" min="1" max="999" value={selected.quantity} onChange={(event) => update(line, { quantity: event.target.value })} /></label>
             {candidate?.price == null && candidate ? <label className="grid gap-1 text-sm font-semibold">{t("proposal.manualPrice")}<input className={control} type="number" min="0" step="0.01" value={selected.manualPrice} onChange={(event) => update(line, { manualPrice: event.target.value })} /></label> : null}
-            {line.requires_review ? <label className="flex items-start gap-2 text-sm"><input className="mt-1" type="checkbox" checked={selected.reviewed} onChange={(event) => update(line, { reviewed: event.target.checked })} />{t("proposal.reviewed")}</label> : null}
+            {line.requires_review ? <label className="flex items-start gap-2 text-sm"><input className="mt-1" type="checkbox" checked={selected.reviewedVersion === verifiedVersion} onChange={(event) => update(line, { reviewedVersion: event.target.checked ? verifiedVersion : null })} />{t("proposal.reviewed")}</label> : null}
           </> : null}
           {line.candidates_truncated ? <p className="text-xs">{t("proposal.candidateLimit")}</p> : null}
         </article>;

@@ -49,7 +49,8 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
     await item.getByLabel("Собівартість", { exact: true }).fill("40");
     await item.getByLabel("Ціна за одиницю", { exact: true }).fill("110");
     await wizard.getByText("Додаткові деталі (необов’язково)", { exact: true }).click();
-    await wizard.getByLabel("Рекламна кампанія", { exact: true }).selectOption(campaignId);
+    await expect(wizard.getByRole("combobox", { name: /^Рекламна кампанія/ })).toBeVisible();
+    await wizard.getByRole("combobox", { name: /^Рекламна кампанія/ }).selectOption(campaignId);
     const requests = ff.state.proposalRequests;
     ff.state.proposal.lines[0].candidates[0].price = "999";
     await proposal.getByRole("button", { name: "Оновити пропозицію", exact: true }).click();
@@ -60,7 +61,7 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
     await expect(item.getByLabel("Ціна за одиницю", { exact: true })).toHaveValue("110");
     await expect(item.getByLabel("Собівартість", { exact: true })).toHaveValue("40");
     await expect(item.getByLabel("Кількість", { exact: true })).toHaveValue("3");
-    await expect(wizard.getByLabel("Рекламна кампанія", { exact: true })).toHaveValue(campaignId);
+    await expect(wizard.getByRole("combobox", { name: /^Рекламна кампанія/ })).toHaveValue(campaignId);
     await f.assertClean();
     await f.page.screenshot({ path: path.join(output, `proposal-${width}.png`), fullPage: false });
     await wizard.getByRole("button", { name: "Продовжити", exact: true }).click();
@@ -107,6 +108,54 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
   await expect(wizard.locator("[data-order-item]")).toHaveCount(2);
   noRecognitionWrite(ambiguous); await ambiguous.assertClean(); await ambiguous.context.close();
   checks.push("ambiguous stale AI is unselected, requires explicit review and manual price for null catalog price; manual item fallback remains available");
+
+  const reviewed = await fixture({ width: 1280, height: 900 }, { fulfillment: true, advertising: true });
+  const rf = reviewed.state.fulfillment;
+  rf.state.extraVariants = [{ id: extraVariantId, workspace_id: workspaceId, product_id: rf.productId, sku: "SYN-L", price: "200", is_active: true }];
+  rf.state.extraInventory = [{ id: "review-stock", product_variant_id: extraVariantId, stock_quantity: 20, reserved_quantity: 0 }];
+  rf.state.proposal = { ...empty(a), analysis_id: "17171717-1717-4717-8717-171717171717", analysis_state: "COMPLETED", lines: [
+    inbound(rf),
+    { ...inbound(rf), id: "analysis-same-id", mention_text: "Синтетичний светр L", source: "ANALYSIS_CONTEXT", evidence: [], requires_review: true, candidates: [candidate(rf, { variant_id: extraVariantId, sku: "SYN-L", price: "200" })] },
+  ] };
+  const rw = await openStep2(reviewed);
+  const rp = rw.locator("[data-direct-order-products]");
+  await rp.getByRole("button", { name: "Додати вибрані товари", exact: true }).click();
+  const existing = rw.locator("[data-order-item]").first();
+  await existing.getByLabel("Ціна за одиницю", { exact: true }).fill("177");
+  await existing.getByLabel("Собівартість", { exact: true }).fill("40");
+  await existing.getByLabel("Кількість", { exact: true }).fill("2");
+  await rw.getByText("Додаткові деталі (необов’язково)", { exact: true }).click();
+  await rw.getByRole("combobox", { name: /^Рекламна кампанія/ }).selectOption(campaignId);
+  const pending = rp.locator('[data-proposal-line="analysis-same-id"]');
+  await pending.getByRole("combobox").selectOption(extraVariantId);
+  await pending.getByLabel("Кількість", { exact: true }).fill("3");
+  await pending.getByRole("checkbox").check();
+  await expect(pending.getByRole("checkbox")).toBeChecked();
+  rf.state.proposal.analysis_state = "STALE";
+  for (let refresh = 0; refresh < 2; refresh++) {
+    // Second refresh intentionally returns an identical already-stale payload.
+    // Stable IDs/structural sharing must not make prior acknowledgement reusable.
+    const reads = rf.state.proposalRequests;
+    await rp.getByRole("button", { name: "Оновити пропозицію", exact: true }).click();
+    await expect.poll(() => rf.state.proposalRequests).toBeGreaterThan(reads);
+    await expect(rp.getByRole("button", { name: "Додати вибрані товари", exact: true })).toBeEnabled();
+    await expect(pending.getByRole("checkbox")).not.toBeChecked();
+    await expect(pending.getByRole("combobox")).toHaveValue(extraVariantId);
+    await expect(pending.getByLabel("Кількість", { exact: true })).toHaveValue("3");
+    await rp.getByRole("button", { name: "Додати вибрані товари", exact: true }).click();
+    await expect(rp.getByRole("alert")).toContainText("Підтвердьте перевірку");
+    await expect(rw.locator("[data-order-item]")).toHaveCount(1);
+    await expect(existing.getByLabel("Ціна за одиницю", { exact: true })).toHaveValue("177");
+    await expect(existing.getByLabel("Собівартість", { exact: true })).toHaveValue("40");
+    await expect(existing.getByLabel("Кількість", { exact: true })).toHaveValue("2");
+    await expect(rw.getByRole("combobox", { name: /^Рекламна кампанія/ })).toHaveValue(campaignId);
+    await pending.getByRole("checkbox").check();
+  }
+  await rp.getByRole("button", { name: "Додати вибрані товари", exact: true }).click();
+  await expect(rw.locator("[data-order-item]")).toHaveCount(2);
+  await expect(rw.locator("[data-order-item]").last().getByLabel("Кількість", { exact: true })).toHaveValue("3");
+  noRecognitionWrite(reviewed); await reviewed.assertClean(); await reviewed.context.close();
+  checks.push("AI review binds to each verified snapshot: COMPLETED -> same-ID STALE -> identical already-STALE refresh requires renewed review, preserving pending selection and applied price/cost/quantity/campaign edits");
 
   const drift = await fixture({ width: 1280, height: 900 }, { fulfillment: true });
   const df = drift.state.fulfillment;
