@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.auth.jwt import decode_token
+from app.core.config import get_settings
 from app.database.session import get_db
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
@@ -24,6 +25,8 @@ def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(
     # Session-bound JWTs must stop working immediately after session
     # revocation, expiration, replay detection, or logout-all.
     raw_session_id = payload.get("sid")
+    if raw_session_id is None and not get_settings().legacy_auth_enabled:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session-bound access required")
     if raw_session_id is not None:
         try:
             session_id = UUID(raw_session_id)

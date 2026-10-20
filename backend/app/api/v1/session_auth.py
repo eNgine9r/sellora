@@ -128,6 +128,8 @@ def session_upgrade(
     upgrade. Legacy JWT deprecation must be scheduled independently.
     """
     _enabled()
+    if not get_settings().legacy_auth_enabled:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Legacy session upgrade is unavailable")
     _origin(request)
     issued = SessionAuthenticationService(db).create(current_user.id)
     _set_cookie(response, issued)
