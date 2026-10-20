@@ -291,16 +291,21 @@ export async function runOrderProposalScenarios({ fixture, base, expect, a, b, w
     await lateOrder.page.goto(`${base}/orders?order_id=${target.orderId}`);
     await expect.poll(() => typeof target.state.releaseOrderDetail).toBe("function");
     const release = target.state.releaseOrderDetail;
-    const oldResponse = lateOrder.page.waitForResponse((response) => response.url().endsWith(`/orders/${target.orderId}`) && response.request().headers()["x-workspace-id"] === workspaceId && response.status() === 200);
     if (change === "create") {
       await lateOrder.page.getByRole("button", { name: "Створити замовлення", exact: true }).first().click();
       await expect(lateOrder.page.getByRole("dialog", { name: "Створити замовлення", exact: true })).toBeVisible();
       await expect(lateOrder.page).not.toHaveURL(/order_id=/);
     } else {
-      await lateOrder.page.locator(".account-profile-trigger").click();
+      // This scenario is mobile: the desktop profile trigger is hidden below md.
+      const profile = lateOrder.page.locator(".mobile-bottom-nav").getByRole("button", { name: "Профіль", exact: true });
+      await expect(profile).toBeVisible();
+      await profile.click();
       await lateOrder.page.getByRole("button", { name: /Другий синтетичний магазин/ }).click();
       await expect(lateOrder.page.locator("[data-order-detail-error]")).toBeVisible();
     }
+    // The fixture is still holding this response. Arm the waiter at release so
+    // an earlier UI-action failure cannot be masked by its unawaited timeout.
+    const oldResponse = lateOrder.page.waitForResponse((response) => response.url().endsWith(`/orders/${target.orderId}`) && response.request().headers()["x-workspace-id"] === workspaceId && response.status() === 200);
     target.state.holdOrderDetail = false; release();
     await (await oldResponse).finished();
     await expect(lateOrder.page.getByRole("dialog", { name: "SYN-1001", exact: true })).toHaveCount(0);
