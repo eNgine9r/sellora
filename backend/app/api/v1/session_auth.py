@@ -115,6 +115,25 @@ def session_login(
     return SessionAccessResponse(access_token=issued.access_token)
 
 
+@router.post("/upgrade", response_model=SessionAccessResponse)
+def session_upgrade(
+    request: Request,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SessionAccessResponse:
+    """Transition a valid existing bearer login without asking for the password again.
+
+    The legacy refresh token should be discarded by the browser immediately after
+    upgrade. Legacy JWT deprecation must be scheduled independently.
+    """
+    _enabled()
+    _origin(request)
+    issued = SessionAuthenticationService(db).create(current_user.id)
+    _set_cookie(response, issued)
+    return SessionAccessResponse(access_token=issued.access_token)
+
+
 @router.post("/refresh", response_model=SessionAccessResponse)
 def session_refresh(
     request: Request,
