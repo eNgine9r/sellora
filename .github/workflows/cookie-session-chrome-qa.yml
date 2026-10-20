@@ -1,0 +1,103 @@
+name: Cookie Session Mobile Chrome QA
+on:
+  push:
+    branches:
+      - security/2026-10-20-http-only-frontend
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-cookie-session:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend and Chrome driver
+        run: |
+          npm ci --prefix frontend --no-audit --no-fund
+          npm install --prefix /tmp/sellora-cookie-chrome --no-save --no-audit --no-fund playwright-core@1.56.0
+          google-chrome --version
+      - name: Build with cookie sessions enabled only inside CI
+        env:
+          NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED: 'true'
+          SELLORA_API_UPSTREAM_URL: http://127.0.0.1:9999
+        run: npm --prefix frontend run build
+      - name: Synthetic mobile login + restore; no tokens in localStorage
+        env:
+          NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED: 'true'
+          SELLORA_API_UPSTREAM_URL: http://127.0.0.1:9999
+        run: |
+          npm --prefix frontend run start -- --hostname 127.0.0.1 --port 3100 >/tmp/sellora-next.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" || true' EXIT
+          for i in $(seq 1 40); do
+            curl -sf http://127.0.0.1:3100/login >/dev/null && break
+            sleep 1
+          done
+          NODE_PATH=/tmp/sellora-cookie-chrome/node_modules node <<'JS'
+          const { chromium } = require('playwright-core');
+          const assert = require('node:assert/strict');
+          (async () => {
+            const browser=await chromium.launch({
+              executablePath:'/usr/bin/google-chrome',headless:true,
+              args:['--no-sandbox','--disable-dev-shm-usage']});
+            const context=await browser.newContext({viewport:{width:390,height:844}});
+            const page=await context.newPage();
+            const errors=[];
+            const counts={login:0,refresh:0,me:0};
+            page.on('pageerror',error=>errors.push(error.message));
+            const user={id:'11111111-1111-4111-8111-111111111111',
+              email:'synthetic@example.com',first_name:'Synthetic',last_name:'Owner',
+              is_active:true,last_login_at:null,memberships:[{
+              workspace_id:'22222222-2222-4222-8222-222222222222',
+              workspace_name:'Synthetic QA Workspace',workspace_slug:'qa',
+              role:'OWNER',currency_code:'UAH'}]};
+            await page.route('**/api/v1/**', async route => {
+              const url=new URL(route.request().url());
+              const p=url.pathname;
+              if (p==='/api/v1/auth/session/login') {
+                counts.login++;
+                return route.fulfill({status:200,contentType:'application/json',
+                  headers:{'set-cookie':'sellora_session_refresh=syntheticQaCookie; HttpOnly; SameSite=Lax; Path=/api/v1/auth/session'},
+                  body:JSON.stringify({access_token:'synthetic-access-token',token_type:'bearer'})});
+              }
+              if (p==='/api/v1/auth/session/refresh') {
+                counts.refresh++;
+                return route.fulfill({status:200,contentType:'application/json',
+                  headers:{'set-cookie':'sellora_session_refresh=syntheticQaCookieRotated; HttpOnly; SameSite=Lax; Path=/api/v1/auth/session'},
+                  body:JSON.stringify({access_token:'synthetic-restored-token',token_type:'bearer'})});
+              }
+              if (p==='/api/v1/auth/me') {
+                counts.me++;
+                return route.fulfill({status:200,contentType:'application/json',
+                  body:JSON.stringify(user)});
+              }
+              return route.fulfill({status:200,contentType:'application/json',body:'{}'});
+            });
+            await page.goto('http://127.0.0.1:3100/login',{waitUntil:'domcontentloaded'});
+            await page.locator('input[type="email"]').fill('synthetic@example.com');
+            await page.locator('input[type="password"]').fill('synthetic-password');
+            await page.locator('button[type="submit"]').click();
+            await page.waitForURL(/\/dashboard/, {timeout:20000});
+            const tokenKeys=()=>page.evaluate(()=>
+              Object.keys(localStorage).filter(k=>/access_token|refresh_token|current_user/.test(k)));
+            assert.deepEqual(await tokenKeys(),[]);
+            assert.equal(counts.login,1);
+            await page.reload({waitUntil:'domcontentloaded'});
+            await page.waitForTimeout(1400);
+            assert.equal(new URL(page.url()).pathname,'/dashboard');
+            assert.ok(counts.refresh>=1,'refresh cookie bootstrap called');
+            assert.deepEqual(await tokenKeys(),[]);
+            assert.equal(errors.length,0,JSON.stringify(errors).slice(0,400));
+            console.log(JSON.stringify({chrome:'Google Chrome',viewport:'390x844',
+              sessionLogin:counts.login,sessionRefresh:counts.refresh,
+              profileLoads:counts.me,storedJwtKeys:0,pageErrors:errors.length,
+              result:'PASS'}));
+            await browser.close();
+          })().catch(e=>{console.error(e.stack);process.exitCode=1});
+          JS
