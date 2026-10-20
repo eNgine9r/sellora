@@ -175,3 +175,30 @@ def test_feature_off_returns_404(monkeypatch, app_client):
     client, fake, _ = app_client
     assert login(client).status_code == 404
     assert post(client, "refresh").status_code == 404
+
+
+
+def test_logout_revokes_only_current_session_and_rejects_foreign_origin(app_client):
+    client, fake, engine = app_client
+    first = login(client)
+    cookie_one = first.cookies.get("sellora_session_refresh")
+    second = login(client)
+    cookie_two = second.cookies.get("sellora_session_refresh")
+    assert cookie_one and cookie_two and cookie_one != cookie_two
+
+    foreign = client.post(
+        "/api/v1/auth/session/logout",
+        headers={
+            "Origin": "https://malicious.example",
+            "Cookie": "sellora_session_refresh=" + cookie_one,
+        },
+    )
+    assert foreign.status_code == 403
+    assert post(client, "refresh", headers={"Cookie": "sellora_session_refresh=" + cookie_one}).status_code == 200
+
+    logout = post(client, "logout", headers={"Cookie": "sellora_session_refresh=" + cookie_one})
+    assert logout.status_code == 204
+    assert "max-age=0" in logout.headers.get("set-cookie", "").lower()
+    assert post(client, "refresh", headers={"Cookie": "sellora_session_refresh=" + cookie_one}).status_code == 401
+    # A different browser's refresh credential should remain usable.
+    assert post(client, "refresh", headers={"Cookie": "sellora_session_refresh=" + cookie_two}).status_code == 200
