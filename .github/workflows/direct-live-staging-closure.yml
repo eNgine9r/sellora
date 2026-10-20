@@ -20,7 +20,8 @@ jobs:
     timeout-minutes: 25
     environment: staging
     env:
-      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_API_URL: https://btc-radar.tail7f9b04.ts.net
+      STAGING_HEALTH_URL: https://btc-radar.tail7f9b04.ts.net/sellora-health
       STAGING_FRONTEND_URL: https://sellora-web-staging.vercel.app
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
@@ -92,7 +93,7 @@ jobs:
 
           health = {}
           for _ in range(120):
-              code, health = request(f"{api_root}/health", timeout=20)
+              code, health = request(os.environ["STAGING_HEALTH_URL"], timeout=20)
               if code == 200 and health.get("status") == "ok" and health.get("runtime_commit"):
                   break
               time.sleep(10)

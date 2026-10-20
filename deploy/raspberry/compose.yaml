@@ -12,6 +12,8 @@ services:
       PORT: "10000"
       PGCONNECT_TIMEOUT: "10"
       IMPORT_STORAGE_PATH: /app/storage/imports
+      META_OAUTH_REDIRECT_URI: "${SELLORA_META_OAUTH_REDIRECT_URI:-https://btc-radar.tail7f9b04.ts.net/api/v1/integrations/instagram/oauth/callback}"
+      META_OAUTH_FRONTEND_CALLBACK_URL: "${SELLORA_META_OAUTH_FRONTEND_CALLBACK_URL:-https://sellora-web-staging.vercel.app/settings/integrations/instagram/callback}"
       META_INSTAGRAM_WEBHOOK_WORKER_ENABLED: "${SELLORA_WORKER_ENABLED:-false}"
       META_INSTAGRAM_SEND_ENABLED: "${SELLORA_SEND_ENABLED:-false}"
       META_INSTAGRAM_AUTO_SEND_ENABLED: "false"
