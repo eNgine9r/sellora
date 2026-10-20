@@ -29,20 +29,23 @@
         "Meta App security settings reviewed"
       ],
       "blockers": [
-        "Offsite secure destination/key custody not configured"
-      ]
+        "Independent off-host ciphertext storage/key custody not yet selected"
+      ],
+      "issue": 252,
+      "evidence": "Daily encrypted local backup timer active; full disposable restore verified"
     },
     {
       "id": "WP-03",
       "title": "Test Direct to CRM and NP lifecycle safely",
-      "status": "READY",
+      "status": "IN_PROGRESS",
       "done_when": [
         "Synthetic inbound Direct fixture",
         "Lead/customer/product/order links asserted",
         "TTN prepare/idempotency/reconcile asserted without actual carrier write",
         "Mobile & desktop UX checked"
       ],
-      "evidence": "129 backend isolated tests passed; not a live provider E2E"
+      "evidence": "129 offline backend tests passed, 2 skipped; actual provider NP and Direct historical deep scan not proven",
+      "issue": 255
     },
     {
       "id": "WP-04",
@@ -53,7 +56,8 @@
         "Campaign/ad IDs synced read-only",
         "No misleading attribution; CPA/ROAS only with grounded inputs"
       ],
-      "blocker": "No Your Jewelry Meta Ads API connection; owner OAuth permission needed"
+      "blocker": "Your Jewelry has no Meta Ads connection; account-owner OAuth required",
+      "issue": 253
     },
     {
       "id": "WP-05",
@@ -64,7 +68,9 @@
         "Owner MFA design and test",
         "PII-safe logs and retention policy",
         "Mobile/desktop usability acceptance"
-      ]
+      ],
+      "issue": 256,
+      "evidence": "SQLAlchemy engine SQL bind redaction deployed via PR #260; broader MFA/CSP and UX audit pending"
     }
   ],
   "invariants": [
@@ -74,5 +80,5 @@
     "Do not claim Meta App approval without dashboard proof",
     "Keep historical TTN and Direct messages unchanged"
   ],
-  "next_action": "Map PR #234-250 ancestry and derive safe release candidate; run fixture E2E; ask owner to link Meta Ads account through the existing Sellora interface."
+  "next_action": "Finish read-only Meta App and carrier readiness; request owner-side OAuth for Meta Ads and Nova Poshta; validate E2E with synthetic data first; reconcile release ancestry before any merge."
 }
