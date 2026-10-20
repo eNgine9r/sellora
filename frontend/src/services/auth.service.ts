@@ -28,6 +28,13 @@ export class InvalidCredentialsError extends Error {
   }
 }
 
+export class SecureSessionExpiredError extends Error {
+  constructor() {
+    super("SECURE_SESSION_EXPIRED");
+    this.name = "SecureSessionExpiredError";
+  }
+}
+
 export class AuthRateLimitedError extends Error {
   readonly retryAfterSeconds: number;
 
@@ -164,7 +171,8 @@ async function requestSessionRefresh(attempt = 0): Promise<TokenPair> {
     await new Promise((resolve) => setTimeout(resolve, 350));
     return requestSessionRefresh(1);
   }
-  if (!response.ok) throw new Error("Unable to refresh secure session");
+  if (response.status === 401) throw new SecureSessionExpiredError();
+  if (!response.ok) throw new AuthNetworkError();
   const result = await response.json() as { access_token: string };
   return { access_token: result.access_token, refresh_token: "", token_type: "bearer" };
 }
