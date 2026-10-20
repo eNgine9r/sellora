@@ -4,6 +4,7 @@ on:
     branches:
       - feat/sellora-direct-history-ui-release-20261020
       - security/2026-10-20-frontend-headers
+      - security/2026-10-20-login-rate-limit-ux
       - security/2026-10-20-frontend-headers
   workflow_dispatch:
 permissions:
