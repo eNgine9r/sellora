@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime
 import asyncio
 import os
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,11 +45,37 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+def allowed_cors_origins() -> list[str]:
+    """Permit explicitly trusted storefronts; no credentialed wildcard CORS."""
+    configured = os.getenv("SELLORA_CORS_ALLOWED_ORIGINS", "")
+    origins = [
+        origin.strip().rstrip("/")
+        for origin in configured.split(",")
+        if origin.strip()
+    ] if configured.strip() else ["https://sellora-web-staging.vercel.app"]
+    if settings.environment != "production":
+        origins.extend(("http://localhost:3000", "http://127.0.0.1:3000"))
+    # Misconfiguration must fail closed, rather than silently reopening CORS.
+    for origin in origins:
+        parsed = urlsplit(origin)
+        if (
+            parsed.scheme not in ("https", "http")
+            or not parsed.hostname
+            or origin != f"{parsed.scheme}://{parsed.netloc}"
+            or parsed.username is not None
+            or parsed.password is not None
+            or "*" in origin
+            or (settings.environment == "production" and parsed.scheme != "https")
+        ):
+            raise ValueError("SELLORA_CORS_ALLOWED_ORIGINS must list trusted origins only")
+    return sorted(set(origins))
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_cors_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
