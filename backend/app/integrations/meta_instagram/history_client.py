@@ -101,12 +101,17 @@ class MetaInstagramHistoryClient:
         # even when the thread and its message IDs remain available.
         rich_fields = f"messages.limit({bounded_limit}){{id,created_time,message,from,to}}"
         basic_fields = f"messages.limit({bounded_limit}){{id,created_time}}"
+        rich_params = {"fields": rich_fields}
+        basic_params = {"fields": basic_fields}
+        if after:
+            rich_params["after"] = after
+            basic_params["after"] = after
         try:
-            payload = await self._get(f"/{conversation_id}", params={"fields": rich_fields})
+            payload = await self._get(f"/{conversation_id}", params=rich_params)
         except MetaInstagramError as exc:
             if not self._unsupported_fields_error(exc):
                 raise
-            payload = await self._get(f"/{conversation_id}", params={"fields": basic_fields})
+            payload = await self._get(f"/{conversation_id}", params=basic_params)
         messages_payload = payload.get("messages") if isinstance(payload, dict) else None
         rows = messages_payload.get("data") if isinstance(messages_payload, dict) else None
         messages = [
