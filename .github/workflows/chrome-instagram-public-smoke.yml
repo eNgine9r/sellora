@@ -34,30 +34,47 @@ jobs:
             done
           done
 
-      - name: Render mobile login in Google Chrome
+      - name: Render public and preview mobile login in Google Chrome
         run: |
           set -euo pipefail
-          mkdir -p /tmp/sellora-chrome
-          timeout 50s google-chrome --headless=new --no-sandbox --disable-dev-shm-usage \
-            --disable-gpu --no-first-run --no-default-browser-check \
-            --user-data-dir=/tmp/sellora-chrome/profile \
-            --window-size=390,844 --hide-scrollbars \
-            --screenshot=/tmp/sellora-chrome/login-390.png \
-            'https://sellora-web-staging-git-fix-2026-10-2-b1cada-engine9rs-projects.vercel.app/login'
-          python3 - <<'PY'
-          import pathlib, struct
-          p = pathlib.Path('/tmp/sellora-chrome/login-390.png')
-          assert p.is_file(), 'Chrome screenshot was not saved'
-          raw = p.read_bytes()
-          assert raw[:8] == b'\x89PNG\r\n\x1a\n', 'Invalid Chrome PNG screenshot'
-          width, height = struct.unpack('>II', raw[16:24])
-          print(f'Google Chrome screenshot: {width}x{height}, {len(raw)} bytes')
-          assert width >= 390 and height >= 700, 'Unexpected Chrome viewport screenshot'
-          assert len(raw) > 5000, 'Screenshot unexpectedly small'
-          PY
+          npm install --prefix /tmp/sellora-chrome --no-save --ignore-scripts --no-audit --no-fund playwright-core@1.56.0
+          NODE_PATH=/tmp/sellora-chrome/node_modules node <<'JS'
+          const fs = require('node:fs');
+          const { chromium } = require('playwright-core');
+          const sites = [
+            ['staging', 'https://sellora-web-staging.vercel.app/login'],
+            ['preview', 'https://sellora-web-staging-git-fix-2026-10-2-b1cada-engine9rs-projects.vercel.app/login'],
+          ];
+          (async () => {
+            const browser = await chromium.launch({
+              executablePath: '/usr/bin/google-chrome',
+              headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'],
+            });
+            try {
+              for (const [name, url] of sites) {
+                const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+                const errors = [];
+                page.on('pageerror', e => errors.push(e.message));
+                const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+                await page.waitForLoadState('networkidle', { timeout: 18000 }).catch(() => {});
+                await page.waitForTimeout(1000);
+                const body = (await page.locator('body').innerText()).trim();
+                const output = '/tmp/sellora-chrome/login-' + name + '-390.png';
+                await page.screenshot({ path: output, fullPage: false });
+                const bytes = fs.statSync(output).size;
+                console.log(JSON.stringify({ browser: 'google-chrome', site: name, http: response?.status(),
+                  viewport: '390x844', bodyChars: body.length, screenshotBytes: bytes,
+                  jsPageErrors: errors.slice(0, 5) }));
+                if (response?.status() !== 200 || body.length < 25 || bytes < 5000 || errors.length)
+                  throw Error('Google Chrome mobile rendering failed for ' + name);
+                await page.close();
+              }
+            } finally { await browser.close(); }
+          })().catch(e => { console.error(e); process.exitCode = 1; });
+          JS
 
       - uses: actions/upload-artifact@v4
         with:
           name: sellora-google-chrome-public-mobile
-          path: /tmp/sellora-chrome/login-390.png
+          path: /tmp/sellora-chrome/login-*-390.png
           retention-days: 1
