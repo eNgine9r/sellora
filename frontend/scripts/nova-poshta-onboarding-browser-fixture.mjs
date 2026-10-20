@@ -14,7 +14,12 @@ export async function installNovaPoshtaOnboardingFixture(page) {
       return respond(state.settings);
     }
     if (endpoint === "test-connection") {
-      state.settings.connection_verified = state.settings.sender_configured;
+      // UX fixture only; actual server/client tuple validation is covered by
+      // test_warehouse_sender_tuple_through_real_client_transport, never by this stub.
+      state.settings.connection_verified = state.settings.sender_counterparty_ref === "synthetic-sender-b"
+        && state.settings.sender_contact_ref === "synthetic-sender-b-contact"
+        && state.settings.sender_city_ref === "synthetic-city"
+        && state.settings.sender_warehouse_ref === "synthetic-warehouse";
       return respond({ success: state.settings.connection_verified, status: "CONNECTED", errors: [], message: "Synthetic verification" });
     }
     if (endpoint === "settings") return respond(state.settings);
@@ -32,10 +37,10 @@ export async function installNovaPoshtaOnboardingFixture(page) {
 export async function runNovaPoshtaOnboardingScenario({ page, expect, base, width }) {
   await page.setViewportSize({ width, height: 900 });
   const state = await installNovaPoshtaOnboardingFixture(page);
-  const ready = page.waitForResponse(response => response.url().endsWith("/integrations/nova-poshta/settings") && response.request().method() === "GET");
+  const ready = page.waitForResponse(response => response.url().endsWith("/integrations/nova-poshta/settings") && response.request().method() === "GET", { timeout: 60000 });
   await page.goto(`${base}/settings/integrations`);
   await ready;
-  const card = page.locator("section").filter({ has: page.getByRole("heading", { name: "Нова Пошта", exact: true }) }).first();
+  const card = page.locator("[data-nova-poshta-settings]");
   await expect(card.getByRole("link", { name: "Відкрити налаштування безпеки Нової пошти" })).toHaveAttribute("href", "https://new.novaposhta.ua/dashboard/settings/developers");
   const password = card.locator('input[type="password"]');
   await password.fill("synthetic-key-test");
@@ -53,9 +58,33 @@ export async function runNovaPoshtaOnboardingScenario({ page, expect, base, widt
   await card.getByRole("button", { name: "Зберегти відправника", exact: true }).click();
   expect(state.payloads.at(-1)).toMatchObject({ api_key: null, sender_counterparty_ref: "synthetic-sender-b", sender_contact_ref: "synthetic-sender-b-contact", sender_city_ref: "synthetic-city", sender_warehouse_ref: "synthetic-warehouse" });
   await card.getByRole("button", { name: "Перевірити підключення", exact: true }).click();
+  await expect(card.getByText("Перевірку пройдено. Створення накладних залишається вимкненим до вашого окремого дозволу.")).toBeVisible();
   expect(state.settings.workspace_permission).toBe(false);
   expect(state.settings.provider_writes_enabled).toBe(false);
   expect(await page.evaluate(() => [localStorage, sessionStorage].some(storage => Object.values(storage).some(value => value.includes("synthetic-key-test"))))).toBe(false);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   return state;
+}
+
+// Card-local geometry and hit testing catch internal occlusion even when the
+// document has no horizontal scrollbar. Run on populated desktop/mobile controls.
+export async function assertNovaPoshtaControlBounds(page, expect) {
+  const card = page.locator("[data-nova-poshta-settings]");
+  const controls = card.locator("input, select, button, a");
+  for (const control of await controls.all()) {
+    if (!await control.isVisible()) continue;
+    await control.evaluate(element => element.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" }));
+    const bounds = await control.evaluate(element => {
+      const card = element.closest("[data-nova-poshta-settings]").getBoundingClientRect();
+      // Inline links can wrap; their union rectangle includes empty space
+      // between text fragments. Hit-test each actual painted client rectangle.
+      const boxes = [...element.getClientRects()].filter(box => box.width && box.height);
+      const hits = boxes.map(box => document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+      return { label: element.getAttribute("aria-label") || element.textContent?.trim() || element.tagName,
+        contained: boxes.every(box => box.left >= card.left && box.right <= card.right + 1),
+        hit: hits.every(hit => hit && (hit === element || element.contains(hit))) };
+    });
+    expect(bounds.contained, `Control outside NP card: ${bounds.label}`).toBe(true);
+    expect(bounds.hit, `Control occluded: ${JSON.stringify(bounds)}`).toBe(true);
+  }
 }

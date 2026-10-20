@@ -1,6 +1,6 @@
 // Run against a local cookie-session frontend; all APIs are synthetic and all external requests blocked.
 import { createRequire } from "node:module";
-import { runNovaPoshtaOnboardingScenario } from "./nova-poshta-onboarding-browser-fixture.mjs";
+import { runNovaPoshtaOnboardingScenario, assertNovaPoshtaControlBounds } from "./nova-poshta-onboarding-browser-fixture.mjs";
 const require = createRequire(process.env.PLAYWRIGHT_RUNTIME_PACKAGE || import.meta.url);
 const { chromium, expect } = require("@playwright/test");
 const base = process.env.NP_TEST_BASE_URL || "http://127.0.0.1:3141";
@@ -27,12 +27,24 @@ try {
     page.on("pageerror", error => errors.push(error.stack));
     let state;
     try { state = await runNovaPoshtaOnboardingScenario({ page, expect, base, width }); } catch (error) { console.log("DIAGNOSTIC", page.url(), errors, (await page.locator("body").innerText()).slice(0, 2000)); throw error; }
+    await assertNovaPoshtaControlBounds(page, expect);
+    await page.locator("[data-nova-poshta-settings]").screenshot({ path: `/tmp/sellora-np-onboarding-populated-${width}.png` });
+    await page.getByLabel("Контактна особа", { exact: true }).selectOption("");
+    await page.getByRole("button", { name: "Зберегти API-ключ", exact: true }).click();
+    await expect.poll(() => state.settings.sender_contact_ref).toBe(null);
+    expect(state.settings.connection_verified).toBe(false);
+    expect(state.settings.workspace_permission).toBe(false);
+    await page.getByLabel("Відправник", { exact: true }).selectOption("");
+    await page.getByRole("button", { name: "Зберегти API-ключ", exact: true }).click();
+    await expect.poll(() => state.settings.sender_counterparty_ref).toBe(null);
+    expect(state.payloads.at(-1)).toMatchObject({ api_key: null, sender_counterparty_ref: null, sender_contact_ref: null, sender_city_ref: null, sender_warehouse_ref: null });
     state.failLookup = true;
     await page.getByLabel("Пошук відправника за назвою", { exact: true }).fill("помилка");
     await expect(page.getByRole("alert").filter({ hasText: "Не вдалося завантажити" })).toBeVisible();
+    await assertNovaPoshtaControlBounds(page, expect);
     expect(errors).toEqual([]);
     await page.screenshot({ path: `/tmp/sellora-np-onboarding-${width}.png`, fullPage: true });
-    console.log(`PASS ${width}: save key, named sender/contact/city/warehouse, dependent reset, blank key payload, verify, writes off, failed lookup, no browser key persistence, no overflow/runtime errors`);
+    console.log(`PASS ${width}: save key, named sender/contact/city/warehouse, dependent reset, blank key payload, verify, writes off, failed lookup, no browser key persistence, no overflow/occlusion/runtime errors`);
     await context.close();
   }
 } finally { await browser.close(); }

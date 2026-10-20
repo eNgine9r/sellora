@@ -1518,7 +1518,7 @@
     "activationSender": "Sender settings are complete",
     "activationVerification": "Credential and sender are verified",
     "activationPermission": "Workspace owner enabled TTN creation",
-    "environmentDisabledHelp": "The server capability is disabled. The environment administrator must set STAGING_NOVA_POSHTA_ALLOW_WRITES=true and restart the backend.",
+    "environmentDisabledHelp": "Waybill creation is not yet available for this workspace. Contact your Sellora administrator to enable this capability after connection verification.",
     "enableTtnCreation": "Enable TTN creation",
     "disableTtnCreation": "Disable TTN creation",
     "updatingPermission": "Updating permission…",

@@ -174,8 +174,9 @@ class NovaPoshtaSettingsService:
         now = datetime.now(UTC)
         existing_settings = dict(connection.settings or {}) if connection else {}
         updates = payload.model_dump(exclude={"api_key"}, exclude_unset=True)
-        material_updates = {key: value for key, value in updates.items() if value is not None}
-        if "sender_phone" in material_updates:
+        # Omitted fields preserve settings; explicit null clears a selected value.
+        material_updates = updates
+        if material_updates.get("sender_phone") is not None:
             try:
                 material_updates["sender_phone"] = normalize_ua_phone(material_updates["sender_phone"])
             except PhoneNormalizationError as exc:
@@ -248,8 +249,10 @@ class NovaPoshtaSettingsService:
                 return "NOVA_POSHTA_SENDER_COUNTERPARTY_INVALID"
             if not client.contact_belongs_to_counterparty(settings["sender_counterparty_ref"], settings["sender_contact_ref"]):
                 return "NOVA_POSHTA_SENDER_CONTACT_INVALID"
-            if not client.sender_address_belongs_to_sender(settings["sender_counterparty_ref"], settings["sender_warehouse_ref"]):
-                return "NOVA_POSHTA_SENDER_ADDRESS_INVALID"
+            # This integration dispatches WarehouseWarehouse documents: SenderAddress
+            # is a directory warehouse Ref, not a counterparty street-address Ref.
+            # Sender/contact account membership is checked above; the warehouse
+            # must independently belong to the selected dispatch city below.
             if not client.warehouse_belongs_to_city(settings["sender_city_ref"], settings["sender_warehouse_ref"]):
                 return "NOVA_POSHTA_SENDER_CITY_MISMATCH"
         except NovaPoshtaClientError:

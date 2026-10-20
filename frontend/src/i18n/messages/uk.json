@@ -1518,7 +1518,7 @@
     "activationSender": "Дані відправника заповнено",
     "activationVerification": "Ключ і відправника перевірено",
     "activationPermission": "Власник дозволив створення ТТН",
-    "environmentDisabledHelp": "Серверний дозвіл вимкнено. Адміністратор середовища має встановити STAGING_NOVA_POSHTA_ALLOW_WRITES=true і перезапустити бекенд.",
+    "environmentDisabledHelp": "Створення накладних ще недоступне для цього робочого простору. Зверніться до адміністратора Sellora, щоб увімкнути цю можливість після перевірки підключення.",
     "enableTtnCreation": "Увімкнути створення ТТН",
     "disableTtnCreation": "Вимкнути створення ТТН",
     "updatingPermission": "Оновлюємо дозвіл…",

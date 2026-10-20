@@ -82,7 +82,7 @@ export default function IntegrationsSettingsPage() {
   return (
     <WorkspacePage>
       <WorkspaceHeader eyebrow={t("settings.label")} title={t("settings.integrationsTitle")} description={t("settings.integrationsSubtitle")} />
-      <section className="grid min-w-0 gap-4 xl:grid-cols-3">
+      <section className="grid min-w-0 gap-4 xl:grid-cols-2">
         <InstagramMessagingIntegrationCard workspaceId={workspaceId} />
         {enabled && settings.isSuccess ? <NovaPoshtaSettingsCard
           key={workspaceId}

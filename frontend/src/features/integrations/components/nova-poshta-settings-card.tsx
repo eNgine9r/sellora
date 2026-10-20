@@ -10,7 +10,7 @@ import { WarehouseSearchSelect } from "@/features/integrations/components/wareho
 import { useI18n } from "@/i18n/provider";
 import { NovaPoshtaSettings, NovaPoshtaSettingsPayload } from "@/types/integrations";
 
-const inputClass = "min-h-11 rounded-lg border border-slate-300 px-3 dark:border-white/10 dark:bg-white/10 dark:text-white";
+const inputClass = "w-full min-w-0 min-h-11 rounded-lg border border-slate-300 px-3 dark:border-white/10 dark:bg-white/10 dark:text-white";
 
 type NovaPoshtaSettingsCardProps = {
   workspaceId: string;
@@ -87,7 +87,7 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
   }
 
   return (
-    <section className="grid gap-5 rounded-2xl bg-white p-5 shadow-sm dark:bg-[#15172A] dark:text-white">
+    <section data-nova-poshta-settings className="grid min-w-0 gap-5 rounded-2xl bg-white p-5 shadow-sm dark:bg-[#15172A] dark:text-white">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-black">{t("novaPoshta.title")}</h2>
@@ -117,14 +117,14 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
             <h3 className="font-black text-slate-950 dark:text-white">{t("novaPoshta.senderSettings")}</h3>
             <p className="text-sm leading-6 text-slate-500 dark:text-slate-300">{t("novaPoshta.senderHelp")}</p>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 [&>*]:min-w-0">
             <CitySearchSelect workspaceId={workspaceId} query={senderCitySearch} onQuery={(value) => { setSenderCitySearch(value); setSenderCityRef(""); setSenderWarehouseRef(""); setSenderWarehouseSearch(""); }} helperText={t("novaPoshta.cityHelper")} onSelect={(item) => { setSenderCitySearch(item.description); setSenderCityRef(item.ref); setSenderWarehouseRef(""); setSenderWarehouseSearch(""); }} />
             <WarehouseSearchSelect workspaceId={workspaceId} cityRef={senderCityRef} query={senderWarehouseSearch} onQuery={(value) => { setSenderWarehouseSearch(value); setSenderWarehouseRef(""); }} helperText={t("novaPoshta.warehouseHelper")} onSelect={(item) => { setSenderWarehouseSearch(item.description); setSenderWarehouseRef(item.ref); }} />
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 [&>*]:min-w-0">
             <label className="grid gap-2 text-sm font-semibold"><span>{t("novaPoshta.senderSearch")}</span><input className={inputClass} value={senderQuery} maxLength={100} onChange={(event) => { setSenderQuery(event.target.value); setSenderPage(1); }} disabled={!hasSavedKey} /></label>
             <label className="grid gap-2 text-sm font-semibold"><span>{t("novaPoshta.senderName")}</span><select aria-label={t("novaPoshta.senderName")} className={inputClass} value={senderCounterpartyRef} disabled={!hasSavedKey || senders.isFetching} onChange={(event) => { setSenderCounterpartyRef(event.target.value); setSenderContactRef(""); setSenderCityRef(""); setSenderWarehouseRef(""); setSenderCitySearch(""); setSenderWarehouseSearch(""); }}><option value="">{t("novaPoshta.chooseSender")}</option>{senderCounterpartyRef && !senders.data?.some(item => item.ref === senderCounterpartyRef) ? <option value={senderCounterpartyRef}>{t("novaPoshta.savedSender")}</option> : null}{senders.data?.map(item => <option key={item.ref} value={item.ref}>{item.description}</option>)}</select></label>
-            <div className="flex gap-2"><button type="button" className="min-h-11 rounded-lg border px-3 disabled:opacity-50" disabled={senderPage === 1 || senders.isFetching} onClick={() => setSenderPage(page => page - 1)}>{t("novaPoshta.previousSenders")}</button><button type="button" className="min-h-11 rounded-lg border px-3 disabled:opacity-50" disabled={!senders.data?.length || senders.data.length < 20 || senders.isFetching || senderPage >= 100} onClick={() => setSenderPage(page => page + 1)}>{t("novaPoshta.nextSenders")}</button></div>
+            <div className="flex min-w-0 flex-wrap gap-2"><button type="button" className="min-h-11 rounded-lg border px-3 disabled:opacity-50" disabled={senderPage === 1 || senders.isFetching} onClick={() => setSenderPage(page => page - 1)}>{t("novaPoshta.previousSenders")}</button><button type="button" className="min-h-11 rounded-lg border px-3 disabled:opacity-50" disabled={!senders.data?.length || senders.data.length < 20 || senders.isFetching || senderPage >= 100} onClick={() => setSenderPage(page => page + 1)}>{t("novaPoshta.nextSenders")}</button></div>
             <label className="grid gap-2 text-sm font-semibold"><span>{t("novaPoshta.contactName")}</span><select aria-label={t("novaPoshta.contactName")} className={inputClass} value={senderContactRef} disabled={!senderCounterpartyRef || contacts.isFetching} onChange={(event) => setSenderContactRef(event.target.value)}><option value="">{t("novaPoshta.chooseContact")}</option>{senderContactRef && !contacts.data?.some(item => item.ref === senderContactRef) ? <option value={senderContactRef}>{t("novaPoshta.savedContact")}</option> : null}{contacts.data?.map(item => <option key={item.ref} value={item.ref}>{item.description}</option>)}</select></label>
             <label className="grid gap-2 text-sm font-semibold"><span>{t("novaPoshta.senderPhone")}</span><input type="tel" className={inputClass} value={senderPhone} onChange={(event) => setSenderPhone(event.target.value)} /></label>
           </div>
