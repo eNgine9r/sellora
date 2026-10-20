@@ -62,7 +62,7 @@ class SessionAuthenticationService:
         secret = secrets.token_urlsafe(48)
         cookie = f"{session_id.hex}.{secret}"
         remaining = max(1, int((expires_at - datetime.now(UTC)).total_seconds()))
-        return SessionTokens(create_access_token(user_id), cookie, remaining)
+        return SessionTokens(create_access_token(user_id, session_id=session_id), cookie, remaining)
 
     def create(self, user_id: UUID) -> SessionTokens:
         now = datetime.now(UTC)
