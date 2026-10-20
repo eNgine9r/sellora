@@ -278,3 +278,14 @@ def test_lead_failure_does_not_drop_verified_incoming_message():
     assert inbound._process_item(event,connection,msg)==1
     assert len(inbound.messages.rows)==1
     assert c.provider_sync_status=='LEAD_AUTOMATION_FAILED_SAFE'
+
+
+def test_converted_lead_starts_new_repeat_sale_opportunity():
+    c = make_conversation()
+    service = make_service([c])
+    previous = service.ensure_from_inbound_order_intent(c.workspace_id, c.id, "Замовляю")
+    previous.status = LeadStatus.CONVERTED.value
+    new = service.ensure_from_inbound_order_intent(c.workspace_id, c.id, "Хочу купити")
+    assert new.id != previous.id
+    assert new.status == LeadStatus.NEW.value
+    assert c.linked_lead_id == new.id

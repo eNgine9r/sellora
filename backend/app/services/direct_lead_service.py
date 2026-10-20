@@ -78,7 +78,7 @@ class DirectLeadService:
             raise DirectLeadError("DIRECT_CONVERSATION_NOT_FOUND")
         if conversation.linked_lead_id:
             linked = self.leads.get(workspace_id, conversation.linked_lead_id)
-            if linked and linked.status != LeadStatus.LOST.value:
+            if linked and linked.status in {LeadStatus.NEW.value, LeadStatus.IN_PROGRESS.value, LeadStatus.QUALIFIED.value}:
                 return linked
 
         previous = self.conversations.find_lead_for_instagram_participant(
@@ -87,7 +87,7 @@ class DirectLeadService:
         )
         if previous:
             linked = self.leads.get(workspace_id, previous.linked_lead_id)
-            if linked and linked.status != LeadStatus.LOST.value:
+            if linked and linked.status in {LeadStatus.NEW.value, LeadStatus.IN_PROGRESS.value, LeadStatus.QUALIFIED.value}:
                 conversation.linked_lead_id = linked.id
                 return linked
 

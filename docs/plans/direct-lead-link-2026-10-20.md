@@ -39,8 +39,10 @@ conversation without representing two distinct people or two orders.
   the existing Lead. A PostgreSQL transaction-level advisory lock is derived
   from workspace, connection, and scoped participant identity, and the
   conversation is loaded with a row lock/refresh before mutation.
-- **Status:** a soft-deleted or LOST lead is not automatically reused as a new
-  sales opportunity. Existing active leads for the same scoped participant
+- **Status:** a soft-deleted, LOST or already CONVERTED lead is not
+  automatically reused for a new sales opportunity. On confirmed order
+  linking, the associated Lead is marked CONVERTED once and audited.
+  Existing active leads for the same scoped participant
   and Instagram connection in the same workspace are reused.
 - **Error codes:** `DIRECT_CONVERSATION_NOT_FOUND` (404),
   `DIRECT_LEAD_INBOUND_REQUIRED` (409),

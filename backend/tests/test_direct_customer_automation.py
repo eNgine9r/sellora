@@ -210,3 +210,47 @@ def test_customer_completion_after_linked_order_saves_delivery_profile():
     assert address.nova_poshta_city_ref == "city-ref"
     assert address.nova_poshta_warehouse_ref == "warehouse-ref"
     assert address.is_default is True
+
+def test_confirmed_order_transitions_linked_lead_only_once():
+    from app.models.lead import Lead, LeadStatus
+
+    service, conversation, workspace_id = make_service()
+    state = service.ensure_candidate(workspace_id, conversation.id, actor_user_id=uuid4())
+    customer = service.customers.get(workspace_id, state.customer.id)
+    lead = Lead(id=uuid4(), workspace_id=workspace_id, name="Марія", status=LeadStatus.NEW.value)
+    class LeadLookup:
+        def get(self, other_workspace, lead_id):
+            return lead if other_workspace == workspace_id and lead_id == lead.id else None
+    service.leads = LeadLookup()
+    conversation.linked_lead_id = lead.id
+    order_id = uuid4()
+    for _ in range(2):
+        service.link_fulfillment_result(
+            workspace_id, conversation.id, customer, order_id,
+            recipient_name="Марія", recipient_phone="0671234567", city="Луцьк",
+            actor_user_id=uuid4(),
+        )
+    assert lead.status == LeadStatus.CONVERTED.value
+    assert conversation.linked_order_id == order_id
+    assert sum(item["action"] == "DIRECT_LEAD_CONVERT" for item in service.audit_logs.records) == 1
+
+
+def test_confirmed_order_never_mutates_cross_workspace_lead():
+    from app.models.lead import Lead, LeadStatus
+
+    service, conversation, workspace_id = make_service()
+    state = service.ensure_candidate(workspace_id, conversation.id, actor_user_id=uuid4())
+    customer = service.customers.get(workspace_id, state.customer.id)
+    lead = Lead(id=uuid4(), workspace_id=uuid4(), name="Other", status=LeadStatus.NEW.value)
+    class LeadLookup:
+        def get(self, other_workspace, lead_id):
+            return lead if other_workspace == lead.workspace_id and lead_id == lead.id else None
+    service.leads = LeadLookup()
+    conversation.linked_lead_id = lead.id
+    service.link_fulfillment_result(
+        workspace_id, conversation.id, customer, uuid4(),
+        recipient_name="Марія", recipient_phone="0671234567", city="Луцьк",
+        actor_user_id=uuid4(),
+    )
+    assert lead.status == LeadStatus.NEW.value
+    assert not any(item["action"] == "DIRECT_LEAD_CONVERT" for item in service.audit_logs.records)
