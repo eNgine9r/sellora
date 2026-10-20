@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/2026-10-20-instagram-oauth-status-mobile
+      - feat/instagram-direct-history-backfill-20261020
   pull_request:
     branches:
       - codex/2026-10-20-instagram-raspberry-cutover
