@@ -1,0 +1,179 @@
+{
+  "verified_at": "2026-10-20T04:54:34Z",
+  "frontend": {
+    "url": "https://sellora-web-staging.vercel.app",
+    "project": "sellora-web-staging",
+    "target": "production",
+    "status": "READY",
+    "framework": "Next.js15.5.19",
+    "source": "71bcfd0bc49d6c9c992c8b4f0210e57968ef20b1",
+    "application_source": "65dc8f201566694b2d2154c2ec520946e73c4460",
+    "deployment": "dpl_J2d33XsU2RSCsaaCQpjF7qrdSJMX",
+    "build_duration_ms": 101546,
+    "same_origin_api": "/api/v1",
+    "server_upstream": "https://btc-radar.tail7f9b04.ts.net/api/v1",
+    "alias_and_exact_source_verified": true
+  },
+  "backend": {
+    "host": "btc-radar",
+    "architecture": "linux/arm64",
+    "source": "37a20fd3d848406d92a71505c26995fe0edd937d",
+    "image_id": "sha256:9cfaa13508cd40ac3ce8cc9f0339fc2d151b71c6a2a6959dc600de0a09a04619",
+    "public_health_http": 200,
+    "runtime_source_verified": "2026-10-20",
+    "native_image_and_disposable_postgresql_smoke": true,
+    "database_revision": "202607220036",
+    "database_schema_modified": false,
+    "private_environment_preserved_at_deploy": true,
+    "worker_enabled": false,
+    "worker_running": false,
+    "outbound_send_enabled": false,
+    "ai_enabled": false,
+    "ai_auto_analysis_enabled": false,
+    "auto_send_enabled": false,
+    "meta_webhook_processing_enabled": true
+  },
+  "source_equivalence": {
+    "method": "git diff --exit-code and equal Git tree IDs",
+    "backend_37a20fd_equals_71bcfd0": "a9eccff710ede072c6cc459c6e19a7af4d0e5fc4",
+    "frontend_src_65dc8f2_equals_71bcfd0": "595d6f1e0780366274beb40c8763446d6958861c",
+    "final_71bcfd0_delta": "browser scenario and evidence report only; no application/backend/config/dependency edits"
+  },
+  "checks": {
+    "exact_source_ci": {
+      "source": "71bcfd0bc49d6c9c992c8b4f0210e57968ef20b1",
+      "url": "https://github.com/eNgine9r/sellora/actions/runs/39371386153",
+      "status": "success",
+      "jobs_passed": 7,
+      "backend_full": {
+        "passed": 569,
+        "skipped": 3,
+        "warnings": 5
+      },
+      "postgresql_integration": "passed",
+      "browser_suite": "full",
+      "browser_groups": 35
+    },
+    "edge_browser": {
+      "production_build_source": "65dc8f201566694b2d2154c2ec520946e73c4460",
+      "final_scenario_source": "71bcfd0bc49d6c9c992c8b4f0210e57968ef20b1",
+      "proposal_groups": 10,
+      "proposal_exit": 0,
+      "proposal_seconds": 36.62,
+      "full_groups": 35,
+      "full_exit": 0,
+      "full_seconds": 100.41,
+      "synthetic_only": true,
+      "failures": [],
+      "viewports": [
+        375,
+        390,
+        1280,
+        1440
+      ],
+      "selected_price_stock_visual_review": [
+        375,
+        1440
+      ]
+    },
+    "reviews": {
+      "task_and_integration_reviews": "approved in prior recorded task loop",
+      "application_final_scoped_review_source": "65dc8f201566694b2d2154c2ec520946e73c4460",
+      "final_test_fix_review": "APPROVED",
+      "final_fix_review_record": ".superpowers/sdd/2026-10-19-direct-sales-modernization/final-browser-rereview.md"
+    }
+  },
+  "public_canaries": {
+    "direct_backend": {
+      "url": "https://github.com/eNgine9r/sellora/actions/runs/39370702849",
+      "source": "65dc8f201566694b2d2154c2ec520946e73c4460",
+      "status": "success",
+      "workspaces": 3,
+      "crm_reports": 3,
+      "order_proposals": 1
+    },
+    "frontend_api": {
+      "url": "https://github.com/eNgine9r/sellora/actions/runs/39371952988",
+      "source": "71bcfd0bc49d6c9c992c8b4f0210e57968ef20b1",
+      "status": "success",
+      "membership_count": 3,
+      "workspaces_checked": 3,
+      "conversation_count": 3,
+      "sample_message_count": 9,
+      "crm_reports_checked": 3,
+      "order_proposals_checked": 1,
+      "unknown_proposal_rejected": true,
+      "foreign_proposal_rejected": true,
+      "foreign_workspace_rejected": true,
+      "login": true,
+      "refresh": true,
+      "anonymous_protection": true
+    },
+    "browser": {
+      "url": "https://github.com/eNgine9r/sellora/actions/runs/39371955783",
+      "source": "71bcfd0bc49d6c9c992c8b4f0210e57968ef20b1",
+      "status": "success",
+      "browser": "Chromium",
+      "login_http": 200,
+      "current_user_http": 200,
+      "authenticated_dashboard_rendered": true,
+      "api_server_errors": 0,
+      "api_network_failures": 0,
+      "browser_page_errors": 0,
+      "same_origin_api": true,
+      "direct_backend_browser_requests": 0,
+      "screenshots_or_auth_state_saved": false
+    },
+    "anonymous_frontend_auth_http": 401,
+    "api_cache_control": "no-store",
+    "existing_nexus_health_http": 200
+  },
+  "observability": {
+    "deployment_scoped_error_fatal_log_groups": 0,
+    "window": "30m",
+    "long_term_monitoring_not_established_by_this_check": true,
+    "drains_inventory": "unknown: inventory API returned404"
+  },
+  "resource_evidence": {
+    "observed_at_deploy_20261019": {
+      "non_root_uid": 10001,
+      "read_only_root": true,
+      "cpu_limit": 1,
+      "pid_limit": 128,
+      "restarts": 0,
+      "address_space_limit_bytes": 805306368,
+      "memory_cgroup_available": false,
+      "container_wide_resident_memory_limit": false,
+      "malloc_arena_max": 2
+    },
+    "current_resource_observation": "not repeated: btc-radar RDC management offline on2026-10-20; public API/auth canaries passed"
+  },
+  "rollback": {
+    "backend_source": "8c2a9b2c83056a8f8719c5b06ddedb6c65314fb4",
+    "backend_image_id": "sha256:8646b17d0e07f8d57bec481b5e71ba4ea5c315d3bc8b7c4a68017d9f2ac7129a",
+    "frontend_deployment": "dpl_zEUi5VR5fdwmtjNjj2bgEY7NaPER",
+    "frontend_source": "a1a5d5a56bab8a11c21a51918e00e2e45c65630c",
+    "private_selector_backup_retained": true,
+    "keep_worker_send_ai_disabled": true,
+    "database_downgrade_required": false
+  },
+  "cleanup": {
+    "builder_transfer_archive_helper_and_own_pycache_removed": true,
+    "builder_release_image_retained": true,
+    "pi_transfer_archive_cleanup": "deferred until management connection returns",
+    "no_docker_prune": true,
+    "no_user_data_removed": true
+  },
+  "remaining": [
+    "Meta callback/redirect registration and permissions validation",
+    "Old Render worker retirement and exactly one active worker before activation",
+    "One live incoming provider event and existing remote attachment read",
+    "Real Nova Poshta provider canary not performed",
+    "Live AI/outbound send/automatic processing remain disabled",
+    "Advertising spend is entered/imported; campaign linkage can be manual; no automatic ad_id/referral attribution or live Meta Ads adapter"
+  ],
+  "customer_messages_sent": false,
+  "real_ttn_created_by_verification": false,
+  "ad_configuration_changed": false,
+  "synthetic_purchase_events_sent": false
+}
