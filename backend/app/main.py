@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime
 import asyncio
 import os
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,14 +56,18 @@ def allowed_cors_origins() -> list[str]:
     if settings.environment != "production":
         origins.extend(("http://localhost:3000", "http://127.0.0.1:3000"))
     # Misconfiguration must fail closed, rather than silently reopening CORS.
-    if any(
-        not origin.startswith(("https://", "http://"))
-        or "*" in origin
-        or (settings.environment == "production" and not origin.startswith("https://"))
-        or "/" in origin.split("://", 1)[1]
-        for origin in origins
-    ):
-        raise ValueError("SELLORA_CORS_ALLOWED_ORIGINS must list trusted origins only")
+    for origin in origins:
+        parsed = urlsplit(origin)
+        if (
+            parsed.scheme not in ("https", "http")
+            or not parsed.hostname
+            or origin != f"{parsed.scheme}://{parsed.netloc}"
+            or parsed.username is not None
+            or parsed.password is not None
+            or "*" in origin
+            or (settings.environment == "production" and parsed.scheme != "https")
+        ):
+            raise ValueError("SELLORA_CORS_ALLOWED_ORIGINS must list trusted origins only")
     return sorted(set(origins))
 
 
