@@ -25,6 +25,7 @@ class MetaMessageSummary:
     id: str
     created_time: str | None = None
     is_unsupported: bool = False
+    details: MetaMessageDetails | None = None
 
 
 @dataclass(frozen=True)
@@ -95,19 +96,28 @@ class MetaInstagramHistoryClient:
         limit: int = 20,
     ) -> MetaMessagePage:
         bounded_limit = max(1, min(limit, 20))
-        params: dict[str, Any] = {
-            "fields": f"messages.limit({bounded_limit}){{id,created_time,is_unsupported}}",
-        }
-        if after:
-            params["after"] = after
-        payload = await self._get(f"/{conversation_id}", params=params)
+        # Meta may provide message details inline within a conversation. This
+        # avoids fetching each older message by its ID, which may be rejected
+        # even when the thread and its message IDs remain available.
+        rich_fields = f"messages.limit({bounded_limit}){{id,created_time,message,from,to}}"
+        basic_fields = f"messages.limit({bounded_limit}){{id,created_time}}"
+        try:
+            payload = await self._get(f"/{conversation_id}", params={"fields": rich_fields})
+        except MetaInstagramError as exc:
+            if not self._unsupported_fields_error(exc):
+                raise
+            payload = await self._get(f"/{conversation_id}", params={"fields": basic_fields})
         messages_payload = payload.get("messages") if isinstance(payload, dict) else None
         rows = messages_payload.get("data") if isinstance(messages_payload, dict) else None
         messages = [
             MetaMessageSummary(
-                id=str(item.get("id")),
-                created_time=str(item.get("created_time")) if item.get("created_time") else None,
+                id=str(item["id"]),
+                created_time=str(item["created_time"]) if item.get("created_time") else None,
                 is_unsupported=bool(item.get("is_unsupported", False)),
+                details=self._details_from_payload(item) if (
+                    ("from" in item or "to" in item) and
+                    (item.get("message") is not None or item.get("is_unsupported"))
+                ) else None,
             )
             for item in rows or []
             if isinstance(item, dict) and item.get("id")
@@ -118,44 +128,73 @@ class MetaInstagramHistoryClient:
         )
 
     async def get_message(self, message_id: str) -> MetaMessageDetails:
+        full_fields = "id,created_time,from,to,message,is_unsupported,reply_to"
+        basic_fields = "id,created_time,from,to,message"
         try:
-            payload = await self._get(
-                f"/{message_id}",
-                params={
-                    "fields": "id,created_time,from,to,message,is_unsupported,reply_to",
-                },
-            )
+            payload = await self._get(f"/{message_id}", params={"fields": full_fields})
         except MetaInstagramError as exc:
-            if exc.code == "META_HISTORY_ACCESS_DENIED":
-                provider_error = exc.__cause__
-                if isinstance(provider_error, httpx.HTTPStatusError):
-                    response = provider_error.response
-                    try:
-                        details = response.json().get("error", {})
-                    except (ValueError, AttributeError):
-                        details = {}
-                    code = details.get("code") if isinstance(details, dict) else None
-                    if response.status_code == 404 or str(code) == "9000001":
-                        raise MetaInstagramError(
-                            "META_HISTORY_MESSAGE_UNAVAILABLE",
-                            "Meta no longer provides this historical message.",
-                            404,
-                        ) from exc
-            raise
+            if self._unsupported_fields_error(exc):
+                try:
+                    payload = await self._get(f"/{message_id}", params={"fields": basic_fields})
+                except MetaInstagramError as retry_exc:
+                    self._raise_if_unavailable(retry_exc)
+                    raise
+            else:
+                self._raise_if_unavailable(exc)
+                raise
+        return self._details_from_payload(payload, fallback_id=message_id)
+
+    @staticmethod
+    def _details_from_payload(payload: dict[str, Any], fallback_id: str = "") -> MetaMessageDetails:
         sender = payload.get("from") if isinstance(payload.get("from"), dict) else {}
         recipients = payload.get("to") if isinstance(payload.get("to"), dict) else {}
         to_data = recipients.get("data") if isinstance(recipients.get("data"), list) else []
+        if isinstance(payload.get("to"), list):
+            to_data = payload["to"]
         reply_to = payload.get("reply_to") if isinstance(payload.get("reply_to"), dict) else {}
         return MetaMessageDetails(
-            id=str(payload.get("id") or message_id),
-            created_time=str(payload.get("created_time")) if payload.get("created_time") else None,
-            from_id=str(sender.get("id")) if sender.get("id") else None,
-            from_username=str(sender.get("username")) if sender.get("username") else None,
+            id=str(payload.get("id") or fallback_id),
+            created_time=str(payload["created_time"]) if payload.get("created_time") else None,
+            from_id=str(sender["id"]) if sender.get("id") else None,
+            from_username=str(sender["username"]) if sender.get("username") else None,
             to=[item for item in to_data if isinstance(item, dict)],
-            message=str(payload.get("message")) if payload.get("message") is not None else None,
+            message=str(payload["message"]) if payload.get("message") is not None else None,
             is_unsupported=bool(payload.get("is_unsupported", False)),
-            reply_to_mid=str(reply_to.get("mid")) if reply_to.get("mid") else None,
+            reply_to_mid=str(reply_to["mid"]) if reply_to.get("mid") else None,
         )
+
+    @staticmethod
+    def _unsupported_fields_error(exc: MetaInstagramError) -> bool:
+        cause = exc.__cause__
+        if exc.code != "META_HISTORY_ACCESS_DENIED" or not isinstance(cause, httpx.HTTPStatusError):
+            return False
+        if cause.response.status_code != 400:
+            return False
+        try:
+            error = cause.response.json().get("error", {})
+        except (ValueError, AttributeError):
+            return False
+        return (isinstance(error, dict) and str(error.get("code")) == "100"
+                and "field" in str(error.get("message", "")).lower())
+
+    @staticmethod
+    def _raise_if_unavailable(exc: MetaInstagramError) -> None:
+        if exc.code != "META_HISTORY_ACCESS_DENIED":
+            return
+        cause = exc.__cause__
+        if not isinstance(cause, httpx.HTTPStatusError):
+            return
+        try:
+            error = cause.response.json().get("error", {})
+        except (ValueError, AttributeError):
+            error = {}
+        code = error.get("code") if isinstance(error, dict) else None
+        if cause.response.status_code == 404 or str(code) == "9000001":
+            raise MetaInstagramError(
+                "META_HISTORY_MESSAGE_UNAVAILABLE",
+                "Meta no longer provides this historical message.",
+                404,
+            ) from exc
 
     async def _get(self, path: str, *, params: dict[str, Any]) -> dict[str, Any]:
         headers = {
