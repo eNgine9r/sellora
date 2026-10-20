@@ -109,7 +109,12 @@ async function main(){
  assert.ok('set-cookie' in loginHeaders,'Next.js rewrite dropped Set-Cookie response header');
  await page.waitForURL(/\/dashboard/,{timeout:20000});
  assert.equal(counts.login,1);
- let cookies=await context.cookies(base);
+ // Cookies with Path=/api/v1/auth/session are intentionally not visible
+ // when querying the site's / route. Query the cookie's actual path.
+ const cookieUrl=base+'/api/v1/auth/session/refresh';
+ assert.ok(!(await context.cookies(base)).some(c=>c.name===cookieName),
+   'Session cookie incorrectly available on site root');
+ let cookies=await context.cookies(cookieUrl);
  let refreshCookie=cookies.find(c=>c.name===cookieName);
  assert.ok(refreshCookie,'Browser did not store forwarded HTTPS Set-Cookie');
  assert.equal(refreshCookie.httpOnly,true,'Cookie is accessible to JavaScript');
@@ -123,7 +128,7 @@ async function main(){
  assert.ok(counts.refresh>=1,'Browser did not forward HttpOnly cookie through Next.js rewrite');
  keys=await page.evaluate(()=>Object.keys(localStorage).filter(k=>/access_token|refresh_token|current_user/.test(k)));
  assert.deepEqual(keys,[]);
- cookies=await context.cookies(base);
+ cookies=await context.cookies(cookieUrl);
  refreshCookie=cookies.find(c=>c.name===cookieName);
  assert.ok(refreshCookie&&refreshCookie.value!== 'synthetic-refresh-1','Rotated Set-Cookie was not forwarded');
  const authErrors=errors.filter(e=>/auth|session|refresh|token|cookie/i.test(e));
