@@ -3,7 +3,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { normalizeWorkspaceId } from "@/lib/workspace";
-import { authStorage, fetchCurrentUser, firstAvailableWorkspace, loginWithPassword, refreshAccessToken } from "@/services/auth.service";
+import { COOKIE_SESSION_AUTH_ENABLED, authStorage, fetchCurrentUser, firstAvailableWorkspace, loginWithPassword, refreshAccessToken, refreshCookieSession, revokeCookieSession, upgradeLegacySession, refreshLegacyAccessToken } from "@/services/auth.service";
 import { CurrentUser, WorkspaceMembership } from "@/types/auth";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -15,7 +15,7 @@ type AuthContextValue = {
   currentWorkspace: WorkspaceMembership | null;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   switchWorkspace: (workspaceId: string) => void;
   reloadCurrentUser: () => Promise<void>;
 };
@@ -50,6 +50,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const reloadCurrentUser = useCallback(async () => {
     const accessToken = authStorage.getAccessToken();
+    if (COOKIE_SESSION_AUTH_ENABLED) {
+      if (accessToken) {
+        try {
+          applyUser(await fetchCurrentUser(accessToken));
+          return;
+        } catch {
+          // Recover from an expired short-lived access token using the cookie.
+        }
+      }
+      const tokens = await refreshCookieSession();
+      authStorage.setTokens(tokens);
+      applyUser(await fetchCurrentUser(tokens.access_token));
+      return;
+    }
     if (!accessToken) {
       setStatus("unauthenticated");
       return;
@@ -70,6 +84,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applyUser]);
 
   useEffect(() => {
+    if (COOKIE_SESSION_AUTH_ENABLED) {
+      // First resume an existing server-side session. For signed-in legacy
+      // users, upgrade once using their existing bearer/refresh credentials.
+      // No password prompt or forced logout is required during the cutover.
+      void (async () => {
+        try {
+          await reloadCurrentUser();
+          return;
+        } catch {
+          const legacy = authStorage.readLegacyTokens();
+          if (legacy) {
+            try {
+              let access = legacy.access_token;
+              try {
+                await fetchCurrentUser(access);
+              } catch {
+                access = (await refreshLegacyAccessToken(legacy.refresh_token)).access_token;
+              }
+              const next = await upgradeLegacySession(access);
+              authStorage.setTokens(next);
+              applyUser(await fetchCurrentUser(next.access_token));
+              return;
+            } catch {
+              // Any failed migration keeps browser credentials from being
+              // silently stored forever; the owner can sign in normally.
+            }
+          }
+          authStorage.clear();
+          queryClient.clear();
+          setCurrentUser(null);
+          setCurrentWorkspaceId(null);
+          setStatus("unauthenticated");
+        }
+      })();
+      return;
+    }
     const storedUser = authStorage.getCurrentUser();
     const storedWorkspaceId = authStorage.getCurrentWorkspaceId();
     if (storedUser && authStorage.getAccessToken()) {
@@ -100,7 +150,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     applyUser(user);
   }, [applyUser]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Do not report successful logout before the server revokes the cookie.
+    if (COOKIE_SESSION_AUTH_ENABLED) await revokeCookieSession();
     authStorage.clear();
     queryClient.clear();
     setCurrentUser(null);
