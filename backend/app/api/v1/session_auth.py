@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth.login_throttle import LoginThrottle, LoginThrottled
-from app.auth.session_service import SessionAuthenticationService, SessionTokens
+from app.auth.session_service import ConcurrentSessionRefresh, SessionAuthenticationService, SessionTokens
 from app.core.config import get_settings
 from app.database.session import get_db
 from app.dependencies.auth import get_current_user
@@ -142,9 +142,15 @@ def session_refresh(
 ) -> SessionAccessResponse:
     _enabled()
     _origin(request)
-    issued = SessionAuthenticationService(db).rotate(request.cookies.get(COOKIE_NAME))
+    try:
+        issued = SessionAuthenticationService(db).rotate(request.cookies.get(COOKIE_NAME))
+    except ConcurrentSessionRefresh as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Session refreshed in another request",
+            headers={"Retry-After": "1"},
+        ) from exc
     if issued is None:
-        _clear_cookie(response)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Session expired or revoked")
     _set_cookie(response, issued)
     return SessionAccessResponse(access_token=issued.access_token)
