@@ -166,13 +166,18 @@ class InstagramConnectionService:
         if not connection.access_token_ciphertext:
             connection.status = InstagramConnectionStatus.RECONNECT_REQUIRED.value
             return connection, False
-        token = decrypt_instagram_token(connection.access_token_ciphertext)
-        profile = await self._oauth_client().inspect_account(access_token=token, token_user_id=connection.instagram_account_id)
-        permission_ok = self._permissions_ok(profile.granted_permissions)
-        professional = (profile.account_type or "").upper() in PROFESSIONAL_ACCOUNT_TYPES
+        # Do not call Meta using a token already known to be expired.
         if connection.token_expires_at and connection.token_expires_at < datetime.now(UTC):
             connection.status = InstagramConnectionStatus.TOKEN_EXPIRED.value
             return connection, False
+        token = decrypt_instagram_token(connection.access_token_ciphertext)
+        profile = await self._oauth_client().inspect_account(
+            access_token=token,
+            token_user_id=connection.instagram_account_id,
+            granted_permissions_hint=connection.granted_permissions,
+        )
+        permission_ok = self._permissions_ok(profile.granted_permissions)
+        professional = (profile.account_type or "").upper() in PROFESSIONAL_ACCOUNT_TYPES
         if not professional:
             connection.status = InstagramConnectionStatus.FAILED.value
             return connection, False

@@ -43,7 +43,7 @@ class MetaWebhookSubscriptionResult:
 class MetaInstagramOAuthClientProtocol(Protocol):
     async def exchange_code(self, *, code: str, redirect_uri: str) -> MetaTokenResult: ...
     async def exchange_long_lived(self, *, access_token: str) -> MetaTokenResult: ...
-    async def inspect_account(self, *, access_token: str, token_user_id: str | None = None) -> MetaAccountProfile: ...
+    async def inspect_account(self, *, access_token: str, token_user_id: str | None = None, granted_permissions_hint: list[str] | None = None) -> MetaAccountProfile: ...
 
 
 class MetaInstagramOAuthClient:
@@ -95,7 +95,7 @@ class MetaInstagramOAuthClient:
             self._last_granted_permissions = permissions
         return MetaTokenResult(access_token=token, user_id=self._user_id_from_payload(payload), expires_at=self._expires_at(payload.get("expires_in")), granted_permissions=permissions)
 
-    async def inspect_account(self, *, access_token: str, token_user_id: str | None = None) -> MetaAccountProfile:
+    async def inspect_account(self, *, access_token: str, token_user_id: str | None = None, granted_permissions_hint: list[str] | None = None) -> MetaAccountProfile:
         headers = {"Authorization": f"Bearer {access_token}"}
         account = await self._profile_request(headers=headers, fields="user_id,username,account_type", stage="profile_primary")
         if account is None:
@@ -104,6 +104,12 @@ class MetaInstagramOAuthClient:
         if not instagram_account_id:
             raise MetaInstagramError("META_ACCOUNT_IDENTITY_MISSING", "Meta account identity is missing.", 400)
         granted = self._last_granted_permissions
+        # Instagram Login tokens do not support Facebook's /me/permissions
+        # endpoint. During a later status validation, reuse only the scopes
+        # captured during OAuth. Live identity and subscription checks still
+        # run independently; the hint is not treated as fresh Meta evidence.
+        if granted is None and granted_permissions_hint is not None:
+            granted = list(granted_permissions_hint)
         if granted is None:
             granted = await self._inspect_permissions(access_token=access_token, headers=headers)
         return MetaAccountProfile(
