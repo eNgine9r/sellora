@@ -9,6 +9,7 @@ from app.integrations.meta_instagram.history_client import (
     MetaConversationSummary,
     MetaMessagePage,
     MetaMessageSummary,
+    MetaMessageDetails,
 )
 from app.integrations.meta_instagram.services.history_sync_visibility_service import (
     InstagramHistorySyncVisibilityService,
@@ -275,3 +276,34 @@ async def test_existing_conversation_thread_is_not_overwritten_by_another_provid
     assert sync.conversations_synced == 0
     assert conversation.external_thread_id == "thread-original"
     assert conversation.external_conversation_id == "thread-original"
+
+
+@pytest.mark.asyncio
+async def test_long_provider_message_id_keeps_full_dedupe_key_without_overflowing_legacy_id():
+    """Provider ID can exceed VARCHAR(160) while staying under VARCHAR(180)."""
+    long_id = "m" * 164
+
+    class HistoricalClient(FakeHistoryClient):
+        async def get_message(self, message_id):
+            return MetaMessageDetails(
+                id=message_id,
+                created_time="2026-09-01T12:00:00+00:00",
+                from_id="customer-1",
+                from_username="customer",
+                to=[{"id": "business-1"}],
+                message="Old message",
+                is_unsupported=False,
+            )
+
+    _, _, sync, conversations, messages, service = make_service(
+        HistoricalClient(message_id=long_id),
+    )
+
+    await service.process_next()
+
+    assert sync.status == "COMPLETED"
+    assert sync.messages_imported == 1
+    assert len(conversations.rows) == 1
+    assert len(messages.rows) == 1
+    assert messages.rows[0].external_message_id is None
+    assert messages.rows[0].provider_message_id == long_id
