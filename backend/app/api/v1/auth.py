@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth.login_throttle import LoginThrottle, LoginThrottled
+from app.core.config import get_settings
 from app.database.session import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -13,6 +14,8 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/login", response_model=TokenPair)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
+    if not get_settings().legacy_auth_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Legacy sign-in is unavailable")
     throttle = LoginThrottle(db)
     try:
         throttle.check(payload.email)
@@ -32,6 +35,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
 
 @router.post("/refresh", response_model=TokenPair)
 def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenPair:
+    if not get_settings().legacy_auth_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Legacy refresh is unavailable")
     tokens = AuthService(db).refresh(payload.refresh_token)
     if tokens is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
