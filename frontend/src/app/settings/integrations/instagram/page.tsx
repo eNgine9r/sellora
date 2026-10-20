@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Instagram, ShieldCheck, Unplug } from "lucide-react";
 import { Button, FieldGrid, FieldItem, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
@@ -13,9 +14,11 @@ export default function InstagramIntegrationPage() {
   const { currentWorkspace, currentWorkspaceId } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const queryClient = useQueryClient();
+  const [browserLink, setBrowserLink] = useState<string | null>(null);
   const canManage = currentWorkspace?.role === "OWNER";
   const statusQuery = useQuery({ queryKey: ["instagram-connection-status", workspaceId], queryFn: fetchInstagramStatus, enabled: Boolean(workspaceId) });
   const connectMutation = useMutation({ mutationFn: startInstagramConnect, onSuccess: (data) => { window.location.href = data.authorization_url; } });
+  const browserMutation = useMutation({ mutationFn: startInstagramConnect, onSuccess: (data) => setBrowserLink(data.authorization_url) });
   const validateMutation = useMutation({ mutationFn: validateInstagramConnection, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-connection-status", workspaceId] }) });
   const disconnectMutation = useMutation({ mutationFn: () => disconnectInstagram(true), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-connection-status", workspaceId] }) });
   const webhookMutation = useMutation({ mutationFn: subscribeInstagramWebhooks, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-connection-status", workspaceId] }) });
