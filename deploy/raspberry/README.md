@@ -1,6 +1,6 @@
 # Sellora backend on Raspberry Pi
 
-This backend-only deployment keeps the Vercel frontend and existing Supabase PostgreSQL database. It does not modify Render deployment files, database schema, Meta callbacks, campaign settings, or customer messages. Target: btc-radar, Linux ARM64.
+The backend runs on btc-radar, Linux ARM64, with the existing Vercel frontend and Supabase PostgreSQL database. The Oct20 OAuth cutover replaces the inherited Render redirect configuration and removes automatic Render deployment. Database schema, stored integration tokens, encryption keys and customer messages are preserved. OAuth redirect registration and webhook/worker ownership are separate gates; see the current cutover record below.
 
 ## Recorded verification
 
@@ -107,3 +107,9 @@ The fallback also sets MALLOC_ARENA_MAX=2. On ARM64 the default glibc arenas res
 Frontend 71bcfd0 is READY at the existing public alias; backend 37a20fd is running on btc-radar. The backend tree is identical across these commits. Exact source, image, deployment IDs and current read-only auth/API/browser canaries are recorded in modernization-verification-2026-10-20.json. The existing NEXUS /health route still returns200; Sellora health remains /sellora-health. Resource and private-environment observations from installation remain dated deployment evidence: the Pi management channel was offline during the Oct20 recheck, while public auth/read canaries passed.
 
 For a feature rollback, retain frontend dpl_zEUi5VR5fdwmtjNjj2bgEY7NaPER/a1a5d5a and backend image sellora-backend:8c2a9b2c83056a8f8719c5b06ddedb6c65314fb4. Restore only the intended immutable release/selector, preserve the private environment and storage, and keep worker/send/AI disabled. No database downgrade or Render-worker resumption is required for this modernization rollback. A provider ownership/callback cutover remains a separate operation. See the delivery record in docs/plans/sellora-modernization-delivery-2026-10-20.md for functional outcomes and remaining gates.
+
+## Instagram OAuth cutover2026-10-20
+
+The inherited Render redirect was corrected on the live Pi and in the existing Meta application. Compose pins the Raspberry OAuth redirect and Vercel frontend return independently of the copied private environment. The previous Render deployment workflow now offers manual verification and a bounded native-autodeploy retirement operation; it cannot deploy to Render. All active workflow API destinations use Raspberry, with /sellora-health where needed.
+
+See [the current cutover record](../../docs/plans/sellora-instagram-cutover-2026-10-20.md). The Meta webhook callback save, old-service suspension, single-worker takeover and real account authorization remain pending gates. Do not interpret the OAuth URL correction as a completed webhook cutover.

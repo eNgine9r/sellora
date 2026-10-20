@@ -74,7 +74,8 @@ def main() -> int:
     try:
         timeout = httpx.Timeout(connect=30.0, read=90.0, write=90.0, pool=30.0)
         with httpx.Client(timeout=timeout, follow_redirects=True) as client:
-            health = request_with_retry(lambda: client.get(f"{api}/health"))
+            health_url = os.getenv("STAGING_HEALTH_URL", f"{api}/health")
+            health = request_with_retry(lambda: client.get(health_url))
             result["health_http"] = health.status_code
             if health.status_code != 200:
                 result["safe_error"] = "Backend health check failed"

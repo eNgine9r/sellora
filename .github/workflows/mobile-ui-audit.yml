@@ -44,7 +44,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      NEXT_PUBLIC_API_BASE_URL: https://sellora-api-staging.onrender.com/api/v1
+      NEXT_PUBLIC_API_BASE_URL: /api/v1
+      SELLORA_API_UPSTREAM_URL: https://btc-radar.tail7f9b04.ts.net/api/v1
       NEXT_PUBLIC_API_TIMEOUT_MS: "90000"
       MOBILE_AUDIT_BASE_URL: http://127.0.0.1:3000
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}

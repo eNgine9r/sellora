@@ -21,7 +21,7 @@ from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
 DEFAULT_FRONTEND_URL = "https://sellora-web-staging.vercel.app/"
-DEFAULT_API_URL = "https://sellora-api-staging.onrender.com"
+DEFAULT_API_URL = "https://btc-radar.tail7f9b04.ts.net"
 ARTIFACT_PATH = Path("artifacts/staging-release-gate.json")
 TIMEOUT_SECONDS = 20
 
@@ -214,7 +214,9 @@ def build_artifact(args: argparse.Namespace) -> dict[str, Any]:
     frontend_status = status_from_code(frontend_code)
     state.set_gate("G0", frontend_status if frontend_status != "WARN" else "PASS")
 
-    health_code, health_body = http_request(urljoin(f"{clean_base_url(api_base)}/", "health"))
+    health_path = "sellora-health" if clean_base_url(api_base) == DEFAULT_API_URL else "health"
+    health_url = os.getenv("STAGING_HEALTH_URL", urljoin(f"{clean_base_url(api_base)}/", health_path))
+    health_code, health_body = http_request(health_url)
     backend_status = "PASS" if health_code == 200 else status_from_code(health_code)
     state.set_gate("G0", backend_status)
 

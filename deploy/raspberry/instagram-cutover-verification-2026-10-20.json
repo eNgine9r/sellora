@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-20",
+  "status": "OAUTH_ROUTING_CORRECTED_WEBHOOK_CUTOVER_PENDING",
+  "configuration_source": "1f503b453219097228c1e25b190e8db3f63c6046",
+  "pull_request": "https://github.com/eNgine9r/sellora/pull/237",
+  "application": {
+    "backend_image": "sellora-backend:37a20fd3d848406d92a71505c26995fe0edd937d",
+    "frontend_source": "71bcfd0bc49d6c9c992c8b4f0210e57968ef20b1",
+    "application_code_changed": false,
+    "database_migrated": false
+  },
+  "oauth": {
+    "redirect_uri": "https://btc-radar.tail7f9b04.ts.net/api/v1/integrations/instagram/oauth/callback",
+    "frontend_return": "https://sellora-web-staging.vercel.app/settings/integrations/instagram/callback",
+    "meta_registration_saved": true,
+    "runtime_configuration_applied": true,
+    "generated_authorization_url_verified": true,
+    "invalid_state_callback_verified": true,
+    "real_account_authorization": "NOT_TESTED",
+    "token_exchange": "NOT_TESTED"
+  },
+  "checks": [
+    {
+      "run": 39375966152,
+      "operation": "verify-oauth",
+      "result": "success"
+    },
+    {
+      "run": 39375981754,
+      "operation": "disable-render-autodeploy",
+      "result": "success"
+    },
+    {
+      "run": 39376092917,
+      "operation": "verify-frontend-api",
+      "result": "success"
+    },
+    {
+      "run": 39376094812,
+      "operation": "verify-browser",
+      "result": "success"
+    }
+  ],
+  "static_checks": {
+    "python_compilation": "PASS",
+    "workflow_yaml_parse": 9,
+    "compose_config": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "retirement": {
+    "native_render_autodeploy": "off",
+    "github_legacy_workflows_disabled": [
+      316567045,
+      316646275,
+      316611473,
+      316626143,
+      317394341,
+      313475703,
+      312810599,
+      316544053
+    ],
+    "default_branch_source": "7233bd245069c97e1060ba93885e7b70bfa12ab2",
+    "reenable_only_after_corrected_raspberry_definitions_land_on_main": true,
+    "render_service_suspended": false
+  },
+  "webhook": {
+    "meta_callback_save": "PENDING_EXPLICIT_VERIFY_TOKEN_TRANSFER_APPROVAL",
+    "target": "https://btc-radar.tail7f9b04.ts.net/api/v1/integrations/instagram/webhook",
+    "raspberry_worker_enabled": false,
+    "raspberry_send_enabled": false,
+    "real_provider_event_verified": false,
+    "single_worker_takeover_verified": false
+  },
+  "preservation": {
+    "private_environment_changed_keys": [
+      "META_OAUTH_REDIRECT_URI"
+    ],
+    "existing_tokens_and_keys_unchanged": true,
+    "outbound_test_messages": 0,
+    "purchase_events_fabricated": 0
+  }
+}

@@ -1,10 +1,6 @@
 name: Instagram History Staging Closure
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/instagram-history-staging-closure.yml"
   workflow_dispatch:
 
 permissions:
@@ -20,7 +16,8 @@ jobs:
     timeout-minutes: 20
     environment: staging
     env:
-      STAGING_API_URL: https://sellora-api-staging.onrender.com
+      STAGING_API_URL: https://btc-radar.tail7f9b04.ts.net
+      STAGING_HEALTH_URL: https://btc-radar.tail7f9b04.ts.net/sellora-health
       STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
       STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
 
