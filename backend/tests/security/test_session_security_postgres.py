@@ -85,7 +85,11 @@ def test_recovered_schema_keeps_rls_and_refuses_destructive_downgrade():
     from alembic import command
     from alembic.config import Config
     with Session(engine) as db:
-        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "202610200038"
+        current_head = db.scalar(text("SELECT version_num FROM alembic_version"))
+        from alembic.script import ScriptDirectory
+        revisions = {r.revision for r in ScriptDirectory.from_config(Config("alembic.ini")).walk_revisions()}
+        assert {"202610200037", "202610200038"}.issubset(revisions)
+        assert current_head == ScriptDirectory.from_config(Config("alembic.ini")).get_current_head()
         rows = db.execute(text(
             "SELECT relname,relrowsecurity FROM pg_class "
             "WHERE oid IN ('auth_sessions'::regclass,'auth_login_attempts'::regclass)"
@@ -94,4 +98,4 @@ def test_recovered_schema_keeps_rls_and_refuses_destructive_downgrade():
     with pytest.raises(RuntimeError, match="Dropping live sessions"):
         command.downgrade(Config("alembic.ini"), "202607220036")
     with Session(engine) as db:
-        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "202610200038"
+        assert db.scalar(text("SELECT version_num FROM alembic_version")) == current_head

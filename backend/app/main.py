@@ -133,3 +133,9 @@ async def request_timing(request, call_next):
                            "status_code": response.status_code,
                            "completed_at": datetime.now(UTC).isoformat()}
     return response
+
+
+# Keep Ads OAuth code/state out of Uvicorn access logs, including validation errors.
+from app.middleware.meta_ads_oauth_redaction import MetaAdsOAuthQueryRedactionMiddleware
+app.add_middleware(MetaAdsOAuthQueryRedactionMiddleware,
+                   callback_path=f"{settings.api_v1_prefix}/integrations/meta-ads/oauth/callback")

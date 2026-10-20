@@ -3,7 +3,7 @@ name: Sellora CI
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main, codex/2026-10-19-raspberry-backend, codex/2026-10-19-direct-sales-workspace, codex/2026-10-20-instagram-raspberry-cutover, codex/2026-10-20-instagram-validation-fix, codex/2026-10-20-direct-lead-link]
+    branches: [main, codex/2026-10-20-runtime-reconcile, codex/2026-10-19-raspberry-backend, codex/2026-10-19-direct-sales-workspace, codex/2026-10-20-instagram-raspberry-cutover, codex/2026-10-20-instagram-validation-fix, codex/2026-10-20-direct-lead-link]
   push:
     branches: [main]
 
@@ -204,7 +204,7 @@ jobs:
       - name: Verify recovered authentication schema and Direct PostgreSQL contracts
         env:
           SELLORA_DISPOSABLE_DATABASE: "1"
-        run: python -m pytest -q tests/integrations/meta_instagram/test_direct_lead_postgres.py tests/security/test_session_security_postgres.py
+        run: python -m pytest -q tests/integrations/meta_instagram/test_direct_lead_postgres.py tests/security/test_session_security_postgres.py tests/test_meta_ads_live_postgres.py
       - name: Run PostgreSQL concurrency and consolidation tests
         run: |
           python -m pytest -q \

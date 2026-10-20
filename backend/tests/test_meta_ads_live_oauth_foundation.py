@@ -14,7 +14,9 @@ from app.database.session import get_db
 from app.dependencies.auth import get_current_user
 from app.dependencies.rbac import get_workspace_id
 from app.integrations.meta_ads.live_oauth_client import MetaTokenExchangeResult
-from app.integrations.meta_ads.oauth_state import generate_live_oauth_state
+from urllib.parse import parse_qs, urlparse
+from datetime import timedelta
+import secrets
 from app.integrations.meta_ads.token_crypto import decrypt_token
 from app.models.meta_ad_connection import MetaAdConnection, MetaAdConnectionStatus
 from app.models.role import RoleName
@@ -32,6 +34,26 @@ class StubDb:
 class FakeRepository:
     def __init__(self) -> None:
         self.connection: MetaAdConnection | None = None
+
+    def lock_workspace(self, workspace_id):
+        pass
+
+    def audit(self, *args):
+        pass
+
+    def issue_state(self, workspace_id, user_id, generation):
+        self.state = secrets.token_urlsafe(32)
+        self.state_owner = (workspace_id, user_id, generation)
+        return self.state, datetime.now(UTC) + timedelta(minutes=10)
+
+    def consume_state(self, workspace_id, user_id, state):
+        if state == getattr(self, "state", None) and (workspace_id, user_id) == self.state_owner[:2]:
+            self.state = None
+            return self.state_owner[2]
+        return None
+
+    def invalidate_states(self, workspace_id):
+        self.state = None
 
     def get_current(self, workspace_id: UUID) -> MetaAdConnection | None:
         if self.connection and self.connection.workspace_id == workspace_id:
@@ -63,13 +85,17 @@ def _settings(**overrides):
         "meta_live_oauth_enabled": False,
         "meta_token_storage_enabled": False,
         "meta_sync_enabled": False,
-        "meta_app_id": None,
+        "meta_ads_app_id": None,
         "meta_app_secret": None,
         "meta_oauth_redirect_uri": None,
         "meta_oauth_authorize_url": None,
         "meta_token_encryption_key": None,
     }
     data.update(overrides)
+    if data.get("meta_ads_app_id"):
+        data.update(meta_ads_app_secret="synthetic-secret", meta_token_storage_enabled=True,
+            meta_token_encryption_key=data.get("meta_token_encryption_key") or Fernet.generate_key().decode(),
+            meta_ads_oauth_frontend_callback_url="https://frontend.example.test/settings/integrations/meta-ads/callback")
     return Settings(_env_file=None, **data)
 
 
@@ -154,8 +180,8 @@ def test_start_can_create_connecting_state_when_explicitly_enabled_and_configure
         settings=_settings(
             meta_connections_enabled=True,
             meta_live_oauth_enabled=True,
-            meta_app_id="test-app-id",
-            meta_oauth_redirect_uri="https://backend.example.test/api/v1/integrations/meta-ads/oauth/callback",
+            meta_ads_app_id="test-app-id",
+            meta_ads_oauth_redirect_uri="https://backend.example.test/api/v1/integrations/meta-ads/oauth/callback",
             meta_oauth_authorize_url="https://meta-oauth.example.test/authorize",
         ),
         repository=repo,
@@ -164,7 +190,7 @@ def test_start_can_create_connecting_state_when_explicitly_enabled_and_configure
     response = service.start_oauth(uuid4(), uuid4())
 
     assert response.authorization_url is not None
-    assert response.authorization_url.startswith("https://meta-oauth.example.test/authorize")
+    assert response.authorization_url.startswith("https://www.facebook.com/v26.0/dialog/oauth")
     assert "test-app-id" in response.authorization_url
     assert "app_secret" not in response.authorization_url
     assert repo.connection is not None
@@ -182,7 +208,8 @@ def test_callback_rejects_invalid_state_and_persists_only_encrypted_synthetic_to
             meta_connections_enabled=True,
             meta_live_oauth_enabled=True,
             meta_token_storage_enabled=True,
-            meta_oauth_redirect_uri="https://backend.example.test/api/v1/integrations/meta-ads/oauth/callback",
+            meta_ads_app_id="test-app-id",
+            meta_ads_oauth_redirect_uri="https://backend.example.test/api/v1/integrations/meta-ads/oauth/callback",
             meta_token_encryption_key=key,
         ),
         repository=repo,
@@ -196,12 +223,12 @@ def test_callback_rejects_invalid_state_and_persists_only_encrypted_synthetic_to
     else:
         raise AssertionError("invalid state should fail")
 
-    state, _ = generate_live_oauth_state(workspace_id, user_id)
+    state = parse_qs(urlparse(service.start_oauth(workspace_id, user_id).authorization_url).query)["state"][0]
     response = service.complete_callback(workspace_id, user_id, state=state, code="synthetic-code")
 
     assert response.connected is True
     assert response.token_stored is True
-    assert response.token_fingerprint
+    assert response.token_fingerprint is None
     assert "synthetic_meta_access_token" not in response.model_dump_json()
     assert repo.connection is not None
     assert repo.connection.encrypted_access_token is not None
