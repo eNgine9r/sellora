@@ -40,3 +40,10 @@ PostgreSQL connect/socket, statement and lock waits plus SQLAlchemy pool waits a
 No release is authorized by a green unit test alone. Required: reconciled frontend, complete CI, isolated image/startup/migration/rollback rehearsal, synthetic browser and controlled Direct/order tests, matching live schema and exact rollback image. Production diagnostics remain read-only. No customer sends, real TTN, token changes or removal of working data.
 
 Rollback restores the exact saved image and prior frontend deployment while retaining schema 038, private environment and storage. Never downgrade security migrations or restore an old 036-only image.
+
+
+## Frontend follow-up from published-bundle QA
+
+The published cookie-session build exposed repeated topbar quick-create navigation to the already active /orders?create=1 URL after the form was dismissed. Next.js may preserve the route and therefore not replay the consumed query intent. The first create works; the repeated topbar click did not reopen the form.
+
+The topbar now emits an explicit create intent when already on /orders. Orders listens through a stable permission-checked callback; normal cross-page navigation still uses the existing URL. The full Direct browser gate now seeds a synthetic HttpOnly session and builds with cookie-session mode enabled, matching the accepted product environment. This follow-up changes frontend/test/CI source only; backend source is byte-equivalent to deployed 16f1946.

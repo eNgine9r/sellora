@@ -237,6 +237,8 @@ jobs:
         run: npm run lint
       - name: Production build
         working-directory: frontend
+        env:
+          NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED: "true"
         run: npm run build
       - name: Install isolated synthetic browser runtime
         run: |

@@ -41,6 +41,9 @@ await mkdir(output, { recursive: true });
 
 async function fixture(viewport, { role = "OWNER", theme = "light", delayedSuggestions = false, multiWorkspace = false, fulfillment = false, advertising = false } = {}) {
   const context = await browser.newContext({ viewport, colorScheme: theme, serviceWorkers: "block" });
+  await context.addCookies([{ name: "sellora_session_refresh", value: "synthetic-browser-session",
+    domain: new URL(base).hostname, path: "/api/v1/auth/session",
+    httpOnly: true, secure: new URL(base).protocol === "https:", sameSite: "Lax" }]);
   const user = { id: "22222222-2222-4222-8222-222222222222", email: "synthetic@example.invalid", first_name: "Тест", last_name: "Sellora", is_active: true, last_login_at: null, memberships: [{ workspace_id: workspaceId, workspace_name: "Синтетичний магазин", workspace_slug: "synthetic", role, currency_code: "UAH" }] };
   if (multiWorkspace) user.memberships.push({ ...user.memberships[0], workspace_id: secondWorkspaceId, workspace_name: "Другий синтетичний магазин", workspace_slug: "synthetic-second" });
   await context.addInitScript(({ user, workspaceId, theme }) => {
@@ -69,6 +72,11 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
     }
     if (!url.pathname.startsWith("/api/")) { await route.continue(); return; }
     const key = `${request.method()} ${url.pathname}`;
+    if (key === "POST /api/v1/auth/session/refresh") {
+      const authenticated = ((await request.allHeaders())["cookie"] || "").includes("sellora_session_refresh=synthetic-browser-session");
+      return route.fulfill({ status: authenticated ? 200 : 401, contentType: "application/json",
+        body: JSON.stringify(authenticated ? { access_token: "synthetic-browser-fixture", token_type: "bearer" } : { detail: "Synthetic session missing" }) });
+    }
     const requestWorkspace = request.headers()["x-workspace-id"];
     const scopedConversations = requestWorkspace === secondWorkspaceId ? [{ ...conversations[0], id: d, participant_display_name: "Ірина Другого Магазину", unread_count: 0 }] : conversations;
     api.push(key);
@@ -394,6 +402,8 @@ try {
   await expect(analyst.page.getByRole("button", { name: "Перевірити відправлення" })).toBeDisabled();
   await expect(analyst.page.getByRole("button", { name: "Підтвердити відправлення" })).toBeDisabled();
   await analyst.page.goto(`${base}/orders?create=1`); await expect(analyst.page.getByRole("dialog")).toHaveCount(0);
+  await analyst.page.evaluate(() => window.dispatchEvent(new Event("sellora:open-order-create")));
+  await expect(analyst.page.getByRole("dialog")).toHaveCount(0);
   expect(analyst.api.filter((key) => key.startsWith("POST "))).toEqual([]);
   await analyst.assertClean(); await analyst.context.close(); checks.push("analyst write controls and quick-create permission");
   await runDirectLeadScenarios({ fixture, base, expect, a, output, checks });
