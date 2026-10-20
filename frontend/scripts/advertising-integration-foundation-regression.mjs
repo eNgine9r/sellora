@@ -43,10 +43,10 @@ for (const marker of [
 ]) assertIncludes("docs/meta-ads-privacy-safety.md", marker);
 
 for (const marker of [
-  "data-meta-ads-placeholder=\"manual-import-first\"",
-  "metaAds.notActiveTitle",
-  "metaAds.manualCsvProtection",
-  "metaAds.connectComingSoon",
+  "data-meta-ads-settings",
+  "data.can_connect",
+  "data.can_sync",
+  "adsLive.selectionRequired",
 ]) assertIncludes("frontend/src/features/integrations/components/meta-ads-readiness-card.tsx", marker);
 
 for (const marker of [

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,6 +20,14 @@ class MetaAdsConnectionAuditEventResponse(BaseModel):
 
 class MetaAdsConnectionStatusResponse(BaseModel):
     provider: str = "meta_ads"
+    implemented: bool = True
+    blockers: list[str] = Field(default_factory=list)
+    can_connect: bool = False
+    can_sync: bool = False
+    account_selection_required: bool = False
+    last_sync_attempt_at: datetime | None = None
+    last_error_code: str | None = None
+    last_error_message: str | None = None
     workspace_id: UUID
     connection_status: MetaAdConnectionStatus
     connected: bool = False
@@ -50,8 +58,8 @@ class MetaAdsOAuthStartResponse(MetaAdsConnectionStatusResponse):
 
 
 class MetaAdsOAuthCallbackRequest(BaseModel):
-    state: str
-    code: str
+    state: str = Field(min_length=1, max_length=2048)
+    code: str = Field(min_length=1, max_length=4096)
 
 
 class MetaAdsOAuthCallbackResponse(MetaAdsConnectionStatusResponse):
@@ -60,3 +68,44 @@ class MetaAdsOAuthCallbackResponse(MetaAdsConnectionStatusResponse):
 
 class MetaAdsDisconnectResponse(MetaAdsConnectionStatusResponse):
     disconnected: bool = True
+
+
+class MetaAdsAccountSelectionRequest(BaseModel):
+    external_account_id: str = Field(pattern=r"^act_[0-9]{1,40}$")
+
+
+class MetaAdsSyncRequest(BaseModel):
+    date_from: date
+    date_to: date
+
+
+class MetaAdsAccountChoice(BaseModel):
+    external_account_id: str
+    name: str
+    currency: str
+    timezone: str
+    selectable: bool
+    reason: str | None = None
+
+
+class MetaAdsAccountsResponse(BaseModel):
+    accounts: list[MetaAdsAccountChoice]
+    selected_account_id: str | None = None
+    workspace_currency: str
+    workspace_timezone: str
+
+
+class MetaAdsSyncResponse(BaseModel):
+    status: str
+    campaigns_seen: int
+    metrics_seen: int
+    campaigns_created: int
+    metrics_created: int
+    metrics_updated: int
+    date_from: date
+    date_to: date
+    currency: str
+    timezone: str
+    workspace_timezone: str
+    last_synced_at: datetime
+    reach_measure: str = "not_imported"

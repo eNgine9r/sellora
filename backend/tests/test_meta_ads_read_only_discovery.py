@@ -50,7 +50,7 @@ def _connected(workspace_id: UUID) -> MetaAdConnection:
     return MetaAdConnection(
         workspace_id=workspace_id,
         provider="meta_ads",
-        connection_status=MetaAdConnectionStatus.CONNECTED.value,
+        connection_status=MetaAdConnectionStatus.MOCK_ONLY.value,
         encrypted_access_token="encrypted-synthetic-token",
     )
 

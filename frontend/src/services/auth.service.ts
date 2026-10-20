@@ -17,6 +17,7 @@ export const COOKIE_SESSION_AUTH_ENABLED =
   process.env.NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED === "true" ||
   secureStagingHost();
 let memoryAccessToken: string | null = null;
+let memoryActorId: string | null = null;
 let refreshInFlight: Promise<TokenPair> | null = null;
 
 const DEV_API_BASE_URL = "http://localhost:8000/api/v1";
@@ -123,8 +124,14 @@ export const authStorage = {
     window.localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
     window.localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
   },
+  getCurrentActorId(): string | null { return memoryActorId ?? this.getCurrentUser()?.id ?? null; },
   setCurrentUser(user: CurrentUser) {
     if (!isBrowser()) return;
+    if (memoryActorId && memoryActorId !== user.id) {
+      window.sessionStorage.removeItem("sellora.meta-ads.intent");
+      delete window.__selloraMetaAdsCallback;
+    }
+    memoryActorId = user.id;
     if (COOKIE_SESSION_AUTH_ENABLED) {
       window.localStorage.removeItem(CURRENT_USER_KEY);
       return;
@@ -138,15 +145,22 @@ export const authStorage = {
       window.localStorage.removeItem(CURRENT_WORKSPACE_ID_KEY);
       return;
     }
+    if (window.localStorage.getItem(CURRENT_WORKSPACE_ID_KEY) !== normalizedWorkspaceId) {
+      window.sessionStorage.removeItem("sellora.meta-ads.intent");
+      delete window.__selloraMetaAdsCallback;
+    }
     window.localStorage.setItem(CURRENT_WORKSPACE_ID_KEY, normalizedWorkspaceId);
   },
   clear() {
     memoryAccessToken = null;
+    memoryActorId = null;
     if (!isBrowser()) return;
     window.localStorage.removeItem(ACCESS_TOKEN_KEY);
     window.localStorage.removeItem(REFRESH_TOKEN_KEY);
     window.localStorage.removeItem(CURRENT_USER_KEY);
     window.localStorage.removeItem(CURRENT_WORKSPACE_ID_KEY);
+    window.sessionStorage.removeItem("sellora.meta-ads.intent");
+    delete window.__selloraMetaAdsCallback;
   },
 };
 

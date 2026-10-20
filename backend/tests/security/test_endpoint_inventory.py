@@ -12,6 +12,7 @@ from app.models.role import RoleName
 PUBLIC_ENDPOINTS = {"/health/live", "/health/ready", "/health", "/api/v1/auth/login", "/api/v1/auth/refresh"}
 COOKIE_SESSION_ENDPOINTS = {"/api/v1/auth/session/login", "/api/v1/auth/session/refresh", "/api/v1/auth/session/logout"}
 AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/session/upgrade", "/api/v1/auth/session/logout-all", "/api/v1/auth/me", "/api/v1/workspaces", "/api/v1/workspaces/demo"}
+PUBLIC_OAUTH_FORWARD_ENDPOINTS = {("GET", "/api/v1/integrations/meta-ads/oauth/callback")}
 FEATURE_GATED_PREFIXES = ("/api/v1/integrations/meta-ads",)
 WORKSPACE_PREFIXES = (
     "/api/v1/leads",
@@ -39,6 +40,14 @@ WORKSPACE_PREFIXES = (
     "/api/v1/direct",
 )
 OWNER_ONLY_ENDPOINTS = {
+    ("GET", "/api/v1/integrations/nova-poshta/senders"),
+    ("GET", "/api/v1/integrations/nova-poshta/sender-contacts"),
+    ("POST", "/api/v1/integrations/meta-ads/oauth/start"),
+    ("POST", "/api/v1/integrations/meta-ads/oauth/callback"),
+    ("POST", "/api/v1/integrations/meta-ads/disconnect"),
+    ("GET", "/api/v1/integrations/meta-ads/accounts"),
+    ("POST", "/api/v1/integrations/meta-ads/account"),
+    ("POST", "/api/v1/integrations/meta-ads/sync"),
     ("POST", "/api/v1/workspace-users"),
     ("PUT", "/api/v1/workspace-users/{user_id}/role"),
     ("PATCH", "/api/v1/workspace-users/{user_id}/deactivate"),
@@ -59,13 +68,13 @@ EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 5,
     "COOKIE_SESSION": 3,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 199,
-    "FEATURE_GATED": 12,
+    "WORKSPACE_SCOPED": 201,
+    "FEATURE_GATED": 16,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
 # Added GET /advertising/crm-attribution and Direct order-proposal: scoped reads, no mutations.
-EXPECTED_TOTAL_ROUTES = 225
-EXPECTED_MUTATION_ROUTES = 128
+EXPECTED_TOTAL_ROUTES = 231
+EXPECTED_MUTATION_ROUTES = 130
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -256,3 +265,24 @@ def test_direct_order_proposal_is_an_explicit_analyst_workspace_read() -> None:
         and getclosurevars(call).nonlocals.get("minimum_role") == RoleName.ANALYST
         for call in calls
     )
+
+
+def test_meta_ads_public_callback_is_only_a_forwarding_boundary():
+    from app.api.v1.meta_ads import redirect_meta_ads_callback
+    routes = [(path, route) for path, route in _api_routes()
+              if route.endpoint is redirect_meta_ads_callback]
+    assert len(routes) == 1
+    path, route = routes[0]
+    assert {(method, path) for method in route.methods} == PUBLIC_OAUTH_FORWARD_ENDPOINTS
+    assert route.methods == {"GET"}
+    # All other live Ads endpoints that mutate state or expose account IDs require OWNER.
+    live_paths = {"/oauth/start", "/oauth/callback", "/disconnect", "/accounts", "/account", "/sync"}
+    for route_path, candidate in _api_routes():
+        suffix = route_path.removeprefix("/api/v1/integrations/meta-ads")
+        if suffix not in live_paths or candidate.endpoint is redirect_meta_ads_callback:
+            continue
+        dependencies = candidate.dependant.dependencies
+        assert get_workspace_id in {dep.call for dep in dependencies}
+        assert any(getattr(dep.call, "__name__", "") == "guard"
+                   and getclosurevars(dep.call).nonlocals.get("minimum_role") == RoleName.OWNER
+                   for dep in dependencies)

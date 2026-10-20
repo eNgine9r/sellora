@@ -1,14 +1,15 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useId, useState } from "react";
 import { Modal } from "@/components/ui/overlay";
 import { Button, FormField, Input, Select, Textarea } from "@/components/ui/primitives";
 import { useI18n } from "@/i18n/provider";
 
-type EditField = { name: string; label: string; type?: "text" | "number" | "date" | "select" | "textarea"; options?: { value: string; label: string }[] };
+type EditField = { disabled?: boolean; help?: string; name: string; label: string; type?: "text" | "number" | "date" | "select" | "textarea"; options?: { value: string; label: string }[] };
 
 export function EditRecordDialog({ title, fields, initialValues, isSubmitting = false, submitError, onClose, onSubmit }: { title: string; fields: EditField[]; initialValues: object; isSubmitting?: boolean; submitError?: string | null; onClose: () => void; onSubmit: (values: Record<string, string>) => void }) {
   const { t } = useI18n();
+  const helpPrefix = useId();
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((field) => [field.name, (initialValues as Record<string, unknown>)[field.name] == null ? "" : String((initialValues as Record<string, unknown>)[field.name])])));
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); onSubmit(values); }
 
@@ -18,14 +19,15 @@ export function EditRecordDialog({ title, fields, initialValues, isSubmitting = 
         {fields.map((field) => (
           <FormField label={field.label} key={field.name}>
             {field.type === "textarea" ? (
-              <Textarea value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} />
+              <Textarea aria-label={field.label} aria-describedby={field.help ? `${helpPrefix}-${field.name}` : undefined} disabled={field.disabled} value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} />
             ) : field.type === "select" ? (
-              <Select value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}>
+              <Select aria-label={field.label} aria-describedby={field.help ? `${helpPrefix}-${field.name}` : undefined} disabled={field.disabled} value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}>
                 {field.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </Select>
             ) : (
-              <Input inputMode={field.type === "number" ? "decimal" : undefined} type={field.type === "date" ? "date" : "text"} value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} />
+              <Input aria-label={field.label} aria-describedby={field.help ? `${helpPrefix}-${field.name}` : undefined} disabled={field.disabled} inputMode={field.type === "number" ? "decimal" : undefined} type={field.type === "date" ? "date" : "text"} value={values[field.name] ?? ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} />
             )}
+            {field.help ? <p id={`${helpPrefix}-${field.name}`} className="text-xs text-text-secondary">{field.help}</p> : null}
           </FormField>
         ))}
         {submitError ? <p className="rounded-2xl border border-danger/25 bg-[var(--danger-surface)] px-3 py-2 text-sm font-bold text-[var(--danger-foreground)]">{submitError}</p> : null}

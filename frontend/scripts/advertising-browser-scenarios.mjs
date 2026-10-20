@@ -15,8 +15,9 @@ export async function runAdvertisingScenarios({ fixture, base, expect, output, c
     await expect(f.page.getByRole("heading", { name: "Внесені рекламні метрики", exact: true })).toBeVisible();
     const source = f.page.locator("[data-advertising-reporting-source]");
     await expect(source).toBeVisible();
-    await expect(source).toContainText("Рекламні метрики внесені вручну або імпортовані.");
-    await expect(source).toContainText("Автоматична синхронізація Meta Ads наразі не активна.");
+    await expect(source).toContainText("Рекламні метрики внесені вручну або імпортовані");
+    await expect(source).toContainText("ручна синхронізація Meta Ads");
+    await expect(source).toContainText("доступність синхронізації дивіться в інтеграціях.");
     await expect(source).not.toContainText(/MVP|Manual\/import|campaign\/adset|NaN|Infinity/);
     await expect(f.page.locator("[data-advertising-methodology]")).not.toHaveAttribute("open", "");
     const visibleRows = section.locator(width < 1024 ? "[data-crm-mobile]" : "[data-crm-desktop]");

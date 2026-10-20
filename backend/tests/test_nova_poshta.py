@@ -422,7 +422,6 @@ def test_disconnect_clears_verification_and_permission(monkeypatch) -> None:
     [
         ("counterparty", "NOVA_POSHTA_SENDER_COUNTERPARTY_INVALID"),
         ("contact", "NOVA_POSHTA_SENDER_CONTACT_INVALID"),
-        ("address", "NOVA_POSHTA_SENDER_ADDRESS_INVALID"),
         ("city", "NOVA_POSHTA_SENDER_CITY_MISMATCH"),
         ("unavailable", "NOVA_POSHTA_SENDER_VALIDATION_UNAVAILABLE"),
     ],
@@ -606,3 +605,185 @@ def test_cancel_ttn_ambiguous_result_blocks_blind_retry(monkeypatch) -> None:
     operation = service.operations.get_for_update(shipment.workspace_id, shipment.id, NovaPoshtaOperationType.CANCEL_TTN.value)
     assert operation.attempt_count == 1
     assert shipment.status == ShipmentStatus.CREATED.value
+
+
+def test_onboarding_blank_key_preserves_credential_and_verification():
+    service = _settings_service(); workspace = uuid4()
+    service.save_settings(workspace, _complete_settings(), uuid4())
+    service.test_connection(workspace, uuid4())
+    encrypted = service.credentials.credential.encrypted_access_token
+    response = service.save_settings(workspace, NovaPoshtaSettingsRequest(api_key="   "), uuid4())
+    assert service.credentials.credential.encrypted_access_token == encrypted
+    assert response.connection_verified
+    assert not response.workspace_permission
+
+
+def test_onboarding_sender_change_clears_old_contact_and_verification():
+    service = _settings_service(); workspace = uuid4()
+    service.save_settings(workspace, _complete_settings(), uuid4())
+    service.test_connection(workspace, uuid4())
+    response = service.save_settings(workspace, NovaPoshtaSettingsRequest(sender_counterparty_ref="other"), uuid4())
+    assert response.sender_contact_ref is None
+    assert not response.connection_verified
+    assert not response.workspace_permission
+
+
+def test_onboarding_lookup_shapes_are_sender_only_read_only_and_bounded():
+    from app.integrations.nova_poshta_client import NovaPoshtaClient
+    client = NovaPoshtaClient("synthetic-test-key")
+    calls = []
+    def call(model, method, props):
+        calls.append((model, method, props))
+        return {"data": [{"Ref": str(i), "Description": f"Name {i}"} for i in range(60)]}
+    client._call = call
+    assert len(client.search_senders("Shop", 2, 3)) == 2
+    assert calls[-1] == ("Counterparty", "getCounterparties", {"CounterpartyProperty": "Sender", "Page": "3", "Limit": "2", "FindByString": "Shop"})
+    assert len(client.search_sender_contacts("0", 2)) == 2
+    assert calls[-1] == ("Counterparty", "getCounterpartyContactPersons", {"Ref": "0", "Page": "1"})
+    assert client.counterparty_exists("0")
+    assert calls[-1][2]["CounterpartyProperty"] == "Sender"
+    assert all(method.startswith("get") for _, method, _ in calls)
+
+
+def test_onboarding_lookup_rejects_arbitrary_sender_and_isolates_workspace():
+    service = _settings_service(); workspace = uuid4()
+    service.save_settings(workspace, _complete_settings(), uuid4())
+    directory = NovaPoshtaDirectoryService.__new__(NovaPoshtaDirectoryService)
+    directory.settings = service
+    with pytest.raises(ValueError, match="COUNTERPARTY_INVALID"):
+        directory.search_sender_contacts(workspace, "arbitrary-ref")
+    with pytest.raises(ValueError, match="not configured"):
+        directory.search_senders(uuid4())
+
+
+def test_onboarding_lookup_failure_never_reflects_provider_secret():
+    class FailedClient(FakeClient):
+        def search_senders(self, *args):
+            raise RuntimeError("synthetic-secret-provider-response")
+    service = _settings_service(lambda key: FailedClient(key)); workspace = uuid4()
+    service.save_settings(workspace, _complete_settings(), uuid4())
+    directory = NovaPoshtaDirectoryService.__new__(NovaPoshtaDirectoryService); directory.settings = service
+    with pytest.raises(ValueError, match="^NOVA_POSHTA_SENDER_LOOKUP_UNAVAILABLE$"):
+        directory.search_senders(workspace)
+
+
+def test_onboarding_lookup_routes_require_owner():
+    from app.api.v1.nova_poshta import router
+    for route in router.routes:
+        if route.path.endswith(("/senders", "/sender-contacts")):
+            role_dependency = next(d.call for d in route.dependant.dependencies if d.name == "current_user")
+            for role in (RoleName.MANAGER, RoleName.ANALYST):
+                with pytest.raises(HTTPException) as error:
+                    role_dependency(SimpleNamespace(workspaces=[SimpleNamespace(workspace_id=(workspace := uuid4()), workspace=SimpleNamespace(is_active=True), role=SimpleNamespace(name=role.value))]), workspace)
+                assert error.value.status_code == 403
+
+
+@pytest.mark.parametrize("field", ["sender_counterparty_ref", "sender_contact_ref", "sender_city_ref", "sender_warehouse_ref", "sender_phone"])
+def test_explicit_sender_null_clears_verified_permitted_settings(monkeypatch, field):
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    service = _settings_service(); workspace = uuid4()
+    service.save_settings(workspace, _complete_settings(), uuid4())
+    assert service.test_connection(workspace, uuid4()).success
+    service.set_write_permission(workspace, NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+    assert service.get_settings(workspace).provider_writes_enabled
+    encrypted = service.credentials.credential.encrypted_access_token
+    result = service.save_settings(workspace, NovaPoshtaSettingsRequest(**{field: None}, api_key=""), uuid4())
+    assert getattr(result, field) is None
+    assert service.connections.connection.settings[field] is None
+    if field == "sender_counterparty_ref":
+        assert result.sender_contact_ref is None
+    if field == "sender_city_ref":
+        assert result.sender_warehouse_ref is None
+    assert not result.sender_configured
+    assert not result.connection_verified
+    assert not result.workspace_permission
+    assert not result.provider_writes_enabled
+    assert service.credentials.credential.encrypted_access_token == encrypted
+
+
+def test_blank_key_only_preserves_verified_permitted_settings(monkeypatch):
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    service = _settings_service(); workspace = uuid4()
+    service.save_settings(workspace, _complete_settings(), uuid4())
+    assert service.test_connection(workspace, uuid4()).success
+    service.set_write_permission(workspace, NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+    assert service.get_settings(workspace).provider_writes_enabled
+    settings = dict(service.connections.connection.settings)
+    credential = service.credentials.credential.encrypted_access_token
+    result = service.save_settings(workspace, NovaPoshtaSettingsRequest(api_key="   "), uuid4())
+    assert result.connection_verified
+    assert result.workspace_permission
+    assert result.provider_writes_enabled
+    assert service.connections.connection.settings == settings
+    assert service.credentials.credential.encrypted_access_token == credential
+
+
+@pytest.mark.parametrize("bad_field,error", [
+    (None, None),
+    ("sender_counterparty_ref", "NOVA_POSHTA_SENDER_COUNTERPARTY_INVALID"),
+    ("sender_contact_ref", "NOVA_POSHTA_SENDER_CONTACT_INVALID"),
+    ("sender_city_ref", "NOVA_POSHTA_SENDER_CITY_MISMATCH"),
+    ("sender_warehouse_ref", "NOVA_POSHTA_SENDER_CITY_MISMATCH"),
+])
+def test_warehouse_sender_tuple_through_real_client_transport(monkeypatch, bad_field, error):
+    import json
+    from app.integrations.nova_poshta_client import NovaPoshtaClient
+    from app.services.nova_poshta_service import NovaPoshtaShipmentService
+    sender = "11111111-1111-4111-8111-111111111111"
+    contact = "22222222-2222-4222-8222-222222222222"
+    city = "33333333-3333-4333-8333-333333333333"
+    warehouse = "44444444-4444-4444-8444-444444444444"
+    street_address = "55555555-5555-4555-8555-555555555555"
+    calls = []
+    def transport(request, timeout):
+        payload = json.loads(request.data)
+        assert request.get_method() == "POST"
+        assert payload["apiKey"] == "synthetic-transport-key"
+        model, method, props = payload["modelName"], payload["calledMethod"], payload["methodProperties"]
+        calls.append((model, method, props))
+        if method == "getAreas": data = [{"Ref": "synthetic-area"}]
+        elif method == "getCounterparties":
+            assert props["CounterpartyProperty"] == "Sender"
+            data = [{"Ref": sender, "Description": "Синтетичний магазин"}]
+        elif method == "getCounterpartyContactPersons":
+            data = [{"Ref": contact, "Description": "Олена Тестова"}] if props["Ref"] == sender else []
+        elif method == "getCounterpartyAddresses":
+            data = [{"Ref": street_address, "CityRef": city, "Description": "вул. Тестова, 10"}]
+        elif method == "getWarehouses":
+            data = [{"Ref": warehouse, "CityRef": city, "Description": "Відділення №1", "Number": "1"}] if props["CityRef"] == city else []
+        else: raise AssertionError(f"Unexpected provider call: {model}/{method}")
+        class Response:
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def read(self): return json.dumps({"success": True, "data": data}).encode()
+        return Response()
+    monkeypatch.setattr("app.integrations.nova_poshta_client.request.urlopen", transport)
+    service = _settings_service(lambda key: NovaPoshtaClient(key))
+    workspace = uuid4()
+    values = dict(api_key="synthetic-transport-key", sender_counterparty_ref=sender, sender_contact_ref=contact,
+                  sender_city_ref=city, sender_warehouse_ref=warehouse, sender_phone="0671234567")
+    client = NovaPoshtaClient("synthetic-transport-key")
+    # Street-address and directory-warehouse identities are deliberately distinct.
+    assert not client.sender_address_belongs_to_sender(sender, warehouse)
+    directory = NovaPoshtaDirectoryService.__new__(NovaPoshtaDirectoryService); directory.settings = service
+    service.save_settings(workspace, NovaPoshtaSettingsRequest(**values), uuid4())
+    assert directory.search_senders(workspace)[0].ref == sender
+    assert directory.search_sender_contacts(workspace, sender)[0].ref == contact
+    assert directory.search_warehouses(workspace, city)[0].ref == warehouse
+    if bad_field:
+        # A valid sender street-address Ref is still invalid as a warehouse Ref.
+        values[bad_field] = street_address
+        service.save_settings(workspace, NovaPoshtaSettingsRequest(**values), uuid4())
+    response = service.test_connection(workspace, uuid4())
+    assert response.success is (error is None)
+    assert response.errors == ([error] if error else [])
+    assert service.get_settings(workspace).connection_verified is (error is None)
+    assert not service.get_settings(workspace).workspace_permission
+    if error is None:
+        shipment = SimpleNamespace(declared_value=100, nova_poshta_city_ref=city, nova_poshta_warehouse_ref=warehouse,
+                                   recipient_phone="0671234567", recipient_name="Одержувач", cod_amount=0)
+        payload = NovaPoshtaShipmentService.__new__(NovaPoshtaShipmentService)._document_payload(shipment, values)
+        assert payload["ServiceType"] == "WarehouseWarehouse"
+        assert payload["SenderAddress"] == warehouse
+        assert payload["SenderAddress"] != street_address
+    assert all(method.startswith(("get", "search")) for _, method, _ in calls)

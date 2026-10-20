@@ -27,7 +27,7 @@ function apiUpstream(): string | null {
 
 const upstream = apiUpstream();
 
-const nextConfig: NextConfig = upstream
+const upstreamConfig: NextConfig = upstream
   ? {
       env: { NEXT_PUBLIC_API_BASE_URL: API_PATH },
       async rewrites() {
@@ -58,4 +58,16 @@ const nextConfig: NextConfig = upstream
     }
   : {};
 
+const nextConfig: NextConfig = {
+  ...upstreamConfig,
+  async headers() {
+    return [
+      ...(upstreamConfig.headers ? await upstreamConfig.headers() : []),
+      { source: "/settings/integrations/meta-ads/callback", headers: [
+        { key: "Referrer-Policy", value: "no-referrer" },
+        { key: "Cache-Control", value: "no-store" },
+      ] },
+    ];
+  },
+};
 export default nextConfig;

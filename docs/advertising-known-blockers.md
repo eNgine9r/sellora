@@ -1,5 +1,7 @@
 # Advertising Known Blockers Registry — Sprint 4.14
 
+> Historical sprint record. Current implementation and activation requirements are in [Meta Ads read-only setup](meta-ads-live-setup.md); rollout evidence and remaining gates are tracked in [integration release control](plans/sellora-integrations-release-20261020.md). The older future/not-implemented statements below describe their named sprints, not the current branch. Live provider approval/consent and broader CSV pilot gates are not established by synthetic integration tests.
+
 Advertising 4.x is **architecture-ready / locally validated / feature-frozen / not pilot-ready**. Runtime/staging QA is intentionally not executed in Sprint 4.14 and is tracked here instead.
 
 Meta Ads API status: **mock/future-ready / not active**. Active Advertising data source: **manual entry / CSV import**.

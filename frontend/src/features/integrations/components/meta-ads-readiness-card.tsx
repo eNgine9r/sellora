@@ -1,99 +1,105 @@
 "use client";
 
-import { featureGates } from "@/config/feature-gates";
+import { useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
+import { authStorage } from "@/services/auth.service";
+import { disconnectMetaAds, fetchMetaAdsAccounts, fetchMetaAdsStatus, integrationErrorCode, selectMetaAdsAccount, startMetaAds, syncMetaAds } from "@/services/meta-ads";
+import { clearAdsIntent, saveAdsIntent } from "@/features/integrations/lib/meta-ads-intent";
 
-const previewStatuses = [
-  "WOULD_CREATE",
-  "WOULD_UPDATE",
-  "WOULD_SKIP",
-  "POTENTIAL_CONFLICT",
-  "NEEDS_EXTERNAL_ID_SUPPORT",
-  "INVALID",
-] as const;
+const input = "min-h-11 w-full min-w-0 rounded-lg border border-slate-300 px-3 dark:border-white/20 dark:bg-white/10";
+const button = "min-h-11 rounded-xl border px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-50";
 
 export function MetaAdsReadinessCard({ compact = false }: { compact?: boolean }) {
+  const auth = useAuth();
+  return <MetaAdsCard key={auth.currentWorkspaceId + ":" + auth.currentUser?.id} workspaceId={auth.currentWorkspaceId ?? ""} actorId={auth.currentUser?.id ?? ""} owner={auth.currentWorkspace?.role === "OWNER"} authenticated={auth.status === "authenticated"} compact={compact} />;
+}
+function MetaAdsCard({ workspaceId, actorId, owner, authenticated, compact }: { workspaceId: string; actorId: string; owner: boolean; authenticated: boolean; compact: boolean }) {
   const { t } = useI18n();
+  const client = useQueryClient();
+  const [pending, setPending] = useState(false);
+  const busy = useRef(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [accountId, setAccountId] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const [from, setFrom] = useState(new Date().toISOString().slice(0, 10));
+  const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
+  const status = useQuery({ queryKey: ["meta-ads-status", workspaceId], queryFn: () => fetchMetaAdsStatus(workspaceId), enabled: authenticated && Boolean(workspaceId), retry: false });
+  const accounts = useQuery({ queryKey: ["meta-ads-accounts", workspaceId], queryFn: () => fetchMetaAdsAccounts(workspaceId), enabled: owner && status.data?.connected === true, retry: false });
+  const current = () => authStorage.getCurrentWorkspaceId() === workspaceId && authStorage.getCurrentActorId() === actorId;
+  const errorText = (code: string) => {
+    const translated = t("adsLive.errors." + code);
+    return translated === "adsLive.errors." + code ? t("adsLive.errors.failed") : translated;
+  };
+  async function action(run: () => Promise<unknown>, success: string) {
+    if (busy.current || !owner || !current()) return;
+    busy.current = true;
+    setPending(true); setMessage(null);
+    try {
+      await run();
+      if (current()) {
+        setMessage(t(success));
+        await Promise.all([client.invalidateQueries({ queryKey: ["meta-ads-status", workspaceId] }), client.invalidateQueries({ queryKey: ["meta-ads-accounts", workspaceId] }), ... ["ad-campaigns", "ad-metrics", "ad-summary", "ad-performance", "ad-trend", "ad-crm-attribution", "dashboard"].map(key => client.invalidateQueries({ queryKey: [key, workspaceId] }))]);
+      }
+    } catch (error) {
+      if (current()) {
+        setMessage(errorText(integrationErrorCode(error)));
+        void client.invalidateQueries({ queryKey: ["meta-ads-status", workspaceId] });
+      }
+    } finally { busy.current = false; if (current()) setPending(false); }
+  }
+  const data = status.data;
+  const days = (Date.parse(to) - Date.parse(from)) / 86400000 + 1;
+  const datesValid = Boolean(from && to && days >= 1 && days <= 91);
+  return <section data-meta-ads-settings className="grid min-w-0 gap-4 rounded-2xl bg-white p-5 shadow-sm dark:bg-[#15172A] dark:text-white">
+    <div><h2 className="text-xl font-black">Meta Ads</h2><p className="mt-2 text-sm leading-6">{t("adsLive.source")}</p></div>
+    {status.isPending ? <p role="status">{t("common.loading")}</p> : null}
+    {status.isError ? <p role="alert">{t("adsLive.loadFailed")} <button className={button} onClick={() => { void status.refetch(); }}>{t("adsLive.retry")}</button></p> : null}
+    {data ? <>
+      <p className="font-bold">{t("adsLive.statuses." + data.connection_status)}</p>
+      {data.blockers?.length ? <ul className="grid gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">{data.blockers.map(code => <li key={code}>{errorText(code)}</li>)}</ul> : null}
+      {data.last_error_code ? <p role="alert">{errorText(data.last_error_code)}</p> : null}
+      {!owner ? <p>{t("adsLive.ownerOnly")}</p> : <>
+        <button className={button} disabled={pending || !data.can_connect} onClick={() => { void action(async () => {
+          const result = await startMetaAds(workspaceId);
+          if (!current()) return;
+          const url = new URL(result.authorization_url);
+          const state = url.searchParams.get("state");
+          if (url.protocol !== "https:" || !(url.hostname === "facebook.com" || url.hostname.endsWith(".facebook.com")) || !state) throw new Error("invalid_authorization");
+          saveAdsIntent({ actor: actorId, workspace: workspaceId, state, expires: result.state_expires_at, phase: "pending" });
+          window.location.assign(url.href);
+        }, "adsLive.redirecting"); }}>{t(data.connected || ["NEEDS_REAUTH", "TOKEN_EXPIRED", "PERMISSION_MISSING", "ERROR"].includes(data.connection_status) ? "adsLive.reconnect" : "adsLive.connect")}</button>
+        {data.connected ? <section className="grid min-w-0 gap-3 rounded-xl border p-3">
+          <h3 className="font-bold">{t("adsLive.accountTitle")}</h3>
+          {data.account_name ? <p className="break-words">{data.account_name} · {data.currency} · {data.timezone}</p> : <p>{t("adsLive.selectionRequired")}</p>}
+          {accounts.isFetching ? <p role="status">{t("common.loading")}</p> : null}
+          {accounts.isError ? <p role="alert">{t("adsLive.accountsFailed")} <button className={button} onClick={() => { void accounts.refetch(); }}>{t("adsLive.retry")}</button></p> : null}
+          {accounts.isSuccess && !accounts.data.accounts.length ? <p>{t("adsLive.noAccounts")}</p> : null}
+          {accounts.data ? <>
+            <p className="text-sm">{t("adsLive.currencyHelp", { currency: accounts.data.workspace_currency })}</p>
+            <label className="grid min-w-0 gap-2 text-sm font-semibold"><span>{t("adsLive.accountTitle")}</span><select className={input} value={accountId} disabled={pending} onChange={event => setAccountId(event.target.value)}><option value="">{t("adsLive.chooseAccount")}</option>{accounts.data.accounts.map(account => <option key={account.external_account_id} value={account.external_account_id} disabled={!account.selectable}>{account.name} · {account.currency} · {account.timezone}{!account.selectable ? " — " + t("adsLive.currencyMismatch") : ""}</option>)}</select></label>
+            <button className={button} disabled={pending || !accounts.data.accounts.some(account => account.external_account_id === accountId && account.selectable)} onClick={() => { void action(() => selectMetaAdsAccount(workspaceId, accountId), "adsLive.accountSaved"); }}>{t("adsLive.selectAccount")}</button>
+          </> : null}
+          {!compact ? <>
+            <p className="text-sm">{t("adsLive.rangeHelp", { timezone: data.timezone ?? "—" })}</p>
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+              <label className="grid min-w-0 gap-2"><span>{t("adsLive.from")}</span><input className={input} type="date" value={from} disabled={pending} onChange={event => setFrom(event.target.value)} /></label>
+              <label className="grid min-w-0 gap-2"><span>{t("adsLive.to")}</span><input className={input} type="date" value={to} disabled={pending} onChange={event => setTo(event.target.value)} /></label>
+            </div>
+            {!datesValid ? <p role="alert">{t("adsLive.errors.invalid_date_range")}</p> : null}
+            <button className={button} disabled={pending || !data.can_sync || !datesValid} onClick={() => { void action(() => syncMetaAds(workspaceId, from, to), "adsLive.syncSuccess"); }}>{t(pending ? "common.loading" : "adsLive.sync")}</button>
+            {!data.sync_enabled ? <p>{t("adsLive.errors.sync_disabled")}</p> : null}
+          </> : null}
+          <p className="text-sm">{t("adsLive.lastSync")}: {data.last_synced_at ? new Date(data.last_synced_at).toLocaleString() : t("adsLive.never")}</p>
 
-  return (
-    <section
-      className="grid gap-4 rounded-2xl bg-white p-5 shadow-sm dark:bg-[#15172A] dark:text-white"
-      data-meta-ads-placeholder="manual-import-first"
-      data-meta-ads-sync-preview-enabled={String(featureGates.metaAdsSyncPreviewEnabled)}
-      data-meta-ads-no-live-connection="true"
-      data-meta-ads-no-apply-run="true"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-600">Meta Ads</p>
-          <h2 className="mt-1 text-xl font-black">{t("metaAds.notActiveTitle")}</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{t("metaAds.currentSourceCopy")}</p>
-          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{t("metaAds.futureSyncCopy")}</p>
-          <p className="mt-2 text-sm leading-6 font-semibold text-slate-800 dark:text-slate-100">{t("metaAds.selloraSideCopy")}</p>
-        </div>
-        <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-100">{t("metaAds.notActiveStatus")}</span>
-      </div>
-
-      <div className="grid gap-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-950 dark:border-indigo-400/20 dark:bg-indigo-500/10 dark:text-indigo-100 sm:grid-cols-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.15em] opacity-70">{t("metaAds.statusLabel")}</p>
-          <p className="mt-1 font-black">{t("metaAds.notActiveStatus")}</p>
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.15em] opacity-70">{t("metaAds.currentSourceLabel")}</p>
-          <p className="mt-1 font-black">{t("metaAds.currentSourceValue")}</p>
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.15em] opacity-70">{t("metaAds.futureLabel")}</p>
-          <p className="mt-1 font-black">{t("metaAds.futureValue")}</p>
-        </div>
-      </div>
-
-      <div className="grid gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-100">
-        <p className="font-bold">{t("metaAds.manualCsvProtection")}</p>
-        <p>{t("metaAds.deliveryMetricsOnly")}</p>
-        <p>{t("metaAds.mockOAuthPrepared")}</p>
-      </div>
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <button
-          aria-describedby="meta-ads-coming-soon-help"
-          className="min-h-11 w-full cursor-not-allowed rounded-xl bg-slate-200 px-4 py-3 text-sm font-black text-slate-500 dark:bg-slate-800 dark:text-slate-300 sm:w-auto"
-          disabled
-          type="button"
-        >
-          {t("metaAds.connectComingSoon")}
-        </button>
-        <p id="meta-ads-coming-soon-help" className="text-sm text-slate-600 dark:text-slate-300">{t("metaAds.comingSoonHelp")}</p>
-      </div>
-
-      {featureGates.metaAdsSyncPreviewEnabled ? (
-        <div className="grid gap-3 rounded-2xl border border-dashed border-slate-300 p-4 dark:border-slate-700" data-meta-ads-demo-preview="future-non-writing-preview-only">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{t("metaAds.demoPreviewEyebrow")}</p>
-            <h3 className="mt-1 font-black">{t("metaAds.demoPreviewTitle")}</h3>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t("metaAds.demoPreviewDescription")}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {previewStatuses.map((status) => (
-              <span key={status} className="rounded-full border border-slate-200 px-3 py-1 text-xs font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200">
-                {t(`metaAds.previewStatuses.${status}`)}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {!compact ? (
-        <ol className="grid gap-2 text-sm text-slate-600 dark:text-slate-300" data-meta-ads-admin-review-flow="future-docs-only-no-steps-1-5-6-implemented">
-          <li>1. {t("metaAds.reviewFlowStep1")}</li>
-          <li>2. {t("metaAds.reviewFlowStep2")}</li>
-          <li>3. {t("metaAds.reviewFlowStep3")}</li>
-          <li>4. {t("metaAds.reviewFlowStep4")}</li>
-          <li>5. {t("metaAds.reviewFlowStep5")}</li>
-          <li>6. {t("metaAds.reviewFlowStep6")}</li>
-        </ol>
-      ) : null}
-    </section>
-  );
+        </section> : null}
+        {data.connected || ["CONNECTING", "NEEDS_REAUTH", "TOKEN_EXPIRED", "PERMISSION_MISSING", "ERROR"].includes(data.connection_status) ? <div className="grid gap-2">
+          <button className={button + " text-rose-700"} disabled={pending} onClick={() => setConfirm(true)}>{t("adsLive.disconnect")}</button>
+          {confirm ? <div className="grid gap-2 rounded-xl border border-rose-300 p-3"><p>{t("adsLive.disconnectConfirm")}</p><button className={button} disabled={pending} onClick={() => { setConfirm(false); clearAdsIntent(); void action(() => disconnectMetaAds(workspaceId), "adsLive.disconnected"); }}>{t("adsLive.confirmDisconnect")}</button><button className={button} disabled={pending} onClick={() => setConfirm(false)}>{t("actions.cancel")}</button></div> : null}
+        </div> : null}
+      </>}
+    </> : null}
+    {message ? <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-500/10 dark:text-blue-100">{message}</p> : null}
+  </section>;
 }

@@ -1,5 +1,7 @@
 # Meta Ads Integration Plan — Sprint 4.6 Readiness Contract
 
+> Historical sprint record. Current implementation and activation requirements are in [Meta Ads read-only setup](meta-ads-live-setup.md); rollout evidence and remaining gates are tracked in [integration release control](plans/sellora-integrations-release-20261020.md). The older future/not-implemented statements below describe their named sprints, not the current branch. Live provider approval/consent and broader CSV pilot gates are not established by synthetic integration tests.
+
 Sprint 4.6 prepares Sellora for a future Meta Ads API integration. It does **not** implement live Meta OAuth, token storage, ad account connection, automatic sync jobs, automatic attribution, Conversions API, or any live Meta API calls.
 
 Current MVP source remains **manual entry / CSV import**. Meta Ads API status after Sprint 4.6 is **planned / architecture-ready / not active**.

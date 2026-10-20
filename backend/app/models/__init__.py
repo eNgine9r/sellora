@@ -40,3 +40,4 @@ __all__ = ["FinanceAdjustment", "FinanceAdjustmentCategory", "FinanceAdjustmentS
 __all__ += ["OrderFulfillment", "OrderFulfillmentResultCode", "OrderFulfillmentState", "OrderFulfillmentOperationType"]
 __all__ += ["InstagramParticipantProfile", "InstagramParticipantProfileStatus"]
 __all__ += ["InstagramHistorySync", "InstagramHistorySyncStatus", "InstagramMessageState"]
+from app.models.meta_ads_oauth_state import MetaAdsOAuthState

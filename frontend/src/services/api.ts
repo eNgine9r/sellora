@@ -95,7 +95,12 @@ function headersWithAuth(path: string, initHeaders: HeadersInit | undefined, bod
     headers.set("Authorization", explicitAuthorization);
   }
 
-  const workspaceId = normalizeWorkspaceId(authStorage.getCurrentWorkspaceId()) ?? explicitWorkspaceId;
+  const currentWorkspaceId = normalizeWorkspaceId(authStorage.getCurrentWorkspaceId());
+  // Explicit scopes belong to the initiating action, including a refresh retry.
+  if (explicitWorkspaceId && explicitWorkspaceId !== currentWorkspaceId) {
+    throw new ApiError(409, { detail: { code: "workspace_changed" } }, path);
+  }
+  const workspaceId = currentWorkspaceId ?? explicitWorkspaceId;
   const workspaceOptional = path === "/workspaces" || path === "/workspaces/" || path === "/workspaces/demo" || path === "/workspaces/demo/";
   if (!workspaceId && !workspaceOptional) {
     throw workspaceSessionError(path);
