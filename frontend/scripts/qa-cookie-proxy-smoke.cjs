@@ -17,7 +17,7 @@ const account={
  memberships:[{workspace_id:'22222222-2222-4222-8222-222222222222',
  workspace_name:'Synthetic QA',workspace_slug:'qa',role:'OWNER',currency_code:'UAH'}]
 };
-const counts={login:0,refresh:0,profile:0,logout:0};
+const counts={login:0,refresh:0,profile:0,logout:0,legacyLogin:0,legacyRefresh:0};
 const cookieName='sellora_session_refresh';
 let issued=0,session=null;
 function json(res,status,body,headers={}){
@@ -28,6 +28,16 @@ const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost');
  const path=url.pathname.replace(/^\/api\/v1/,'');
  const cookie=req.headers.cookie||'';
+ if(path==='/auth/login'&&req.method==='POST'){
+  counts.legacyLogin++;
+  return json(res,200,{access_token:'synthetic-legacy-access',
+    refresh_token:'synthetic-legacy-refresh',token_type:'bearer'});
+ }
+ if(path==='/auth/refresh'&&req.method==='POST'){
+  counts.legacyRefresh++;
+  return json(res,200,{access_token:'synthetic-legacy-access-renewed',
+    refresh_token:'synthetic-legacy-refresh-renewed',token_type:'bearer'});
+ }
  if(path==='/auth/session/login'&&req.method==='POST'){
   counts.login++;session='synthetic-refresh-'+(++issued);
   return json(res,200,{access_token:'synthetic-access',token_type:'bearer'},{
@@ -96,7 +106,33 @@ async function main(){
  const page=await context.newPage();
  const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
- await page.goto(base+'/login',{waitUntil:'domcontentloaded'});
+ const pilotRequested=process.env.COOKIE_QA_PILOT === 'true';
+ if(pilotRequested){
+   // Complete a real legacy login in a SEPARATE Chrome context, proving
+   // the opt-in pilot cannot change other managers' browser sessions.
+   const legacyContext=await browser.newContext({viewport:{width:390,height:844},
+     ignoreHTTPSErrors:true});
+   const legacyPage=await legacyContext.newPage();
+   await legacyPage.goto(base+'/login',{waitUntil:'domcontentloaded'});
+   assert.equal(await legacyPage.evaluate(()=>sessionStorage.getItem('sellora.secure_session_pilot')),null);
+   await legacyPage.locator('input[type="email"]').fill(account.email);
+   await legacyPage.locator('input[type="password"]').fill('synthetic-legacy-no-real-password');
+   await legacyPage.locator('button[type="submit"]').click();
+   await legacyPage.waitForURL(url=>new URL(url).pathname==='/dashboard',{timeout:20000});
+   assert.equal(counts.legacyLogin,1,'Default login no longer uses legacy auth endpoint');
+   assert.equal(counts.login,0,'Legacy browser unexpectedly used secure session');
+   const legacyKeys=await legacyPage.evaluate(()=>Object.keys(localStorage));
+   assert.ok(legacyKeys.some(key=>key.includes('access_token')),'Legacy bearer access not preserved');
+   assert.ok(legacyKeys.some(key=>key.includes('refresh_token')),'Legacy refresh not preserved');
+   await legacyContext.close();
+   // The opt-in pilot starts in an independent browser context, never
+   // inheriting credentials from the legacy login above.
+ }
+ await page.goto(base+'/login'+(pilotRequested?'?secure_login_pilot=1':''),{waitUntil:'domcontentloaded'});
+ if(pilotRequested){
+   assert.equal(await page.evaluate(()=>sessionStorage.getItem('sellora.secure_session_pilot')),'1',
+     'Browser pilot opt-in was not activated');
+ }
  // First load must remain unauthenticated; the stub returns 401 if cookie absent.
  await page.locator('input[type="email"]').fill(account.email);
  await page.locator('input[type="password"]').fill('synthetic-no-real-password');
@@ -137,7 +173,7 @@ async function main(){
  const visible=await page.evaluate(()=>document.cookie);
  assert.ok(!visible.includes(cookieName),'HttpOnly cookie visible to JS');
  console.log(JSON.stringify({result:'COOKIE_REWRITE_PASS',chrome:'Google Chrome',viewport:'390x844',
- proxyPath:'/api/v1',login:counts.login,refresh:counts.refresh,profile:counts.profile,
+ proxyPath:'/api/v1',pilotRequested,legacyLogin:counts.legacyLogin,login:counts.login,refresh:counts.refresh,profile:counts.profile,
  cookie:{httpOnly:refreshCookie.httpOnly,secure:refreshCookie.secure,
  sameSite:refreshCookie.sameSite,path:refreshCookie.path},
  localStorageTokens:keys.length,visibleCookie:false,authErrors:0,

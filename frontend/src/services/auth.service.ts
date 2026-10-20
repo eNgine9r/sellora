@@ -1,7 +1,29 @@
 import { normalizeWorkspaceId } from "@/lib/workspace";
 import { CurrentUser, TokenPair, WorkspaceMembership } from "@/types/auth";
 
-export const COOKIE_SESSION_AUTH_ENABLED = process.env.NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED === "true";
+// Cookie login stays off by default. An explicitly opted-in STAGING browser
+// may use the safer session API without switching every employee at once.
+// Only a non-secret pilot preference is stored in sessionStorage.
+const PILOT_STORAGE_KEY = "sellora.secure_session_pilot";
+function browserCookiePilotEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  const hosts = (process.env.NEXT_PUBLIC_COOKIE_SESSION_PILOT_HOSTS ?? "sellora-web-staging.vercel.app")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+  if (!hosts.includes(window.location.hostname.toLowerCase())) return false;
+  try {
+    const command = new URLSearchParams(window.location.search).get("secure_login_pilot");
+    if (command === "1") window.sessionStorage.setItem(PILOT_STORAGE_KEY, "1");
+    if (command === "0") window.sessionStorage.removeItem(PILOT_STORAGE_KEY);
+    return window.sessionStorage.getItem(PILOT_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+export const COOKIE_SESSION_AUTH_ENABLED =
+  process.env.NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED === "true" ||
+  browserCookiePilotEnabled();
 let memoryAccessToken: string | null = null;
 let refreshInFlight: Promise<TokenPair> | null = null;
 
