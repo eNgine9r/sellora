@@ -1,5 +1,7 @@
 # Meta Ads Privacy and Safety Notes
 
+> Historical sprint record. Current implementation and activation requirements are in [Meta Ads read-only setup](meta-ads-live-setup.md); rollout evidence and remaining gates are tracked in [integration release control](plans/sellora-integrations-release-20261020.md). The older future/not-implemented statements below describe their named sprints, not the current branch. Live provider approval/consent and broader CSV pilot gates are not established by synthetic integration tests.
+
 Sellora must treat advertising integration data as sensitive. Sprint 4.0 only adds the foundation and placeholder messaging; it does not activate automatic Meta Ads API sync.
 
 ## Token and credential rules

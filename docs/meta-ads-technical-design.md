@@ -1,5 +1,7 @@
 # Meta Ads Technical Design — Sprint 4.6 Draft
 
+> Historical sprint record. Current implementation and activation requirements are in [Meta Ads read-only setup](meta-ads-live-setup.md); rollout evidence and remaining gates are tracked in [integration release control](plans/sellora-integrations-release-20261020.md). The older future/not-implemented statements below describe their named sprints, not the current branch. Live provider approval/consent and broader CSV pilot gates are not established by synthetic integration tests.
+
 This is a future implementation contract. It does not add live Meta OAuth, live API calls, token storage logic, sync jobs, or database migrations.
 
 ## Proposed backend module boundaries
