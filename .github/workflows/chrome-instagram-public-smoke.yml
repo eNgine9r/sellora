@@ -86,3 +86,43 @@ jobs:
           name: sellora-google-chrome-public-mobile
           path: /tmp/sellora-chrome/login-*-390.png
           retention-days: 1
+
+      - name: Diagnose public Instagram OAuth document in Chrome (no sign-in)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          NODE_PATH=/tmp/sellora-chrome/node_modules node <<'JS'
+          const { chromium } = require('playwright-core');
+          const authorize = new URL('https://www.instagram.com/oauth/authorize');
+          const params = {
+            client_id: '1575856504325341',
+            redirect_uri: 'https://btc-radar.tail7f9b04.ts.net/api/v1/integrations/instagram/oauth/callback',
+            scope: 'instagram_business_basic,instagram_business_manage_messages',
+            response_type: 'code', state: 'public-readonly-diagnostic-not-an-actual-sellora-session',
+            enable_fb_login: '0', force_reauth: 'true'
+          };
+          for (const [key,value] of Object.entries(params)) authorize.searchParams.set(key,value);
+          (async () => {
+            const browser = await chromium.launch({
+              executablePath:'/usr/bin/google-chrome',
+              headless:true, args:['--no-sandbox','--disable-dev-shm-usage']
+            });
+            try {
+              const page = await browser.newPage({viewport:{width:390,height:844}});
+              const errors = [];
+              page.on('pageerror',e => errors.push(e.message.slice(0,120)));
+              const response=await page.goto(authorize.href,{waitUntil:'domcontentloaded',timeout:30000});
+              await page.waitForTimeout(4000);
+              const url=new URL(page.url());
+              const body=(await page.locator('body').innerText().catch(()=>'')); 
+              console.log(JSON.stringify({
+                providerHost:url.hostname,providerPath:url.pathname,
+                status:response?.status(),title:(await page.title()).slice(0,100),
+                bodyChars:body.length,hasErrorText:/something went wrong|сталася помилка|invalid request|invalid scope/i.test(body),
+                hasLoginText:/log in|login|увійти|continue as|продовжити/i.test(body),
+                jsErrors:errors.length
+              }));
+              await page.close();
+            } finally {await browser.close();}
+          })().catch(e=>{console.log('PROVIDER_DIAG_UNAVAILABLE: '+e.name);process.exitCode=1;});
+          JS
