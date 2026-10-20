@@ -15,6 +15,8 @@ from app.models.customer_address import DeliveryProvider
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.customer_repository import CustomerRepository
+from app.repositories.lead_repository import LeadRepository
+from app.models.lead import LeadStatus
 from app.schemas.crm_completion import CustomerAddressCreate, CustomerAddressUpdate
 from app.schemas.customer import CustomerResponse
 from app.schemas.direct_customer_automation import (
@@ -35,6 +37,7 @@ class DirectCustomerAutomationService:
         self.conversations = DirectConversationRepository(db)
         self.messages = DirectMessageRepository(db)
         self.customers = CustomerRepository(db)
+        self.leads = LeadRepository(db)
         self.customer_crm = CustomerCrmService(db)
         self.audit_logs = AuditLogRepository(db)
 
@@ -191,6 +194,20 @@ class DirectCustomerAutomationService:
         old_value = snapshot(customer)
         conversation.linked_customer_id = customer.id
         conversation.linked_order_id = order_id
+        if conversation.linked_lead_id:
+            lead = self.leads.get(workspace_id, conversation.linked_lead_id)
+            if lead and lead.status not in {LeadStatus.CONVERTED.value, LeadStatus.LOST.value}:
+                lead.status = LeadStatus.CONVERTED.value
+                self.audit_logs.create(
+                    workspace_id=workspace_id, user_id=actor_user_id,
+                    entity_type="Lead", entity_id=lead.id,
+                    action="DIRECT_LEAD_CONVERT",
+                    new_value={
+                        "status": LeadStatus.CONVERTED.value,
+                        "order_id": str(order_id),
+                        "customer_id": str(customer.id),
+                    },
+                )
         customer.name = recipient_name.strip() or customer.name
         customer.phone = recipient_phone or customer.phone
         customer.city = city.strip() or customer.city

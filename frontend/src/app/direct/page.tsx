@@ -33,6 +33,7 @@ import { ApiError } from "@/services/api";
 import { fetchAISuggestions } from "@/services/ai";
 import {
   ensureDirectCustomer,
+  ensureDirectLead,
   fetchDirectConversations,
   fetchDirectCustomerAutomation,
   fetchDirectMessages,
@@ -241,6 +242,14 @@ export default function DirectPage() {
     mutationFn: (conversationId: string) => refreshDirectParticipantProfile(conversationId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] }),
   });
+  const ensureLeadMutation = useMutation({
+    mutationFn: (conversationId: string) => ensureDirectLead(conversationId),
+    onSuccess: (_conversation, conversationId) => {
+      void queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["leads", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-customer-automation", workspaceId, conversationId] });
+    },
+  });
   const ensureCustomerMutation = useMutation({
     mutationFn: (conversationId: string) => ensureDirectCustomer(conversationId),
     onSuccess: (_state, conversationId) => {
@@ -398,6 +407,9 @@ export default function DirectPage() {
           automationError={automationQuery.isError || ensureCustomerMutation.isError}
           canManage={canManage}
           ensuringCustomer={ensureCustomerMutation.isPending}
+          ensuringLead={ensureLeadMutation.isPending}
+          leadError={ensureLeadMutation.isError}
+          onEnsureLead={() => selectedConversation && ensureLeadMutation.mutate(selectedConversation.id)}
           onEnsureCustomer={() => selectedConversation && ensureCustomerMutation.mutate(selectedConversation.id)}
           loading={messagesQuery.isLoading}
           error={messagesQuery.isError}
@@ -606,6 +618,9 @@ function MessageThread({
   canManage,
   ensuringCustomer,
   onEnsureCustomer,
+  ensuringLead,
+  leadError,
+  onEnsureLead,
   loading,
   error,
   messages,
@@ -635,6 +650,9 @@ function MessageThread({
   canManage: boolean;
   ensuringCustomer: boolean;
   onEnsureCustomer: () => void;
+  ensuringLead: boolean;
+  leadError: boolean;
+  onEnsureLead: () => void;
   loading: boolean;
   error: boolean;
   messages: DirectMessage[];
@@ -715,6 +733,9 @@ function MessageThread({
         canManage={canManage}
         ensuring={ensuringCustomer}
         onEnsure={onEnsureCustomer}
+        ensuringLead={ensuringLead}
+        leadError={leadError}
+        onEnsureLead={onEnsureLead}
       />
       <div className="space-y-3 p-3">
         {loading ? <LoadingSkeleton /> : null}
@@ -760,6 +781,9 @@ function CustomerAutomationCard({
   canManage,
   ensuring,
   onEnsure,
+  ensuringLead,
+  leadError,
+  onEnsureLead,
 }: {
   conversation: DirectConversation;
   automation?: DirectCustomerAutomationState;
@@ -768,6 +792,9 @@ function CustomerAutomationCard({
   canManage: boolean;
   ensuring: boolean;
   onEnsure: () => void;
+  ensuringLead: boolean;
+  leadError: boolean;
+  onEnsureLead: () => void;
 }) {
   const { t } = useI18n();
   const customer = automation?.customer;
@@ -788,6 +815,9 @@ function CustomerAutomationCard({
               {automation?.profile_complete ? t("direct.profileComplete") : customer ? t("direct.prospect") : t("direct.notCreated")}
             </span>
           </div>
+          {conversation.channel === "INSTAGRAM" && conversation.linked_lead_id ? (
+            <p className="mt-1 text-xs font-semibold text-emerald-700">{t("direct.leadLinked")}</p>
+          ) : null}
           {customer ? (
             <p className="mt-1 text-sm text-text-secondary">
               {customer.name}{customer.instagram_username ? ` · @${customer.instagram_username}` : ""}
@@ -799,8 +829,20 @@ function CustomerAutomationCard({
             <p className="mt-1 text-xs font-semibold text-amber-700">{t("direct.missingFields", { fields: automation.missing_fields.map((field) => missingLabels[field] ?? t("direct.otherField")).join(", ") })}</p>
           ) : null}
           {error ? <p className="mt-1 text-xs font-semibold text-rose-600">{t("direct.customerError")}</p> : null}
+          {leadError ? <p role="alert" className="mt-1 text-xs font-semibold text-rose-600">{t("direct.leadError")}</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          {canManage && conversation.channel === "INSTAGRAM" && !conversation.linked_lead_id ? (
+            <Button variant="secondary" onClick={onEnsureLead} disabled={ensuringLead}>
+              {ensuringLead ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+              {t("direct.createLead")}
+            </Button>
+          ) : null}
+          {conversation.linked_lead_id ? (
+            <Link className="inline-flex min-h-10 items-center rounded-2xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-black text-text-primary" href="/leads">
+              {t("direct.openLeads")}
+            </Link>
+          ) : null}
           {!customer && canManage ? (
             <Button variant="secondary" onClick={onEnsure} disabled={ensuring}>
               {ensuring ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}

@@ -57,13 +57,13 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 3,
     "AUTHENTICATED_GLOBAL": 4,
-    "WORKSPACE_SCOPED": 198,
+    "WORKSPACE_SCOPED": 199,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
 # Added GET /advertising/crm-attribution and Direct order-proposal: scoped reads, no mutations.
-EXPECTED_TOTAL_ROUTES = 217
-EXPECTED_MUTATION_ROUTES = 122
+EXPECTED_TOTAL_ROUTES = 218
+EXPECTED_MUTATION_ROUTES = 123
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -72,6 +72,9 @@ EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("GET", "/api/v1/orders/{order_id}/fulfillment"),
     ("POST", "/api/v1/orders/{order_id}/fulfillment/reconcile"),
     ("POST", "/api/v1/orders/{order_id}/fulfillment/cancel"),
+}
+EXPECTED_DIRECT_LEAD_ROUTES = {
+    ("POST", "/api/v1/direct/conversations/{conversation_id}/lead/ensure"),
 }
 EXPECTED_DIRECT_CUSTOMER_AUTOMATION_ROUTES = {
     ("GET", "/api/v1/direct/conversations/{conversation_id}/customer-automation"),
@@ -141,6 +144,24 @@ def test_global_endpoint_whitelist_is_explicit_and_small() -> None:
     assert AUTHENTICATED_GLOBAL_ENDPOINTS.issubset(global_paths)
     assert "/api/v1/workspaces/current" not in global_paths
     assert len(global_paths) == len(PUBLIC_ENDPOINTS | AUTHENTICATED_GLOBAL_ENDPOINTS)
+
+
+def test_direct_lead_mutation_is_workspace_scoped_and_manager_guarded() -> None:
+    route = next(
+        route for path, route in _api_routes()
+        if path == "/api/v1/direct/conversations/{conversation_id}/lead/ensure"
+    )
+    assert route.methods == {"POST"}
+    assert _primary_scope("/api/v1/direct/conversations/{conversation_id}/lead/ensure") == "WORKSPACE_SCOPED"
+    # require_min_role(MANAGER) and get_workspace_id must remain in
+    # route dependency graph; no anonymous or cross-tenant mutation.
+    dependencies = {dep.call for dep in route.dependant.dependencies}
+    assert get_workspace_id in dependencies
+    assert any(
+        getattr(dep.call, "__name__", "") == "guard"
+        and RoleName.MANAGER in getclosurevars(dep.call).nonlocals.values()
+        for dep in route.dependant.dependencies
+    )
 
 
 def test_canonical_fulfillment_routes_are_explicit_and_workspace_scoped() -> None:

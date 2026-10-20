@@ -1,3 +1,4 @@
+import hashlib
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -38,6 +39,37 @@ class DirectConversationRepository:
                 DirectConversation.id == conversation_id,
                 DirectConversation.deleted_at.is_(None),
             )
+        ).scalar_one_or_none()
+
+    def get_for_update(self, workspace_id: UUID, conversation_id: UUID) -> DirectConversation | None:
+        return self.db.execute(
+            select(DirectConversation).where(
+                DirectConversation.workspace_id == workspace_id,
+                DirectConversation.id == conversation_id,
+                DirectConversation.deleted_at.is_(None),
+            ).with_for_update().execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+
+    def lock_instagram_participant(self, workspace_id: UUID, connection_id: UUID, scoped_id: str) -> None:
+        # PostgreSQL transaction-scoped lock protects replay/concurrency across
+        # multiple threads, without locking any other workspace's contacts.
+        if self.db.get_bind().dialect.name != "postgresql":
+            return
+        identity = f"sellora:direct-lead:{workspace_id}:{connection_id}:{scoped_id}"
+        key = int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], "big", signed=True)
+        self.db.execute(select(func.pg_advisory_xact_lock(key)))
+
+    def find_lead_for_instagram_participant(
+        self, workspace_id: UUID, connection_id: UUID, scoped_id: str,
+    ) -> DirectConversation | None:
+        return self.db.execute(
+            select(DirectConversation).where(
+                DirectConversation.workspace_id == workspace_id,
+                DirectConversation.instagram_connection_id == connection_id,
+                DirectConversation.participant_scoped_id == scoped_id,
+                DirectConversation.linked_lead_id.is_not(None),
+                DirectConversation.deleted_at.is_(None),
+            ).order_by(DirectConversation.created_at.desc()).limit(1)
         ).scalar_one_or_none()
 
     def get_by_instagram_participant(
@@ -182,6 +214,18 @@ class DirectMessageRepository:
             ),
         ).limit(1)
         return self.db.execute(stmt).scalar_one_or_none() is not None
+
+    def latest_instagram_inbound(self, workspace_id: UUID, conversation_id: UUID) -> DirectMessage | None:
+        return self.db.execute(
+            select(DirectMessage).where(
+                DirectMessage.workspace_id == workspace_id,
+                DirectMessage.conversation_id == conversation_id,
+                DirectMessage.direction == "INBOUND",
+                DirectMessage.provider == "INSTAGRAM",
+                DirectMessage.is_synthetic.is_(False),
+                DirectMessage.deleted_at.is_(None),
+            ).order_by(DirectMessage.received_at.desc(), DirectMessage.id.desc()).limit(1)
+        ).scalar_one_or_none()
 
     def latest_analyzable(self, workspace_id: UUID, conversation_id: UUID) -> DirectMessage | None:
         return self.db.execute(

@@ -18,6 +18,7 @@ export function fetchDirectLiveSummary() { return apiRequest<DirectLiveSummary>(
 export function markDirectConversationRead(conversationId: string) { return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/read`, { method: "POST" }); }
 export function refreshDirectParticipantProfile(conversationId: string) { return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/participant-profile/refresh`, { method: "POST" }); }
 export function fetchDirectCustomerAutomation(conversationId: string, workspaceId?: string) { return apiRequest<DirectCustomerAutomationState>(`/direct/conversations/${conversationId}/customer-automation`, { headers: workspaceId ? { "X-Workspace-ID": workspaceId } : {} }); }
+export function ensureDirectLead(conversationId: string) { return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/lead/ensure`, { method: "POST" }); }
 export function ensureDirectCustomer(conversationId: string) { return apiRequest<DirectCustomerAutomationState>(`/direct/conversations/${conversationId}/customer-automation/ensure`, { method: "POST" }); }
 export function completeDirectCustomer(conversationId: string, payload: DirectCustomerCompletePayload) {
   return apiRequest<DirectCustomerAutomationState>(`/direct/conversations/${conversationId}/customer-automation/complete`, {
