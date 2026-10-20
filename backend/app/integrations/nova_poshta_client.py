@@ -158,8 +158,21 @@ class NovaPoshtaClient:
             if item.get("Ref")
         ]
 
+    def search_senders(self, query: str = "", limit: int = 20, page: int = 1) -> list[NovaPoshtaCity]:
+        body = self._call("Counterparty", "getCounterparties", {
+            "CounterpartyProperty": "Sender", "Page": str(page),
+            "Limit": str(limit), "FindByString": query,
+        })
+        return [NovaPoshtaCity(ref=str(item["Ref"]), description=str(item.get("Description") or item.get("FullName") or ""))
+                for item in body.get("data", [])[:limit] if item.get("Ref")]
+
+    def search_sender_contacts(self, sender_ref: str, limit: int = 50) -> list[NovaPoshtaCity]:
+        body = self._call("Counterparty", "getCounterpartyContactPersons", {"Ref": sender_ref, "Page": "1"})
+        return [NovaPoshtaCity(ref=str(item["Ref"]), description=str(item.get("Description") or " ".join(str(item.get(key) or "") for key in ("LastName", "FirstName", "MiddleName")).strip()))
+                for item in body.get("data", [])[:limit] if item.get("Ref")]
+
     def counterparty_exists(self, counterparty_ref: str) -> bool:
-        body = self._call("Counterparty", "getCounterparties", {"Ref": counterparty_ref})
+        body = self._call("Counterparty", "getCounterparties", {"Ref": counterparty_ref, "CounterpartyProperty": "Sender", "Page": "1"})
         return any(str(item.get("Ref") or "") == counterparty_ref for item in body.get("data", []))
 
     def contact_belongs_to_counterparty(self, counterparty_ref: str, contact_ref: str) -> bool:

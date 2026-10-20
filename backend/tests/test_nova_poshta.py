@@ -606,3 +606,74 @@ def test_cancel_ttn_ambiguous_result_blocks_blind_retry(monkeypatch) -> None:
     operation = service.operations.get_for_update(shipment.workspace_id, shipment.id, NovaPoshtaOperationType.CANCEL_TTN.value)
     assert operation.attempt_count == 1
     assert shipment.status == ShipmentStatus.CREATED.value
+
+
+def test_onboarding_blank_key_preserves_credential_and_verification():
+    service = _settings_service(); workspace = uuid4()
+    service.save_settings(workspace, _complete_settings(), uuid4())
+    service.test_connection(workspace, uuid4())
+    encrypted = service.credentials.credential.encrypted_access_token
+    response = service.save_settings(workspace, NovaPoshtaSettingsRequest(api_key="   "), uuid4())
+    assert service.credentials.credential.encrypted_access_token == encrypted
+    assert response.connection_verified
+    assert not response.workspace_permission
+
+
+def test_onboarding_sender_change_clears_old_contact_and_verification():
+    service = _settings_service(); workspace = uuid4()
+    service.save_settings(workspace, _complete_settings(), uuid4())
+    service.test_connection(workspace, uuid4())
+    response = service.save_settings(workspace, NovaPoshtaSettingsRequest(sender_counterparty_ref="other"), uuid4())
+    assert response.sender_contact_ref is None
+    assert not response.connection_verified
+    assert not response.workspace_permission
+
+
+def test_onboarding_lookup_shapes_are_sender_only_read_only_and_bounded():
+    from app.integrations.nova_poshta_client import NovaPoshtaClient
+    client = NovaPoshtaClient("synthetic-test-key")
+    calls = []
+    def call(model, method, props):
+        calls.append((model, method, props))
+        return {"data": [{"Ref": str(i), "Description": f"Name {i}"} for i in range(60)]}
+    client._call = call
+    assert len(client.search_senders("Shop", 2, 3)) == 2
+    assert calls[-1] == ("Counterparty", "getCounterparties", {"CounterpartyProperty": "Sender", "Page": "3", "Limit": "2", "FindByString": "Shop"})
+    assert len(client.search_sender_contacts("0", 2)) == 2
+    assert calls[-1] == ("Counterparty", "getCounterpartyContactPersons", {"Ref": "0", "Page": "1"})
+    assert client.counterparty_exists("0")
+    assert calls[-1][2]["CounterpartyProperty"] == "Sender"
+    assert all(method.startswith("get") for _, method, _ in calls)
+
+
+def test_onboarding_lookup_rejects_arbitrary_sender_and_isolates_workspace():
+    service = _settings_service(); workspace = uuid4()
+    service.save_settings(workspace, _complete_settings(), uuid4())
+    directory = NovaPoshtaDirectoryService.__new__(NovaPoshtaDirectoryService)
+    directory.settings = service
+    with pytest.raises(ValueError, match="COUNTERPARTY_INVALID"):
+        directory.search_sender_contacts(workspace, "arbitrary-ref")
+    with pytest.raises(ValueError, match="not configured"):
+        directory.search_senders(uuid4())
+
+
+def test_onboarding_lookup_failure_never_reflects_provider_secret():
+    class FailedClient(FakeClient):
+        def search_senders(self, *args):
+            raise RuntimeError("synthetic-secret-provider-response")
+    service = _settings_service(lambda key: FailedClient(key)); workspace = uuid4()
+    service.save_settings(workspace, _complete_settings(), uuid4())
+    directory = NovaPoshtaDirectoryService.__new__(NovaPoshtaDirectoryService); directory.settings = service
+    with pytest.raises(ValueError, match="^NOVA_POSHTA_SENDER_LOOKUP_UNAVAILABLE$"):
+        directory.search_senders(workspace)
+
+
+def test_onboarding_lookup_routes_require_owner():
+    from app.api.v1.nova_poshta import router
+    for route in router.routes:
+        if route.path.endswith(("/senders", "/sender-contacts")):
+            role_dependency = next(d.call for d in route.dependant.dependencies if d.name == "current_user")
+            for role in (RoleName.MANAGER, RoleName.ANALYST):
+                with pytest.raises(HTTPException) as error:
+                    role_dependency(SimpleNamespace(workspaces=[SimpleNamespace(workspace_id=(workspace := uuid4()), workspace=SimpleNamespace(is_active=True), role=SimpleNamespace(name=role.value))]), workspace)
+                assert error.value.status_code == 403

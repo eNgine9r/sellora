@@ -180,9 +180,13 @@ class NovaPoshtaSettingsService:
                 material_updates["sender_phone"] = normalize_ua_phone(material_updates["sender_phone"])
             except PhoneNormalizationError as exc:
                 raise NovaPoshtaServiceError("INVALID_UA_PHONE") from exc
-        api_key_rotated = payload.api_key is not None
+        api_key_rotated = bool(payload.api_key)
         sender_settings_changed = self._material_sender_settings_changed(existing_settings, material_updates)
         settings = {**existing_settings, **material_updates}
+        if material_updates.get("sender_counterparty_ref") != existing_settings.get("sender_counterparty_ref") and "sender_counterparty_ref" in material_updates:
+            settings["sender_contact_ref"] = material_updates.get("sender_contact_ref")
+        if material_updates.get("sender_city_ref") != existing_settings.get("sender_city_ref") and "sender_city_ref" in material_updates:
+            settings["sender_warehouse_ref"] = material_updates.get("sender_warehouse_ref")
         if connection is None:
             connection = self.connections.create(
                 IntegrationConnection(
@@ -373,6 +377,27 @@ class NovaPoshtaSettingsService:
 class NovaPoshtaDirectoryService:
     def __init__(self, db: Session, client_factory=None) -> None:
         self.settings = NovaPoshtaSettingsService(db, client_factory)
+
+    def search_senders(self, workspace_id: UUID, query: str = "", limit: int = 20, page: int = 1) -> list[NovaPoshtaDirectoryItem]:
+        _connection, api_key = self.settings._require_connection(workspace_id)
+        try:
+            items = self.settings.client_factory(api_key).search_senders(query, limit, page)
+            return [NovaPoshtaDirectoryItem(ref=item.ref, description=item.description) for item in items[:limit]]
+        except Exception as exc:
+            raise NovaPoshtaServiceError("NOVA_POSHTA_SENDER_LOOKUP_UNAVAILABLE") from exc
+
+    def search_sender_contacts(self, workspace_id: UUID, sender_ref: str, limit: int = 50) -> list[NovaPoshtaDirectoryItem]:
+        _connection, api_key = self.settings._require_connection(workspace_id)
+        client = self.settings.client_factory(api_key)
+        try:
+            if not client.counterparty_exists(sender_ref):
+                raise NovaPoshtaServiceError("NOVA_POSHTA_SENDER_COUNTERPARTY_INVALID")
+            items = client.search_sender_contacts(sender_ref, limit)
+            return [NovaPoshtaDirectoryItem(ref=item.ref, description=item.description) for item in items[:limit]]
+        except NovaPoshtaServiceError:
+            raise
+        except Exception as exc:
+            raise NovaPoshtaServiceError("NOVA_POSHTA_SENDER_LOOKUP_UNAVAILABLE") from exc
 
     def search_cities(
         self,

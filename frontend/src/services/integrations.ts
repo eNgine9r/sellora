@@ -39,3 +39,6 @@ export const searchNovaPoshtaWarehouses = (workspaceId: string, cityRef: string,
 export const createNovaPoshtaTtn = (workspaceId: string, shipmentId: string) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaActionResponse>(`/shipments/${shipmentId}/nova-poshta/create-ttn`, { method: "POST" }));
 export const reconcileNovaPoshtaTtn = (workspaceId: string, shipmentId: string) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaActionResponse>(`/shipments/${shipmentId}/nova-poshta/reconcile-ttn`, { method: "POST" }));
 export const syncNovaPoshtaStatus = (workspaceId: string, shipmentId: string) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaActionResponse>(`/shipments/${shipmentId}/nova-poshta/sync-status`, { method: "POST" }));
+
+export const searchNovaPoshtaSenders = (workspaceId: string, q = "", page = 1) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaDirectoryItem[]>(`/integrations/nova-poshta/senders?q=${encodeURIComponent(q)}&page=${page}&limit=20`));
+export const fetchNovaPoshtaSenderContacts = (workspaceId: string, senderRef: string) => withWorkspaceContext(workspaceId, () => apiRequest<NovaPoshtaDirectoryItem[]>(`/integrations/nova-poshta/sender-contacts?sender_ref=${encodeURIComponent(senderRef)}`));

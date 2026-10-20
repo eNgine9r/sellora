@@ -20,9 +20,9 @@ import { useI18n } from "@/i18n/provider";
 export default function IntegrationsSettingsPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const { currentUser, currentWorkspaceId, status } = useAuth();
+  const { currentUser, currentWorkspace, currentWorkspaceId, status } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
-  const enabled = status === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
+  const enabled = status === "authenticated" && Boolean(currentUser) && Boolean(workspaceId) && currentWorkspace?.role === "OWNER";
   const [message, setMessage] = useState<string | null>(null);
   const settings = useQuery({ queryKey: ["np-settings", workspaceId], queryFn: () => fetchNovaPoshtaSettings(workspaceId), enabled });
 
@@ -84,7 +84,8 @@ export default function IntegrationsSettingsPage() {
       <WorkspaceHeader eyebrow={t("settings.label")} title={t("settings.integrationsTitle")} description={t("settings.integrationsSubtitle")} />
       <section className="grid min-w-0 gap-4 xl:grid-cols-3">
         <InstagramMessagingIntegrationCard workspaceId={workspaceId} />
-        <NovaPoshtaSettingsCard
+        {enabled && settings.isSuccess ? <NovaPoshtaSettingsCard
+          key={workspaceId}
           workspaceId={workspaceId}
           settings={settings.data}
           message={message}
@@ -96,7 +97,7 @@ export default function IntegrationsSettingsPage() {
           onTest={() => test.mutate()}
           onUpdateWritePermission={(allowed) => permission.mutate(allowed)}
           onDisconnect={() => disconnect.mutate()}
-        />
+        /> : <section className="rounded-2xl bg-white p-5 shadow-sm dark:bg-[#15172A]" role={settings.isError ? "alert" : "status"}>{t(!enabled && status === "authenticated" ? "novaPoshta.ownerOnly" : settings.isError ? "novaPoshta.settingsLoadFailed" : "common.loading")}{settings.isError ? <button type="button" className="ml-2 underline" onClick={() => { void settings.refetch(); }}>{t("novaPoshta.retryLookup")}</button> : null}</section>}
         <MetaAdsReadinessCard />
       </section>
     </WorkspacePage>
