@@ -150,7 +150,18 @@ class InstagramHistorySyncVisibilityService(InstagramHistorySyncService):
                 continue
 
             try:
-                details = await client.get_message(message_summary.id)
+                inline = message_summary.details
+                # Sender and recipient are needed to attach a historical
+                # message to the correct customer; do not guess identities.
+                can_use_inline = bool(
+                    inline
+                    and inline.from_id
+                    and (
+                        inline.from_id != connection.instagram_account_id
+                        or inline.to
+                    )
+                )
+                details = inline if can_use_inline else await client.get_message(message_summary.id)
             except MetaInstagramError as exc:
                 if exc.code == "META_HISTORY_MESSAGE_UNAVAILABLE":
                     sync.messages_unavailable += 1
@@ -219,7 +230,10 @@ class InstagramHistorySyncVisibilityService(InstagramHistorySyncService):
                 DirectMessage(
                     workspace_id=sync.workspace_id,
                     conversation_id=conversation.id,
-                    external_message_id=details.id,
+                    # Legacy external_message_id is VARCHAR(160). Meta may return
+                    # longer opaque IDs; preserve the full ID in provider_message_id
+                    # (VARCHAR(180)) for deduplication, rather than truncating it.
+                    external_message_id=details.id if len(details.id) <= 160 else None,
                     direction=direction,
                     sender_type=(
                         DirectMessageSenderType.MANAGER.value
@@ -247,6 +261,7 @@ class InstagramHistorySyncVisibilityService(InstagramHistorySyncService):
             )
             sync.messages_imported += 1
             self._advance_conversation(conversation, direction, created_at)
+            self._ensure_lead_safe(sync, conversation, direction, message_type, text, created_at)
 
         if conversation and thread_linked:
             conversation.provider_sync_status = "HISTORY_SYNCED"

@@ -2370,7 +2370,8 @@
     "checkSendStatus": "Refresh send status",
     "unknownSendHelp": "The server did not confirm the result. Check the message in Instagram and contact the responsible manager. Sending again remains blocked.",
     "statusError": "Could not check the result. Sending again remains blocked.",
-    "customerAndOrder": "Customer and order"
+    "customerAndOrder": "Customer and order",
+    "createAnotherOrder": "Create another order"
   },
   "instagramSettings": {
     "title": "Instagram Direct",

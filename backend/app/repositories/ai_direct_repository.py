@@ -41,6 +41,15 @@ class DirectConversationRepository:
             )
         ).scalar_one_or_none()
 
+    def get_by_linked_lead(self, workspace_id: UUID, lead_id: UUID) -> DirectConversation | None:
+        return self.db.execute(
+            select(DirectConversation).where(
+                DirectConversation.workspace_id == workspace_id,
+                DirectConversation.linked_lead_id == lead_id,
+                DirectConversation.deleted_at.is_(None),
+            ).order_by(DirectConversation.created_at.desc()).limit(1)
+        ).scalar_one_or_none()
+
     def get_for_update(self, workspace_id: UUID, conversation_id: UUID) -> DirectConversation | None:
         return self.db.execute(
             select(DirectConversation).where(

@@ -2,6 +2,8 @@ from pathlib import Path
 
 
 MIGRATIONS = (
+    Path("alembic/versions/202610200037_auth_login_attempts.py"),
+    Path("alembic/versions/202610200038_auth_sessions.py"),
     Path("alembic/versions/202607080020_secure_public_tables_rls.py"),
     Path("alembic/versions/202607150022_nova_poshta_durable_operations.py"),
 )

@@ -266,13 +266,18 @@ class DirectCustomerAutomationService:
             stage = "PROSPECT_READY_FOR_ORDER"
         else:
             stage = "NOT_CREATED"
+        repeat_lead = (self.leads.get(workspace_id, conversation.linked_lead_id)
+                       if conversation.linked_order_id and conversation.linked_lead_id else None)
+        repeat_eligible = bool(repeat_lead and repeat_lead.status in {
+            LeadStatus.NEW.value, LeadStatus.IN_PROGRESS.value, LeadStatus.QUALIFIED.value,
+        })
         return DirectCustomerAutomationState(
             conversation_id=conversation.id,
             customer=CustomerResponse.model_validate(customer) if customer else None,
             linked_order_id=conversation.linked_order_id,
             stage=stage,
             missing_fields=missing,
-            can_create_order=customer is not None and conversation.linked_order_id is None,
+            can_create_order=customer is not None and (conversation.linked_order_id is None or repeat_eligible),
             profile_complete=profile_complete,
         )
 

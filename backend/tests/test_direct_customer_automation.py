@@ -254,3 +254,16 @@ def test_confirmed_order_never_mutates_cross_workspace_lead():
     )
     assert lead.status == LeadStatus.NEW.value
     assert not any(item["action"] == "DIRECT_LEAD_CONVERT" for item in service.audit_logs.records)
+
+
+def test_new_repeat_opportunity_can_start_order_without_losing_previous_order():
+    service, conversation, workspace_id = make_service()
+    service.ensure_candidate(workspace_id, conversation.id, None)
+    previous_order = uuid4()
+    conversation.linked_order_id = previous_order
+    conversation.linked_lead_id = uuid4()
+    service.leads = SimpleNamespace(get=lambda *_: SimpleNamespace(status="NEW"))
+    state = service.state(workspace_id, conversation.id)
+    assert state.can_create_order is True
+    assert state.linked_order_id == previous_order
+    assert conversation.linked_order_id == previous_order

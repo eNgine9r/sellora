@@ -275,3 +275,27 @@ async def test_existing_conversation_thread_is_not_overwritten_by_another_provid
     assert sync.conversations_synced == 0
     assert conversation.external_thread_id == "thread-original"
     assert conversation.external_conversation_id == "thread-original"
+
+
+@pytest.mark.asyncio
+async def test_runtime_history_import_links_qualified_inbound_once():
+    from contextlib import nullcontext
+    from app.integrations.meta_instagram import runtime_worker
+    from app.integrations.meta_instagram.history_client import MetaMessageDetails
+
+    class InboundClient(FakeHistoryClient):
+        async def get_message(self, message_id):
+            return MetaMessageDetails(id=message_id, created_time=None,
+                from_id="buyer-1", from_username="buyer", to=[],
+                message="Хочу замовити", is_unsupported=False, reply_to_mid=None)
+
+    workspace, connection, sync, conversations, messages, service = make_service(InboundClient())
+    assert isinstance(service, runtime_worker.InstagramHistorySyncService)
+    service.db.begin_nested = lambda: nullcontext()
+    calls = []
+    service.lead_service = SimpleNamespace(ensure_from_inbound_order_intent=lambda *args: calls.append(args))
+    await service.process_next()
+    assert len(calls) == 1
+    assert calls[0][0] == workspace
+    await service.process_next()
+    assert len(calls) == 1

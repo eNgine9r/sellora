@@ -38,6 +38,8 @@ class FakeLeadRepository:
     def get(self, workspace_id, lead_id):
         return next((lead for lead in self.leads if lead.workspace_id == workspace_id and lead.id == lead_id and lead.deleted_at is None), None)
 
+    get_for_update = get
+
     def create(self, lead):
         lead.id = lead.id or uuid4()
         self.created.append(lead)
@@ -120,6 +122,7 @@ def _lead_service_with(leads: list[Lead], users: dict | None = None) -> LeadServ
     service = LeadService.__new__(LeadService)
     service.db = FakeLeadDb(users or {})
     service.leads = FakeLeadRepository(leads)
+    service.conversations = SimpleNamespace(get_by_linked_lead=lambda *_: None)
     service.lead_sources = EmptyScopedRepo()
     service.customers = EmptyScopedRepo()
     service.audit_logs = FakeAuditLogs()

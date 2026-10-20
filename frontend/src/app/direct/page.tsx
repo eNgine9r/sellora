@@ -849,13 +849,13 @@ function CustomerAutomationCard({
               {t("direct.createProspect")}
             </Button>
           ) : null}
-          {customer && !automation?.linked_order_id && canManage ? (
+          {customer && automation?.can_create_order && canManage ? (
             <Link
               className="inline-flex min-h-10 items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-black text-primary-foreground"
               href={`/orders?create=1&customer_id=${encodeURIComponent(customer.id)}&direct_conversation_id=${encodeURIComponent(conversation.id)}`}
             >
               <ShoppingBag className="h-4 w-4" />
-              {t("direct.createOrder")}
+              {t(automation?.linked_order_id ? "direct.createAnotherOrder" : "direct.createOrder")}
             </Link>
           ) : null}
           {automation?.linked_order_id ? (
