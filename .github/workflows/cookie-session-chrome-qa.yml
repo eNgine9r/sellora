@@ -80,9 +80,11 @@ jobs:
               return route.fulfill({status:200,contentType:'application/json',body:'{}'});
             });
             await page.goto('http://127.0.0.1:3100/login',{waitUntil:'domcontentloaded'});
+            console.log('CHROME_LOGIN_PAGE_LOADED');
             await page.locator('input[type="email"]').fill('synthetic@example.com');
             await page.locator('input[type="password"]').fill('synthetic-password');
             await page.locator('button[type="submit"]').click();
+            console.log('CHROME_LOGIN_SUBMITTED');
             await page.waitForURL(/\/dashboard/, {timeout:20000});
             const tokenKeys=()=>page.evaluate(()=>
               Object.keys(localStorage).filter(k=>/access_token|refresh_token|current_user/.test(k)));
@@ -99,5 +101,5 @@ jobs:
               profileLoads:counts.me,storedJwtKeys:0,pageErrors:errors.length,
               result:'PASS'}));
             await browser.close();
-          })().catch(e=>{console.error(e.stack);process.exitCode=1});
+          })().catch(e=>{console.error(e.stack);process.exit(1)});
           JS
