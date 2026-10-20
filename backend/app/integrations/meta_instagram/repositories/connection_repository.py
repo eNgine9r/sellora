@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.meta_instagram import InstagramConnection, InstagramConnectionStatus, MetaOAuthState
@@ -36,6 +36,8 @@ class InstagramConnectionRepository:
             .where(
                 InstagramConnection.instagram_account_id == instagram_account_id,
                 InstagramConnection.status == InstagramConnectionStatus.CONNECTED.value,
+                InstagramConnection.access_token_ciphertext.is_not(None),
+                or_(InstagramConnection.token_expires_at.is_(None), InstagramConnection.token_expires_at > func.now()),
                 InstagramConnection.deleted_at.is_(None),
             )
             .order_by(InstagramConnection.updated_at.desc(), InstagramConnection.id.desc())
@@ -52,6 +54,8 @@ class InstagramConnectionRepository:
                 InstagramConnection.instagram_account_id == instagram_account_id,
                 InstagramConnection.workspace_id != workspace_id,
                 InstagramConnection.status == InstagramConnectionStatus.CONNECTED.value,
+                InstagramConnection.access_token_ciphertext.is_not(None),
+                or_(InstagramConnection.token_expires_at.is_(None), InstagramConnection.token_expires_at > func.now()),
                 InstagramConnection.deleted_at.is_(None),
             )
             .order_by(InstagramConnection.updated_at.desc(), InstagramConnection.id.desc())
