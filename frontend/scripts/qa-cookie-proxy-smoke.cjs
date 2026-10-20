@@ -96,7 +96,12 @@ async function main(){
  const page=await context.newPage();
  const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
- await page.goto(base+'/login',{waitUntil:'domcontentloaded'});
+ const pilotRequested=process.env.COOKIE_QA_PILOT === 'true';
+ await page.goto(base+'/login'+(pilotRequested?'?secure_login_pilot=1':''),{waitUntil:'domcontentloaded'});
+ if(pilotRequested){
+   assert.equal(await page.evaluate(()=>sessionStorage.getItem('sellora.secure_session_pilot')),'1',
+     'Browser pilot opt-in was not activated');
+ }
  // First load must remain unauthenticated; the stub returns 401 if cookie absent.
  await page.locator('input[type="email"]').fill(account.email);
  await page.locator('input[type="password"]').fill('synthetic-no-real-password');
@@ -137,7 +142,7 @@ async function main(){
  const visible=await page.evaluate(()=>document.cookie);
  assert.ok(!visible.includes(cookieName),'HttpOnly cookie visible to JS');
  console.log(JSON.stringify({result:'COOKIE_REWRITE_PASS',chrome:'Google Chrome',viewport:'390x844',
- proxyPath:'/api/v1',login:counts.login,refresh:counts.refresh,profile:counts.profile,
+ proxyPath:'/api/v1',pilotRequested,login:counts.login,refresh:counts.refresh,profile:counts.profile,
  cookie:{httpOnly:refreshCookie.httpOnly,secure:refreshCookie.secure,
  sameSite:refreshCookie.sameSite,path:refreshCookie.path},
  localStorageTokens:keys.length,visibleCookie:false,authErrors:0,
