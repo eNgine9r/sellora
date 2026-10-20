@@ -28,6 +28,8 @@ from app.models.ai_direct import (
 from app.models.instagram_inbox_sync import InstagramHistorySync, InstagramHistorySyncStatus
 from app.models.meta_instagram import InstagramConnectionStatus
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
+from app.services.direct_lead_service import DirectLeadService
+from app.ai.services.direct_order_intent_service import detect_direct_order_intent
 
 
 ACTIVE_SYNC_STATUSES = {
@@ -45,6 +47,7 @@ class InstagramHistorySyncService:
         self.conversations = DirectConversationRepository(db)
         self.messages = DirectMessageRepository(db)
         self.profile_service = InstagramParticipantProfileService(db)
+        self.lead_service = DirectLeadService(db)
         self.client_factory = client_factory
 
     def request_sync(
@@ -294,6 +297,19 @@ class InstagramHistorySyncService:
             )
             sync.messages_imported += 1
             self._advance_conversation(conversation, direction, created_at)
+            if (
+                direction == DirectMessageDirection.INBOUND.value
+                and message_type == DirectMessageType.TEXT.value
+                and detect_direct_order_intent(text).detected
+            ):
+                try:
+                    with self.db.begin_nested():
+                        self.lead_service.ensure_from_inbound_order_intent(
+                            sync.workspace_id, conversation.id, text, created_at,
+                        )
+                except Exception:
+                    sync.error_count += 1
+                    sync.last_error_code = "DIRECT_LEAD_FAILED_SAFE"
 
         if conversation:
             conversation.provider_sync_status = "HISTORY_SYNCED"

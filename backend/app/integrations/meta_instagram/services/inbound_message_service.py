@@ -24,6 +24,8 @@ from app.models.meta_instagram import (
 )
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
 from app.services.direct_customer_automation_service import DirectCustomerAutomationService
+from app.services.direct_lead_service import DirectLeadService
+from app.ai.services.direct_order_intent_service import detect_direct_order_intent
 
 
 MEDIA_TYPES = {
@@ -36,13 +38,14 @@ MEDIA_TYPES = {
 
 
 class InstagramInboundMessageService:
-    def __init__(self, db: Session, profile_service=None, customer_automation_service=None) -> None:
+    def __init__(self, db: Session, profile_service=None, customer_automation_service=None, lead_service=None) -> None:
         self.db = db
         self.conversations = DirectConversationRepository(db)
         self.messages = DirectMessageRepository(db)
         self.message_states = InstagramMessageStateRepository(db)
         self.profile_service = profile_service or InstagramParticipantProfileService(db)
         self.customer_automation = customer_automation_service or DirectCustomerAutomationService(db)
+        self.lead_service = lead_service or DirectLeadService(db)
 
     def process_event(self, event: MetaWebhookEvent) -> int:
         connection = (
@@ -163,7 +166,9 @@ class InstagramInboundMessageService:
             conversation.human_agent_window_expires_at = provider_created_at + timedelta(days=7)
             connection.last_message_received_at = provider_created_at
             self._enrich_profile_safe(event.workspace_id, conversation)
-            self._ensure_customer_safe(event.workspace_id, conversation, text)
+            if message_type == DirectMessageType.TEXT.value:
+                self._ensure_lead_safe(event.workspace_id, conversation, text, provider_created_at)
+                self._ensure_customer_safe(event.workspace_id, conversation, text)
         return 1
 
     def _process_seen(self, event: MetaWebhookEvent, item: dict[str, Any]) -> None:
@@ -228,6 +233,19 @@ class InstagramInboundMessageService:
                 conversation.provider_sync_status = f"PROFILE_{profile.status}"
         except Exception:
             conversation.provider_sync_status = "PROFILE_FAILED_SAFE"
+
+    def _ensure_lead_safe(self, workspace_id, conversation, text: str | None, received_at: datetime) -> None:
+        if not detect_direct_order_intent(text).detected:
+            return
+        try:
+            # An automation error must not roll back or lose the verified
+            # incoming provider message.
+            with self.db.begin_nested():
+                self.lead_service.ensure_from_inbound_order_intent(
+                    workspace_id, conversation.id, text, received_at,
+                )
+        except Exception:
+            conversation.provider_sync_status = "LEAD_AUTOMATION_FAILED_SAFE"
 
     def _ensure_customer_safe(self, workspace_id, conversation, text: str | None) -> None:
         try:

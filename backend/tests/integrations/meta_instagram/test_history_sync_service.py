@@ -207,3 +207,36 @@ async def test_history_sync_rate_limit_uses_bounded_retry(monkeypatch):
     assert sync.rate_limit_count == 1
     assert sync.last_error_code == "META_HISTORY_RATE_LIMITED"
     assert sync.next_retry_at > datetime.now(UTC)
+
+from contextlib import nullcontext
+from dataclasses import replace
+
+
+@pytest.mark.asyncio
+async def test_history_sync_qualifying_inbound_replays_without_duplicate_leads(monkeypatch):
+    class QualifiedHistoryClient(FakeHistoryClient):
+        async def get_message(self, message_id):
+            result=await super().get_message(message_id)
+            return replace(result,message="Хочу замовити")
+
+    class Spy:
+        def __init__(self): self.calls=[]
+        def ensure_from_inbound_order_intent(self,*args):
+            self.calls.append(args)
+            return SimpleNamespace(id=uuid4())
+
+    workspace_id, sync, conversations, messages, service = make_service(monkeypatch, QualifiedHistoryClient())
+    service.db = SimpleNamespace(begin_nested=lambda: nullcontext())
+    service.lead_service = Spy()
+    await service.process_next()
+    assert sync.status == "COMPLETED"
+    assert sync.messages_imported == 1
+    assert len(service.lead_service.calls)==1
+    assert service.lead_service.calls[0][0]==workspace_id
+    assert service.lead_service.calls[0][1]==conversations.rows[0].id
+    sync.status="PENDING"
+    sync.conversation_cursor=None
+    sync.completed_at=None
+    await service.process_next()
+    assert sync.messages_existing==1
+    assert len(service.lead_service.calls)==1

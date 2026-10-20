@@ -29,6 +29,7 @@ from app.repositories.ai_direct_repository import (
 )
 from app.schemas.direct_order_proposal import DirectOrderProposal
 from app.services.direct_order_proposal_service import DirectOrderProposalService, ProposalConversationNotFound
+from app.services.direct_lead_service import DirectLeadError, DirectLeadService
 from app.schemas.ai_direct import (
     AIAnalysisResponse,
     AISuggestionResponse,
@@ -119,6 +120,27 @@ def get_conversation(
         conversation_id,
     )
     return conversation_response(conversation, profile)
+
+
+@router.post("/conversations/{conversation_id}/lead/ensure", response_model=DirectConversationResponse)
+def ensure_direct_lead(
+    conversation_id: UUID,
+    workspace_id: UUID = Depends(get_workspace_id),
+    user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        DirectLeadService(db).ensure_manually(workspace_id, conversation_id, user.id)
+        db.commit()
+        conversation = DirectConversationRepository(db).get(workspace_id, conversation_id)
+        return conversation_response(conversation)
+    except DirectLeadError as exc:
+        db.rollback()
+        code = str(exc)
+        raise HTTPException(
+            404 if code == "DIRECT_CONVERSATION_NOT_FOUND" else 409,
+            code,
+        ) from exc
 
 
 @router.post(
