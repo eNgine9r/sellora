@@ -19,7 +19,7 @@ class InstagramOAuthService:
         state_hash = hashlib.sha256(raw_state.encode()).hexdigest()
         expires_at = datetime.now(UTC) + timedelta(minutes=10)
         MetaOAuthStateRepository(self.db).create(MetaOAuthState(workspace_id=workspace_id, user_id=user_id, state_hash=state_hash, redirect_uri=settings.meta_oauth_redirect_uri, expires_at=expires_at, created_at=datetime.now(UTC)))
-        params = urlencode({"client_id": settings.meta_app_id, "redirect_uri": settings.meta_oauth_redirect_uri, "scope": ",".join(OAUTH_REQUIRED_SCOPES), "response_type": "code", "state": raw_state})
+        params = urlencode({"client_id": settings.meta_app_id, "redirect_uri": settings.meta_oauth_redirect_uri, "scope": ",".join(OAUTH_REQUIRED_SCOPES), "response_type": "code", "enable_fb_login": "0", "force_reauth": "true", "state": raw_state})
         return f"{settings.meta_instagram_oauth_authorize_url}?{params}", expires_at
     def validate_state(self, state: str, workspace_id: UUID | None = None, user_id: UUID | None = None) -> MetaOAuthState:
         row = MetaOAuthStateRepository(self.db).get_by_hash_for_update(hashlib.sha256(state.encode()).hexdigest())
