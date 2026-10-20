@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - security/2026-10-20-staging-cookie-cutover
+      - maintenance/2026-10-20-cookie-only-browser
   workflow_dispatch:
 permissions:
   contents: read
