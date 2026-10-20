@@ -67,9 +67,10 @@ async function main(){
  let stderr='';
  app.stderr.on('data',chunk=>stderr+=String(chunk).slice(-500));
  const base='https://localhost:13102';
+ const readinessUrl='http://127.0.0.1:'+webPort+'/login';
  let up=false;
  for(let i=0;i<80;i++){
-  try{const response=await fetch(base+'/login');if(response.ok){up=true;break;}}catch{}
+  try{const response=await fetch(readinessUrl);if(response.ok){up=true;break;}}catch{}
   await sleep(400);
  }
  assert.ok(up,'Next.js QA server did not start '+stderr.slice(-350));
