@@ -230,7 +230,10 @@ class InstagramHistorySyncVisibilityService(InstagramHistorySyncService):
                 DirectMessage(
                     workspace_id=sync.workspace_id,
                     conversation_id=conversation.id,
-                    external_message_id=details.id,
+                    # Legacy external_message_id is VARCHAR(160). Meta may return
+                    # longer opaque IDs; preserve the full ID in provider_message_id
+                    # (VARCHAR(180)) for deduplication, rather than truncating it.
+                    external_message_id=details.id if len(details.id) <= 160 else None,
                     direction=direction,
                     sender_type=(
                         DirectMessageSenderType.MANAGER.value
