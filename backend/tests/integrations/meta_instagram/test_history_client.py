@@ -94,3 +94,42 @@ async def test_history_client_maps_rate_limit_to_safe_error(monkeypatch):
     with pytest.raises(MetaInstagramError) as exc:
         await MetaInstagramHistoryClient("https://graph.example", "v99.0", "token").list_conversations("ig-business")
     assert exc.value.code == "META_HISTORY_RATE_LIMITED"
+
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("status", "provider_code", "expected_code"),
+    [
+        (400, 9000001, "META_HISTORY_MESSAGE_UNAVAILABLE"),
+        (404, 100, "META_HISTORY_MESSAGE_UNAVAILABLE"),
+        (400, 100, "META_HISTORY_ACCESS_DENIED"),
+        (403, 10, "META_HISTORY_ACCESS_DENIED"),
+    ],
+)
+async def test_history_client_does_not_hide_permission_errors_as_missing_messages(
+    monkeypatch, status, provider_code, expected_code
+):
+    client = MetaInstagramHistoryClient("https://graph.example", "v99.0", "token")
+    request = httpx.Request("GET", "https://graph.example/v99.0/message-id")
+    response = httpx.Response(
+        status,
+        request=request,
+        json={"error": {"code": provider_code, "type": "OAuthException"}},
+    )
+
+    async def rejected_get(path, *, params):
+        cause = httpx.HTTPStatusError("rejected", request=request, response=response)
+        try:
+            raise cause
+        except httpx.HTTPStatusError as error:
+            raise MetaInstagramError(
+                "META_HISTORY_ACCESS_DENIED",
+                "Meta rejected the history request or the item is unavailable.",
+                status,
+            ) from error
+
+    monkeypatch.setattr(client, "_get", rejected_get)
+    with pytest.raises(MetaInstagramError) as exc:
+        await client.get_message("message-id")
+    assert exc.value.code == expected_code
