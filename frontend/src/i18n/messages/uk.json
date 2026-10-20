@@ -2433,7 +2433,8 @@
         "account_type_unverified": "Не вдалося перевірити тип акаунта",
         "permission_failed": "Не вдалося перевірити дозволи",
         "invalid_state": "Сесія OAuth недійсна або вже використана",
-        "failed": "Підключення не завершено"
+        "failed": "Підключення не завершено",
+        "webhook_inactive": "Підписки Instagram на події не активовано"
       }
     },
     "activateWebhook": "Активувати webhook",
@@ -2444,8 +2445,17 @@
     "missingWebhookFields": "Бракує подій webhook",
     "fieldLabels": {
       "messages": "Повідомлення",
-      "messaging_postbacks": "Натискання кнопок"
-    }
+      "messaging_postbacks": "Натискання кнопок",
+      "messaging_seen": "Переглянуті повідомлення",
+      "message_reactions": "Реакції на повідомлення"
+    },
+    "reconnectExplanation": "Термін дії токена Instagram завершився. Перепідключіть акаунт для відновлення Direct.",
+    "connectionMissingExplanation": "Підключення Instagram у цьому робочому просторі неактивне. Потрібен новий вхід власника.",
+    "openInBrowserHint": "Якщо Instagram показує «Сталася помилка», відкрийте Sellora напряму в Safari або Chrome та повторіть вхід.",
+    "reconnect": "Перепідключити Instagram",
+    "browserLinkButton": "Посилання для Chrome",
+    "browserLinkTitle": "Відкрити Instagram у браузері",
+    "browserLinkInstructions": "Натисни на поле, скопіюй посилання і встав його безпосередньо в адресний рядок Chrome. Не відкривай посилання натисканням на нього: iPhone може перекинути у застосунок Instagram. Посилання дійсне 10 хвилин. Нікому його не надсилай."
   },
   "proposal": {
     "currentPrice": "Поточна ціна",

@@ -127,11 +127,20 @@ class MetaInstagramHistoryClient:
             )
         except MetaInstagramError as exc:
             if exc.code == "META_HISTORY_ACCESS_DENIED":
-                raise MetaInstagramError(
-                    "META_HISTORY_MESSAGE_UNAVAILABLE",
-                    "Meta no longer exposes details for this historical message.",
-                    404,
-                ) from exc
+                provider_error = exc.__cause__
+                if isinstance(provider_error, httpx.HTTPStatusError):
+                    response = provider_error.response
+                    try:
+                        details = response.json().get("error", {})
+                    except (ValueError, AttributeError):
+                        details = {}
+                    code = details.get("code") if isinstance(details, dict) else None
+                    if response.status_code == 404 or str(code) == "9000001":
+                        raise MetaInstagramError(
+                            "META_HISTORY_MESSAGE_UNAVAILABLE",
+                            "Meta no longer provides this historical message.",
+                            404,
+                        ) from exc
             raise
         sender = payload.get("from") if isinstance(payload.get("from"), dict) else {}
         recipients = payload.get("to") if isinstance(payload.get("to"), dict) else {}

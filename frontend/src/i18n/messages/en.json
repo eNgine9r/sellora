@@ -2433,7 +2433,8 @@
         "account_type_unverified": "Could not verify account type",
         "permission_failed": "Could not verify permissions",
         "invalid_state": "OAuth session is invalid or already used",
-        "failed": "Connection was not completed"
+        "failed": "Connection was not completed",
+        "webhook_inactive": "Instagram event subscriptions are not active"
       }
     },
     "activateWebhook": "Activate webhook",
@@ -2444,8 +2445,17 @@
     "missingWebhookFields": "Missing webhook events",
     "fieldLabels": {
       "messages": "Messages",
-      "messaging_postbacks": "Button taps"
-    }
+      "messaging_postbacks": "Button taps",
+      "messaging_seen": "Seen messages",
+      "message_reactions": "Message reactions"
+    },
+    "reconnect": "Reconnect Instagram",
+    "reconnectExplanation": "Your Instagram token has expired. Reconnect the account to restore Direct messages.",
+    "connectionMissingExplanation": "The Instagram connection in this workspace is inactive. The account owner needs to sign in again.",
+    "openInBrowserHint": "If Instagram displays 'Something went wrong', open Sellora directly in Chrome or Safari and retry.",
+    "browserLinkButton": "Chrome login link",
+    "browserLinkTitle": "Open Instagram in the browser",
+    "browserLinkInstructions": "Select the link, copy it, and paste it directly into Chrome's address bar. Do not tap it as a link: iPhone may launch the Instagram app. This link expires in 10 minutes. Do not share it."
   },
   "proposal": {
     "currentPrice": "Current price",
