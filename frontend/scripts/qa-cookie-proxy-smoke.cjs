@@ -2,6 +2,11 @@
 // Does NOT contact Instagram, Supabase, production Raspberry or real accounts.
 const assert=require('node:assert/strict');
 const http=require('node:http');
+const https=require('node:https');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const {execFileSync}=require('node:child_process');
 const {spawn}=require('node:child_process');
 const {chromium}=require('playwright-core');
 
@@ -51,7 +56,7 @@ const server=http.createServer(async(req,res)=>{
  return json(res,200,{});
 });
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-let browser,app;
+let browser,app,httpsProxy,certDir;
 async function main(){
  await new Promise(resolve=>server.listen(upstreamPort,upstreamHost,resolve));
  app=spawn('npm',['--prefix','frontend','run','start','--','--hostname','127.0.0.1','--port',String(webPort)],{
@@ -61,15 +66,32 @@ async function main(){
  });
  let stderr='';
  app.stderr.on('data',chunk=>stderr+=String(chunk).slice(-500));
- const base='http://localhost:'+webPort;
+ const base='https://localhost:13102';
  let up=false;
  for(let i=0;i<80;i++){
   try{const response=await fetch(base+'/login');if(response.ok){up=true;break;}}catch{}
   await sleep(400);
  }
  assert.ok(up,'Next.js QA server did not start '+stderr.slice(-350));
+ // Run the actual Next.js rewrite behind HTTPS: Secure cookies are not
+ // guaranteed to be accepted through a plain HTTP test origin.
+ certDir=fs.mkdtempSync(path.join(os.tmpdir(),'sellora-https-smoke-'));
+ const key=path.join(certDir,'key.pem'),crt=path.join(certDir,'cert.pem');
+ execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-sha256','-nodes',
+   '-keyout',key,'-out',crt,'-days','1','-subj','/CN=localhost',
+   '-addext','subjectAltName=DNS:localhost'],{stdio:'ignore'});
+ httpsProxy=https.createServer({key:fs.readFileSync(key),cert:fs.readFileSync(crt)},(req,res)=>{
+   const forward=http.request({hostname:'127.0.0.1',port:webPort,
+     method:req.method,path:req.url,headers:{...req.headers,host:'127.0.0.1:'+webPort,
+       'x-forwarded-proto':'https'}},out=>{
+     res.writeHead(out.statusCode,out.headers);out.pipe(res);
+   });
+   forward.on('error',()=>{res.writeHead(502);res.end();});
+   req.pipe(forward);
+ });
+ await new Promise(resolve=>httpsProxy.listen(13102,'127.0.0.1',resolve));
  browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
- const context=await browser.newContext({viewport:{width:390,height:844}});
+ const context=await browser.newContext({viewport:{width:390,height:844},ignoreHTTPSErrors:true});
  const page=await context.newPage();
  const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
@@ -77,12 +99,18 @@ async function main(){
  // First load must remain unauthenticated; the stub returns 401 if cookie absent.
  await page.locator('input[type="email"]').fill(account.email);
  await page.locator('input[type="password"]').fill('synthetic-no-real-password');
- await page.locator('button[type="submit"]').click();
+ const [loginResponse]=await Promise.all([
+   page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/auth/session/login'),
+   page.locator('button[type="submit"]').click(),
+ ]);
+ const loginHeaders=await loginResponse.allHeaders();
+ assert.equal(loginResponse.status(),200,'Backend failed session login through proxy');
+ assert.ok('set-cookie' in loginHeaders,'Next.js rewrite dropped Set-Cookie response header');
  await page.waitForURL(/\/dashboard/,{timeout:20000});
  assert.equal(counts.login,1);
  let cookies=await context.cookies(base);
  let refreshCookie=cookies.find(c=>c.name===cookieName);
- assert.ok(refreshCookie,'Next.js rewrite dropped Set-Cookie');
+ assert.ok(refreshCookie,'Browser did not store forwarded HTTPS Set-Cookie');
  assert.equal(refreshCookie.httpOnly,true,'Cookie is accessible to JavaScript');
  assert.equal(refreshCookie.secure,true,'Cookie is not Secure');
  assert.equal(refreshCookie.sameSite,'Lax');
@@ -112,6 +140,8 @@ async function main(){
 main().catch(err=>{console.error('COOKIE_REWRITE_SMOKE_FAILED',err.stack);process.exitCode=1;}).finally(async()=>{
  if(browser)await browser.close().catch(()=>{});
  if(app)app.kill('SIGTERM');
+ if(httpsProxy)await new Promise(resolve=>httpsProxy.close(resolve));
  await new Promise(resolve=>server.close(resolve));
+ if(certDir)fs.rmSync(certDir,{recursive:true,force:true});
  process.exit(process.exitCode||0);
 });
