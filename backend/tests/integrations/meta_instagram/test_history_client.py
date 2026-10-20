@@ -189,7 +189,7 @@ async def test_history_client_falls_back_when_inline_fields_unsupported(monkeypa
 
     import app.integrations.meta_instagram.history_client as module
     monkeypatch.setattr(module.httpx, "AsyncClient", AsyncClient)
-    page = await MetaInstagramHistoryClient("https://graph.example", "v99.0", "token").list_messages("thread-1")
+    page = await MetaInstagramHistoryClient("https://graph.example", "v99.0", "token").list_messages("thread-1", after="older-cursor")
     assert len(calls) == 2
     assert page.messages[0].id == "mid-basic"
     assert page.messages[0].details is None
