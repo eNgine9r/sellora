@@ -143,3 +143,76 @@ Reviewed the edited React components using the React best-practices skill and th
 No live activation is claimed. Ads remains dependent on separately configured/enabled runtime gates, a reviewed Meta application, granted permissions, real owner consent and a compatible explicitly selected account. The browser mocks validate frontend behavior, not live OAuth/provider correctness. Upstream ingress/access-log query suppression must still be validated before activation: browser cleanup cannot erase the original HTTP callback request already received by hosting infrastructure.
 
 The five archival static failures above are existing debt, proven at the assigned base. Independent controller review, final release/CI evaluation and any authorized activation remain controller-owned.
+
+
+## Review fix round 1/5 — I1 and M1
+
+Fix base: `de528f7716045567abf4b55506a66ab3346194cc`.
+
+### I1 — distinguish stale incoming arrival from a matched attempt failure
+
+Reproduced the review finding with the actual transpiled callback page and actual intent module under synthetic React/auth/window/provider stubs. The newly added assertion failed before the fix: expected stored state `pending-B`, received undefined after stale A arrived. There were no additional callback POSTs. This is an effect/control-flow VM regression, complemented by real Next browser checks below; it is not a substitute for React StrictMode verification.
+
+The callback page now rejects mismatched or missing incoming state for a pending attempt before any cleanup, and its generic promise catch only presents invalid_state. The intent module validates incoming association before looking up an in-flight promise or consuming metadata. Matching expired/invalid-code and provider-failed attempts remain cleared by the helper. Callback denial/auth rejection clears only an incoming matching attempt. A denial without state is shown as cancellation while preserving an unidentified pending B; matching denial still clears its own attempt. Explicit logout/session/workspace cleanup in auth.service.ts is unchanged.
+
+The regression now proves all of:
+- A arrives after B is stored: B remains pending, invalid-state UI, zero additional callback POSTs.
+- Missing incoming state, with or without a code: B remains pending.
+- Unassociated/state-free denial: B remains pending.
+- B subsequently completes exactly once, including a second effect invocation and a stale A arriving while B is in flight.
+- Query-free completed B recovers through status, without another POST.
+- Matching expired and matching denied attempts clear their own metadata.
+- The original late-A-completion-after-B regression is retained and passes.
+
+### M1 — advertising wording
+
+Updated Ukrainian provider_metric_read_only to: “Рекламні показники та дату контролює Meta Ads. Оновіть метрики й редагуйте лише локальні поля CRM.” Updated the existing browser expectation to the same advertising wording.
+
+### Files changed by this fix
+
+- frontend/src/app/settings/integrations/meta-ads/callback/page.tsx
+- frontend/src/features/integrations/lib/meta-ads-intent.ts
+- frontend/src/i18n/messages/uk.json
+- frontend/scripts/meta-ads-intent-regression.mjs
+- frontend/scripts/meta-ads-onboarding-browser.mjs
+- .superpowers/sdd/sellora-integrations-onboarding-20261020/task-3-report.md
+
+### Exact covering checks and results
+
+All commands used Remote Desktop Commander on btc-radar in the assigned worktree.
+
+```sh
+node frontend/scripts/meta-ads-intent-regression.mjs
+```
+
+Red: AssertionError, “actual page must preserve B when older A arrives”; actual undefined, expected pending-B. Green after the fix: exit 0, both “Meta Ads intent regression passed” and “Actual callback component + intent regression passed: stale/missing-state arrival preserves B; B completes once; in-flight stale arrival rejected; sanitized recovery succeeds.”
+
+```sh
+NEXT_PUBLIC_API_BASE_URL=/api/v1 NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED=true INTEGRATIONS_TEST_DEV=1 META_ADS_TEST_SUITE=callback PLAYWRIGHT_RUNTIME_PACKAGE=/home/btcradar/nexolab711-work/package.json PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium node frontend/scripts/meta-ads-onboarding-browser.mjs
+```
+
+Real Next development/StrictMode: exit 0; “Meta Ads synthetic gate passed: 2 scenarios” (49.60s). Includes original held-auth query scrub/one POST/reload recovery plus stale-A/missing-state/unassociated-denial arrivals preserving B, then B completion once and reload recovery.
+
+From frontend/:
+```sh
+npm run typecheck && npm run lint && NEXT_TELEMETRY_DISABLED=1 NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED=true npm run build
+```
+
+Exit 0 (67.87s). Next 15.5.19 compiled and generated all 33 routes; no typecheck/lint failures.
+
+```sh
+NEXT_TELEMETRY_DISABLED=1 META_ADS_TEST_SUITE=callback PLAYWRIGHT_RUNTIME_PACKAGE=/home/btcradar/nexolab711-work/package.json PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium node frontend/scripts/meta-ads-onboarding-browser.mjs
+git diff --check
+```
+
+Production callback mode: exit 0; “Meta Ads synthetic gate passed: 2 scenarios” (15.44s). Diff check passed. Callback policy, immediate URL cleanup, window-capture deletion, no code persistence, no automatic account selection and the complementary per-attempt flow are exercised. Every API remains synthetic and external provider traffic is intercepted; no real provider/data action occurred.
+
+The complete CI browser runner now defines 16 scenarios (the existing 15 plus the new attempt-isolation flow). Only the two covering callback scenarios were rerun locally for this fix, alongside the VM and frontend gates. NP/Direct were untouched and were not repeated, as requested; final CI remains controller-owned.
+
+Fresh focused result manifests and attempt-isolation screenshots are under:
+- artifacts/integrations-onboarding/meta-ads/result.json
+- artifacts/integrations-onboarding/meta-ads/callback-attempt-isolation.png
+- artifacts/integrations-onboarding/meta-ads-strictmode/result.json
+- artifacts/integrations-onboarding/meta-ads-strictmode/callback-attempt-isolation.png
+
+Both manifests record 2 checks and an empty failures array. Generated artifacts and the root-owned release-control document are excluded from this fix commit. Original de528f7 evidence was privately archived by the controller before this round. No new implementation concern identified; inherited archival-static/live-activation limits above remain unchanged.

@@ -27,6 +27,11 @@ export function matchesAdsIntent(intent: AdsIntent, actor: string, workspace: st
 // Only the promise is shared during StrictMode remounts. Codes stay in memory.
 const exchanges = new Map<string, Promise<MetaAdsStatus>>();
 export function completeAdsIntent(intent: AdsIntent, code: string | null, state: string | null) {
+  // Reject unassociated arrivals before joining or consuming any stored attempt.
+  // A query-free visit may recover an already processing/completed attempt only.
+  if ((code !== null || state !== null || intent.phase === "pending") && state !== intent.state) {
+    return Promise.reject(new Error("invalid_state"));
+  }
   const attempt = intent.actor + ":" + intent.workspace + ":" + intent.state;
   const existing = exchanges.get(attempt);
   if (existing) return existing;
@@ -36,7 +41,10 @@ export function completeAdsIntent(intent: AdsIntent, code: string | null, state:
       if (!status.connected) throw new Error("invalid_state");
       return status;
     }
-    if (!code || state !== intent.state || Date.parse(intent.expires) <= Date.now()) throw new Error("invalid_state");
+    if (!code || Date.parse(intent.expires) <= Date.now()) {
+      clearAdsIntent(intent.state); // The incoming state matched this attempt above.
+      throw new Error("invalid_state");
+    }
     saveAdsIntent({ ...intent, phase: "processing" });
     try {
       const status = await metaAdsRequest<MetaAdsStatus>(intent.workspace, "/oauth/callback", { code, state });

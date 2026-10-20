@@ -20,17 +20,24 @@ export default function MetaAdsCallbackPage() {
     window.history.replaceState(window.history.state, "", "/settings/integrations/meta-ads/callback");
     if (auth.status === "loading") return;
     const intent = readAdsIntent();
-    if (auth.status !== "authenticated" || !intent || auth.currentWorkspace?.role !== "OWNER" || !matchesAdsIntent(intent, auth.currentUser?.id ?? "", auth.currentWorkspaceId ?? "")) {
-      clearAdsIntent(); setResult("invalid_state"); return;
+    if (intent && payload.current.state !== intent.state && (payload.current.code !== null || payload.current.state !== null || (intent.phase === "pending" && !payload.current.denied))) {
+      setResult("invalid_state"); return;
     }
-    if (payload.current.denied) { clearAdsIntent(); setResult("denied"); return; }
+    if (auth.status !== "authenticated" || !intent || auth.currentWorkspace?.role !== "OWNER" || !matchesAdsIntent(intent, auth.currentUser?.id ?? "", auth.currentWorkspaceId ?? "")) {
+      if (intent && payload.current.state === intent.state) clearAdsIntent(payload.current.state);
+      setResult("invalid_state"); return;
+    }
     setOwner(intent.workspace + ":" + intent.actor);
+    if (payload.current.denied) {
+      if (payload.current.state === intent.state) clearAdsIntent(payload.current.state);
+      setResult("denied"); return;
+    }
     let active = true;
     void completeAdsIntent(intent, payload.current.code, payload.current.state).then(() => {
       if (!active) return;
       if (matchesAdsIntent(intent, intent.actor, intent.workspace) && readAdsIntent()?.state === intent.state) setResult("success");
       else setResult("invalid_state");
-    }).catch(() => { if (!active) return; clearAdsIntent(intent.state); setResult("invalid_state"); }).finally(() => { payload.current = { code: null, state: null, denied: false }; });
+    }).catch(() => { if (!active) return; setResult("invalid_state"); }).finally(() => { payload.current = { code: null, state: null, denied: false }; });
     return () => { active = false; };
   }, [auth.status, auth.currentUser?.id, auth.currentWorkspaceId, auth.currentWorkspace?.role]);
   const visible = owner && owner !== auth.currentWorkspaceId + ":" + auth.currentUser?.id ? "invalid_state" : result;

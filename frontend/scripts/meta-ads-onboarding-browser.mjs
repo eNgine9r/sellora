@@ -14,7 +14,7 @@ async function fixture(width, role = "OWNER") {
   await context.addCookies([{ name: "sellora_session_refresh", value: "synthetic-browser-session", domain: new URL(base).hostname, secure: new URL(base).protocol === "https:", path: "/api/v1/auth/session", httpOnly: true, sameSite: "Lax" }]);
   await context.addInitScript(id => { if (!localStorage.getItem("sellora.current_workspace_id")) localStorage.setItem("sellora.current_workspace_id", id); }, w1);
   const user = { id: actor, email: "synthetic@example.invalid", first_name: "Тест", last_name: "Sellora", is_active: true, memberships: [{ workspace_id: w1, workspace_name: "Синтетичний магазин", role, currency_code: "UAH" }, { workspace_id: w2, workspace_name: "Другий синтетичний магазин", role, currency_code: "UAH" }] };
-  const state = { status: statuses(), calls: [], external: [], unexpected: [], errors: [], syncError: null, hold: null, release: null, failStatus: false, accounts: true, callbackError: false, holdRefresh: false, releaseRefresh: null, retry401: false, callbackCount: 0, metricConflict: false, metricPayload: null };
+  const state = { status: statuses(), calls: [], external: [], unexpected: [], errors: [], syncError: null, hold: null, release: null, failStatus: false, accounts: true, callbackError: false, holdRefresh: false, releaseRefresh: null, retry401: false, callbackCount: 0, expectedState: "synthetic-state", expectedCode: "synthetic-code", metricConflict: false, metricPayload: null };
   const campaign = { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", workspace_id: w1, name: "Meta synthetic", platform: "INSTAGRAM", status: "ACTIVE", objective: "MESSAGES", budget_type: "DAILY" };
   const metric = { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", campaign_id: campaign.id, workspace_id: w1, metric_date: "2026-10-20", source_type: "meta_live", provider_controlled_fields: ["metric_date", "spend", "impressions", "clicks", "messages"], spend: "100", impressions: 1000, reach: 0, clicks: 20, messages: 5, leads: 0, orders: 0, revenue: "0", net_profit: "0" };
   await context.route("**/*", async route => {
@@ -44,7 +44,7 @@ async function fixture(width, role = "OWNER") {
         state.callbackCount++;
         if (state.callbackError) return ok({ detail: { code: "invalid_state" } }, 400);
         expect(r.headers()["referer"]).toBeUndefined();
-        expect(r.postDataJSON()).toEqual({ code: "synthetic-code", state: "synthetic-state" });
+        expect(r.postDataJSON()).toEqual({ code: state.expectedCode, state: state.expectedState });
         state.status = { ...state.status, connected: true, connection_status: "CONNECTED", account_selection_required: true };
         return ok({ ...state.status, token_stored: true });
       }
@@ -169,6 +169,33 @@ try {
     } catch (error) { await f.page.screenshot({ path: path.join(output, "failure-" + width + ".png"), fullPage: true }); throw error; }
     finally { await f.context.close(); }
   }
+
+  if (!denialOnly) {
+    const f = await fixture(1366);
+    try {
+      await f.page.goto(base + "/settings/integrations");
+      await expect(f.card().getByRole("button", { name: "Підключити Meta Ads", exact: true })).toBeVisible();
+      f.state.expectedState = "synthetic-state-B"; f.state.expectedCode = "synthetic-code-B";
+      await f.page.evaluate(({ actor, w1 }) => sessionStorage.setItem("sellora.meta-ads.intent", JSON.stringify({ actor, workspace: w1, state: "synthetic-state-B", phase: "pending", expires: "2099-01-01" })), { actor, w1 });
+      for (const query of ["code=synthetic-code-A&state=synthetic-state-A", "code=synthetic-code-A", "", "error=access_denied&state=synthetic-state-A", "error=access_denied"]) {
+        await f.page.goto(base + "/settings/integrations/meta-ads/callback" + (query ? "?" + query : ""));
+        await expect(f.page.getByText(query === "error=access_denied" ? /Ви скасували підключення/ : /Підключення не підтверджено/)).toBeVisible();
+        expect(new URL(f.page.url()).search).toBe("");
+        expect(await f.page.evaluate(() => JSON.parse(sessionStorage.getItem("sellora.meta-ads.intent")))).toMatchObject({ state: "synthetic-state-B", phase: "pending" });
+        expect(f.state.callbackCount).toBe(0);
+      }
+      await f.page.goto(base + "/settings/integrations/meta-ads/callback?code=synthetic-code-B&state=synthetic-state-B");
+      await expect(f.page.getByText("Meta Ads підключено. Тепер оберіть рекламний кабінет.")).toBeVisible();
+      expect(f.state.callbackCount).toBe(1);
+      expect(await f.page.evaluate(() => [localStorage, sessionStorage].some(storage => Object.values(storage).some(value => value.includes("synthetic-code-B"))))).toBe(false);
+      await f.page.reload();
+      await expect(f.page.getByText("Meta Ads підключено. Тепер оберіть рекламний кабінет.")).toBeVisible();
+      expect(f.state.callbackCount).toBe(1);
+      await f.page.screenshot({ path: path.join(output, "callback-attempt-isolation.png") });
+      await f.clean();
+      checks.push("callback attempt isolation: stale A/missing state/unassociated denial preserve pending B; B exchanges exactly once and reload recovers");
+    } finally { await f.context.close(); }
+  }
   if (!callbackOnly) {
   for (const mode of denialOnly ? ["denial"] : ["blocked", "empty", "statusError", "denial", "expired", "actorMismatch", "workspaceMismatch", "callbackError", "logout", "reconnect", "analyst", "manager"]) {
     const f = await fixture(390, mode === "analyst" ? "ANALYST" : mode === "manager" ? "MANAGER" : "OWNER");
@@ -185,7 +212,9 @@ try {
         await f.page.goto(base + "/settings/integrations/meta-ads/callback?" + (mode === "denial" ? "error=access_denied" : "state=synthetic-state&code=synthetic-code"));
         await expect(f.page.getByText(mode === "denial" ? /Ви скасували підключення/ : /Підключення не підтверджено/)).toBeVisible();
         expect(new URL(f.page.url()).search).toBe("");
-        expect(await f.page.evaluate(() => sessionStorage.getItem("sellora.meta-ads.intent"))).toBe(null);
+        const remaining = await f.page.evaluate(() => JSON.parse(sessionStorage.getItem("sellora.meta-ads.intent") ?? "null"));
+        if (mode === "denial") expect(remaining?.state).toBe("synthetic-state");
+        else expect(remaining).toBe(null);
         expect(f.state.callbackCount).toBe(mode === "callbackError" ? 1 : 0);
       } else {
         await f.page.goto(base + "/settings/integrations");
@@ -225,7 +254,7 @@ try {
     await f.page.getByRole("button", { name: "Редагувати метрику 2026-10-20", exact: true }).click();
     await dialog.getByLabel("Ліди", { exact: true }).fill("4");
     await dialog.getByRole("button", { name: "Зберегти зміни" }).click();
-    await expect(dialog.getByText(/Поля доставки та дату контролює Meta Ads/)).toBeVisible();
+    await expect(dialog.getByText(/Рекламні показники та дату контролює Meta Ads/)).toBeVisible();
     await f.clean(); checks.push("metric editor: protected fields disabled, local CRM saved, stale409 explained");
     await dialog.screenshot({ path: path.join(output, "metric-editor.png") });
   } finally { await f.context.close(); }
