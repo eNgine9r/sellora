@@ -140,7 +140,8 @@
         "label": "English interface",
         "value": "EN"
       }
-    ]
+    ],
+    "rateLimited": "Too many sign-in attempts. For security, please try again in approximately {minutes} min."
   },
   "landing": {
     "nav": {

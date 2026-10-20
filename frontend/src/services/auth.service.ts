@@ -24,6 +24,16 @@ export class InvalidCredentialsError extends Error {
   }
 }
 
+export class AuthRateLimitedError extends Error {
+  readonly retryAfterSeconds: number;
+
+  constructor(retryAfterSeconds: number) {
+    super("AUTH_RATE_LIMITED");
+    this.name = "AuthRateLimitedError";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
 const ACCESS_TOKEN_KEY = "sellora.access_token";
 const REFRESH_TOKEN_KEY = "sellora.refresh_token";
 const CURRENT_USER_KEY = "sellora.current_user";
@@ -104,6 +114,10 @@ export async function loginWithPassword(email: string, password: string): Promis
     body: JSON.stringify({ email, password }),
   });
   if (!response.ok) {
+    if (response.status === 429) {
+      const seconds = Number(response.headers.get("Retry-After"));
+      throw new AuthRateLimitedError(Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 900);
+    }
     if (response.status === 401 || response.status === 422) {
       throw new InvalidCredentialsError();
     }
