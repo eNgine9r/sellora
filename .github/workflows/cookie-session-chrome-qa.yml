@@ -121,5 +121,5 @@ jobs:
       - name: Verify actual Next.js proxy preserves Secure HttpOnly cookies
         env:
           NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED: 'true'
-          SELLORA_API_UPSTREAM_URL: http://127.0.0.1:19999
+          SELLORA_API_UPSTREAM_URL: http://127.0.0.1:9999
         run: NODE_PATH=/tmp/sellora-cookie-chrome/node_modules node frontend/scripts/qa-cookie-proxy-smoke.cjs
