@@ -42,9 +42,9 @@ def _status_response(workspace_id: UUID, c) -> InstagramConnectionStatusResponse
     return InstagramConnectionStatusResponse(
         workspace_id=workspace_id,
         status=effective_status,
-        instagram_username=c.instagram_username if c else None,
-        instagram_account_type=c.instagram_account_type if c else None,
-        granted_permissions=c.granted_permissions if c else [],
+        instagram_username=c.instagram_username if c and c.status != "DISCONNECTED" else None,
+        instagram_account_type=c.instagram_account_type if c and c.status != "DISCONNECTED" else None,
+        granted_permissions=c.granted_permissions if c and c.status != "DISCONNECTED" else [],
         subscribed_webhook_fields=confirmed,
         confirmed_webhook_fields=confirmed,
         missing_webhook_fields=missing,
