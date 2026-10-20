@@ -50,6 +50,7 @@ class MetaAdsConnectionService:
             blockers.append("unsupported_api_version")
         if not (s.meta_ads_app_id and s.meta_ads_app_secret and s.meta_token_encryption_key
                 and self._callback_url(s.meta_ads_oauth_redirect_uri)
+                and urlparse(s.meta_ads_oauth_redirect_uri).path.rstrip("/") == f"{s.api_v1_prefix}/integrations/meta-ads/oauth/callback"
                 and self._callback_url(s.meta_ads_oauth_frontend_callback_url)):
             blockers.append("missing_required_configuration")
         if s.meta_token_encryption_key:

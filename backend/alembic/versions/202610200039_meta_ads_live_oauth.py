@@ -31,8 +31,17 @@ def upgrade():
     op.create_index("ix_meta_ads_oauth_states_workspace_id", "meta_ads_oauth_states", ["workspace_id"])
     op.create_index("ix_meta_ads_oauth_states_expires_at", "meta_ads_oauth_states", ["expires_at"])
     op.execute("ALTER TABLE meta_ads_oauth_states ENABLE ROW LEVEL SECURITY")
-    # Backend follows the existing workspace-scoped service-role access convention.
-    # No public/anon policy is added for credential state.
+    # RLS does not govern TRUNCATE. Remove inherited Supabase defaults as well.
+    op.execute("REVOKE ALL PRIVILEGES ON TABLE public.meta_ads_oauth_states FROM PUBLIC")
+    for role_name in ("anon", "authenticated"):
+        op.execute(f"""
+            DO $$ BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{role_name}') THEN
+                    REVOKE ALL PRIVILEGES ON TABLE public.meta_ads_oauth_states FROM "{role_name}";
+                END IF;
+            END $$
+        """)
+    # Backend table owner/service role keeps its established access; no public policy.
 
 
 def downgrade():

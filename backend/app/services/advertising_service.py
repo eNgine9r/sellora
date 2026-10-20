@@ -29,6 +29,15 @@ class AdvertisingServiceError(ValueError):
     pass
 
 
+META_CONTROLLED_METRIC_FIELDS = ("metric_date", "spend", "impressions", "clicks", "messages")
+
+
+class ProviderMetricReadOnlyError(AdvertisingServiceError):
+    def __init__(self, fields: list[str]) -> None:
+        self.fields = fields
+        super().__init__("Meta Ads controls these daily delivery fields. Edit CRM attribution fields only.")
+
+
 class AdCampaignService:
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -99,6 +108,11 @@ class AdMetricService:
         if metric is None:
             raise AdvertisingServiceError("Advertising metric not found")
         values = payload.model_dump(exclude_unset=True)
+        if metric.source_type == "meta_live":
+            changed = [field for field in META_CONTROLLED_METRIC_FIELDS
+                       if field in values and values[field] != getattr(metric, field)]
+            if changed:
+                raise ProviderMetricReadOnlyError(changed)
         next_date = values.get("metric_date", metric.metric_date)
         duplicate = self.metrics.find_by_campaign_date(workspace_id, metric.campaign_id, next_date)
         if duplicate and duplicate.id != metric.id:
@@ -298,6 +312,8 @@ def metric_response(metric: AdMetric, include_sensitive: bool) -> AdMetricRespon
         workspace_id=metric.workspace_id,
         campaign_id=metric.campaign_id,
         metric_date=metric.metric_date,
+        source_type=metric.source_type,
+        provider_controlled_fields=list(META_CONTROLLED_METRIC_FIELDS) if metric.source_type == "meta_live" else [],
         spend=Decimal(str(metric.spend or 0)),
         impressions=int(metric.impressions or 0),
         reach=int(metric.reach or 0),

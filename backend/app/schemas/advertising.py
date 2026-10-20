@@ -78,6 +78,8 @@ class AdMetricUpdate(BaseModel):
 
 
 class AdMetricResponse(BaseModel):
+    source_type: str | None = None
+    provider_controlled_fields: list[str] = Field(default_factory=list)
     id: UUID
     workspace_id: UUID
     campaign_id: UUID

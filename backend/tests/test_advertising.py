@@ -277,3 +277,18 @@ def test_ad_metric_update_rejects_duplicate_campaign_date() -> None:
 
     with pytest.raises(AdvertisingServiceError):
         service.update(workspace_id, metric.id, AdMetricUpdate(metric_date=duplicate.metric_date), actor_id)
+
+
+@pytest.mark.parametrize("source_type", [None, "CSV"])
+def test_manual_and_csv_metric_delivery_edits_remain_supported(source_type):
+    from app.schemas.advertising import AdMetricUpdate
+    service, workspace_id, campaign_id = _metric_service()
+    day = date(2026, 10, 1)
+    created = service.create(workspace_id, AdMetricCreate(campaign_id=campaign_id, metric_date=day, spend=10), None)
+    service.metrics.metric.source_type = source_type
+    response = service.update(workspace_id, created.id,
+        AdMetricUpdate(metric_date=day + timedelta(days=1), spend=20, impressions=300), None)
+    assert response.metric_date == day + timedelta(days=1)
+    assert response.spend == 20 and response.impressions == 300
+    assert response.provider_controlled_fields == []
+    assert response.source_type == source_type

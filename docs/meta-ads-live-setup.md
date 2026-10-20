@@ -46,3 +46,12 @@ No Meta campaign/budget writes, customer uploads, permission revocation or perio
 ## Release evidence required
 
 Run the full backend suite and PostgreSQL gate before release. Migration 202610200039 extends recovered 038 and adds OAuth state, generation/attempt columns and partial unique live identity indexes. No production migration or flags were changed during implementation. Live app approval, actual provider consent and a controlled owner-selected account sync remain deployment-stage validation, outside synthetic tests.
+
+
+## Daily metric ownership
+
+Advertising metric responses include source_type (nullable string) and provider_controlled_fields (string array). For source_type meta_live the array is exactly metric_date, spend, impressions, clicks, messages. The existing OWNER metric PUT rejects changed values in these fields with409 provider_metric_read_only and a fields array. Identical values remain accepted so existing full-form updates can still edit attribution. There is no implicit conversion to a manual override.
+
+Reach is not imported by Meta sync and is not provider-controlled. Local reach, leads, orders, revenue and net_profit edits remain allowed and are preserved by later sync. Manual and CSV rows return an empty provider_controlled_fields array and retain existing editing behavior.
+
+The callback middleware protects the canonical path and trailing-slash routing variants, including307 redirects and422 validation errors. The configured backend callback must target that route; unrelated HTTPS paths fail readiness. Migration039 explicitly removes PUBLIC/anon/authenticated table grants, including inherited TRUNCATE, while retaining backend owner/service-role access.

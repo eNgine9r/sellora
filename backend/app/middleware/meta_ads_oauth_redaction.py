@@ -7,7 +7,7 @@ class MetaAdsOAuthQueryRedactionMiddleware:
         self.callback_path = callback_path
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] == "http" and scope.get("path") == self.callback_path:
+        if scope["type"] == "http" and scope.get("path", "").rstrip("/") == self.callback_path.rstrip("/"):
             # Uvicorn owns this outer scope and logs it when response headers start.
             # Preserve query parsing only in a private inner scope for FastAPI.
             inner = dict(scope)

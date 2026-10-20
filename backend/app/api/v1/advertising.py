@@ -20,12 +20,15 @@ from app.schemas.advertising import (
     CampaignPerformanceResponse,
     CrmAttributionResponse,
 )
-from app.services.advertising_service import AdCampaignService, AdMetricService, AdvertisingAnalyticsService, AdvertisingServiceError
+from app.services.advertising_service import AdCampaignService, AdMetricService, AdvertisingAnalyticsService, AdvertisingServiceError, ProviderMetricReadOnlyError
 
 router = APIRouter(prefix="/advertising", tags=["Advertising"])
 
 
 def _bad_request(exc: AdvertisingServiceError) -> HTTPException:
+    if isinstance(exc, ProviderMetricReadOnlyError):
+        return HTTPException(status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "provider_metric_read_only", "message": str(exc), "fields": exc.fields})
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 

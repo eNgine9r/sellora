@@ -162,3 +162,57 @@ Self-review closed the static mock-signing live-state flaw, disabled-default liv
 The code has been exercised against synthetic provider transports and actual disposable PostgreSQL, not a real Meta app/account. Live app access review, correct Ads app credentials, provider consent and controlled owner-selected account validation remain prerequisites before activation. Marketing allowlist updates need an explicit support review. Large accounts/date ranges fail boundedly instead of partially importing. Upstream ingress logs also need query suppression before activation. Production database/flags and all working Instagram secrets were untouched.
 
 Files changed: Meta clients/services/repository/models/schema/router, scoped callback redaction middleware and registration, additive039 migration, configuration, Meta tests, endpoint/security tests, CI PG gate and setup/inventory docs. Root-owned plan and Nova Poshta implementation files are excluded from the task commit.
+
+
+## Review fix round1/5 — I1, I2, I3
+
+Fix base: b845c5fc49bd39b2d139c4a99c566bdd244e70b6. Root-owned plan changes excluded.
+
+### I1 — provider daily metric ownership at existing advertising mutation boundary
+
+The existing AdMetricService.update now rejects changed provider-controlled delivery values on source_type meta_live before any mutation/audit write. The repository loads the metric with a row lock and fresh identity-map values to coordinate with sync. The complete update is rejected, including mixed CRM fields in an invalid request. Unchanged full-form provider values are accepted. No automatic manual ownership conversion is performed.
+
+Exact additive frontend response contract for every existing AdMetricResponse:
+- source_type: string | null; live-imported rows return "meta_live". Existing manual/CSV values remain unchanged.
+- provider_controlled_fields: string[]. Exactly ["metric_date","spend","impressions","clicks","messages"] for meta_live; [] for all other source types.
+
+Exact existing mutation contract: PUT /api/v1/advertising/metrics/{metric_id}, OWNER/workspace guarded. If any of the five provider-controlled fields changes, returns HTTP409:
+{"detail":{"code":"provider_metric_read_only","message":"Meta Ads controls these daily delivery fields. Edit CRM attribution fields only.","fields":["<changed protected fields, in the order above>"]}}
+
+Task3 should disable those five fields and preserve existing CRM editing. Date is immutable on provider-owned rows: moving a daily row is rejected, so a later sync cannot recreate the original date and double count spend. Reach is NOT imported and NOT in provider_controlled_fields; it stays locally editable and survives sync. Leads, orders, revenue and net_profit also stay locally editable and survive sync. This does not turn reach into provider-supplied or unique reach. No currency override behavior was added.
+
+Tests run the actual advertising HTTP route/service against PostgreSQL through sync → rejected spend/impressions/clicks/messages/date edit → sync → accepted CRM/local-reach edit → sync; assert one original-day row, preserved provider values and retained local values. Manual/CSV delivery/date editing remains covered and allowed.
+
+### I2 — slash callback privacy
+
+The callback middleware now protects paths after stripping trailing slashes, before FastAPI normalization. Actual Uvicorn tests cover canonical callbacks and one-/two-slash variants, including307 normalization redirects and422 validation failures. Query code/state never appear in server access logs; all these responses retain no-store/no-referrer. Redirect query values remain intact for the intended OAuth flow. Unrelated configured backend callback paths fail readiness; the Ads callback and token-exchange configuration remain dedicated and exact.
+
+### I3 — inherited private-state ACL
+
+Migration039 now explicitly REVOKEs ALL table privileges from PUBLIC and conditionally anon/authenticated, preserving backend owner/service-role operation. The regression creates a unique disposable database, upgrades it to038, simulates ALL table default grants to anon/authenticated/PUBLIC, then applies039. It checks no ACL grants remain for any of those principals (including version-dependent privileges such as PostgreSQL17 MAINTAIN), explicitly checks SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER, confirms RLS, and proves backend state issue/consume/replay rejection. The fresh test database is dropped afterward. No production schema/ACL was changed.
+
+### Additional HTTP isolation
+
+A successful GET /accounts uses actual X-Workspace-ID parsing and membership/OWNER guards, with only current-user identity and DB session supplied by the test. The live reader runs against injected httpx MockTransport. Missing header400 and unauthorized workspace403 are checked before and after the successful scoped read; unauthorized requests make no provider call. Workspace resolution is not overridden.
+
+### Exact fix checks
+
+Focused PostgreSQL/advertising/callback/security run:
+```sh
+docker run --rm --network sellora-integrations-qa-20261020 --entrypoint python -e DATABASE_URL=postgresql+psycopg://sellora_qa:synthetic-integrations-qa-only@sellora-integrations-qa-pg-20261020:5432/sellora_ads_final -e SELLORA_DISPOSABLE_DATABASE=1 -e JWT_SECRET=sellora-controlled-test-secret-at-least-32-chars -e SECRET_KEY=sellora-synthetic-tests-only -v /home/btcradar/commander-workspaces/sellora-migration/release-reconcile-20261020/backend:/app:ro -w /app sellora-backend:16f1946ac1b6b858c49ded8bb9a5224d0da0d807 -m pytest -q -p no:cacheprovider tests/test_meta_ads_live_postgres.py tests/test_advertising.py tests/test_meta_ads_oauth_access_log.py tests/test_meta_ads_live_oauth_foundation.py tests/security/test_session_security_postgres.py
+```
+Result:50 passed,6 existing warnings in7.50s. The new default-ACL migration regression lives in the already CI-wired PostgreSQL test file.
+
+Full backend run:
+```sh
+docker run --rm --network none --entrypoint python -e DATABASE_URL=sqlite+pysqlite:///:memory: -e JWT_SECRET=sellora-controlled-test-secret-at-least-32-chars -e SECRET_KEY=sellora-synthetic-tests-only -v /home/btcradar/commander-workspaces/sellora-migration/release-reconcile-20261020/backend:/app:ro -v /home/btcradar/commander-workspaces/sellora-migration/release-reconcile-20261020/deploy:/deploy:ro -v /home/btcradar/commander-workspaces/sellora-migration/release-reconcile-20261020/.gitignore:/.gitignore:ro -v /home/btcradar/commander-workspaces/sellora-migration/release-reconcile-20261020/frontend/src:/frontend/src:ro -w /app sellora-backend:16f1946ac1b6b858c49ded8bb9a5224d0da0d807 -m pytest -q -p no:cacheprovider tests
+```
+Result:653 passed,37 skipped,5 existing warnings in14.55s. PostgreSQL-only tests are intentionally skipped here and run in the focused gate above.
+
+Final strengthened local-reach preservation assertions:
+```sh
+docker run --rm --network sellora-integrations-qa-20261020 --entrypoint python -e DATABASE_URL=postgresql+psycopg://sellora_qa:synthetic-integrations-qa-only@sellora-integrations-qa-pg-20261020:5432/sellora_ads_final -e SELLORA_DISPOSABLE_DATABASE=1 -e JWT_SECRET=sellora-controlled-test-secret-at-least-32-chars -e SECRET_KEY=sellora-synthetic-tests-only -v /home/btcradar/commander-workspaces/sellora-migration/release-reconcile-20261020/backend:/app:ro -w /app sellora-backend:16f1946ac1b6b858c49ded8bb9a5224d0da0d807 -m pytest -q -p no:cacheprovider tests/test_meta_ads_live_postgres.py -k live_metric_http_edit
+```
+Result:5 passed (16 deselected). git diff --check passed.
+
+No activation, deployment, push, production database changes or provider calls. Existing rollout caveats remain: actual Meta approval/consent and upstream proxy query suppression must be validated by root before activation.

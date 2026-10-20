@@ -324,3 +324,140 @@ def test_provider_expiry_and_rate_limit_are_durable_and_retryable(fixture):
     with Session(engine) as db:
         c = db.scalar(select(MetaAdConnection).where(MetaAdConnection.workspace_id == fixture[0]))
         assert c.connection_status == "TOKEN_EXPIRED" and c.last_synced_at is not None
+
+
+@pytest.mark.parametrize("field,value", [
+    ("spend", "999.00"), ("impressions", 999), ("clicks", 99),
+    ("messages", 99), ("metric_date", "2026-10-02"),
+])
+def test_live_metric_http_edit_then_sync_protects_delivery_and_allows_crm(fixture, field, value):
+    from app.api.v1.advertising import router as advertising_router
+    connect(fixture); select_account(fixture); sync(fixture)
+    wid, uid, _ = fixture
+    with Session(engine) as db:
+        metric_id = db.scalar(select(AdMetric.id).where(AdMetric.workspace_id == wid))
+    app = FastAPI(); app.include_router(advertising_router, prefix="/api/v1")
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=uid, workspaces=[
+        SimpleNamespace(workspace_id=wid, workspace=SimpleNamespace(is_active=True), role=SimpleNamespace(name="OWNER"))])
+    def session():
+        with Session(engine) as db:
+            yield db
+    app.dependency_overrides[get_db] = session
+    client = TestClient(app, headers={"X-Workspace-ID": str(wid)})
+    path = f"/api/v1/advertising/metrics/{metric_id}"
+    rejected = client.put(path, json={field: value, "revenue": "999"})
+    assert rejected.status_code == 409
+    assert rejected.json()["detail"]["code"] == "provider_metric_read_only"
+    assert rejected.json()["detail"]["fields"] == [field]
+    sync(fixture)
+    crm = client.put(path, json={"reach": 55, "leads": 3, "orders": 2, "revenue": "100.00", "net_profit": "40.00"})
+    assert crm.status_code == 200
+    assert crm.json()["source_type"] == "meta_live"
+    assert crm.json()["provider_controlled_fields"] == ["metric_date", "spend", "impressions", "clicks", "messages"]
+    # Unchanged full-form provider values are allowed, rather than blocking CRM-only edits.
+    unchanged = client.put(path, json={"spend": "12.30", "metric_date": str(DAY), "orders": 4})
+    assert unchanged.status_code == 200
+    sync(fixture)
+    with Session(engine) as db:
+        metrics = db.scalars(select(AdMetric).where(AdMetric.workspace_id == wid)).all()
+        assert len(metrics) == 1
+        metric = metrics[0]
+        assert metric.metric_date == DAY and str(metric.spend) == "12.30"
+        assert (metric.impressions, metric.clicks, metric.messages) == (100, 5, 2)
+        assert (metric.reach, metric.leads, metric.orders, metric.revenue, metric.net_profit) == (55, 3, 4, 100, 40)
+
+
+def test_live_accounts_actual_workspace_header_membership_with_transport(fixture, monkeypatch):
+    import httpx
+    import app.api.v1.meta_ads as api
+    from app.integrations.meta_ads.graph_transport import MetaGraphTransport
+    from app.integrations.meta_ads.live_reader import MetaAdsLiveReader
+    connect(fixture)
+    wid, uid, settings = fixture
+    calls = []
+    def handler(request):
+        calls.append(request)
+        assert request.url.path == "/v26.0/me/adaccounts"
+        return httpx.Response(200, json={"data": [{"id": "act_123", "name": "Scoped",
+            "currency": "UAH", "timezone_name": "Europe/Kyiv", "account_status": 1}]})
+    def reader(**kwargs):
+        return MetaAdsLiveReader(**kwargs, transport=MetaGraphTransport("v26.0",
+            client=httpx.Client(transport=httpx.MockTransport(handler))))
+    monkeypatch.setattr(api, "MetaAdsLiveSyncService", lambda db: MetaAdsLiveSyncService(
+        db, settings=settings, reader_factory=reader))
+    app = FastAPI(); app.include_router(router, prefix="/api/v1")
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=uid, workspaces=[
+        SimpleNamespace(workspace_id=wid, workspace=SimpleNamespace(is_active=True), role=SimpleNamespace(name="OWNER"))])
+    def session():
+        with Session(engine) as db:
+            yield db
+    app.dependency_overrides[get_db] = session
+    # get_workspace_id and the actual role/membership guards are NOT overridden.
+    client = TestClient(app)
+    path = "/api/v1/integrations/meta-ads/accounts"
+    assert client.get(path).status_code == 400
+    assert client.get(path, headers={"X-Workspace-ID": str(uuid4())}).status_code == 403
+    assert not calls
+    result = client.get(path, headers={"X-Workspace-ID": str(wid)})
+    assert result.status_code == 200
+    assert result.json()["accounts"][0]["external_account_id"] == "act_123"
+    assert len(calls) == 1
+    assert client.get(path, headers={"X-Workspace-ID": str(uuid4())}).status_code == 403
+    assert len(calls) == 1
+
+
+def test_fresh_039_revokes_inherited_private_state_privileges(fixture, monkeypatch):
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import create_engine, text
+    import app.core.config as config_module
+    from app.repositories.meta_ads_live_repository import MetaAdsLiveRepository
+
+    # Unique disposable DB: never downgrade or alter the suite's shared schema.
+    name = "meta_acl_" + uuid4().hex
+    admin = engine.connect().execution_options(isolation_level="AUTOCOMMIT")
+    admin.execute(text(f'CREATE DATABASE "{name}"'))
+    test_engine = create_engine(engine.url.set(database=name))
+    settings = fixture[2].model_copy(update={"database_url": engine.url.set(database=name).render_as_string(hide_password=False)})
+    monkeypatch.setattr(config_module, "get_settings", lambda: settings)
+    try:
+        for role in ("anon", "authenticated"):
+            admin.execute(text(f"""DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='{role}') THEN
+                    CREATE ROLE "{role}" NOLOGIN;
+                END IF;
+            END $$"""))
+        command.upgrade(Config("alembic.ini"), "202610200038")
+        with test_engine.begin() as connection:
+            connection.execute(text("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, PUBLIC"))
+        command.upgrade(Config("alembic.ini"), "202610200039")
+        with test_engine.connect() as connection:
+            assert connection.scalar(text("SELECT relrowsecurity FROM pg_class WHERE oid='public.meta_ads_oauth_states'::regclass"))
+            for role in ("anon", "authenticated"):
+                for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"):
+                    assert not connection.scalar(text("SELECT has_table_privilege(:role, 'public.meta_ads_oauth_states', :privilege)"),
+                        {"role": role, "privilege": privilege})
+            assert connection.scalar(text("SELECT count(*) FROM pg_class c, LATERAL aclexplode(c.relacl) acl "
+                "WHERE c.oid='public.meta_ads_oauth_states'::regclass "
+                "AND acl.grantee IN (SELECT oid FROM pg_roles WHERE rolname IN ('anon','authenticated'))")) == 0
+            # Includes version-dependent privileges such as PostgreSQL17 MAINTAIN.
+            # PUBLIC is pseudo-role grantee0; no accidental privilege remains.
+            assert connection.scalar(text("SELECT count(*) FROM pg_class c, LATERAL aclexplode(c.relacl) acl "
+                "WHERE c.oid='public.meta_ads_oauth_states'::regclass AND acl.grantee=0")) == 0
+        with Session(test_engine) as db:
+            workspace = Workspace(name="ACL QA", slug=uuid4().hex)
+            user = User(email=uuid4().hex + "@example.invalid", password_hash="synthetic", first_name="QA", last_name="ACL")
+            db.add_all([workspace, user]); db.commit()
+            wid, uid = workspace.id, user.id
+            repo = MetaAdsLiveRepository(db)
+            repo.lock_workspace(wid)
+            generation = str(uuid4())
+            state, _ = repo.issue_state(wid, uid, generation)
+            db.commit()
+            assert repo.consume_state(wid, uid, state) == generation
+            db.commit()
+            assert repo.consume_state(wid, uid, state) is None
+    finally:
+        test_engine.dispose()
+        admin.execute(text(f'DROP DATABASE "{name}" WITH (FORCE)'))
+        admin.close()

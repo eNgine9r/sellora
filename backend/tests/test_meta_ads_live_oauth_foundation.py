@@ -252,3 +252,12 @@ def test_disconnect_marks_connection_safely_without_returning_token() -> None:
     assert connection.encrypted_access_token is None
     assert connection.token_fingerprint is None
     assert "encrypted-value" not in response.model_dump_json()
+
+
+def test_backend_callback_configuration_rejects_unrouted_paths():
+    service = MetaAdsConnectionService(StubDb(), settings=_settings(
+        meta_connections_enabled=True, meta_live_oauth_enabled=True,
+        meta_ads_app_id="test-app-id",
+        meta_ads_oauth_redirect_uri="https://backend.example.test/not-an-ads-callback"),
+        repository=FakeRepository())
+    assert "missing_required_configuration" in service.blockers()
