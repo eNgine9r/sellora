@@ -5,7 +5,7 @@ on:
     inputs:
       operation:
         type: choice
-        options: [verify-oauth, verify-raspberry, verify-frontend-api, verify-browser, disable-render-autodeploy]
+        options: [verify-oauth, verify-raspberry, verify-frontend-api, verify-browser, disable-render-autodeploy, retire-render]
         default: verify-oauth
         description: Raspberry verification or one-time retirement of Render autodeploy
 
@@ -71,7 +71,7 @@ jobs:
           STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
 
   disable-render-autodeploy:
-    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'disable-render-autodeploy'
+    if: github.event_name == 'workflow_dispatch' && (inputs.operation == 'disable-render-autodeploy' || inputs.operation == 'retire-render')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     environment: staging
@@ -79,7 +79,8 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Disable native autodeploy for the former Sellora Render service
+      - name: Retire only the former Sellora Render service
         run: python3 deploy/raspberry/disable_render_autodeploy.py
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_RETIRE_SERVICE: ${{ inputs.operation == 'retire-render' && 'true' || 'false' }}
