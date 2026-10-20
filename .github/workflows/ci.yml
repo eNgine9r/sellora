@@ -248,6 +248,21 @@ jobs:
         env:
           PLAYWRIGHT_RUNTIME_PACKAGE: /tmp/sellora-playwright/package.json
         run: node frontend/scripts/direct-workspace-browser.mjs
+      - name: Synthetic integration onboarding browser gates
+        env:
+          PLAYWRIGHT_RUNTIME_PACKAGE: /tmp/sellora-playwright/package.json
+        run: |
+          node frontend/scripts/meta-ads-intent-regression.mjs
+          node frontend/scripts/integrations-workspace-retry-regression.mjs
+          node frontend/scripts/nova-poshta-onboarding-browser.mjs
+          node frontend/scripts/meta-ads-onboarding-browser.mjs
+      - name: Upload synthetic integration onboarding evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrations-onboarding-synthetic
+          path: artifacts/integrations-onboarding/
+          if-no-files-found: warn
       - name: Upload synthetic Direct browser evidence
         if: always()
         uses: actions/upload-artifact@v4

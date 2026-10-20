@@ -32,6 +32,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="uk" className="overflow-x-hidden bg-canvas">
       <body className="min-w-0 overflow-x-hidden bg-canvas antialiased">
         <script
+          data-meta-ads-callback-bootstrap
+          dangerouslySetInnerHTML={{
+            __html: `(function(){if(window.location.pathname!=='/settings/integrations/meta-ads/callback')return;var p=new URLSearchParams(window.location.search);window.__selloraMetaAdsCallback={code:p.get('code'),state:p.get('state'),denied:p.has('error')};window.history.replaceState(window.history.state,'','/settings/integrations/meta-ads/callback');})();`,
+          }}
+        />
+        <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var m=localStorage.getItem('sellora.theme-mode')||'system';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var t=m==='dark'||(m==='system'&&d)?'dark':'light';document.documentElement.classList.add(t);document.documentElement.dataset.theme=t;}catch(e){document.documentElement.classList.add('light');}})();`,
           }}

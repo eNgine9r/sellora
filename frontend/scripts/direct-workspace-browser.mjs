@@ -86,6 +86,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
     if (key === "GET /api/v1/direct/live-summary") return respond({ server_time: "2026-10-19T10:00:00Z", unread_total: 2, order_intent_count: 1, events: [{ message_id: "synthetic-event", conversation_id: a, participant_display_name: "Олена Тестова", text_preview: "Хочу замовити", order_intent: true, order_intent_confidence: 0.9, unread_count: 2, received_at: "2026-10-19T10:00:00Z" }] });
     if (key === "GET /api/v1/direct/conversations") return respond(fulfillmentFixture ? fulfillmentFixture.conversations(scopedConversations) : scopedConversations.map((row) => ({ ...row, linked_lead_id: state.leadLinked && row.id === a ? "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee" : null })));
     if (key === "GET /api/v1/direct/history-sync") return respond(null);
+    if (key === "GET /api/v1/integrations/meta-ads/status") return respond({ workspace_id: requestWorkspace, connection_status: "NOT_CONNECTED", connected: false, configured: false, can_connect: false, can_sync: false, sync_enabled: false, account_selection_required: false, blockers: ["feature_disabled"], account_name: null, currency: null, timezone: null, last_synced_at: null, last_error_code: null });
     if (key === "GET /api/v1/integrations/instagram/status") return respond({ status: "CONNECTED", token_present: true, webhook_active: true });
     const operationMatch = url.pathname.match(/^\/api\/v1\/direct\/message-operations\/([^/]+)$/);
     if (request.method() === "GET" && operationMatch) {

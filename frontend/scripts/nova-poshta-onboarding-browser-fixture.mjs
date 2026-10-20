@@ -1,10 +1,14 @@
 // Synthetic only. Install on an authenticated OWNER page before navigating.
 export async function installNovaPoshtaOnboardingFixture(page) {
-  const state = { payloads: [], failLookup: false, settings: { status: "DISCONNECTED", masked_api_key: null, environment_capability: false, workspace_permission: false, provider_writes_enabled: false, sender_configured: false, connection_verified: false } };
+  const state = { payloads: [], failLookup: false, holdTest: false, releaseTest: null, retry401: false, testCalls: [], settings: { status: "DISCONNECTED", masked_api_key: null, environment_capability: false, workspace_permission: false, provider_writes_enabled: false, sender_configured: false, connection_verified: false } };
   const senders = [{ ref: "synthetic-sender-a", description: "Магазин Тест А" }, { ref: "synthetic-sender-b", description: "Магазин Тест Б" }];
   await page.route("**/integrations/nova-poshta/**", async route => {
     const request = route.request(), url = new URL(request.url());
     const endpoint = url.pathname.split("/").at(-1);
+    if (request.headers()["x-workspace-id"] !== "11111111-1111-4111-8111-111111111111") {
+      if (request.method() !== "GET") throw new Error("Unexpected NP mutation in another workspace");
+      return route.fulfill({ json: endpoint === "settings" ? { status: "DISCONNECTED", masked_api_key: null, environment_capability: false, workspace_permission: false, provider_writes_enabled: false, sender_configured: false, connection_verified: false } : [] });
+    }
     const respond = (json, status = 200) => route.fulfill({ status, json });
     if (request.method() === "POST" && endpoint === "settings") {
       const payload = request.postDataJSON(); state.payloads.push(payload);
@@ -14,6 +18,9 @@ export async function installNovaPoshtaOnboardingFixture(page) {
       return respond(state.settings);
     }
     if (endpoint === "test-connection") {
+      state.testCalls.push(request.headers()["x-workspace-id"]);
+      if (state.holdTest) await new Promise(resolve => { state.releaseTest = resolve; });
+      if (state.retry401) { state.retry401 = false; return respond({}, 401); }
       // UX fixture only; actual server/client tuple validation is covered by
       // test_warehouse_sender_tuple_through_real_client_transport, never by this stub.
       state.settings.connection_verified = state.settings.sender_counterparty_ref === "synthetic-sender-b"
@@ -68,14 +75,14 @@ export async function runNovaPoshtaOnboardingScenario({ page, expect, base, widt
 
 // Card-local geometry and hit testing catch internal occlusion even when the
 // document has no horizontal scrollbar. Run on populated desktop/mobile controls.
-export async function assertNovaPoshtaControlBounds(page, expect) {
-  const card = page.locator("[data-nova-poshta-settings]");
+export async function assertNovaPoshtaControlBounds(page, expect, selector = "[data-nova-poshta-settings]") {
+  const card = page.locator(selector);
   const controls = card.locator("input, select, button, a");
   for (const control of await controls.all()) {
     if (!await control.isVisible()) continue;
     await control.evaluate(element => element.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" }));
     const bounds = await control.evaluate(element => {
-      const card = element.closest("[data-nova-poshta-settings]").getBoundingClientRect();
+      const card = element.closest("[data-nova-poshta-settings], [data-meta-ads-settings]").getBoundingClientRect();
       // Inline links can wrap; their union rectangle includes empty space
       // between text fragments. Hit-test each actual painted client rectangle.
       const boxes = [...element.getClientRects()].filter(box => box.width && box.height);
