@@ -21,7 +21,14 @@ def engine_connect_args(database_url: str) -> dict[str, Any]:
 
 
 settings = get_settings()
-engine = create_engine(settings.database_url, pool_pre_ping=True, connect_args=engine_connect_args(settings.database_url))
+# Never interpolate customer message text, phone numbers or token-like bind values
+# into SQLAlchemy exception/log messages. Keep SQL statement metadata.
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,
+    hide_parameters=True,
+    connect_args=engine_connect_args(settings.database_url),
+)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, class_=Session)
 
 
