@@ -3,7 +3,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { normalizeWorkspaceId } from "@/lib/workspace";
-import { COOKIE_SESSION_AUTH_ENABLED, authStorage, fetchCurrentUser, firstAvailableWorkspace, loginWithPassword, refreshAccessToken, refreshCookieSession, revokeCookieSession, upgradeLegacySession, refreshLegacyAccessToken } from "@/services/auth.service";
+import { COOKIE_SESSION_AUTH_ENABLED, authStorage, fetchCurrentUser, firstAvailableWorkspace, loginWithPassword, refreshAccessToken, refreshCookieSession, revokeCookieSession } from "@/services/auth.service";
 import { CurrentUser, WorkspaceMembership } from "@/types/auth";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -85,32 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (COOKIE_SESSION_AUTH_ENABLED) {
-      // First resume an existing server-side session. For signed-in legacy
-      // users, upgrade once using their existing bearer/refresh credentials.
-      // No password prompt or forced logout is required during the cutover.
+      // Resume an existing server-side session. The prior JWT migration
+      // endpoint has been retired after owner acceptance.
       void (async () => {
         try {
           await reloadCurrentUser();
           return;
         } catch {
-          const legacy = authStorage.readLegacyTokens();
-          if (legacy) {
-            try {
-              let access = legacy.access_token;
-              try {
-                await fetchCurrentUser(access);
-              } catch {
-                access = (await refreshLegacyAccessToken(legacy.refresh_token)).access_token;
-              }
-              const next = await upgradeLegacySession(access);
-              authStorage.setTokens(next);
-              applyUser(await fetchCurrentUser(next.access_token));
-              return;
-            } catch {
-              // Any failed migration keeps browser credentials from being
-              // silently stored forever; the owner can sign in normally.
-            }
-          }
           authStorage.clear();
           queryClient.clear();
           setCurrentUser(null);
