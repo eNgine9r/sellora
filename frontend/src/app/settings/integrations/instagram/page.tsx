@@ -30,6 +30,12 @@ export default function InstagramIntegrationPage() {
   return <WorkspacePage>
     <WorkspaceHeader eyebrow="Meta Instagram" title={t("instagramSettings.title")} description={t("instagramSettings.description")} actions={canManage ? <div className="flex flex-wrap gap-2"><Button onClick={() => connectMutation.mutate()} disabled={connectMutation.isPending}>{t(requiresReconnect ? "instagramSettings.reconnect" : "instagramSettings.connect")}</Button><Button variant="secondary" onClick={() => browserMutation.mutate()} disabled={browserMutation.isPending}>{t("instagramSettings.browserLinkButton")}</Button></div> : null} />
     {statusQuery.isLoading ? <LoadingSkeleton /> : null}
+    {browserLink ? <section className="min-w-0 rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm" aria-label={t("instagramSettings.browserLinkTitle")}>
+      <p className="font-bold text-text-primary">{t("instagramSettings.browserLinkTitle")}</p>
+      <p className="mt-2 text-text-secondary">{t("instagramSettings.browserLinkInstructions")}</p>
+      <input readOnly value={browserLink} onFocus={(e) => e.currentTarget.select()} aria-label={t("instagramSettings.browserLinkTitle")} className="mt-3 w-full min-w-0 rounded-xl border border-border-subtle bg-surface-1 px-3 py-3 text-xs text-text-primary" />
+    </section> : null}
+    {browserMutation.isError ? <ErrorState title={t("instagramSettings.error")} description={t("instagramSettings.errorDescription")} /> : null}
     {connectMutation.isError ? <ErrorState title={t("instagramSettings.error")} description={t("instagramSettings.errorDescription")} /> : null}
     {webhookMutation.isError ? <ErrorState title={t("instagramSettings.webhookInactive")} description={t("instagramSettings.webhookInactiveExplanation")} /> : null}
     {!statusQuery.isLoading && data && (requiresReconnect || data.status === "DISCONNECTED") ? <section role="status" className="rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm leading-6 text-text-secondary"><p className="font-black text-text-primary">{t(requiresReconnect ? "instagramSettings.reconnectExplanation" : "instagramSettings.connectionMissingExplanation")}</p><p className="mt-2">{t("instagramSettings.openInBrowserHint")}</p></section> : null}
