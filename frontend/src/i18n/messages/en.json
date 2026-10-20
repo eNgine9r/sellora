@@ -140,7 +140,9 @@
         "label": "English interface",
         "value": "EN"
       }
-    ]
+    ],
+    "rateLimited": "Too many sign-in attempts. For security, please try again in approximately {minutes} min.",
+    "logoutFailed": "Could not revoke the session on the server. Check your connection and try signing out again."
   },
   "landing": {
     "nav": {
@@ -2370,7 +2372,12 @@
     "checkSendStatus": "Refresh send status",
     "unknownSendHelp": "The server did not confirm the result. Check the message in Instagram and contact the responsible manager. Sending again remains blocked.",
     "statusError": "Could not check the result. Sending again remains blocked.",
-    "customerAndOrder": "Customer and order"
+    "customerAndOrder": "Customer and order",
+    "createAnotherOrder": "Create another order",
+    "historyProviderLimits": "Meta permits import of only available history. Very old messages and inactive Requests may not be exposed. A new scan will not delete existing conversations.",
+    "historyProviderError": "Meta history import error: {code}. New messages remain active.",
+    "historyRescan": "Retry history import",
+    "historyDeepScan": "Find older conversations (up to 500)"
   },
   "instagramSettings": {
     "title": "Instagram Direct",

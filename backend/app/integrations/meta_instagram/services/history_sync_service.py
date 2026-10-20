@@ -297,23 +297,25 @@ class InstagramHistorySyncService:
             )
             sync.messages_imported += 1
             self._advance_conversation(conversation, direction, created_at)
-            if (
-                direction == DirectMessageDirection.INBOUND.value
-                and message_type == DirectMessageType.TEXT.value
-                and detect_direct_order_intent(text).detected
-            ):
-                try:
-                    with self.db.begin_nested():
-                        self.lead_service.ensure_from_inbound_order_intent(
-                            sync.workspace_id, conversation.id, text, created_at,
-                        )
-                except Exception:
-                    sync.error_count += 1
-                    sync.last_error_code = "DIRECT_LEAD_FAILED_SAFE"
+            self._ensure_lead_safe(sync, conversation, direction, message_type, text, created_at)
 
         if conversation:
             conversation.provider_sync_status = "HISTORY_SYNCED"
             self._enrich_profile_safe(sync.workspace_id, conversation)
+
+    def _ensure_lead_safe(self, sync, conversation, direction, message_type, text, created_at) -> None:
+        if (direction != DirectMessageDirection.INBOUND.value
+                or message_type != DirectMessageType.TEXT.value
+                or not detect_direct_order_intent(text).detected):
+            return
+        try:
+            with self.db.begin_nested():
+                self.lead_service.ensure_from_inbound_order_intent(
+                    sync.workspace_id, conversation.id, text, created_at,
+                )
+        except Exception:
+            sync.error_count += 1
+            sync.last_error_code = "DIRECT_LEAD_FAILED_SAFE"
 
     def _identity(
         self,

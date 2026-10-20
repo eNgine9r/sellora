@@ -1,0 +1,63 @@
+name: Sellora Staging Chrome Direct Smoke
+on:
+  push:
+    branches:
+      - feat/sellora-direct-history-ui-release-20261020
+      - security/2026-10-20-frontend-headers
+      - security/2026-10-20-login-rate-limit-ux
+      - security/2026-10-20-frontend-headers
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chrome-mobile-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Confirm Google Chrome
+        run: |
+          command -v google-chrome
+          google-chrome --version
+      - name: Install isolated browser driver
+        run: npm install --prefix /tmp/sellora-check --no-save --no-audit --no-fund playwright-core@1.56.0
+      - name: Check live staging at mobile viewport
+        run: |
+          NODE_PATH=/tmp/sellora-check/node_modules node <<'JS'
+          const {chromium}=require('playwright-core');
+          const base='https://sellora-web-staging.vercel.app';
+          (async()=>{
+            const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+            try {
+              for (const path of ['/login','/direct','/settings/integrations/instagram']) {
+                const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+                const errors=[];const apiHosts=[];
+                page.on('pageerror',err=>errors.push(err.name));
+                page.on('request',req=>{
+                  if(req.url().includes('/api/v1/')) apiHosts.push(new URL(req.url()).hostname);
+                });
+                const res=await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});
+                await page.waitForLoadState('networkidle',{timeout:12000}).catch(()=>{});
+                const body=(await page.locator('body').innerText()).trim();
+                const final=new URL(page.url());
+                const oldApi=apiHosts.some(host=>host.includes('onrender.com'));
+                const protectedHeaders = res?.headers() ?? {};
+                if (protectedHeaders['x-content-type-options'] !== 'nosniff' ||
+                    protectedHeaders['x-frame-options'] !== 'DENY' ||
+                    protectedHeaders['content-security-policy'] !== "frame-ancestors 'none'" ||
+                    protectedHeaders['referrer-policy'] !== 'strict-origin-when-cross-origin')
+                  throw Error('Expected frontend hardening headers absent: ' + path);
+                const sso=/Vercel Authentication|Authentication Required/i.test(body);
+                const headers=res?.headers()||{};
+                const secureHeaders=headers['x-content-type-options']==='nosniff'
+                  && headers['x-frame-options']==='DENY'
+                  && headers['referrer-policy']==='strict-origin-when-cross-origin'
+                  && headers['content-security-policy']==="frame-ancestors 'none'";
+                console.log(JSON.stringify({path,http:res?.status(),finalHost:final.hostname,
+                  bodyChars:body.length,jsErrors:errors.length,apiHosts:[...new Set(apiHosts)],sso,secureHeaders}));
+                if(res?.status()!==200||final.hostname!=='sellora-web-staging.vercel.app'||
+                   !body.includes('Sellora')||errors.length||oldApi||sso||!secureHeaders)throw Error('staging Chrome smoke failed: '+path);
+                await page.close();
+              }
+            }finally{await browser.close();}
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          JS

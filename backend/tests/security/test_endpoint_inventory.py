@@ -9,8 +9,9 @@ from app.dependencies.rbac import get_workspace_id
 from app.models.role import RoleName
 
 
-PUBLIC_ENDPOINTS = {"/health", "/api/v1/auth/login", "/api/v1/auth/refresh"}
-AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/me", "/api/v1/workspaces", "/api/v1/workspaces/demo"}
+PUBLIC_ENDPOINTS = {"/health/live", "/health/ready", "/health", "/api/v1/auth/login", "/api/v1/auth/refresh"}
+COOKIE_SESSION_ENDPOINTS = {"/api/v1/auth/session/login", "/api/v1/auth/session/refresh", "/api/v1/auth/session/logout"}
+AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/session/upgrade", "/api/v1/auth/session/logout-all", "/api/v1/auth/me", "/api/v1/workspaces", "/api/v1/workspaces/demo"}
 FEATURE_GATED_PREFIXES = ("/api/v1/integrations/meta-ads",)
 WORKSPACE_PREFIXES = (
     "/api/v1/leads",
@@ -55,15 +56,16 @@ OWNER_ONLY_ENDPOINTS = {
     ("POST", "/api/v1/integrations/instagram/webhooks/unsubscribe"),
 }
 EXPECTED_PRIMARY_COUNTS = {
-    "PUBLIC": 3,
-    "AUTHENTICATED_GLOBAL": 4,
+    "PUBLIC": 5,
+    "COOKIE_SESSION": 3,
+    "AUTHENTICATED_GLOBAL": 6,
     "WORKSPACE_SCOPED": 199,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
 # Added GET /advertising/crm-attribution and Direct order-proposal: scoped reads, no mutations.
-EXPECTED_TOTAL_ROUTES = 218
-EXPECTED_MUTATION_ROUTES = 123
+EXPECTED_TOTAL_ROUTES = 225
+EXPECTED_MUTATION_ROUTES = 128
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -106,6 +108,8 @@ def _api_routes() -> list[tuple[str, APIRoute]]:
 
 
 def _primary_scope(path: str) -> str:
+    if path in COOKIE_SESSION_ENDPOINTS:
+        return "COOKIE_SESSION"
     if path in PUBLIC_ENDPOINTS:
         return "PUBLIC"
     if path in AUTHENTICATED_GLOBAL_ENDPOINTS:

@@ -9,6 +9,7 @@ import { createAdvertisingFixture } from "./advertising-browser-fixture.mjs";
 import { runAdvertisingScenarios } from "./advertising-browser-scenarios.mjs";
 import { createFulfillmentFixture } from "./fulfillment-browser-fixture.mjs";
 import { runFulfillmentScenarios } from "./fulfillment-browser-scenarios.mjs";
+import { runDirectLeadScenarios } from "./direct-lead-browser-scenarios.mjs";
 import { runOrderProposalScenarios } from "./order-proposal-browser-scenarios.mjs";
 // Default CI keeps the complete gate. The explicit bounded mode helps debug
 // newly authored proposal scenarios against an already-built application.
@@ -40,6 +41,9 @@ await mkdir(output, { recursive: true });
 
 async function fixture(viewport, { role = "OWNER", theme = "light", delayedSuggestions = false, multiWorkspace = false, fulfillment = false, advertising = false } = {}) {
   const context = await browser.newContext({ viewport, colorScheme: theme, serviceWorkers: "block" });
+  await context.addCookies([{ name: "sellora_session_refresh", value: "synthetic-browser-session",
+    domain: new URL(base).hostname, path: "/api/v1/auth/session",
+    httpOnly: true, secure: new URL(base).protocol === "https:", sameSite: "Lax" }]);
   const user = { id: "22222222-2222-4222-8222-222222222222", email: "synthetic@example.invalid", first_name: "Тест", last_name: "Sellora", is_active: true, last_login_at: null, memberships: [{ workspace_id: workspaceId, workspace_name: "Синтетичний магазин", workspace_slug: "synthetic", role, currency_code: "UAH" }] };
   if (multiWorkspace) user.memberships.push({ ...user.memberships[0], workspace_id: secondWorkspaceId, workspace_name: "Другий синтетичний магазин", workspace_slug: "synthetic-second" });
   await context.addInitScript(({ user, workspaceId, theme }) => {
@@ -51,7 +55,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
   const api = [];
   const unexpected = [];
   const errors = [];
-  const state = { sendStatus: "COMPLETED", holdSend: false, releaseSend: null, prepareError: false, releaseSuggestions: null, operationStatus: null, holdStatus: false, releaseStatus: null, abortSend: false, statusRequests: 0, extraTimeline: [], appendSentTimeline: false, holdAutomation: false, releaseAutomation: null };
+  const state = { leadLinked: false, leadFailure: false, repeatSale: false, sendStatus: "COMPLETED", holdSend: false, releaseSend: null, prepareError: false, releaseSuggestions: null, operationStatus: null, holdStatus: false, releaseStatus: null, abortSend: false, statusRequests: 0, extraTimeline: [], appendSentTimeline: false, holdAutomation: false, releaseAutomation: null };
   const fulfillmentFixture = fulfillment ? createFulfillmentFixture({ workspaceId, conversationId: a }) : null;
   state.fulfillment = fulfillmentFixture;
   const advertisingFixture = advertising ? createAdvertisingFixture({ workspaceId }) : null;
@@ -68,6 +72,11 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
     }
     if (!url.pathname.startsWith("/api/")) { await route.continue(); return; }
     const key = `${request.method()} ${url.pathname}`;
+    if (key === "POST /api/v1/auth/session/refresh") {
+      const authenticated = ((await request.allHeaders())["cookie"] || "").includes("sellora_session_refresh=synthetic-browser-session");
+      return route.fulfill({ status: authenticated ? 200 : 401, contentType: "application/json",
+        body: JSON.stringify(authenticated ? { access_token: "synthetic-browser-fixture", token_type: "bearer" } : { detail: "Synthetic session missing" }) });
+    }
     const requestWorkspace = request.headers()["x-workspace-id"];
     const scopedConversations = requestWorkspace === secondWorkspaceId ? [{ ...conversations[0], id: d, participant_display_name: "Ірина Другого Магазину", unread_count: 0 }] : conversations;
     api.push(key);
@@ -75,7 +84,7 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
     if (key === "GET /api/v1/auth/me") return respond(user);
     if (key === "GET /api/v1/direct/live-summary" && requestWorkspace === secondWorkspaceId) return respond({ server_time: "2026-10-19T10:00:00Z", unread_total: 0, order_intent_count: 0, events: [] });
     if (key === "GET /api/v1/direct/live-summary") return respond({ server_time: "2026-10-19T10:00:00Z", unread_total: 2, order_intent_count: 1, events: [{ message_id: "synthetic-event", conversation_id: a, participant_display_name: "Олена Тестова", text_preview: "Хочу замовити", order_intent: true, order_intent_confidence: 0.9, unread_count: 2, received_at: "2026-10-19T10:00:00Z" }] });
-    if (key === "GET /api/v1/direct/conversations") return respond(fulfillmentFixture ? fulfillmentFixture.conversations(scopedConversations) : scopedConversations);
+    if (key === "GET /api/v1/direct/conversations") return respond(fulfillmentFixture ? fulfillmentFixture.conversations(scopedConversations) : scopedConversations.map((row) => ({ ...row, linked_lead_id: state.leadLinked && row.id === a ? "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee" : null })));
     if (key === "GET /api/v1/direct/history-sync") return respond(null);
     if (key === "GET /api/v1/integrations/instagram/status") return respond({ status: "CONNECTED", token_present: true, webhook_active: true });
     const operationMatch = url.pathname.match(/^\/api\/v1\/direct\/message-operations\/([^/]+)$/);
@@ -93,6 +102,12 @@ async function fixture(viewport, { role = "OWNER", theme = "light", delayedSugge
     const match = url.pathname.match(/^\/api\/v1\/direct\/conversations\/([^/]+)\/(.+)$/);
     if (match && scopedConversations.some((item) => item.id === match[1])) {
       const [, id, action] = match;
+      if (request.method() === "POST" && action === "lead/ensure") {
+        if (state.leadFailure) return respond({ detail: "DIRECT_LEAD_INBOUND_REQUIRED" }, 409);
+        state.leadLinked = true;
+        return respond({ ...scopedConversations.find((row) => row.id === id), linked_lead_id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee" });
+      }
+      if (request.method() === "GET" && action === "customer-automation" && state.repeatSale) return respond({ conversation_id: id, customer: { id: "99999999-9999-4999-8999-999999999999", name: "Повторний покупець", instagram_username: "repeat_fixture" }, linked_order_id: "88888888-8888-4888-8888-888888888888", stage: "CUSTOMER_READY", missing_fields: [], can_create_order: true, profile_complete: true });
       if (request.method() === "GET" && action === "message-timeline") return respond([...Array.from({ length: 24 }, (_, index) => ({ id: `${id}-${index}`, conversation_id: id, direction: index % 2 ? "OUTBOUND" : "INBOUND", text: `Синтетичне повідомлення ${index + 1}`, received_at: "2026-10-19T10:00:00Z", delivery_status: index % 2 ? "PROVIDER_ACCEPTED" : "RECEIVED" })), ...state.extraTimeline.filter((message) => message.conversation_id === id)]);
       if (request.method() === "GET" && action === "customer-automation") return respond({ conversation_id: id, customer: null, linked_order_id: null, stage: "CUSTOMER_READY", missing_fields: [], can_create_order: true, profile_complete: false, created_automatically: false });
       if (request.method() === "GET" && action === "customer-data-extraction") return respond(null);
@@ -166,7 +181,7 @@ try {
     if (startupFailure) throw startupFailure;
     if (!ready) throw new Error("Owned synthetic Next server did not become ready");
   }
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined });
   if (suite === "full") {
   const f = await fixture({ width: 1280, height: 900 }, { delayedSuggestions: true });
   await f.page.goto(`${base}/direct`);
@@ -387,8 +402,11 @@ try {
   await expect(analyst.page.getByRole("button", { name: "Перевірити відправлення" })).toBeDisabled();
   await expect(analyst.page.getByRole("button", { name: "Підтвердити відправлення" })).toBeDisabled();
   await analyst.page.goto(`${base}/orders?create=1`); await expect(analyst.page.getByRole("dialog")).toHaveCount(0);
+  await analyst.page.evaluate(() => window.dispatchEvent(new Event("sellora:open-order-create")));
+  await expect(analyst.page.getByRole("dialog")).toHaveCount(0);
   expect(analyst.api.filter((key) => key.startsWith("POST "))).toEqual([]);
   await analyst.assertClean(); await analyst.context.close(); checks.push("analyst write controls and quick-create permission");
+  await runDirectLeadScenarios({ fixture, base, expect, a, output, checks });
   await runFulfillmentScenarios({ fixture, base, expect, a, b, workspaceId, output, checks });
   await runAdvertisingScenarios({ fixture, base, expect, output, checks, workspaceId });
   }

@@ -1,8 +1,10 @@
 "use client";
 
+import { OPEN_ORDER_CREATE_EVENT } from "@/lib/order-navigation";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import {
   FilterBar,
@@ -92,7 +94,7 @@ export default function OrdersPage() {
   const orderOwner = `${enabled}:${workspaceId}:${requestedCreate}:${requestedOrderId ?? ""}`;
   const currentOrderOwner = useRef(orderOwner);
   currentOrderOwner.current = orderOwner;
-  const cancelOrderNavigation = () => {
+  const cancelOrderNavigation = useCallback(() => {
     orderNavigation.current++;
     setOrderLinkState("IDLE");
     if (requestedOrderId) {
@@ -100,14 +102,14 @@ export default function OrdersPage() {
       params.delete("order_id");
       router.replace(`/orders${params.size ? `?${params}` : ""}`);
     }
-  };
-  const openCreate = () => {
-    if (!canEdit) return;
+  }, [requestedOrderId, router, searchParams]);
+  const openCreate = useCallback(() => {
+    if (!enabled || !canEdit) return;
     cancelOrderNavigation();
     setSelectedOrder(null);
     directPrefillOpened.current = true;
     setIsCreateOpen(true);
-  };
+  }, [canEdit, cancelOrderNavigation, enabled]);
 
   const ordersQuery = useQuery({
     queryKey: ["orders", workspaceId, status],
@@ -218,6 +220,11 @@ export default function OrdersPage() {
   const paginatedOrders = useMemo(() => paginateItems(filteredOrders, page, pageSize), [filteredOrders, page, pageSize]);
   const hasAnyOrders = (ordersQuery.data?.length ?? 0) > 0;
   const hasActiveFilters = Boolean(search.trim() || status || paymentStatus || orderSort !== "newest");
+
+  useEffect(() => {
+    window.addEventListener(OPEN_ORDER_CREATE_EVENT, openCreate);
+    return () => window.removeEventListener(OPEN_ORDER_CREATE_EVENT, openCreate);
+  }, [openCreate]);
 
   useEffect(() => {
     setPage(1);

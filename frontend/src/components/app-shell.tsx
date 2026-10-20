@@ -57,6 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const protectedPath = isProtectedPath(pathname);
 
   useEffect(() => {
@@ -68,9 +69,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => document.body.classList.remove("overflow-hidden");
   }, [mobileMenuOpen]);
 
-  const handleLogout = () => {
-    logout();
-    router.replace("/login");
+  const handleLogout = async () => {
+    setLogoutError(null);
+    try {
+      await logout();
+      router.replace("/login");
+    } catch {
+      // Failed server revocation must not be shown as successful sign-out.
+      setLogoutError(t("auth.logoutFailed"));
+    }
   };
 
   if (!protectedPath) return <>{children}</>;
@@ -81,6 +88,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <DirectLiveProvider workspaceId={currentWorkspaceId}>
+      {logoutError ? <div role="alert" className="fixed bottom-4 left-4 right-4 z-[100] mx-auto max-w-md rounded-xl border border-danger/30 bg-surface-1 p-4 text-sm font-semibold text-danger shadow-xl">{logoutError}</div> : null}
       <div className="min-h-screen w-full overflow-x-hidden bg-canvas text-text-primary lg:grid lg:[--sidebar-width:220px] lg:[--topbar-height:72px] lg:[grid-template-columns:var(--sidebar-width)_minmax(0,1fr)] lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]" data-protected-shell-grid>
         <div className="hidden min-w-0 border-b border-r border-border-subtle bg-canvas/92 px-4 backdrop-blur-xl lg:flex lg:h-[var(--topbar-height)] lg:w-[var(--sidebar-width)] lg:items-center" data-shell-brand-cell>
           <Link href="/dashboard" aria-label={t("navigation.dashboard")} className="flex min-w-0 items-center rounded-2xl border border-transparent px-1 py-1 transition hover:border-border-subtle hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">

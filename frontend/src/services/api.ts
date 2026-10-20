@@ -1,5 +1,5 @@
 import { normalizeWorkspaceId } from "@/lib/workspace";
-import { API_BASE_URL, authStorage, refreshAccessToken } from "@/services/auth.service";
+import { API_BASE_URL, COOKIE_SESSION_AUTH_ENABLED, SecureSessionExpiredError, authStorage, refreshAccessToken } from "@/services/auth.service";
 
 let refreshPromise: ReturnType<typeof refreshAccessToken> | null = null;
 const API_REQUEST_TIMEOUT_MS = 20_000;
@@ -133,23 +133,28 @@ export async function authenticatedFetch(path: string, init?: RequestInit, retry
   }
 
   const refreshToken = authStorage.getRefreshToken();
-  if (!refreshToken) {
+  if (!refreshToken && !COOKIE_SESSION_AUTH_ENABLED) {
     authStorage.clear();
     redirectToLogin();
     return response;
   }
 
   try {
-    refreshPromise ??= refreshAccessToken(refreshToken).finally(() => {
+    refreshPromise ??= refreshAccessToken(refreshToken ?? "").finally(() => {
       refreshPromise = null;
     });
     const tokens = await refreshPromise;
     authStorage.setTokens(tokens);
     return authenticatedFetch(path, init, false);
-  } catch {
-    authStorage.clear();
-    redirectToLogin();
-    return response;
+  } catch (error) {
+    if (!COOKIE_SESSION_AUTH_ENABLED || error instanceof SecureSessionExpiredError) {
+      authStorage.clear();
+      redirectToLogin();
+      return response;
+    }
+    // A temporary refresh network outage is not proof the session was
+    // revoked. Preserve the browser cookie rather than forcing a logout.
+    throw new ApiError(503, { detail: "SECURE_SESSION_REFRESH_TEMPORARILY_UNAVAILABLE" }, path);
   }
 }
 

@@ -10,7 +10,7 @@ import { Button, Card, FormField, Input } from "@/components/ui/primitives";
 import { PublicFooter, PublicPageContainer } from "@/components/public-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
-import { AuthNetworkError, InvalidCredentialsError } from "@/services/auth.service";
+import { AuthNetworkError, AuthRateLimitedError, InvalidCredentialsError } from "@/services/auth.service";
 
 type LoginIndicator = { label: string; value: string };
 
@@ -36,7 +36,10 @@ export default function LoginPage() {
       await login(email, password);
       router.replace("/dashboard");
     } catch (exc) {
-      if (exc instanceof AuthNetworkError) setError(t("auth.networkError"));
+      if (exc instanceof AuthRateLimitedError) {
+        const minutes = Math.max(1, Math.ceil(exc.retryAfterSeconds / 60));
+        setError(t("auth.rateLimited", { minutes }));
+      } else if (exc instanceof AuthNetworkError) setError(t("auth.networkError"));
       else if (exc instanceof InvalidCredentialsError) setError(t("auth.invalidCredentials"));
       else setError(t("auth.error"));
     } finally {

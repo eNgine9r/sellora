@@ -1,7 +1,8 @@
 "use client";
 
 import { Bell, Menu, MoreHorizontal, Plus, Search, ShoppingBag } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { OPEN_ORDER_CREATE_EVENT } from "@/lib/order-navigation";
 import { useState } from "react";
 import { BrandIcon } from "@/components/brand";
 import { DirectLiveEvent } from "@/types/direct";
@@ -36,10 +37,17 @@ function participantLabel(event: DirectLiveEvent) {
 
 export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, mobileMoreOpen, onOpenMenu, onOpenMobileMore, onCloseMobileMore, onLogout, onSwitchWorkspace, onWorkspaceCreated }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useI18n();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const validMemberships = currentUser?.memberships ?? [];
-  const createOrder = () => router.push("/orders?create=1");
+  const createOrder = () => {
+    if (pathname === "/orders") {
+      window.dispatchEvent(new Event(OPEN_ORDER_CREATE_EVENT));
+      return;
+    }
+    router.push("/orders?create=1");
+  };
   const { summary, isLive, isError, permission, requestBrowserNotifications, openConversation } = useDirectLive();
   const unreadTotal = summary?.unread_total ?? 0;
 

@@ -13,6 +13,7 @@ from app.ai.services.direct_customer_data_extraction_service import (
     PROMPT_KEY as CUSTOMER_EXTRACTION_PROMPT_KEY,
 )
 from app.database.session import SessionLocal
+from app.core.runtime_health import worker_phase, worker_finished
 from app.integrations.meta_instagram.services.history_sync_visibility_service import (
     InstagramHistorySyncVisibilityService as InstagramHistorySyncService,
 )
@@ -64,9 +65,13 @@ def process_webhook_batch() -> int:
 
 
 async def process_history_sync_job() -> str | None:
+    return await asyncio.to_thread(_process_history_sync_job)
+
+
+def _process_history_sync_job() -> str | None:
     with SessionLocal() as db:
         try:
-            sync = await InstagramHistorySyncService(db).process_next()
+            sync = asyncio.run(InstagramHistorySyncService(db).process_next())
             db.commit()
             return sync.status if sync else None
         except Exception:
@@ -93,11 +98,15 @@ def _customer_extraction_cooldown_active(db) -> bool:
 
 
 async def process_customer_data_extraction_job() -> str | None:
+    return await asyncio.to_thread(_process_customer_data_extraction_job)
+
+
+def _process_customer_data_extraction_job() -> str | None:
     with SessionLocal() as db:
         try:
             if _customer_extraction_cooldown_active(db):
                 return None
-            status = await DirectCustomerDataExtractionService(db).process_next()
+            status = asyncio.run(DirectCustomerDataExtractionService(db).process_next())
             db.commit()
             return status
         except Exception:
@@ -118,16 +127,21 @@ async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
     )
     while not stop_event.is_set():
         try:
+            worker_phase("webhook")
             processed = await asyncio.to_thread(process_webhook_batch)
+            worker_finished()
             if processed:
                 logger.info("Instagram webhook batch processed", extra={"processed": processed})
         except asyncio.CancelledError:
             raise
-        except Exception:
-            logger.exception("Instagram webhook worker batch failed")
+        except Exception as exc:
+            worker_finished(exc)
+            logger.error("Instagram webhook worker batch failed", extra={"error_type": type(exc).__name__})
 
         try:
+            worker_phase("history")
             history_status = await process_history_sync_job()
+            worker_finished()
             if history_status:
                 logger.info(
                     "Instagram history sync job processed",
@@ -135,14 +149,17 @@ async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
                 )
         except asyncio.CancelledError:
             raise
-        except Exception:
-            logger.exception("Instagram history sync job failed")
+        except Exception as exc:
+            worker_finished(exc)
+            logger.error("Instagram history sync job failed", extra={"error_type": type(exc).__name__})
 
         monotonic_now = time.monotonic()
         if monotonic_now >= next_extraction_at:
             next_extraction_at = monotonic_now + extraction_interval
             try:
+                worker_phase("extraction")
                 extraction_status = await process_customer_data_extraction_job()
+                worker_finished()
                 if extraction_status:
                     logger.info(
                         "Direct customer data extraction processed",
@@ -150,8 +167,9 @@ async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
                     )
             except asyncio.CancelledError:
                 raise
-            except Exception:
-                logger.exception("Direct customer data extraction failed")
+            except Exception as exc:
+                worker_finished(exc)
+                logger.error("Direct customer data extraction failed", extra={"error_type": type(exc).__name__})
 
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval)

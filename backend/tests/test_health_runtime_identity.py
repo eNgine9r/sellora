@@ -1,8 +1,9 @@
+import asyncio
 from app.main import health
 
 
 def test_health_exposes_safe_runtime_identity() -> None:
-    payload = health()
+    payload = asyncio.run(health())
 
     assert payload["status"] == "ok"
     assert payload["runtime_commit"]

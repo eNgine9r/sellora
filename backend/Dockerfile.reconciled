@@ -1,0 +1,20 @@
+# Recovery build: reuse dependencies from the exact audited production image.
+# The operator must inspect and verify SELLORA_BASE_IMAGE before invoking this.
+ARG SELLORA_BASE_IMAGE
+FROM ${SELLORA_BASE_IMAGE}
+USER root
+WORKDIR /app
+COPY app ./app
+COPY alembic ./alembic
+COPY scripts ./scripts
+COPY alembic.ini ./
+ARG SELLORA_REVISION
+RUN test -n "$SELLORA_REVISION" \
+    && printf '%s\n' "$SELLORA_REVISION" > /app/RELEASE_REVISION \
+    && python scripts/verify_alembic_revision.py \
+    && python scripts/verify_sprint_8b_routes.py
+LABEL org.opencontainers.image.revision="$SELLORA_REVISION"
+ENV RENDER_GIT_COMMIT="$SELLORA_REVISION"
+ENV SELLORA_COOKIE_SESSIONS_ENABLED=true SELLORA_LEGACY_AUTH_ENABLED=false SELLORA_LOGIN_RATE_LIMIT_ENABLED=true
+USER 10001:10001
+CMD ["python", "scripts/start_raspberry.py"]
