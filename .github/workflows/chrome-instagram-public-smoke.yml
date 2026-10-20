@@ -1,0 +1,61 @@
+name: Sellora Google Chrome Public Smoke
+
+on:
+  push:
+    branches:
+      - fix/2026-10-20-instagram-oauth-status-mobile
+  pull_request:
+    branches:
+      - codex/2026-10-20-instagram-raspberry-cutover
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chrome-public:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Confirm branded Google Chrome
+        run: |
+          set -euo pipefail
+          command -v google-chrome
+          google-chrome --version
+
+      - name: Check public response codes
+        run: |
+          set -euo pipefail
+          for route in /login /settings/integrations/instagram/callback?status=webhook_inactive; do
+            code=$(curl -sS -L --max-time 25 -o /dev/null -w '%{http_code}' "https://sellora-web-staging.vercel.app${route}")
+            echo "${route} => ${code}"
+            test "${code}" = 200
+          done
+
+      - name: Render mobile login in Google Chrome
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/sellora-chrome
+          timeout 50s google-chrome --headless=new --no-sandbox --disable-dev-shm-usage \
+            --disable-gpu --no-first-run --no-default-browser-check \
+            --user-data-dir=/tmp/sellora-chrome/profile \
+            --window-size=390,844 --hide-scrollbars \
+            --screenshot=/tmp/sellora-chrome/login-390.png \
+            'https://sellora-web-staging.vercel.app/login'
+          python3 - <<'PY'
+          import pathlib, struct
+          p = pathlib.Path('/tmp/sellora-chrome/login-390.png')
+          assert p.is_file(), 'Chrome screenshot was not saved'
+          raw = p.read_bytes()
+          assert raw[:8] == b'\x89PNG\r\n\x1a\n', 'Invalid Chrome PNG screenshot'
+          width, height = struct.unpack('>II', raw[16:24])
+          print(f'Google Chrome screenshot: {width}x{height}, {len(raw)} bytes')
+          assert width >= 390 and height >= 700, 'Unexpected Chrome viewport screenshot'
+          assert len(raw) > 5000, 'Screenshot unexpectedly small'
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sellora-google-chrome-public-mobile
+          path: /tmp/sellora-chrome/login-390.png
+          retention-days: 1
