@@ -1,6 +1,6 @@
 # Integration release control — 2026-10-20
 
-Status: pre-release QA; deployment is blocked by the reproduced PostgreSQL concurrency defect described below. This document does not record deployment or live activation.
+Status: final code review approved; final package, exact-head CI and controlled deployment gates remain pending. This frozen pre-release document does not record deployment or live activation; the PR release record and private runtime manifest carry rollout results.
 
 ## Scope
 
@@ -51,10 +51,20 @@ These checks concern synthetic disposable environments, not production activatio
 - Encrypted local snapshot from20:14UTC was restored directly into internal tmpfs PostgreSQL, with no plaintext archive persisted. Candidate migration038→039 added the state table; row digests/counts for all49 unchanged existing tables matched exactly. The existing connection-table row count was preserved.
 - Application smoke on that restored clone used a newly seeded synthetic user/workspace: session-bound authenticated CRM/Direct reads succeeded, Ads status remained fail-closed, another workspace was denied403 and session revocation returned401. This does not establish real provider consent or independent off-host key recovery. A fresh encrypted backup is still required immediately before the eventual production migration.
 
-## Open integrated release blocker
+## Integrated concurrency blocker — resolved in code review
 
 A bounded PostgreSQL17 probe through the actual metric-update service and workspace-lock repository reproduced SQLSTATE40P01 when a CRM metric edit overlaps the Ads persistence lock path. Workspace FOR UPDATE conflicts with the audit foreign-key KEY SHARE while each transaction holds the other required row lock. All probe writes were rolled back on an isolated restored clone; production was unchanged. This is a new integration release blocker, not evidence of the historical Issue266 trigger.
 
 The packaged7cb candidate above must not be deployed unchanged. Final review/fix must retain cross-process serialization, connection-generation revalidation, uniqueness and provider-field ownership while adding a deterministic real-PostgreSQL concurrent-edit/sync regression. A new backend package and exact-head CI are required after the fix.
 
 Frontend implementation de528f7 passed all seven CI39493365697 jobs, including the new NP/Ads and existing Direct browser gates. Independent review found a stale OAuth callback deleting a newer pending attempt; d83db71 fixes that and the Ukrainian metric-source error copy. Scoped component, production callback and real StrictMode callback checks passed; independent re-review and final-head CI remain gates. These tests use intercepted synthetic APIs, not real provider consent.
+
+## Final code review gate
+
+Fix d1bab4ac8845ba1d39d9887250650df88ef36fcf changes the Ads workspace mutex to PostgreSQL FOR NO KEY UPDATE, retaining exclusive Ads serialization while permitting audit FK KEY SHARE. The actual emitted statement and a blocked second mutex session were tested. Deterministic actual-service CRM update/delete versus full sync failed with40P01 before the fix and passed afterward. Local CRM values, provider delivery, one campaign/day identity, audit persistence and durable delete conflicts are asserted. Four real manual/CSV insertion-overlap cases preserve inserted data and reject conflicting sync. Migration039 is unchanged.
+
+The final scoped review approved I1 with no new fix breakage. Focused PostgreSQL/security/provider/privacy/inventory tests:83 passed. Full no-network backend:653 passed/44 skipped; seven added PostgreSQL cases account for the extra skips and pass in the PostgreSQL gate. These source-mounted tests do not replace the final packaged-image and exact-head CI gates.
+
+Global normalized campaign-name serialization remains a pre-existing boundary: a newly created independent manual/CSV campaign can commit after the sync name snapshot; neither old nor new mutex guarantees predicate uniqueness. Existing data is not overwritten and subsequent sync detects the overlap. Historical static/document-marker harness debt is deferred; current behavior-based CI remains required.
+
+The temporary per-task report is removed from the final tree after its committed history and private review archive are retained. No product code is changed by this documentation cleanup.
