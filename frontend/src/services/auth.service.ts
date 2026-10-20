@@ -1,7 +1,21 @@
 import { normalizeWorkspaceId } from "@/lib/workspace";
 import { CurrentUser, TokenPair, WorkspaceMembership } from "@/types/auth";
 
-export const COOKIE_SESSION_AUTH_ENABLED = process.env.NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED === "true";
+// Staging is intentionally running the revocable cookie-session pilot globally.
+// The default host is exact, not a suffix match; non-staging domains retain
+// existing legacy auth until their own controlled cutover.
+function secureStagingHost(): boolean {
+  if (typeof window === "undefined") return false;
+  const hosts = (process.env.NEXT_PUBLIC_COOKIE_SESSION_STAGING_HOSTS ??
+    "sellora-web-staging.vercel.app")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+  return hosts.includes(window.location.hostname.toLowerCase());
+}
+export const COOKIE_SESSION_AUTH_ENABLED =
+  process.env.NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED === "true" ||
+  secureStagingHost();
 let memoryAccessToken: string | null = null;
 let refreshInFlight: Promise<TokenPair> | null = null;
 
