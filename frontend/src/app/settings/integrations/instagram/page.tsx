@@ -28,7 +28,7 @@ export default function InstagramIntegrationPage() {
   const hasUsableToken = Boolean(data?.token_present && !requiresReconnect && data.status !== "DISCONNECTED");
   const disconnected = data?.status === "DISCONNECTED";
   return <WorkspacePage>
-    <WorkspaceHeader eyebrow="Meta Instagram" title={t("instagramSettings.title")} description={t("instagramSettings.description")} actions={canManage ? <Button onClick={() => connectMutation.mutate()} disabled={connectMutation.isPending}>{t(requiresReconnect ? "instagramSettings.reconnect" : "instagramSettings.connect")}</Button> : null} />
+    <WorkspaceHeader eyebrow="Meta Instagram" title={t("instagramSettings.title")} description={t("instagramSettings.description")} actions={canManage ? <div className="flex flex-wrap gap-2"><Button onClick={() => connectMutation.mutate()} disabled={connectMutation.isPending}>{t(requiresReconnect ? "instagramSettings.reconnect" : "instagramSettings.connect")}</Button><Button variant="secondary" onClick={() => browserMutation.mutate()} disabled={browserMutation.isPending}>{t("instagramSettings.browserLinkButton")}</Button></div> : null} />
     {statusQuery.isLoading ? <LoadingSkeleton /> : null}
     {connectMutation.isError ? <ErrorState title={t("instagramSettings.error")} description={t("instagramSettings.errorDescription")} /> : null}
     {webhookMutation.isError ? <ErrorState title={t("instagramSettings.webhookInactive")} description={t("instagramSettings.webhookInactiveExplanation")} /> : null}
