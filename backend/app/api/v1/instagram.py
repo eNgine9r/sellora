@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
@@ -31,10 +32,16 @@ def _status_response(workspace_id: UUID, c) -> InstagramConnectionStatusResponse
     confirmed = list(c.subscribed_webhook_fields or []) if c else []
     missing = [field for field in WEBHOOK_SUBSCRIPTIONS if field not in set(confirmed)]
     required_confirmed = not missing
-    webhook_active = bool(c and c.status == "CONNECTED" and required_confirmed)
+    effective_status = c.status if c else "DISCONNECTED"
+    if c and c.status == "CONNECTED":
+        if not c.access_token_ciphertext:
+            effective_status = "RECONNECT_REQUIRED"
+        elif c.token_expires_at and c.token_expires_at <= datetime.now(UTC):
+            effective_status = "TOKEN_EXPIRED"
+    webhook_active = bool(c and effective_status == "CONNECTED" and required_confirmed)
     return InstagramConnectionStatusResponse(
         workspace_id=workspace_id,
-        status=c.status if c else "DISCONNECTED",
+        status=effective_status,
         instagram_username=c.instagram_username if c else None,
         instagram_account_type=c.instagram_account_type if c else None,
         granted_permissions=c.granted_permissions if c else [],
