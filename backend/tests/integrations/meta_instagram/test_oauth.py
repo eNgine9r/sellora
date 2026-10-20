@@ -310,3 +310,98 @@ async def test_inspect_account_uses_scope_evidence_without_permissions_endpoint(
     profile = await client.inspect_account(access_token="token")
     assert profile.instagram_account_id == "ig-1"
     assert profile.granted_permissions == list(OAUTH_REQUIRED_SCOPES)
+
+
+@pytest.mark.asyncio
+async def test_inspect_account_reuses_oauth_scopes_during_live_validation(monkeypatch):
+    from app.integrations.meta_instagram.client import MetaInstagramOAuthClient
+
+    class Response:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"id": "ig-1", "user_id": "ig-1", "username": "shop", "account_type": "BUSINESS"}
+
+    class AsyncClient:
+        calls = []
+
+        def __init__(self, timeout):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url, headers=None, params=None):
+            self.calls.append(url)
+            assert url.endswith("/me"), "Do not use Facebook-only /me/permissions for Instagram Login"
+            assert headers == {"Authorization": "Bearer existing-token"}
+            return Response()
+
+    import app.integrations.meta_instagram.client as module
+    monkeypatch.setattr(module.httpx, "AsyncClient", AsyncClient)
+    client = MetaInstagramOAuthClient(
+        app_id="app", app_secret="secret", token_url="https://token",
+        graph_base_url="https://graph.instagram.test", graph_version="v23.0",
+    )
+    profile = await client.inspect_account(
+        access_token="existing-token",
+        token_user_id="ig-1",
+        granted_permissions_hint=list(OAUTH_REQUIRED_SCOPES),
+    )
+    assert profile.granted_permissions == list(OAUTH_REQUIRED_SCOPES)
+    assert AsyncClient.calls == ["https://graph.instagram.test/v23.0/me"]
+
+
+@pytest.mark.asyncio
+async def test_manual_connection_validation_uses_stored_scopes_and_live_subscription(monkeypatch):
+    import app.integrations.meta_instagram.services.connection_service as module
+
+    repo = FakeRepo(None)
+    connection = InstagramConnection(
+        workspace_id=uuid4(), instagram_account_id="ig-1", status="CONNECTED",
+        instagram_account_type="BUSINESS", granted_permissions=list(OAUTH_REQUIRED_SCOPES),
+        subscribed_webhook_fields=list(WEBHOOK_SUBSCRIPTIONS),
+        access_token_ciphertext="protected-token",
+        token_expires_at=datetime.now(UTC) + timedelta(days=30),
+    )
+    repo.connection = connection
+    monkeypatch.setattr(module, "InstagramConnectionRepository", lambda db: repo)
+    monkeypatch.setattr(module, "decrypt_instagram_token", lambda value: "existing-token")
+    monkeypatch.setattr(module, "encrypt_instagram_token", lambda value: ("encrypted", "nonce", "v1"))
+
+    class ScopedClient(FakeClient):
+        async def inspect_account(self, *, access_token, token_user_id=None, granted_permissions_hint=None):
+            assert granted_permissions_hint == list(OAUTH_REQUIRED_SCOPES)
+            assert token_user_id == "ig-1"
+            self.calls.append(("inspect", access_token))
+            return MetaAccountProfile("ig-1", "shop", "BUSINESS", list(granted_permissions_hint))
+
+    client = ScopedClient()
+    checked, ok = await InstagramConnectionService(SimpleNamespace(), client).validate(connection.workspace_id)
+    assert ok is True
+    assert checked.status == "CONNECTED"
+    assert client.calls == [("inspect", "existing-token")]
+    assert [call[0] for call in FakeWebhookClient.calls] == ["subscribe", "get"]
+
+
+@pytest.mark.asyncio
+async def test_manual_validation_skips_known_expired_token_without_provider_call(monkeypatch):
+    import app.integrations.meta_instagram.services.connection_service as module
+    repo = FakeRepo(None)
+    connection = InstagramConnection(
+        workspace_id=uuid4(), instagram_account_id="ig-1", status="CONNECTED",
+        granted_permissions=list(OAUTH_REQUIRED_SCOPES),
+        access_token_ciphertext="protected-token",
+        token_expires_at=datetime.now(UTC) - timedelta(days=1),
+    )
+    repo.connection = connection
+    monkeypatch.setattr(module, "InstagramConnectionRepository", lambda db: repo)
+    client = FakeClient()
+    checked, ok = await InstagramConnectionService(SimpleNamespace(), client).validate(connection.workspace_id)
+    assert ok is False
+    assert checked.status == "TOKEN_EXPIRED"
+    assert client.calls == []
