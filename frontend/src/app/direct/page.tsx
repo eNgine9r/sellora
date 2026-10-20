@@ -259,7 +259,7 @@ export default function DirectPage() {
     },
   });
   const historyMutation = useMutation({
-    mutationFn: () => startInstagramHistorySync(100, 20),
+    mutationFn: (conversationLimit: number) => startInstagramHistorySync(conversationLimit, 20),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-history-sync", workspaceId] }),
   });
   const readMutation = useMutation({
@@ -345,7 +345,7 @@ export default function DirectPage() {
             </span>
             <Button
               variant="secondary"
-              onClick={() => historyMutation.mutate()}
+              onClick={() => historyMutation.mutate(100)}
               disabled={!canManage || historyMutation.isPending || historyActive || statusQuery.data?.status !== "CONNECTED"}
             >
               <RefreshCw className={`h-4 w-4 ${historyMutation.isPending || historyActive ? "animate-spin" : ""}`} />
@@ -361,7 +361,7 @@ export default function DirectPage() {
       </div>
 
       {historyMutation.isError || profileMutation.isError ? <p role="alert" className="text-sm text-rose-600">{t("direct.actionError")}</p> : null}
-      <div className={selectedConversation ? "hidden lg:block" : ""}><HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} /></div>
+      <div className={selectedConversation ? "hidden lg:block" : ""}><HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} canStart={Boolean(canManage && statusQuery.data?.status === "CONNECTED")} isStarting={historyMutation.isPending} onStart={(limit) => historyMutation.mutate(limit)} /></div>
 
       <div className={`${selectedConversation ? "hidden lg:block" : "block"} min-[1440px]:hidden`}>
         <button
@@ -377,7 +377,7 @@ export default function DirectPage() {
       {selectedConversation ? <div className="flex min-w-0 items-center gap-2 lg:hidden" data-direct-mobile-controls>
         <Button variant="secondary" className="min-w-0 flex-1 px-2 text-xs" onClick={() => { setSelectedId(null); setAiPanelOpen(false); router.replace("/direct", { scroll: false }); }}><ArrowLeft className="h-4 w-4 shrink-0" />{t("direct.backToDialogs")}</Button>
         <Button variant="secondary" className="px-3 text-xs" onClick={() => setAiPanelOpen(true)} aria-label={t("direct.openAiPanel")}><Bot className="h-4 w-4" />{t("direct.aiShort")}</Button>
-        <Button variant="secondary" className="w-11 shrink-0 px-0" aria-label={historyActive ? t("direct.syncActive") : t("direct.syncHistory")} onClick={() => historyMutation.mutate()} disabled={!canManage || historyMutation.isPending || historyActive || statusQuery.data?.status !== "CONNECTED"}><RefreshCw className={`h-4 w-4 ${historyActive || historyMutation.isPending ? "animate-spin" : ""}`} /></Button>
+        <Button variant="secondary" className="w-11 shrink-0 px-0" aria-label={historyActive ? t("direct.syncActive") : t("direct.syncHistory")} onClick={() => historyMutation.mutate(100)} disabled={!canManage || historyMutation.isPending || historyActive || statusQuery.data?.status !== "CONNECTED"}><RefreshCw className={`h-4 w-4 ${historyActive || historyMutation.isPending ? "animate-spin" : ""}`} /></Button>
       </div> : null}
       <section
         className={`grid ${selectedConversation ? "h-[calc(100dvh-260px)] min-h-[380px] lg:h-[max(540px,calc(100dvh-var(--topbar-height,72px)-240px))]" : "h-[max(540px,calc(100dvh-var(--topbar-height,72px)-240px))]"} min-w-0 gap-3 lg:grid-cols-[280px_minmax(0,1fr)] min-[1440px]:grid-cols-[280px_minmax(0,1fr)_300px]`}
@@ -463,7 +463,7 @@ export default function DirectPage() {
   );
 }
 
-function HistorySyncBanner({ sync, loading }: { sync?: InstagramHistorySync | null; loading: boolean }) {
+function HistorySyncBanner({ sync, loading, canStart, isStarting, onStart }: { sync?: InstagramHistorySync | null; loading: boolean; canStart: boolean; isStarting: boolean; onStart: (limit: number) => void }) {
   const { t } = useI18n();
   if (loading || !sync) return null;
   const active = ACTIVE_HISTORY_STATUSES.has(sync.status);
@@ -488,11 +488,22 @@ function HistorySyncBanner({ sync, loading }: { sync?: InstagramHistorySync | nu
           {statusLabel[sync.status] ?? t("direct.unknownStatus")}
         </span>
       </div>
+      <p className="mt-2 text-xs text-text-secondary">{t("direct.historyProviderLimits")}</p>
+      {sync.last_error_code ? <p role="alert" className="mt-2 text-xs text-rose-600">{t("direct.historyProviderError", { code: sync.last_error_code })}</p> : null}
       {sync.messages_unavailable > 0 || sync.error_count > 0 ? (
         <p className="mt-2 text-xs font-semibold text-amber-700">
           {t("direct.historyErrors", { unavailable: sync.messages_unavailable, errors: sync.error_count })}
         </p>
       ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button variant="secondary" disabled={!canStart || active || isStarting} onClick={() => onStart(100)}>
+          <RefreshCw className={`h-4 w-4 ${active || isStarting ? "animate-spin" : ""}`} />
+          {t("direct.historyRescan")}
+        </Button>
+        <Button variant="secondary" disabled={!canStart || active || isStarting} onClick={() => onStart(500)}>
+          {t("direct.historyDeepScan")}
+        </Button>
+      </div>
     </section>
   );
 }

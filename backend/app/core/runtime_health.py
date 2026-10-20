@@ -1,6 +1,7 @@
 """Bounded, content-free process and background-worker telemetry."""
 import asyncio
 import time
+from threading import Lock
 from datetime import UTC, datetime
 
 WORKER_STATE: dict[str, object] = {}
@@ -35,3 +36,19 @@ async def monitor_event_loop() -> None:
         started = time.monotonic()
         await asyncio.sleep(1)
         LOOP_STATE["lag_seconds"] = round(max(0.0, time.monotonic() - started - 1), 3)
+
+
+_DB_LOCK = Lock()
+_DB_STATE: dict[str, object] = {"operations": 0, "last_seconds": 0.0, "max_seconds": 0.0}
+
+
+def record_db_operation(seconds: float) -> None:
+    with _DB_LOCK:
+        _DB_STATE["operations"] = int(_DB_STATE["operations"]) + 1
+        _DB_STATE["last_seconds"] = round(seconds, 3)
+        _DB_STATE["max_seconds"] = round(max(float(_DB_STATE["max_seconds"]), seconds), 3)
+
+
+def db_snapshot() -> dict[str, object]:
+    with _DB_LOCK:
+        return dict(_DB_STATE)

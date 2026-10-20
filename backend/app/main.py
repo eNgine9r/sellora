@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime
 import asyncio
 import os
+import time
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Response
@@ -9,7 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
-from app.core.runtime_health import LOOP_STATE, monitor_event_loop, worker_snapshot
+from app.core.runtime_health import LOOP_STATE, monitor_event_loop, worker_snapshot, db_snapshot
+from app.database.session import engine
 from app.integrations.meta_instagram.runtime_worker import run_instagram_webhook_worker, webhook_worker_enabled
 
 settings = get_settings()
@@ -98,7 +100,7 @@ async def health() -> dict[str, object]:
         "process_started_at": PROCESS_STARTED_AT,
         "meta_webhook_worker_enabled": webhook_worker_enabled(),
         "meta_webhook_processing_enabled": settings.meta_instagram_webhook_processing_enabled,
-        "meta_webhook_worker_running": bool(getattr(app.state, "instagram_webhook_worker_running", False)),
+        "meta_webhook_worker_running": bool(getattr(app.state, "instagram_webhook_worker_task", None) and not app.state.instagram_webhook_worker_task.done()),
     }
 
 
@@ -115,5 +117,19 @@ async def readiness(response: Response) -> dict[str, object]:
     state = worker_snapshot()
     ready = not required or bool(task and not task.done() and not state["stalled"])
     response.status_code = 200 if ready else 503
+    checked_out = getattr(engine.pool, "checkedout", None)
     return {"status": "ok" if ready else "degraded",
-            "worker": state, "event_loop_lag_seconds": LOOP_STATE["lag_seconds"]}
+            "worker": state, "event_loop_lag_seconds": LOOP_STATE["lag_seconds"],
+            "db": db_snapshot() | {"checked_out": checked_out() if checked_out else None,
+                                   "pool_wait_limit_seconds": 5},
+            "http": getattr(app.state, "last_http", {})}
+
+
+@app.middleware("http")
+async def request_timing(request, call_next):
+    started = time.monotonic()
+    response = await call_next(request)
+    app.state.last_http = {"response_seconds": round(time.monotonic() - started, 3),
+                           "status_code": response.status_code,
+                           "completed_at": datetime.now(UTC).isoformat()}
+    return response

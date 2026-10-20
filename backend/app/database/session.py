@@ -1,10 +1,12 @@
 from collections.abc import Generator
 from typing import Any
+import time
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
+from app.core.runtime_health import record_db_operation
 
 
 def engine_connect_args(database_url: str) -> dict[str, Any]:
@@ -39,7 +41,17 @@ engine = create_engine(
     **({"pool_size": 5, "max_overflow": 5, "pool_timeout": 5, "pool_recycle": 300}
        if settings.database_url.startswith("postgresql") else {}),
 )
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, class_=Session)
+class InstrumentedSession(Session):
+    def execute(self, *args, **kwargs):
+        started = time.monotonic()
+        try:
+            return super().execute(*args, **kwargs)
+        finally:
+            # Includes connection acquisition and query time; never logs SQL or binds.
+            record_db_operation(time.monotonic() - started)
+
+
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, class_=InstrumentedSession)
 
 
 def get_db() -> Generator[Session, None, None]:

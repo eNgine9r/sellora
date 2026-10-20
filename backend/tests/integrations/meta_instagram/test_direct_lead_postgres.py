@@ -118,3 +118,68 @@ def test_http_lead_role_and_membership_enforcement(seed, role, foreign_header, e
             headers["Authorization"] = "Bearer " + SessionAuthenticationService(db).create(user.id).access_token
     response = TestClient(app).post(f"/api/v1/direct/conversations/{conversation}/lead/ensure", headers=headers)
     assert response.status_code == expected
+
+
+def test_signed_direct_replay_to_customer_order_and_payment_without_provider_writes(seed, monkeypatch):
+    import hashlib, hmac, json
+    from decimal import Decimal
+    from types import SimpleNamespace
+    from app.core.config import get_settings
+    from app.integrations.meta_instagram.services.webhook_service import InstagramWebhookService
+    from app.integrations.meta_instagram.services.inbound_message_service import InstagramInboundMessageService
+    from app.models.product import Product
+    from app.models.product_variant import ProductVariant
+    from app.models.inventory import Inventory
+    from app.models.order import Order
+    from app.schemas.order import OrderCreate, OrderItemCreate, OrderUpdate
+    from app.services.order_service import OrderService
+    workspace, foreign, connection_id, conversation_id = seed
+    monkeypatch.setenv("META_APP_SECRET", "synthetic-release-test-key")
+    get_settings.cache_clear()
+    try:
+        with Session(engine) as db:
+            connection = db.get(InstagramConnection, connection_id)
+            conversation = db.get(DirectConversation, conversation_id)
+            mid = "synthetic-mid-" + uuid4().hex
+            payload = {"object": "instagram", "entry": [{"id": connection.instagram_account_id,
+                "messaging": [{"sender": {"id": conversation.participant_scoped_id},
+                    "recipient": {"id": connection.instagram_account_id},
+                    "timestamp": int(datetime.now(UTC).timestamp() * 1000),
+                    "message": {"mid": mid, "text": "Хочу замовити"}}]}]}
+            body = json.dumps(payload).encode()
+            signature = "sha256=" + hmac.new(b"synthetic-release-test-key", body, hashlib.sha256).hexdigest()
+            receiver = InstagramWebhookService(db)
+            receiver.validate_signature(body, signature)
+            event = receiver.persist_verified_event(body, payload)
+            processor = InstagramInboundMessageService(db, profile_service=SimpleNamespace(enrich_if_due=lambda *_: None))
+            assert processor.process_event(event) == 1
+            db.commit()
+            assert receiver.persist_verified_event(body, payload).id == event.id
+            assert processor.process_event(event) == 0
+            db.commit()
+            db.refresh(conversation)
+            assert conversation.linked_lead_id and conversation.linked_customer_id
+            assert db.scalar(select(func.count()).select_from(Lead).where(Lead.workspace_id == workspace)) == 1
+            assert db.scalar(select(func.count()).select_from(Customer).where(Customer.workspace_id == workspace)) == 1
+            customer = db.get(Customer, conversation.linked_customer_id)
+            product = Product(workspace_id=workspace, name="Synthetic QA product")
+            db.add(product); db.flush()
+            variant = ProductVariant(workspace_id=workspace, product_id=product.id, sku="QA-" + uuid4().hex)
+            db.add(variant); db.flush()
+            inventory = Inventory(workspace_id=workspace, product_variant_id=variant.id, stock_quantity=5)
+            db.add(inventory); db.commit()
+            orders = OrderService(db)
+            order = orders.create(workspace, OrderCreate(customer_id=customer.id, items=[
+                OrderItemCreate(product_variant_id=variant.id, quantity=1, unit_price=Decimal("100"), unit_cost=Decimal("30")),
+            ]), actor_user_id=None)
+            DirectCustomerAutomationService(db).link_fulfillment_result(workspace, conversation.id, customer, order.id,
+                recipient_name="Synthetic QA", recipient_phone="", city="Synthetic city", actor_user_id=None)
+            db.commit()
+            updated = orders.update(workspace, order.id, OrderUpdate(payment_status="PAID"), actor_user_id=None)
+            assert updated.payment_status == "PAID" and updated.net_profit == Decimal("70.00")
+            db.refresh(inventory); assert inventory.reserved_quantity == 1 and inventory.stock_quantity == 5
+            db.refresh(conversation); assert conversation.linked_order_id == order.id
+            assert db.get(Lead, conversation.linked_lead_id).status == "CONVERTED"
+            assert orders.get(foreign, order.id) is None
+    finally:
+        get_settings.cache_clear()
