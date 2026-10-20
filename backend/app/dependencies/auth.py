@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.auth.jwt import decode_token
@@ -20,6 +21,23 @@ def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(
         user_id = UUID(payload["sub"])
     except (KeyError, TypeError, ValueError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    # Session-bound JWTs must stop working immediately after session
+    # revocation, expiration, replay detection, or logout-all.
+    raw_session_id = payload.get("sid")
+    if raw_session_id is not None:
+        try:
+            session_id = UUID(raw_session_id)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+        active = db.execute(
+            text(
+                "SELECT 1 FROM auth_sessions WHERE id=:sid AND user_id=:uid "
+                "AND revoked_at IS NULL AND expires_at > now()"
+            ),
+            {"sid": session_id, "uid": user_id},
+        ).first()
+        if not active:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session revoked or expired")
     user = UserRepository(db).get_by_id(user_id)
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive or missing user")
