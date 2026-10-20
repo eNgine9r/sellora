@@ -23,6 +23,20 @@ Compose now explicitly supplies these public URLs, so importing a stale Render e
 - Provider history-sync workflows are manual, so merging their URL changes cannot trigger provider writes.
 - The OAuth canary creates one short-lived OAuth state for an existing OWNER membership; it checks the generated provider URL and public invalid-state callback without exchanging a code or modifying an existing connection.
 
+## Verified execution
+
+Source/config commit: 1f503b453219097228c1e25b190e8db3f63c6046, draft PR237 stacked on PR236.
+
+- OAuth handoff and public invalid-state return passed in Actions run39375966152. The app-generated authorization URL targets the existing Instagram app and the registered Raspberry callback. Account authorization/token exchange was not performed.
+- Native Render autodeploy is off, verified by service GET after PATCH in run39375981754.
+- Authenticated same-origin API canary passed in run39376092917: login/refresh, three workspace reads, CRM reports, one proposal read, and isolation rejection checks.
+- External Chromium login/dashboard canary passed in run39376094812.
+- Python compilation, nine workflow YAML parses, Compose config validation and git diff --check passed. No application code changed.
+- Private env comparison confirmed that only META_OAUTH_REDIRECT_URI changed. The same backend image remains healthy; Raspberry worker/send/AI stay disabled.
+- The eight legacy workflow IDs316567045,316646275,316611473,316626143,317394341,313475703,312810599,316544053 are disabled_manually in GitHub. Their default-branch versions still target Render until the stacked PRs land. Re-enable only after confirming that main contains the corrected Raspberry definitions; the deploy workflow must remain manual and must not regain Render deploy/export jobs.
+
+These checks establish routing/configuration and ordinary Sellora access. They do not establish real Instagram login completion, provider webhook delivery or single-worker takeover.
+
 ## Pending provider cutover
 
 The Meta webhook callback still points to Render. Changing it to https://btc-radar.tail7f9b04.ts.net/api/v1/integrations/instagram/webhook requires re-entering the existing Raspberry verify token into the existing Meta application. The save has not been performed: automatic approval review required explicit consent for this secret transfer. No token was rotated or included in source, logs or screenshots.
