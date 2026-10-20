@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = Field(default=30, alias="JWT_EXPIRE_MINUTES")
     refresh_token_expire_days: int = Field(default=7, alias="REFRESH_TOKEN_EXPIRE_DAYS")
     cookie_sessions_enabled: bool = Field(default=False, alias="SELLORA_COOKIE_SESSIONS_ENABLED")
+    legacy_auth_enabled: bool = Field(default=True, alias="SELLORA_LEGACY_AUTH_ENABLED")
     login_rate_limit_enabled: bool = Field(default=False, alias="SELLORA_LOGIN_RATE_LIMIT_ENABLED")
     login_rate_limit_max_failures: int = Field(default=8, ge=3, le=30, alias="SELLORA_LOGIN_RATE_LIMIT_MAX_FAILURES")
     login_rate_limit_window_seconds: int = Field(default=900, ge=60, le=3600, alias="SELLORA_LOGIN_RATE_LIMIT_WINDOW_SECONDS")
