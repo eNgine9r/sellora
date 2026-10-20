@@ -2452,7 +2452,10 @@
     "reconnectExplanation": "Термін дії токена Instagram завершився. Перепідключіть акаунт для відновлення Direct.",
     "connectionMissingExplanation": "Підключення Instagram у цьому робочому просторі неактивне. Потрібен новий вхід власника.",
     "openInBrowserHint": "Якщо Instagram показує «Сталася помилка», відкрийте Sellora напряму в Safari або Chrome та повторіть вхід.",
-    "reconnect": "Перепідключити Instagram"
+    "reconnect": "Перепідключити Instagram",
+    "browserLinkButton": "Посилання для Chrome",
+    "browserLinkTitle": "Відкрити Instagram у браузері",
+    "browserLinkInstructions": "Натисни на поле, скопіюй посилання і встав його безпосередньо в адресний рядок Chrome. Не відкривай посилання натисканням на нього: iPhone може перекинути у застосунок Instagram. Посилання дійсне 10 хвилин. Нікому його не надсилай."
   },
   "proposal": {
     "currentPrice": "Поточна ціна",
