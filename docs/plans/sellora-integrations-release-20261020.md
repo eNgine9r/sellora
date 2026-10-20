@@ -67,4 +67,4 @@ The final scoped review approved I1 with no new fix breakage. Focused PostgreSQL
 
 Global normalized campaign-name serialization remains a pre-existing boundary: a newly created independent manual/CSV campaign can commit after the sync name snapshot; neither old nor new mutex guarantees predicate uniqueness. Existing data is not overwritten and subsequent sync detects the overlap. Historical static/document-marker harness debt is deferred; current behavior-based CI remains required.
 
-The temporary per-task report is removed from the final tree after its committed history and private review archive are retained. No product code is changed by this documentation cleanup.
+The temporary per-task reports are removed from the final tree after its committed history and private review archive are retained. No product code is changed by this documentation cleanup.
