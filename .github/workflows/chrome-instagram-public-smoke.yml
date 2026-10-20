@@ -26,10 +26,12 @@ jobs:
       - name: Check public response codes
         run: |
           set -euo pipefail
-          for route in /login /settings/integrations/instagram/callback?status=webhook_inactive; do
-            code=$(curl -sS -L --max-time 25 -o /dev/null -w '%{http_code}' "https://sellora-web-staging.vercel.app${route}")
-            echo "${route} => ${code}"
-            test "${code}" = 200
+          for base in https://sellora-web-staging.vercel.app https://sellora-web-staging-git-fix-2026-10-2-b1cada-engine9rs-projects.vercel.app; do
+            for route in /login /settings/integrations/instagram/callback?status=webhook_inactive; do
+              code=$(curl -sS -L --max-time 25 -o /dev/null -w '%{http_code}' "${base}${route}")
+              echo "${base}${route} => ${code}"
+              test "${code}" = 200
+            done
           done
 
       - name: Render mobile login in Google Chrome
@@ -41,7 +43,7 @@ jobs:
             --user-data-dir=/tmp/sellora-chrome/profile \
             --window-size=390,844 --hide-scrollbars \
             --screenshot=/tmp/sellora-chrome/login-390.png \
-            'https://sellora-web-staging.vercel.app/login'
+            'https://sellora-web-staging-git-fix-2026-10-2-b1cada-engine9rs-projects.vercel.app/login'
           python3 - <<'PY'
           import pathlib, struct
           p = pathlib.Path('/tmp/sellora-chrome/login-390.png')
