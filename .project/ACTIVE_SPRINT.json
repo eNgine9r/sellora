@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "updated_at": "2026-10-20",
+  "project": "Sellora",
+  "environment": "staging",
+  "sprint_id": "staging-e2e-acceptance-20261020",
+  "goal": "Prove the Instagram Direct → customer → confirmed order → Nova Poshta preview → advertising attribution flow without external writes, while reconciling deployed runtime with GitHub source.",
+  "state": "IN_PROGRESS",
+  "work_packages": [
+    {
+      "id": "WP-01",
+      "title": "Reconcile release branches and deployed patches",
+      "status": "IN_PROGRESS",
+      "issue": 233,
+      "done_when": [
+        "Deployed Vercel and Raspberry SHAs pinned",
+        "Patch-to-PR matrix reviewed",
+        "README and CI updated without overwriting live changes"
+      ]
+    },
+    {
+      "id": "WP-02",
+      "title": "Recoverable encrypted backups and security controls",
+      "status": "PARTIAL",
+      "done_when": [
+        "Automated encrypted PostgreSQL snapshots",
+        "Restore proof in disposable PostgreSQL",
+        "Separate encrypted offsite copy with independent key custody",
+        "Meta App security settings reviewed"
+      ],
+      "blockers": [
+        "Offsite secure destination/key custody not configured"
+      ]
+    },
+    {
+      "id": "WP-03",
+      "title": "Test Direct to CRM and NP lifecycle safely",
+      "status": "READY",
+      "done_when": [
+        "Synthetic inbound Direct fixture",
+        "Lead/customer/product/order links asserted",
+        "TTN prepare/idempotency/reconcile asserted without actual carrier write",
+        "Mobile & desktop UX checked"
+      ],
+      "evidence": "129 backend isolated tests passed; not a live provider E2E"
+    },
+    {
+      "id": "WP-04",
+      "title": "Connect Meta Ads read-only and establish attribution",
+      "status": "BLOCKED_EXTERNAL",
+      "done_when": [
+        "Owner authorizes a Meta ad account",
+        "Campaign/ad IDs synced read-only",
+        "No misleading attribution; CPA/ROAS only with grounded inputs"
+      ],
+      "blocker": "No Your Jewelry Meta Ads API connection; owner OAuth permission needed"
+    },
+    {
+      "id": "WP-05",
+      "title": "Harden CSP, MFA, logs and finish UI audit",
+      "status": "PLANNED",
+      "done_when": [
+        "CSP Report-Only evidence and no breakage",
+        "Owner MFA design and test",
+        "PII-safe logs and retention policy",
+        "Mobile/desktop usability acceptance"
+      ]
+    }
+  ],
+  "invariants": [
+    "Never send a real Instagram message or create a carrier document in tests",
+    "Never use a fake provider ID as real attribution",
+    "No destructive DB changes without rollback",
+    "Do not claim Meta App approval without dashboard proof",
+    "Keep historical TTN and Direct messages unchanged"
+  ],
+  "next_action": "Map PR #234-250 ancestry and derive safe release candidate; run fixture E2E; ask owner to link Meta Ads account through the existing Sellora interface."
+}
