@@ -194,9 +194,12 @@ def test_logout_revokes_only_current_session_and_rejects_foreign_origin(app_clie
         },
     )
     assert foreign.status_code == 403
-    assert post(client, "refresh", headers={"Cookie": "sellora_session_refresh=" + cookie_one}).status_code == 200
+    refreshed_first = post(client, "refresh", headers={"Cookie": "sellora_session_refresh=" + cookie_one})
+    assert refreshed_first.status_code == 200
+    current_first_cookie = refreshed_first.cookies.get("sellora_session_refresh")
+    assert current_first_cookie and current_first_cookie != cookie_one
 
-    logout = post(client, "logout", headers={"Cookie": "sellora_session_refresh=" + cookie_one})
+    logout = post(client, "logout", headers={"Cookie": "sellora_session_refresh=" + current_first_cookie})
     assert logout.status_code == 204
     assert "max-age=0" in logout.headers.get("set-cookie", "").lower()
     assert post(client, "refresh", headers={"Cookie": "sellora_session_refresh=" + cookie_one}).status_code == 401
