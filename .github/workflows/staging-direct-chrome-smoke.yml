@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - feat/sellora-direct-history-ui-release-20261020
+      - security/2026-10-20-frontend-headers
+      - security/2026-10-20-frontend-headers
   workflow_dispatch:
 permissions:
   contents: read
@@ -37,11 +39,22 @@ jobs:
                 const body=(await page.locator('body').innerText()).trim();
                 const final=new URL(page.url());
                 const oldApi=apiHosts.some(host=>host.includes('onrender.com'));
+                const protectedHeaders = res?.headers() ?? {};
+                if (protectedHeaders['x-content-type-options'] !== 'nosniff' ||
+                    protectedHeaders['x-frame-options'] !== 'DENY' ||
+                    protectedHeaders['content-security-policy'] !== "frame-ancestors 'none'" ||
+                    protectedHeaders['referrer-policy'] !== 'strict-origin-when-cross-origin')
+                  throw Error('Expected frontend hardening headers absent: ' + path);
                 const sso=/Vercel Authentication|Authentication Required/i.test(body);
+                const headers=res?.headers()||{};
+                const secureHeaders=headers['x-content-type-options']==='nosniff'
+                  && headers['x-frame-options']==='DENY'
+                  && headers['referrer-policy']==='strict-origin-when-cross-origin'
+                  && headers['content-security-policy']==="frame-ancestors 'none'";
                 console.log(JSON.stringify({path,http:res?.status(),finalHost:final.hostname,
-                  bodyChars:body.length,jsErrors:errors.length,apiHosts:[...new Set(apiHosts)],sso}));
+                  bodyChars:body.length,jsErrors:errors.length,apiHosts:[...new Set(apiHosts)],sso,secureHeaders}));
                 if(res?.status()!==200||final.hostname!=='sellora-web-staging.vercel.app'||
-                   !body.includes('Sellora')||errors.length||oldApi||sso)throw Error('staging Chrome smoke failed: '+path);
+                   !body.includes('Sellora')||errors.length||oldApi||sso||!secureHeaders)throw Error('staging Chrome smoke failed: '+path);
                 await page.close();
               }
             }finally{await browser.close();}
