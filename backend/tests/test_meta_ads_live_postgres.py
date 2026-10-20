@@ -461,3 +461,237 @@ def test_fresh_039_revokes_inherited_private_state_privileges(fixture, monkeypat
         test_engine.dispose()
         admin.execute(text(f'DROP DATABASE "{name}" WITH (FORCE)'))
         admin.close()
+
+
+def _bounded_session():
+    """Bound every transaction, including the service's post-network transaction."""
+    from sqlalchemy import event
+    db = Session(engine)
+    @event.listens_for(db, "after_begin")
+    def timeouts(session, transaction, connection):
+        connection.exec_driver_sql("SET LOCAL statement_timeout = '8s'")
+        connection.exec_driver_sql("SET LOCAL lock_timeout = '6s'")
+    return db
+
+
+def _wait_until_blocked(waiter, blocker):
+    """Observe the actual server wait; an event before execute alone is not proof."""
+    from time import monotonic
+    from threading import Event
+    from sqlalchemy import text
+    deadline = monotonic() + 5
+    with _bounded_session() as observer:
+        while monotonic() < deadline:
+            if blocker in observer.scalar(text("SELECT pg_blocking_pids(:pid)"), {"pid": waiter}):
+                return
+            Event().wait(0.01)
+    raise AssertionError("Expected PostgreSQL lock wait was not observed")
+
+
+@pytest.mark.parametrize("mutation", ["update", "delete"])
+def test_actual_crm_mutation_during_sync_has_no_fk_deadlock(fixture, mutation):
+    from threading import Event
+    from sqlalchemy import text
+    from sqlalchemy.exc import DBAPIError
+    from app.schemas.advertising import AdMetricUpdate
+    from app.services.advertising_service import AdMetricService
+
+    connect(fixture); select_account(fixture); sync(fixture)
+    wid, uid, settings = fixture
+    with Session(engine) as db:
+        metric_id = db.scalar(select(AdMetric.id).where(AdMetric.workspace_id == wid))
+    metric_locked, sync_at_metrics, release_editor = Event(), Event(), Event()
+    pids = {}
+
+    class UpdatedReader(Reader):
+        def get_campaign_insights_preview(self, account, start, end):
+            return [MetaInsightsRowDTO("12345", DAY, "19.75", 200, 9, 4, currency="UAH")]
+
+    def edit():
+        with _bounded_session() as db:
+            service = AdMetricService(db)
+            get = service.metrics.get
+            def locked_get(*args):
+                metric = get(*args)  # Actual FOR UPDATE, no mocked persistence.
+                pids["editor"] = db.scalar(text("SELECT pg_backend_pid()"))
+                metric_locked.set()
+                assert release_editor.wait(5), "Editor barrier timed out"
+                return metric
+            service.metrics.get = locked_get
+            try:
+                if mutation == "update":
+                    service.update(wid, metric_id, AdMetricUpdate(
+                        reach=55, leads=3, orders=4, revenue="100", net_profit="40"), uid)
+                else:
+                    service.delete(wid, metric_id, uid)
+                return "committed"
+            except DBAPIError as exc:
+                return "database_error:" + str(exc.orig.sqlstate)
+
+    def import_metrics():
+        with _bounded_session() as db:
+            service = MetaAdsLiveSyncService(db, settings=settings, reader_factory=UpdatedReader)
+            metrics = service.repository.metrics
+            def waiting_metrics(*args):
+                pids["sync"] = db.scalar(text("SELECT pg_backend_pid()"))
+                sync_at_metrics.set()
+                return metrics(*args)  # Actual sync persistence and fresh locked rows.
+            service.repository.metrics = waiting_metrics
+            try:
+                return service.sync(wid, uid, DAY, DAY)["status"]
+            except MetaAdsConnectionServiceError as exc:
+                return exc.code
+            except DBAPIError as exc:
+                return "database_error:" + str(exc.orig.sqlstate)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        editing = pool.submit(edit)
+        try:
+            assert metric_locked.wait(5), "Metric lock was not acquired"
+            importing = pool.submit(import_metrics)
+            assert sync_at_metrics.wait(5), "Sync did not reach persistence"
+            _wait_until_blocked(pids["sync"], pids["editor"])
+        finally:
+            release_editor.set()
+        results = editing.result(timeout=12), importing.result(timeout=12)
+    assert results == ("committed", "SUCCEEDED" if mutation == "update" else "manual_spend_conflict")
+
+    with Session(engine) as db:
+        campaigns = db.scalars(select(AdCampaign).where(AdCampaign.workspace_id == wid)).all()
+        metrics = db.scalars(select(AdMetric).where(AdMetric.workspace_id == wid)).all()
+        assert len(campaigns) == len(metrics) == 1
+        campaign, metric = campaigns[0], metrics[0]
+        assert (campaign.external_source, campaign.external_account_id,
+                campaign.external_campaign_id, campaign.sync_source) == ("meta_ads", "act_123", "12345", "meta_live")
+        assert metric.id == metric_id and metric.campaign_id == campaign.id and metric.metric_date == DAY
+        assert (metric.external_source, metric.external_account_id,
+                metric.external_campaign_id, metric.source_type) == ("meta_ads", "act_123", "12345", "meta_live")
+        action = "AD_METRIC_UPDATE" if mutation == "update" else "AD_METRIC_DELETE"
+        assert db.scalar(select(func.count()).select_from(AuditLog).where(
+            AuditLog.workspace_id == wid, AuditLog.entity_id == str(metric_id), AuditLog.action == action)) == 1
+        connection = db.scalar(select(MetaAdConnection).where(MetaAdConnection.workspace_id == wid))
+        if mutation == "update":
+            assert metric.deleted_at is None and connection.last_error_code is None
+            assert (str(metric.spend), metric.impressions, metric.clicks, metric.messages) == ("19.75", 200, 9, 4)
+            assert (metric.reach, metric.leads, metric.orders, metric.revenue, metric.net_profit) == (55, 3, 4, 100, 40)
+        else:
+            assert metric.deleted_at is not None and metric.deleted_by == uid
+            assert connection.last_error_code == "manual_spend_conflict"
+            assert (str(metric.spend), metric.impressions, metric.clicks, metric.messages) == ("12.30", 100, 5, 2)
+
+
+def test_workspace_mutex_emits_no_key_update_and_remains_exclusive(fixture):
+    from threading import Event
+    from sqlalchemy import event, text
+    from app.repositories.meta_ads_live_repository import MetaAdsLiveRepository
+
+    wid = fixture[0]
+    attempting = Event()
+    pids, statements = {}, []
+    with _bounded_session() as first:
+        connection = first.connection()
+        @event.listens_for(connection, "before_cursor_execute")
+        def capture(conn, cursor, statement, parameters, context, executemany):
+            if "FROM workspaces" in statement:
+                statements.append(statement)  # Never capture bind values.
+        first_pid = first.scalar(text("SELECT pg_backend_pid()"))
+        MetaAdsLiveRepository(first).lock_workspace(wid)
+
+        def contender():
+            with _bounded_session() as second:
+                pids["second"] = second.scalar(text("SELECT pg_backend_pid()"))
+                attempting.set()
+                MetaAdsLiveRepository(second).lock_workspace(wid)
+                return "acquired"
+
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            waiting = pool.submit(contender)
+            try:
+                assert attempting.wait(5), "Second lock attempt did not start"
+                _wait_until_blocked(pids["second"], first_pid)
+            finally:
+                first.rollback()
+            assert waiting.result(timeout=12) == "acquired"
+    assert len(statements) == 1
+    assert statements[0].rstrip().endswith("FOR NO KEY UPDATE")
+
+
+@pytest.mark.parametrize("kind", ["campaign", "metric"])
+@pytest.mark.parametrize("writer", ["manual", "csv"])
+def test_new_manual_csv_insert_under_workspace_mutex_is_preserved(fixture, kind, writer):
+    """FK checks may proceed; the ensuing sync snapshot must reject their overlap."""
+    from threading import Event
+    from app.schemas.advertising import AdCampaignCreate, AdMetricCreate
+    from app.services.advertising_service import AdCampaignService, AdMetricService
+    from app.services.import_center_service import EntityImportService
+    from app.models.import_job_log import ImportJobLogStatus
+
+    connect(fixture); select_account(fixture)
+    wid, uid, settings = fixture
+
+    class CampaignOnlyReader(Reader):
+        def get_campaign_insights_preview(self, account, start, end):
+            return []
+
+    if kind == "metric":
+        sync(fixture, CampaignOnlyReader)
+        with Session(engine) as db:
+            campaign_id = db.scalar(select(AdCampaign.id).where(AdCampaign.workspace_id == wid))
+    parent_locked, release_sync = Event(), Event()
+
+    def importing():
+        with _bounded_session() as db:
+            service = MetaAdsLiveSyncService(db, settings=settings, reader_factory=Reader)
+            campaigns = service.repository.campaigns
+            def before_snapshot(*args):
+                # Actual final revalidation has acquired the workspace mutex.
+                parent_locked.set()
+                assert release_sync.wait(5), "Insert barrier timed out"
+                return campaigns(*args)
+            service.repository.campaigns = before_snapshot
+            try:
+                service.sync(wid, uid, DAY, DAY)
+                return "unexpected_success"
+            except MetaAdsConnectionServiceError as exc:
+                return exc.code
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        imported = pool.submit(importing)
+        try:
+            assert parent_locked.wait(5), "Sync did not acquire its parent mutex"
+            with _bounded_session() as db:
+                if writer == "manual":
+                    if kind == "campaign":
+                        AdCampaignService(db).create(wid, AdCampaignCreate(name="Synthetic campaign"), uid)
+                    else:
+                        AdMetricService(db).create(wid, AdMetricCreate(
+                            campaign_id=campaign_id, metric_date=DAY, spend="999", reach=55, orders=4), uid)
+                else:
+                    raw = ({"name": "Synthetic campaign", "platform": "INSTAGRAM"} if kind == "campaign"
+                           else {"campaign_id": str(campaign_id), "metric_date": str(DAY),
+                                 "spend": "999", "reach": "55", "orders": "4"})
+                    status, _ = EntityImportService(db).import_row(
+                        wid, "ad_campaigns" if kind == "campaign" else "ad_metrics", raw,
+                        {field: field for field in raw})
+                    assert status == ImportJobLogStatus.SUCCESS
+                    db.commit()
+        finally:
+            release_sync.set()
+        assert imported.result(timeout=12) == "manual_spend_conflict"
+
+    with Session(engine) as db:
+        campaigns = db.scalars(select(AdCampaign).where(AdCampaign.workspace_id == wid)).all()
+        metrics = db.scalars(select(AdMetric).where(AdMetric.workspace_id == wid)).all()
+        assert len(campaigns) == 1
+        if kind == "campaign":
+            assert campaigns[0].sync_source is None
+            assert not metrics
+        else:
+            assert len(metrics) == 1
+            metric = metrics[0]
+            assert metric.campaign_id == campaign_id and metric.metric_date == DAY
+            assert metric.source_type is None  # Actual legacy import writer leaves ownership unset.
+            assert (metric.spend, metric.reach, metric.orders) == (999, 55, 4)
+            assert metric.last_synced_at is None
+        connection = db.scalar(select(MetaAdConnection).where(MetaAdConnection.workspace_id == wid))
+        assert connection.last_error_code == "manual_spend_conflict"

@@ -17,10 +17,13 @@ from app.repositories.meta_ads_connection_repository import MetaAdsConnectionRep
 
 class MetaAdsLiveRepository(MetaAdsConnectionRepository):
     def lock_workspace(self, workspace_id):
-        # All Ads mutations take this lock, including start/disconnect/selection.
+        # Serialize live Ads operations without blocking workspace FK KEY SHARE
+        # checks (e.g. a CRM metric edit's audit while sync waits on that metric).
+        # We never change the workspace key. SQLAlchemy key_share=True, read=False
+        # emits PostgreSQL FOR NO KEY UPDATE, which still conflicts with itself.
         # populate_existing prevents stale identity-map state after network I/O.
         workspace = self.db.scalar(select(Workspace).where(Workspace.id == workspace_id)
-            .with_for_update().execution_options(populate_existing=True))
+            .with_for_update(key_share=True).execution_options(populate_existing=True))
         if workspace is None:
             raise ValueError("Workspace unavailable")
         self.db.expire_all()
