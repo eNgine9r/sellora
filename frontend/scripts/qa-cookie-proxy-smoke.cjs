@@ -97,6 +97,14 @@ async function main(){
  const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  const pilotRequested=process.env.COOKIE_QA_PILOT === 'true';
+ if(pilotRequested){
+   // The same built frontend must retain legacy sign-in for users who
+   // did not explicitly opt in on this browser.
+   await page.goto(base+'/login',{waitUntil:'domcontentloaded'});
+   assert.equal(await page.evaluate(()=>sessionStorage.getItem('sellora.secure_session_pilot')),null);
+   assert.equal(new URL(page.url()).pathname,'/login');
+   assert.equal(counts.login,0,'Legacy UI unexpectedly used secure login');
+ }
  await page.goto(base+'/login'+(pilotRequested?'?secure_login_pilot=1':''),{waitUntil:'domcontentloaded'});
  if(pilotRequested){
    assert.equal(await page.evaluate(()=>sessionStorage.getItem('sellora.secure_session_pilot')),'1',
