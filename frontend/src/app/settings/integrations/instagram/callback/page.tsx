@@ -7,7 +7,7 @@ import { Button, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspa
 import { LoadingSkeleton } from "@/components/ui/states";
 import { useI18n } from "@/i18n/provider";
 
-const safeStatuses = new Set(["success", "permission_missing", "profile_failed", "account_not_professional", "account_type_unverified", "permission_failed", "invalid_state", "failed", "processing"]);
+const safeStatuses = new Set(["success", "permission_missing", "profile_failed", "account_not_professional", "account_type_unverified", "permission_failed", "invalid_state", "failed", "webhook_inactive", "processing"]);
 
 export default function InstagramCallbackPage() {
   const { t } = useI18n();
