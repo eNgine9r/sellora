@@ -3,7 +3,7 @@ name: Sellora CI
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main, codex/2026-10-19-raspberry-backend, codex/2026-10-19-direct-sales-workspace, codex/2026-10-20-instagram-raspberry-cutover]
+    branches: [main, codex/2026-10-19-raspberry-backend, codex/2026-10-19-direct-sales-workspace, codex/2026-10-20-instagram-raspberry-cutover, codex/2026-10-20-instagram-validation-fix]
   push:
     branches: [main]
 
