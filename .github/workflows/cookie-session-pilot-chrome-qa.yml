@@ -1,0 +1,37 @@
+name: Secure Session Single-Browser Pilot QA
+on:
+  push:
+    branches:
+      - security/2026-10-20-cookie-session-single-browser-pilot
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-opt-in:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies and Google Chrome test driver
+        run: |
+          npm ci --prefix frontend --no-audit --no-fund
+          npm install --prefix /tmp/sellora-cookie-chrome --no-save --no-audit --no-fund playwright-core@1.56.0
+          google-chrome --version
+      - name: Build with secure cookies OFF globally and QA pilot limited to localhost
+        env:
+          NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED: 'false'
+          NEXT_PUBLIC_COOKIE_SESSION_PILOT_HOSTS: localhost
+          SELLORA_API_UPSTREAM_URL: http://127.0.0.1:9999
+        run: npm --prefix frontend run build
+      - name: Verify opt-in, real Next.js rewrite and Secure HttpOnly cookie rotation
+        env:
+          NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED: 'false'
+          NEXT_PUBLIC_COOKIE_SESSION_PILOT_HOSTS: localhost
+          SELLORA_API_UPSTREAM_URL: http://127.0.0.1:9999
+          COOKIE_QA_PILOT: 'true'
+        run: NODE_PATH=/tmp/sellora-cookie-chrome/node_modules node frontend/scripts/qa-cookie-proxy-smoke.cjs
