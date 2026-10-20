@@ -89,6 +89,8 @@ def test_cookie_login_refresh_rotation_csrf_and_revoke(app_client):
     assert first.status_code == 200, first.text[:300]
     assert "refresh_token" not in first.json()
     assert first.json()["access_token"]
+    from app.auth.jwt import decode_token
+    assert decode_token(first.json()["access_token"], "access").get("sid")
     cookie_header = first.headers["set-cookie"]
     for flag in ("httponly", "secure", "samesite=lax", "path=/api/v1/auth/session"):
         assert flag in cookie_header.lower()
@@ -124,6 +126,11 @@ def test_cookie_login_refresh_rotation_csrf_and_revoke(app_client):
     replay = post(client, "refresh", headers={"Cookie": "sellora_session_refresh=" + old_cookie})
     assert replay.status_code == 401
     assert post(client, "refresh").status_code == 401
+    protected = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": "Bearer " + first.json()["access_token"]},
+    )
+    assert protected.status_code == 401
 
 
 def test_seamless_upgrade_and_logout_all(app_client):
@@ -150,6 +157,10 @@ def test_seamless_upgrade_and_logout_all(app_client):
             {"uid": fake.id},
         ).scalar_one()
     assert remaining == 0
+    assert client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": "Bearer " + upgrade.json()["access_token"]},
+    ).status_code == 401
 
 
 def test_feature_off_returns_404(monkeypatch, app_client):
