@@ -68,6 +68,13 @@ jobs:
               }
               if (p==='/api/v1/auth/session/refresh') {
                 counts.refresh++;
+                // No cookie means no authenticated session. The initial login
+                // page must NOT redirect to the dashboard just because the
+                // test double blindly returns a successful refresh.
+                if (!(route.request().headers()['cookie']||'').includes('sellora_session_refresh=')) {
+                  return route.fulfill({status:401,contentType:'application/json',
+                    body:JSON.stringify({detail:'Session missing'})});
+                }
                 return route.fulfill({status:200,contentType:'application/json',
                   headers:{'set-cookie':'sellora_session_refresh=syntheticQaCookieRotated; HttpOnly; SameSite=Lax; Path=/api/v1/auth/session'},
                   body:JSON.stringify({access_token:'synthetic-restored-token',token_type:'bearer'})});
