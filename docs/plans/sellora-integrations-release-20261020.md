@@ -1,6 +1,6 @@
 # Integration release control — 2026-10-20
 
-Status: implementation/review in progress; this document does not record deployment or live activation.
+Status: pre-release QA; deployment is blocked by the reproduced PostgreSQL concurrency defect described below. This document does not record deployment or live activation.
 
 ## Scope
 
@@ -37,3 +37,24 @@ Deployment may leave Ads features fail-closed. Live Meta requires dedicated Ads 
 Nova Poshta requires an owner-provided official cabinet key and valid sender setup. Verification does not enable TTN writes. A real shipment/payment/profit pilot needs a separately controlled recipient/order and explicit no-customer-send boundaries.
 
 The first Ads integration supports manual sync only; it has no scheduled sync or automatic long-lived token exchange. Imported delivery/date fields are provider-controlled; CRM revenue/profit and local reach remain editable. Reach is not imported or represented as Meta unique reach. Currency mismatch blocks import; changing an existing workspace currency is not an integration workaround.
+
+## Completed pre-release evidence
+
+These checks concern synthetic disposable environments, not production activation:
+
+- Reviewed backend implementation/fixes: 7cb428023c8fdef9ff1eece2d6954699b2824cbd; independent scoped review passed all three findings.
+- CI39488127031 at cb67b0e: all seven jobs passed. This precedes the new Meta frontend; a final-head CI run is still required.
+- Candidate image: sha256:040401aa5760c97410b3cca6c3471ba4ca5ecc75885fa3d948d76e7516ec0cc5; ARM64, UID10001. All302 packaged source/config/release files exactly match archived7cb source, with no extra or missing files. Tests used the packaged application, not a source override: 653 passed/37 explicitly skipped in the no-network suite; 61 PostgreSQL/transport/privacy tests passed after fresh packaged migrations.
+- Rollback package: sellora-backend:rollback-16f1946-schema039-7cb4280, sha256:c970e7fb5e390490d9577440ae77ae587cfe0d7296c7cae7d2a751cf03b223a8. Byte comparison verified 295 old source/config/release files unchanged; only039 migration added. Thirteen actual-old-code Direct/session PostgreSQL tests passed.
+- Disposable039 candidate → compatibility rollback → candidate startup rehearsal passed: health/readiness200, anonymous protected requests401, worker disabled, no schema downgrade. All test services were on an internal Docker network.
+
+- Encrypted local snapshot from20:14UTC was restored directly into internal tmpfs PostgreSQL, with no plaintext archive persisted. Candidate migration038→039 added the state table; row digests/counts for all49 unchanged existing tables matched exactly. The existing connection-table row count was preserved.
+- Application smoke on that restored clone used a newly seeded synthetic user/workspace: session-bound authenticated CRM/Direct reads succeeded, Ads status remained fail-closed, another workspace was denied403 and session revocation returned401. This does not establish real provider consent or independent off-host key recovery. A fresh encrypted backup is still required immediately before the eventual production migration.
+
+## Open integrated release blocker
+
+A bounded PostgreSQL17 probe through the actual metric-update service and workspace-lock repository reproduced SQLSTATE40P01 when a CRM metric edit overlaps the Ads persistence lock path. Workspace FOR UPDATE conflicts with the audit foreign-key KEY SHARE while each transaction holds the other required row lock. All probe writes were rolled back on an isolated restored clone; production was unchanged. This is a new integration release blocker, not evidence of the historical Issue266 trigger.
+
+The packaged7cb candidate above must not be deployed unchanged. Final review/fix must retain cross-process serialization, connection-generation revalidation, uniqueness and provider-field ownership while adding a deterministic real-PostgreSQL concurrent-edit/sync regression. A new backend package and exact-head CI are required after the fix.
+
+Frontend implementation de528f7 passed all seven CI39493365697 jobs, including the new NP/Ads and existing Direct browser gates. Independent review found a stale OAuth callback deleting a newer pending attempt; d83db71 fixes that and the Ukrainian metric-source error copy. Scoped component, production callback and real StrictMode callback checks passed; independent re-review and final-head CI remain gates. These tests use intercepted synthetic APIs, not real provider consent.
