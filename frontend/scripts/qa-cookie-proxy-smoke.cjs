@@ -118,7 +118,7 @@ async function main(){
    await legacyPage.locator('input[type="email"]').fill(account.email);
    await legacyPage.locator('input[type="password"]').fill('synthetic-legacy-no-real-password');
    await legacyPage.locator('button[type="submit"]').click();
-   await legacyPage.waitForURL(/\\/dashboard/,{timeout:20000});
+   await legacyPage.waitForURL(url=>new URL(url).pathname==='/dashboard',{timeout:20000});
    assert.equal(counts.legacyLogin,1,'Default login no longer uses legacy auth endpoint');
    assert.equal(counts.login,0,'Legacy browser unexpectedly used secure session');
    const legacyKeys=await legacyPage.evaluate(()=>Object.keys(localStorage));
