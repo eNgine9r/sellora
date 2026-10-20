@@ -141,7 +141,8 @@
         "value": "EN"
       }
     ],
-    "rateLimited": "Too many sign-in attempts. For security, please try again in approximately {minutes} min."
+    "rateLimited": "Too many sign-in attempts. For security, please try again in approximately {minutes} min.",
+    "logoutFailed": "Could not revoke the session on the server. Check your connection and try signing out again."
   },
   "landing": {
     "nav": {
