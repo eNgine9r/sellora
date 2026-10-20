@@ -2452,7 +2452,10 @@
     "reconnect": "Reconnect Instagram",
     "reconnectExplanation": "Your Instagram token has expired. Reconnect the account to restore Direct messages.",
     "connectionMissingExplanation": "The Instagram connection in this workspace is inactive. The account owner needs to sign in again.",
-    "openInBrowserHint": "If Instagram displays 'Something went wrong', open Sellora directly in Chrome or Safari and retry."
+    "openInBrowserHint": "If Instagram displays 'Something went wrong', open Sellora directly in Chrome or Safari and retry.",
+    "browserLinkButton": "Chrome login link",
+    "browserLinkTitle": "Open Instagram in the browser",
+    "browserLinkInstructions": "Select the link, copy it, and paste it directly into Chrome's address bar. Do not tap it as a link: iPhone may launch the Instagram app. This link expires in 10 minutes. Do not share it."
   },
   "proposal": {
     "currentPrice": "Current price",
