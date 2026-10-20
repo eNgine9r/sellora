@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Home, Package, ShoppingBag, Users } from "lucide-react";
+import { BarChart3, Home, Package, ShoppingBag, MessageCircle } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
 import { BrandLockup } from "@/components/brand";
@@ -36,7 +36,7 @@ const protectedRoutes = [
 
 const mobileQuickNav = [
   { href: "/dashboard", labelKey: "navigation.dashboard", icon: Home },
-  { href: "/leads", labelKey: "navigation.leads", icon: Users },
+  { href: "/direct", labelKey: "navigation.direct", icon: MessageCircle },
   { href: "/orders", labelKey: "navigation.orders", icon: ShoppingBag },
   { href: "/products", labelKey: "navigation.products", icon: Package },
   { href: "/finance", labelKey: "navigation.finance", icon: BarChart3 },

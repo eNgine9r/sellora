@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.models.ai_direct import (
@@ -158,6 +158,31 @@ class DirectMessageRepository:
         )
         return [(message, conversation) for message, conversation in self.db.execute(statement).all()]
 
+    def proposal_inbound(self, workspace_id: UUID, conversation_id: UUID, limit: int = 51) -> list[DirectMessage]:
+        return list(self.db.execute(
+            select(DirectMessage).where(
+                DirectMessage.workspace_id == workspace_id,
+                DirectMessage.conversation_id == conversation_id,
+                DirectMessage.deleted_at.is_(None),
+                DirectMessage.direction == "INBOUND", DirectMessage.message_type == "TEXT",
+            ).order_by(DirectMessage.created_at.desc(), DirectMessage.id.desc()).limit(min(limit, 51))
+        ).scalars())
+
+    def proposal_context_changed(self, workspace_id: UUID, conversation_id: UUID, since: datetime) -> bool:
+        # Import/storage times catch an old provider timestamp arriving late.
+        # Edits update DirectMessage.updated_at in the existing inbound service.
+        stmt = select(DirectMessage.id).where(
+            DirectMessage.workspace_id == workspace_id,
+            DirectMessage.conversation_id == conversation_id,
+            DirectMessage.message_type == "TEXT",
+            or_(
+                and_(DirectMessage.direction == "INBOUND", DirectMessage.created_at > since),
+                and_(DirectMessage.updated_at > since, DirectMessage.updated_at > DirectMessage.created_at),
+                DirectMessage.deleted_at > since,
+            ),
+        ).limit(1)
+        return self.db.execute(stmt).scalar_one_or_none() is not None
+
     def latest_analyzable(self, workspace_id: UUID, conversation_id: UUID) -> DirectMessage | None:
         return self.db.execute(
             select(DirectMessage)
@@ -234,6 +259,15 @@ class AIRepository:
                 .order_by(AIAnalysis.created_at.desc())
             ).scalars()
         )
+
+    def latest_generic_analysis(self, workspace_id: UUID, conversation_id: UUID) -> AIAnalysis | None:
+        return self.db.execute(
+            select(AIAnalysis).where(
+                AIAnalysis.workspace_id == workspace_id,
+                AIAnalysis.conversation_id == conversation_id,
+                AIAnalysis.prompt_key == "DIRECT_MESSAGE_ANALYSIS",
+            ).order_by(AIAnalysis.created_at.desc(), AIAnalysis.id.desc()).limit(1)
+        ).scalar_one_or_none()
 
     def get_analysis(self, workspace_id: UUID, analysis_id: UUID) -> AIAnalysis | None:
         return self.db.execute(

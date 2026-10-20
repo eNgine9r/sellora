@@ -5,6 +5,7 @@ const checks = [];
 const expect = (name, condition) => checks.push({ name, passed: Boolean(condition) });
 
 const advertisingPage = read("frontend/src/app/advertising/page.tsx");
+const crmSection = read("frontend/src/features/advertising/components/crm-attribution-section.tsx");
 const uk = read("frontend/src/i18n/messages/uk.json");
 const en = read("frontend/src/i18n/messages/en.json");
 const metricsDoc = read("docs/advertising-metrics.md");
@@ -14,9 +15,9 @@ const decisionSupport = read("frontend/src/features/advertising/lib/decision-sup
 const insightsPanel = read("frontend/src/features/advertising/components/campaign-insights-panel.tsx");
 
 expect("advertising reporting structure markers exist", advertisingPage.includes("data-advertising-reporting-source") && advertisingPage.includes("CampaignInsightsPanel") && advertisingPage.includes("CampaignPerformanceTable") && advertisingPage.includes("AdMetricTable"));
-expect("manual/import source messaging is visible", advertisingPage.includes("advertising.manualImportFirst") && advertisingPage.includes("advertising.manualSource") && uk.includes("ручний імпорт") && en.includes("manual import"));
-expect("manual attribution messaging is visible", advertisingPage.includes("data-manual-attribution-summary") && advertisingPage.includes("advertising.manualAttributionLinkedOnly") && uk.includes("Атрибуція є ручною") && en.includes("Attribution is manual"));
-expect("pilot readiness gate is present and not production-ready", advertisingPage.includes("data-advertising-readiness-gate") && uk.includes("не означає production-ready") && en.includes("does not mean production-ready"));
+expect("manual/import source messaging is visible", advertisingPage.includes("advertising.manualImportFirst") && advertisingPage.includes("advertising.manualSource") && uk.includes("вручну або імпортовані") && en.includes("entered manually or imported"));
+expect("manual attribution messaging is visible", advertisingPage.includes("CrmAttributionSection") && crmSection.includes("data-crm-coverage") && advertisingPage.includes("advertising.crm.sourceHelp") && uk.includes("Атрибуція є ручною") && en.includes("Attribution is manual"));
+expect("consolidated help retains readiness and source warnings", advertisingPage.includes("data-advertising-methodology") && advertisingPage.includes("MetaAdsReadinessCard compact") && advertisingPage.includes("advertising.futureMetaSync") && uk.includes("не означає production-ready") && en.includes("does not mean production-ready"));
 expect("Meta Ads API is clearly future work", uk.includes("майбутній етап, зараз не активний") && en.includes("future stage, not active now") && metricsDoc.includes("Meta Ads API remains future work"));
 expect("formula docs cover attribution and zero-denominator safety", metricsDoc.includes("Attributed Revenue") && metricsDoc.includes("Attributed Net Profit") && metricsDoc.includes("Cost per Message") && metricsDoc.includes("must not render `NaN`, `Infinity`, `undefined`, or raw `null`"));
 expect("decision statuses remain UI-level labels", decisionSupport.includes('"GOOD" | "WATCH" | "PROBLEM" | "NO_DATA"') && insightsPanel.includes('data-decision-statuses="GOOD WATCH PROBLEM NO_DATA"'));

@@ -31,9 +31,9 @@ requireText("src/features/advertising/components/campaign-form.tsx", "Button, Fo
 requireText("src/features/integrations/components/instagram-messaging-integration-card.tsx", "w-full min-w-0 max-w-full overflow-hidden", "Instagram card mobile width contract");
 requireText("scripts/mobile-ui-audit.mjs", "discoverAppRoutes", "exhaustive App Router discovery");
 requireText("scripts/mobile-ui-audit.mjs", "dynamicTemplates", "dynamic route inventory");
-requireText("src/app/direct/page.tsx", "w-[92vw] max-w-md flex-col overflow-hidden", "Direct AI drawer bounded width");
-requireText("src/app/direct/page.tsx", "sellora-scrollbar min-h-0 flex-1 overflow-y-auto", "Direct AI drawer internal scroll");
-requireText("src/app/direct/page.tsx", "aria-label={t(\"actions.close\")}", "Direct AI drawer localized close action");
+requireText("src/app/direct/page.tsx", "<Drawer open={aiPanelOpen}", "Direct AI uses shared bounded drawer");
+requireText("src/components/ui/overlay.tsx", "sellora-scrollbar min-h-0 min-w-0 flex-1", "Direct shared drawer internal scroll");
+requireText("src/components/ui/overlay.tsx", "aria-label={t(\"actions.close\")}", "Direct shared drawer localized close action");
 
 const forbidden = [
   ["src/components/mobile-more-sheet.tsx", "bg-violet-600", "page-local violet primary button"],

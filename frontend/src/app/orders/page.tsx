@@ -28,6 +28,7 @@ import { fetchCustomers } from "@/services/crm";
 import {
   changeOrderStatus,
   deleteOrder,
+  fetchOrder,
   fetchOrderDashboard,
   fetchOrders,
   updateOrder,
@@ -62,6 +63,8 @@ export default function OrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const directPrefillOpened = useRef(false);
+  const orderNavigation = useRef(0);
+  const [orderLinkState, setOrderLinkState] = useState<"IDLE" | "LOADING" | "ERROR">("IDLE");
   const {
     currentUser,
     currentWorkspace,
@@ -86,6 +89,25 @@ export default function OrdersPage() {
   const requestedCustomerId = searchParams.get("customer_id");
   const sourceDirectConversationId = searchParams.get("direct_conversation_id");
   const requestedOrderId = searchParams.get("order_id");
+  const orderOwner = `${enabled}:${workspaceId}:${requestedCreate}:${requestedOrderId ?? ""}`;
+  const currentOrderOwner = useRef(orderOwner);
+  currentOrderOwner.current = orderOwner;
+  const cancelOrderNavigation = () => {
+    orderNavigation.current++;
+    setOrderLinkState("IDLE");
+    if (requestedOrderId) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("order_id");
+      router.replace(`/orders${params.size ? `?${params}` : ""}`);
+    }
+  };
+  const openCreate = () => {
+    if (!canEdit) return;
+    cancelOrderNavigation();
+    setSelectedOrder(null);
+    directPrefillOpened.current = true;
+    setIsCreateOpen(true);
+  };
 
   const ordersQuery = useQuery({
     queryKey: ["orders", workspaceId, status],
@@ -202,6 +224,8 @@ export default function OrdersPage() {
   }, [search, status, paymentStatus, orderSort, pageSize]);
 
   useEffect(() => {
+    orderNavigation.current++;
+    setOrderLinkState("IDLE");
     setSelectedOrder(null);
     setEditingOrder(null);
     setArchivingOrder(null);
@@ -210,17 +234,46 @@ export default function OrdersPage() {
   }, [workspaceId]);
 
   useEffect(() => {
-    if (!enabled || !requestedCreate || !requestedCustomerId || directPrefillOpened.current) return;
-    if (!customersQuery.data?.some((customer) => customer.id === requestedCustomerId)) return;
+    if (!requestedCreate) { directPrefillOpened.current = false; return; }
+    if (!enabled || !canEdit || directPrefillOpened.current) return;
+    if (requestedCustomerId && !customersQuery.data?.some((customer) => customer.id === requestedCustomerId)) return;
+    orderNavigation.current++;
+    setOrderLinkState("IDLE");
+    setSelectedOrder(null);
     directPrefillOpened.current = true;
     setIsCreateOpen(true);
-  }, [customersQuery.data, enabled, requestedCreate, requestedCustomerId]);
+  }, [canEdit, customersQuery.data, enabled, requestedCreate, requestedCustomerId]);
 
   useEffect(() => {
-    if (!requestedOrderId || !ordersQuery.data?.length) return;
-    const requestedOrder = ordersQuery.data.find((order) => order.id === requestedOrderId);
-    if (requestedOrder) setSelectedOrder(requestedOrder);
-  }, [ordersQuery.data, requestedOrderId]);
+    const navigation = ++orderNavigation.current;
+    setOrderLinkState("IDLE");
+    if (!enabled || !requestedOrderId || requestedCreate) return;
+    setSelectedOrder(null);
+    setIsCreateOpen(false);
+    setOrderLinkState("LOADING");
+    const owner = `${enabled}:${workspaceId}:${requestedCreate}:${requestedOrderId}`;
+    let cancelled = false;
+    // Resolve one navigation intent independently of status/search/pagination.
+    // A list refetch never replays it; explicit create/dismiss cancels it.
+    void queryClient.fetchQuery({
+      queryKey: ["order-detail", workspaceId, requestedOrderId],
+      queryFn: () => fetchOrder(workspaceId, requestedOrderId),
+      staleTime: 0,
+      retry: false,
+    }).then((order) => {
+      if (cancelled || orderNavigation.current !== navigation || currentOrderOwner.current !== owner) return;
+      if (order.id !== requestedOrderId || order.workspace_id !== workspaceId) {
+        setOrderLinkState("ERROR");
+        return;
+      }
+      setOrderLinkState("IDLE");
+      setIsCreateOpen(false);
+      setSelectedOrder(order);
+    }, () => {
+      if (!cancelled && orderNavigation.current === navigation && currentOrderOwner.current === owner) setOrderLinkState("ERROR");
+    });
+    return () => { cancelled = true; };
+  }, [enabled, queryClient, requestedCreate, requestedOrderId, workspaceId]);
 
   useEffect(() => {
     setPage((currentPage) => clampPage(currentPage, pageSize, filteredOrders.length));
@@ -238,8 +291,10 @@ export default function OrdersPage() {
       <WorkspaceHeader
         title={t("orders.title")}
         description={sourceDirectConversationId && requestedCreate ? "Оформлення замовлення з Instagram Direct із автоматичним доповненням клієнта." : t("orders.subtitle")}
-        actions={<Button disabled={!enabled} onClick={() => { directPrefillOpened.current = true; setIsCreateOpen(true); }}>{t("orders.create")}</Button>}
+        actions={<Button disabled={!enabled || !canEdit} onClick={openCreate}>{t("orders.create")}</Button>}
       />
+      {!isCreateOpen && orderLinkState === "LOADING" ? <p role="status">{t("orders.loading")}</p> : null}
+      {!isCreateOpen && orderLinkState === "ERROR" ? <p role="alert" data-order-detail-error className="text-sm text-danger">{t("orders.detailLinkError")}</p> : null}
       <CompactSummary layout="five-balanced" items={[
         { label: t("orders.summary.all"), value: allOrders },
         { label: t("orders.summary.new"), value: newOrders },
@@ -291,7 +346,7 @@ export default function OrdersPage() {
             open={Boolean(selectedOrder)}
             title={selectedOrder.order_number ?? t("orders.details")}
             description={`${t("orders.profit")}: ${formatMoney(selectedOrder.net_profit, currencyCode)}`}
-            onClose={() => setSelectedOrder(null)}
+            onClose={() => { cancelOrderNavigation(); setSelectedOrder(null); }}
             footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingOrder(selectedOrder)}>{t("orders.edit")}</Button>{["NEW", "CANCELLED"].includes(selectedOrder.status) ? <Button variant="danger" onClick={() => setArchivingOrder(selectedOrder)}>{t("orders.archive")}</Button> : null}</div> : undefined}
           >
             <OrderDetails
@@ -313,14 +368,14 @@ export default function OrdersPage() {
               <EmptyState
                 title={hasAnyOrders && hasActiveFilters ? t("orders.pagination.filteredEmptyTitle") : t("orders.pagination.emptyTitle")}
                 description={hasAnyOrders && hasActiveFilters ? t("orders.pagination.filteredEmptyDescription") : t("orders.pagination.emptyDescription")}
-                action={!hasAnyOrders ? <Button onClick={() => { directPrefillOpened.current = true; setIsCreateOpen(true); }}>{t("orders.create")}</Button> : null}
+                action={!hasAnyOrders ? <Button onClick={openCreate}>{t("orders.create")}</Button> : null}
               />
             ) : (
               <OrderTable
                 orders={paginatedOrders}
                 currencyCode={currencyCode}
                 selectedOrderId={selectedOrder?.id}
-                onSelect={setSelectedOrder}
+                onSelect={(order) => { cancelOrderNavigation(); setSelectedOrder(order); }}
                 onEdit={canEdit ? setEditingOrder : undefined}
                 onArchive={canEdit ? setArchivingOrder : undefined}
               />
@@ -342,9 +397,10 @@ export default function OrdersPage() {
           title={sourceDirectConversationId && requestedCreate ? "Оформити замовлення з Direct" : t("orders.create")}
           description={sourceDirectConversationId && requestedCreate ? "Контакти та адреса після успішного створення автоматично доповнять картку клієнта." : t("orders.createDescription")}
           size="xl"
-          onClose={() => { setIsCreateOpen(false); if (requestedCreate) router.replace("/orders"); }}
+          onClose={() => { cancelOrderNavigation(); setIsCreateOpen(false); if (requestedCreate) router.replace("/orders"); }}
         >
           <OrderFulfillmentWizard
+            key={`${workspaceId}:${requestedCreate ? sourceDirectConversationId ?? "" : ""}`}
             workspaceId={workspaceId}
             variants={variantsQuery.data ?? []}
             products={productsQuery.data ?? []}
@@ -355,8 +411,9 @@ export default function OrdersPage() {
             showProfit={currentWorkspace?.role === "OWNER"}
             initialCustomerId={requestedCreate ? requestedCustomerId : null}
             sourceDirectConversationId={requestedCreate ? sourceDirectConversationId : null}
-            onSuccess={(result) => {
-              setSelectedOrder(result.order);
+            onSuccess={() => {
+              // Keep the wizard's success/TTN actions in the foreground.
+              // Order details open through the existing explicit link.
               invalidateOrderState();
               queryClient.invalidateQueries({ queryKey: ["customers", workspaceId] });
               queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });

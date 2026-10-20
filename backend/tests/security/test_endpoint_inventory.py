@@ -1,8 +1,12 @@
 from collections import Counter
+from inspect import getclosurevars
 
 from fastapi.routing import APIRoute
 
 from app.main import app
+from app.dependencies.auth import get_current_user
+from app.dependencies.rbac import get_workspace_id
+from app.models.role import RoleName
 
 
 PUBLIC_ENDPOINTS = {"/health", "/api/v1/auth/login", "/api/v1/auth/refresh"}
@@ -53,11 +57,12 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 3,
     "AUTHENTICATED_GLOBAL": 4,
-    "WORKSPACE_SCOPED": 196,
+    "WORKSPACE_SCOPED": 198,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 215
+# Added GET /advertising/crm-attribution and Direct order-proposal: scoped reads, no mutations.
+EXPECTED_TOTAL_ROUTES = 217
 EXPECTED_MUTATION_ROUTES = 122
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
@@ -180,4 +185,49 @@ def test_direct_customer_extraction_routes_are_explicit_and_workspace_scoped() -
     assert all(
         _primary_scope(path) == "WORKSPACE_SCOPED"
         for _method, path in EXPECTED_DIRECT_CUSTOMER_EXTRACTION_ROUTES
+    )
+
+
+def test_crm_attribution_is_explicit_authenticated_workspace_read() -> None:
+    path = "/api/v1/advertising/crm-attribution"
+    matches = [route for route_path, route in _api_routes() if route_path == path]
+    assert len(matches) == 1
+    route = matches[0]
+    assert route.methods == {"GET"}
+    assert _primary_scope(path) == "WORKSPACE_SCOPED"
+    pending = [route.dependant]
+    calls = set()
+    while pending:
+        dependency = pending.pop()
+        if dependency.call is not None:
+            calls.add(dependency.call)
+        pending.extend(dependency.dependencies)
+    assert get_workspace_id in calls
+    assert get_current_user in calls
+    # Preserve the advertising read minimum, rather than merely adding a count.
+    assert any(
+        getattr(call, "__module__", "") == "app.dependencies.rbac"
+        and getclosurevars(call).nonlocals.get("minimum_role") == RoleName.ANALYST
+        for call in calls
+    )
+
+
+def test_direct_order_proposal_is_an_explicit_analyst_workspace_read() -> None:
+    path = "/api/v1/direct/conversations/{conversation_id}/order-proposal"
+    matches = [route for route_path, route in _api_routes() if route_path == path]
+    assert len(matches) == 1
+    route = matches[0]
+    assert route.methods == {"GET"}
+    assert _primary_scope(path) == "WORKSPACE_SCOPED"
+    pending, calls = [route.dependant], set()
+    while pending:
+        dependency = pending.pop()
+        if dependency.call is not None:
+            calls.add(dependency.call)
+        pending.extend(dependency.dependencies)
+    assert get_workspace_id in calls and get_current_user in calls
+    assert any(
+        getattr(call, "__module__", "") == "app.dependencies.rbac"
+        and getclosurevars(call).nonlocals.get("minimum_role") == RoleName.ANALYST
+        for call in calls
     )

@@ -18,6 +18,7 @@ from app.schemas.advertising import (
     AdvertisingSummaryResponse,
     AdvertisingTrendPoint,
     CampaignPerformanceResponse,
+    CrmAttributionResponse,
 )
 from app.services.advertising_service import AdCampaignService, AdMetricService, AdvertisingAnalyticsService, AdvertisingServiceError
 
@@ -119,3 +120,11 @@ def campaign_performance(start_date: date | None = None, end_date: date | None =
 @router.get("/trend", response_model=list[AdvertisingTrendPoint])
 def advertising_trend(start_date: date | None = None, end_date: date | None = None, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.ANALYST)), db: Session = Depends(get_db)) -> list[AdvertisingTrendPoint]:
     return AdvertisingAnalyticsService(db).trend(workspace_id, start_date, end_date, _include_sensitive(current_user, workspace_id))
+
+
+@router.get("/crm-attribution", response_model=CrmAttributionResponse)
+def crm_attribution(start_date: date | None = None, end_date: date | None = None, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.ANALYST)), db: Session = Depends(get_db)) -> CrmAttributionResponse:
+    try:
+        return AdvertisingAnalyticsService(db).crm_attribution(workspace_id, start_date, end_date)
+    except AdvertisingServiceError as exc:
+        raise _bad_request(exc)

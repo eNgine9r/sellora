@@ -20,6 +20,7 @@ from app.schemas.advertising import (
     AdvertisingSummaryResponse,
     AdvertisingTrendPoint,
     CampaignPerformanceResponse,
+    CrmAttributionResponse, CrmAttributionTotals, CrmAttributionCampaign,
 )
 from app.services.business_utils import snapshot
 
@@ -134,6 +135,68 @@ class AdMetricService:
 class AdvertisingAnalyticsService:
     def __init__(self, db: Session) -> None:
         self.repository = AdvertisingAnalyticsRepository(db)
+
+    def crm_attribution(self, workspace_id: UUID, start_date: date | None, end_date: date | None) -> CrmAttributionResponse:
+        try:
+            start, end = resolve_date_range(start_date, end_date)
+        except OverflowError as exc:
+            raise AdvertisingServiceError("Invalid advertising date range") from exc
+        if start > end or end == date.max:
+            raise AdvertisingServiceError("Invalid advertising date range")
+        campaigns: dict[UUID, CrmAttributionCampaign] = {}
+        unknown = CrmAttributionTotals()
+
+        def campaign(row):
+            campaign_id = row["campaign_id"]
+            if campaign_id not in campaigns:
+                campaigns[campaign_id] = CrmAttributionCampaign(
+                    campaign_id=campaign_id, campaign_name=row["campaign_name"],
+                    campaign_status=row["campaign_status"],
+                )
+            return campaigns[campaign_id]
+
+        for row in self.repository.group_crm_orders(workspace_id, start, end):
+            target = campaign(row) if row["campaign_id"] is not None else unknown
+            count, revenue = int(row["orders"]), Decimal(str(row["revenue"] or 0))
+            target.placed_orders += count
+            target.placed_revenue += revenue
+            status, payment = row["status"], row["payment_status"]
+            if status == "CANCELLED":
+                target.cancelled_orders += count
+            elif status == "RETURNED" or payment == "REFUNDED":
+                target.returned_refunded_orders += count
+            elif status in {"NEW", "CONFIRMED", "SHIPPED", "DELIVERED", "COMPLETED"}:
+                target.active_orders += count
+                target.active_revenue += revenue
+                if status in {"DELIVERED", "COMPLETED"}:
+                    target.fulfilled_orders += count
+                    target.fulfilled_revenue += revenue
+                    if payment == "PAID":
+                        target.paid_fulfilled_orders += count
+                        target.paid_fulfilled_revenue += revenue
+        for row in self.repository.group_visible_metrics(workspace_id, start, end):
+            target = campaign(row)
+            target.spend = Decimal(str(row["spend"] or 0))
+            target.metric_declared_orders = int(row["declared_orders"] or 0)
+            target.metric_declared_revenue = Decimal(str(row["declared_revenue"] or 0))
+        totals = CrmAttributionTotals()
+        ratio_fields = {"crm_period_revenue_to_spend", "cost_per_fulfilled_order"}
+        for row in [unknown, *campaigns.values()]:
+            for field in CrmAttributionTotals.model_fields:
+                if field not in ratio_fields:
+                    setattr(totals, field, getattr(totals, field) + getattr(row, field))
+            row.crm_period_revenue_to_spend = safe_div(row.fulfilled_revenue, row.spend)
+            row.cost_per_fulfilled_order = None if row is unknown else safe_div(row.spend, row.fulfilled_orders)
+        totals.crm_period_revenue_to_spend = safe_div(totals.fulfilled_revenue, totals.spend)
+        totals.cost_per_fulfilled_order = safe_div(totals.spend, totals.fulfilled_orders)
+        attributed = totals.placed_orders - unknown.placed_orders
+        return CrmAttributionResponse(
+            start_date=start, end_date=end, totals=totals, attributed_orders=attributed,
+            unattributed_orders=unknown.placed_orders,
+            attribution_coverage_percent=percent_div(attributed, totals.placed_orders),
+            unattributed=unknown,
+            campaigns=sorted(campaigns.values(), key=lambda row: (-row.spend, row.campaign_name, str(row.campaign_id))),
+        )
 
     def summary(self, workspace_id: UUID, start_date: date | None, end_date: date | None, include_sensitive: bool) -> AdvertisingSummaryResponse:
         start, end = resolve_date_range(start_date, end_date)

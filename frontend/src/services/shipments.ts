@@ -13,6 +13,10 @@ export async function fetchShipments(workspaceId: string, status?: ShipmentStatu
   return apiRequest<Shipment[]>(`/shipments${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId) });
 }
 
+export async function fetchShipment(workspaceId: string, shipmentId: string): Promise<Shipment> {
+  return apiRequest<Shipment>(`/shipments/${encodeURIComponent(shipmentId)}`, { headers: workspaceHeaders(workspaceId) });
+}
+
 export async function fetchShipmentSummary(workspaceId: string): Promise<ShipmentSummary> {
   return apiRequest<ShipmentSummary>("/shipments/summary", { headers: workspaceHeaders(workspaceId) });
 }

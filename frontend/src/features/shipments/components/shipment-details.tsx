@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { hasUsableTtn, ttnDraftHref } from "@/lib/ttn-draft";
+import { fetchDirectConversations } from "@/services/direct";
 import type { ReactNode } from "react";
 import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
@@ -29,6 +33,11 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shipment: Shipment; workspaceId: string; onStatusChange: (status: ShipmentStatus) => void }) {
   const { t, formatStatus } = useI18n();
+  const { currentWorkspace } = useAuth();
+  const canManage = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
+  const conversationsQuery = useQuery({ queryKey: ["direct-conversations", workspaceId], queryFn: fetchDirectConversations, enabled: canManage && hasUsableTtn(shipment) });
+  const linkedConversations = conversationsQuery.data?.filter((conversation) => conversation.linked_order_id === shipment.order_id) ?? [];
+  const linkedConversation = linkedConversations.length === 1 ? linkedConversations[0] : null;
   const hasProviderDocument = Boolean(shipment.nova_poshta_document_ref || shipment.nova_poshta_document_number);
   const actions = NEXT_ACTIONS[shipment.status];
   const trackingNumber = shipment.nova_poshta_document_number ?? shipment.tracking_number;
@@ -59,7 +68,7 @@ export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shi
 
       <Section title={t("shipments.trackingSection")}>
         <div className="grid gap-3 sm:grid-cols-2"><DetailRow label={t("shipments.carrier")} value={shipment.carrier} /><DetailRow label={t("shipments.trackingTtn")} value={trackingNumber} /><DetailRow label={t("novaPoshta.documentRef")} value={shipment.nova_poshta_document_ref ? t("common.yes") : null} /><DetailRow label={t("shipments.externalStatus")} value={shipment.nova_poshta_raw_status ?? shipment.external_status} /><DetailRow label={t("shipments.lastSynced")} value={shipment.nova_poshta_synced_at ? new Date(shipment.nova_poshta_synced_at).toLocaleString() : null} /><DetailRow label={t("shipments.updated")} value={new Date(shipment.updated_at).toLocaleString()} /></div>
-        <div className="grid gap-2 sm:grid-cols-2"><CopyTtnButton trackingNumber={trackingNumber} variant="primary" /></div>
+        <div className="grid gap-2 sm:grid-cols-2"><CopyTtnButton trackingNumber={trackingNumber} variant="primary" />{canManage && hasUsableTtn(shipment) && linkedConversation ? <Link className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border-subtle px-4 py-2 text-center text-sm font-bold" href={ttnDraftHref(linkedConversation.id, shipment.order_id, shipment.id)}>{t("fulfillment.prepareTtnMessage")}</Link> : null}</div>
         <TtnDocumentLimitation />
       </Section>
 

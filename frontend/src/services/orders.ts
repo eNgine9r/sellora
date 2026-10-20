@@ -24,6 +24,10 @@ export async function fetchOrders(workspaceId: string, status?: OrderStatus | ""
   return apiRequest<Order[]>(`/orders${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId) });
 }
 
+export async function fetchOrder(workspaceId: string, orderId: string): Promise<Order> {
+  return apiRequest<Order>(`/orders/${encodeURIComponent(orderId)}`, { headers: workspaceHeaders(workspaceId) });
+}
+
 export async function fetchOrderDashboard(workspaceId: string): Promise<OrderDashboard> {
   return apiRequest<OrderDashboard>("/orders/dashboard", { headers: workspaceHeaders(workspaceId) });
 }

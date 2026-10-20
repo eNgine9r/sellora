@@ -4,13 +4,13 @@ This backend-only deployment keeps the Vercel frontend and existing Supabase Pos
 
 ## Recorded verification
 
-See [verification-2026-10-19.json](verification-2026-10-19.json) for the native ARM64 image, disposable PostgreSQL results and outstanding deployment gates. This evidence was collected on nexolab-edge-01, not btc-radar. The tested backend source revision is recorded separately from later test/documentation commits.
+Historical foundation evidence is in [verification-2026-10-19.json](verification-2026-10-19.json) and [target-verification-2026-10-19.json](target-verification-2026-10-19.json). The modernization release is recorded separately in [modernization-verification-2026-10-20.json](modernization-verification-2026-10-20.json), including immutable frontend/backend sources, exact CI runs, public canaries, rollback and remaining provider gates. Build-host evidence and target-host observations are labelled separately; source-equivalent frontend-only/test/documentation commits do not require rebuilding an unchanged backend.
 
 ## Requirements and boundaries
 
 - Docker Engine and Compose 2.30+ on the target host.
 - Confirm ARM64, disk space, memory, existing ports and services before deployment.
-- One API process, capped at 1 CPU, 768 MiB RAM and 128 PIDs.
+- One API process with 1 CPU and 128 PID cgroup limits. The standard Compose file requests a 768 MiB memory cgroup limit; btc-radar requires the documented no-memcg override, which limits virtual address space rather than resident memory.
 - Bind the API to loopback port 18000. A separately verified HTTPS reverse proxy is required for Vercel, OAuth and Meta webhooks.
 - Public ingress is not created by this package. Preserve authentication and route only Sellora traffic; do not replace existing NEXUS/BTC Radar routing.
 - No local PostgreSQL, frontend, pgAdmin, Redis or unrelated service is started.
@@ -80,7 +80,7 @@ Verify:
 4. Stop the old Instagram worker before enabling it on Raspberry. Preserve pending webhook jobs in the shared database.
 5. Set SELLORA_WORKER_ENABLED to the previously approved worker state. Keep SELLORA_SEND_ENABLED=false during the migration. Auto-sends and AI activity stay off.
 6. Recreate only the Sellora backend and verify worker state through /health.
-7. Update Vercel's NEXT_PUBLIC_API_BASE_URL and rebuild the frontend. Update the matching Meta OAuth redirect/webhook URLs when the backend URL changes; verify the challenge and subscriptions with the existing app.
+7. Set Vercel's server-side SELLORA_API_UPSTREAM_URL to the backend API base and rebuild the frontend. The legacy absolute NEXT_PUBLIC_API_BASE_URL is accepted as a server-side fallback; browser requests use same-origin /api/v1 through the Next.js rewrite. Update the matching Meta OAuth redirect/webhook URLs when the backend URL changes; verify the challenge and subscriptions with the existing app.
 8. Verify one authorized canary: incoming event, one stored message, one history entry, and no duplicate processing. Do not send a customer message or fabricate a purchase to test.
 9. Observe queue errors, authentication, database connectivity, resources and Direct behavior before retiring Render.
 
@@ -88,12 +88,22 @@ Restoring manual sends or AI behavior is a separately reviewed change. Advertisi
 
 ## Rollback
 
-Disable the Raspberry worker first. Restore the previous Vercel API URL and Meta callbacks, verify routing, then resume the previous Render worker. Keep only one worker owner active. Preserve the Raspberry storage volume and pending jobs; do not run compose down -v, drop tables, delete tokens, or downgrade the shared database.
+Disable the Raspberry worker first. Restore the previous Vercel deployment/upstream and Meta callbacks, verify routing, then resume the previous Render worker. Keep only one worker owner active. Preserve the Raspberry storage volume and pending jobs; do not run compose down -v, drop tables, delete tokens, or downgrade the shared database.
 
-This package prepares deployment. Target-host installation, private environment transfer, backup recovery, HTTPS/OAuth validation and cutover must each have recorded evidence before migration can be called complete.
+Target-host installation, preserved private environment, HTTPS API access and the same-origin frontend proxy have recorded evidence. Meta callback/redirect registration, old-worker retirement, a single active worker, a live incoming provider event and existing remote attachment reads remain separate gates; the infrastructure checks do not establish a complete live Instagram cutover.
+
+## Verified frontend proxy
+
+The deployed frontend uses same-origin /api/v1 requests; its server forwards them to the configured backend. API responses use Cache-Control: no-store. The external Chromium canary verified login, the current user and dashboard with direct tailnet/localhost requests blocked (Actions run 39306467890). The authenticated read-only API canary also passed through the Vercel proxy (Actions run 39312335737). These checks establish browser/API access; they do not establish Meta callback delivery, old-worker retirement, existing attachment access or a completed live Instagram cutover.
 
 ## Hosts without a memory cgroup
 
 Check Docker MemoryLimit support before startup. On btc-radar the existing boot configuration disables the memory controller. The optional no-memcg.yaml override bounds the single API process address space to 768 MiB using the kernel RLIMIT_AS resource limit. CPU and PID cgroup limits remain in effect. This does not provide a container-wide resident-memory limit. Do not claim otherwise or reboot unrelated services as part of this fallback. Add the override as a second Compose file and verify /proc/1/limits and actual API operation.
 
 The fallback also sets MALLOC_ARENA_MAX=2. On ARM64 the default glibc arenas reserved enough virtual address space to reach RLIMIT_AS while resident memory remained around 170 MiB, preventing the API from creating worker threads. Bounding the allocator arenas preserves the address-space guard and leaves room for the application's existing thread pool. Verify actual public login and read requests after applying this override.
+
+## Modernization release2026-10-20
+
+Frontend 71bcfd0 is READY at the existing public alias; backend 37a20fd is running on btc-radar. The backend tree is identical across these commits. Exact source, image, deployment IDs and current read-only auth/API/browser canaries are recorded in modernization-verification-2026-10-20.json. The existing NEXUS /health route still returns200; Sellora health remains /sellora-health. Resource and private-environment observations from installation remain dated deployment evidence: the Pi management channel was offline during the Oct20 recheck, while public auth/read canaries passed.
+
+For a feature rollback, retain frontend dpl_zEUi5VR5fdwmtjNjj2bgEY7NaPER/a1a5d5a and backend image sellora-backend:8c2a9b2c83056a8f8719c5b06ddedb6c65314fb4. Restore only the intended immutable release/selector, preserve the private environment and storage, and keep worker/send/AI disabled. No database downgrade or Render-worker resumption is required for this modernization rollback. A provider ownership/callback cutover remains a separate operation. See the delivery record in docs/plans/sellora-modernization-delivery-2026-10-20.md for functional outcomes and remaining gates.
