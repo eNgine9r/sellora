@@ -5,7 +5,7 @@ const http=require('node:http');
 const {spawn}=require('node:child_process');
 const {chromium}=require('playwright-core');
 
-const upstreamHost='127.0.0.1',upstreamPort=19999,webPort=13101;
+const upstreamHost='127.0.0.1',upstreamPort=9999,webPort=13101;
 const account={
  id:'11111111-1111-4111-8111-111111111111',email:'qa-user@example.com',
  first_name:'Synthetic',last_name:'Owner',is_active:true,last_login_at:null,
