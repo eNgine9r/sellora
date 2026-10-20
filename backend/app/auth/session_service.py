@@ -29,6 +29,10 @@ class SessionTokens:
     max_age_seconds: int
 
 
+class ConcurrentSessionRefresh(Exception):
+    """A different tab rotated the cookie very recently; retry once."""
+
+
 class SessionAuthenticationService:
     def __init__(self, db: Session):
         self.db = db
@@ -89,7 +93,7 @@ class SessionAuthenticationService:
         # FOR UPDATE makes token consumption atomic, even with multiple workers.
         row = self.db.execute(
             text(
-                "SELECT user_id,refresh_hash,expires_at,revoked_at FROM auth_sessions "
+                "SELECT user_id,refresh_hash,previous_refresh_hash,rotated_at,expires_at,revoked_at FROM auth_sessions "
                 "WHERE id=:sid FOR UPDATE"
             ),
             {"sid": session_id},
@@ -101,8 +105,21 @@ class SessionAuthenticationService:
             self.db.rollback()
             return None
         if not hmac.compare_digest(row["refresh_hash"], self._hash(cookie)):
-            # A valid session identifier paired with a used/invalid secret is
-            # treated as replay. Fail closed by revoking only this session.
+            # Concurrent requests from multiple tabs can use an old cookie
+            # before the first response updates the browser cookie jar.
+            # Allow a short, non-issuing retry window for the previous secret.
+            previous = row["previous_refresh_hash"]
+            rotated = row["rotated_at"]
+            if (
+                previous is not None
+                and rotated is not None
+                and hmac.compare_digest(previous, self._hash(cookie))
+                and timedelta(0) <= now - rotated <= timedelta(seconds=10)
+            ):
+                self.db.rollback()
+                raise ConcurrentSessionRefresh()
+            # Replay outside the short concurrency window revokes only
+            # this session, never other sessions or Instagram credentials.
             self.db.execute(
                 text("UPDATE auth_sessions SET revoked_at=:now WHERE id=:sid"),
                 {"sid": session_id, "now": now},
@@ -120,8 +137,9 @@ class SessionAuthenticationService:
         issued = self._mint(row["user_id"], session_id, row["expires_at"])
         self.db.execute(
             text(
-                "UPDATE auth_sessions SET refresh_hash=:digest,last_used_at=:now, "
-                "rotation_count=rotation_count+1 WHERE id=:sid"
+                "UPDATE auth_sessions SET previous_refresh_hash=refresh_hash,rotated_at=:now, "
+                "refresh_hash=:digest,last_used_at=:now,rotation_count=rotation_count+1 "
+                "WHERE id=:sid"
             ),
             {"digest": self._hash(issued.refresh_cookie), "now": now, "sid": session_id},
         )
