@@ -33,7 +33,7 @@ def main():
 
     _, service = request()
     identify(service)
-    if retire:
+    if retire and service.get("suspended") != "suspended":
         with urlopen(HEALTH_URL, timeout=20) as response:
             health = json.load(response)
         assert health.get("status") == "ok", "Raspberry is not healthy"
@@ -58,7 +58,7 @@ def main():
             raise AssertionError("Render suspension was not confirmed")
     print(json.dumps({
         "service_id": SERVICE_ID, "auto_deploy": "off",
-        "suspension": updated.get("suspended") if retire else "PENDING_WEBHOOK_CUTOVER",
+        "suspension": updated.get("suspended", "unknown"),
         "deleted_resources": 0,
     }))
 

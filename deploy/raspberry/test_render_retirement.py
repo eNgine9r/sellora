@@ -20,9 +20,9 @@ class Reply(io.BytesIO):
 
 
 class RetirementGuards(unittest.TestCase):
-    def run_case(self, *, wrong_service=False, worker_running=False):
+    def run_case(self, *, wrong_service=False, worker_running=False, already_suspended=False):
         calls = []
-        suspended = False
+        suspended = already_suspended
 
         def fake_open(request, timeout):
             nonlocal suspended
@@ -50,7 +50,7 @@ class RetirementGuards(unittest.TestCase):
         with patch.dict(os.environ, {"RENDER_API_KEY": "synthetic-test-key", "RENDER_RETIRE_SERVICE": "true"}):
             with patch.object(module, "urlopen", side_effect=fake_open):
                 with contextlib.redirect_stdout(io.StringIO()) as output:
-                    if wrong_service or worker_running:
+                    if wrong_service or (worker_running and not already_suspended):
                         with self.assertRaises(AssertionError):
                             module.main()
                     else:
@@ -65,6 +65,10 @@ class RetirementGuards(unittest.TestCase):
     def test_active_pi_worker_blocks_old_service_suspension(self):
         calls = self.run_case(worker_running=True)
         self.assertFalse(any(method == "POST" for method, _ in calls))
+
+    def test_already_suspended_service_is_idempotent_with_active_pi_worker(self):
+        calls = self.run_case(already_suspended=True, worker_running=True)
+        self.assertTrue(all(method == "GET" for method, _ in calls))
 
     def test_pi_checked_before_verified_service_suspension(self):
         calls = self.run_case()
