@@ -126,3 +126,17 @@ jobs:
             } finally {await browser.close();}
           })().catch(e=>{console.log('PROVIDER_DIAG_UNAVAILABLE: '+e.name);process.exitCode=1;});
           JS
+
+  history-client-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install isolated history-client test dependencies
+        run: python -m pip install --disable-pip-version-check pytest pytest-asyncio httpx
+      - name: Test Instagram history error classifications
+        working-directory: backend
+        run: python -m pytest -q tests/integrations/meta_instagram/test_history_client.py
