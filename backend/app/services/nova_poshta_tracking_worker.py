@@ -33,7 +33,7 @@ def enabled() -> bool:
 
 
 def pending_tracking_ids(db, *, now: datetime, limit: int = BATCH_LIMIT) -> list[tuple[UUID, UUID]]:
-    """Find recent, nonterminal, provider-backed TTNs in connected workspaces."""
+    """Find recently active, nonterminal, provider-backed TTNs in connected workspaces."""
     stmt = (
         select(Shipment.workspace_id, Shipment.id)
         .join(
@@ -56,13 +56,13 @@ def pending_tracking_ids(db, *, now: datetime, limit: int = BATCH_LIMIT) -> list
                 ShipmentStatus.CREATED.value, ShipmentStatus.IN_TRANSIT.value,
                 ShipmentStatus.ARRIVED.value,
             ]),
-            Shipment.created_at >= now - MAX_AGE,
+            Shipment.updated_at >= now - MAX_AGE,
             or_(
                 Shipment.nova_poshta_synced_at.is_(None),
                 Shipment.nova_poshta_synced_at <= now - MIN_INTERVAL,
             ),
         )
-        .order_by(Shipment.nova_poshta_synced_at.asc().nullsfirst(), Shipment.created_at.asc())
+        .order_by(Shipment.nova_poshta_synced_at.asc().nullsfirst(), Shipment.updated_at.asc())
         .limit(min(max(limit, 1), BATCH_LIMIT))
     )
     return list(db.execute(stmt).all())

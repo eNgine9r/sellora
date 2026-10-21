@@ -161,6 +161,9 @@ def test_worker_sql_scopes_shipments_to_connected_workspaces_and_bounded_batch()
     assert "integration_connections.workspace_id" in sql
     assert "workspaces.is_active" in sql
     assert "shipments.deleted_at IS NULL" in sql
+    # An older shipment draft with a recently created TTN must remain eligible.
+    assert "shipments.updated_at" in sql
+    assert "shipments.created_at >=" not in sql
     assert "integration_connections.deleted_at IS NULL" in sql
     assert BATCH_LIMIT==10
 
