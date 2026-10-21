@@ -374,7 +374,7 @@ export default function DirectPage() {
         </div>
       ) : null}
       <section
-        className={`grid ${selectedConversation ? "h-[calc(100dvh-185px)] min-h-[380px] lg:h-[max(560px,calc(100dvh-var(--topbar-height,72px)-155px))]" : "h-[max(560px,calc(100dvh-var(--topbar-height,72px)-155px))]"} min-w-0 gap-2 lg:grid-cols-[minmax(260px,290px)_minmax(0,1fr)]`}
+        className={`grid ${selectedConversation ? "h-[calc(100dvh-240px)] min-h-[330px] lg:h-[max(560px,calc(100dvh-var(--topbar-height,72px)-155px))]" : "h-[max(560px,calc(100dvh-var(--topbar-height,72px)-155px))]"} min-w-0 gap-2 lg:grid-cols-[minmax(260px,290px)_minmax(0,1fr)]`}
         data-direct-shell-content
       >
         <div className={`${selectedConversation ? "hidden lg:block" : "block"} min-h-0 overflow-hidden`}>
