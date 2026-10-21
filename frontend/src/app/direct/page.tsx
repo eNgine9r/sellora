@@ -431,6 +431,7 @@ export default function DirectPage() {
           operationError={operationQuery.isError}
           onCheckOperation={() => operationQuery.refetch()}
           sendPending={sendMutation.isPending}
+          composerEnabled={statusQuery.data?.send_enabled === true}
           noAutoSend={statusQuery.data?.send_enabled === true ? t("direct.noAutoSend") : t("direct.sendUnavailableByPolicy")}
         />
         </div>
@@ -662,6 +663,7 @@ function MessageThread({
   onCheckOperation,
   sendPending,
   noAutoSend,
+  composerEnabled,
 }: {
   handoffKey?: string;
   handoff?: ReactNode;
@@ -686,6 +688,7 @@ function MessageThread({
   onCheckOperation: () => void;
   sendPending: boolean;
   noAutoSend: string;
+  composerEnabled: boolean;
 }) {
   const { t } = useI18n();
   const scrollContainer = useRef<HTMLDivElement>(null);
@@ -762,12 +765,14 @@ function MessageThread({
       </div>
       </div>
       <footer className="shrink-0 border-t border-border-subtle p-3">
+        {composerEnabled ? <>
         <div className="mb-2 text-xs text-text-muted">{noAutoSend}</div>
         <textarea aria-label={t("direct.reply")} disabled={!canManage} value={replyText} onChange={(event) => setReplyText(event.target.value)} className="h-20 min-h-12 w-full rounded-2xl border border-border-subtle bg-surface-2 p-3 text-sm" placeholder={t("direct.reply")} />
         <div className="mt-2 flex flex-wrap gap-2">
           <Button variant="secondary" onClick={onPrepare} disabled={!canManage || !replyText}>{t("direct.prepare")}</Button>
           <Button onClick={onSend} disabled={sendDisabled || !replyText}>{sendPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{t("direct.send")}</Button>
         </div>
+        </> : <p role="status" className="flex min-w-0 items-start gap-2 text-xs font-semibold text-text-secondary"><Send className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />{noAutoSend}</p>}
         {prepareResult ? <p role="status" className="mt-2 text-sm text-text-secondary">{t(prepareResult.ready ? "direct.ready" : "direct.blocked")}</p> : null}
         {prepareError ? <p role="alert" className="mt-2 text-sm text-rose-600">{t("direct.prepareError")}</p> : null}
         {sendOutcome ? <p role="status" className="mt-2 text-sm text-text-secondary">{t(`direct.sendState.${["COMPLETED", "CANCELLED", "PREPARED", "SENDING", "PROVIDER_SUCCEEDED", "FAILED_SAFE", "RETRY_PENDING", "RECONCILIATION_REQUIRED"].includes(sendOutcome) ? sendOutcome : "UNKNOWN"}`)}</p> : null}

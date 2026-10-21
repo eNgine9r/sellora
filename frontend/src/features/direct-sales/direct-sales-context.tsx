@@ -37,8 +37,8 @@ export function DirectSalesContext({
     : null;
 
   return (
-    <section className="shrink-0 rounded-2xl border border-border-subtle bg-surface-1 p-3" data-direct-sales-context>
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+    <section className="shrink-0 rounded-2xl border border-border-subtle bg-surface-1 p-2.5 sm:p-3" data-direct-sales-context>
+      <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold text-text-muted">{t("direct.salesWorkspaceTitle")}</p>
           <p className="mt-1 flex items-center gap-2 text-sm font-bold text-text-primary" data-direct-sales-stage={stage}>
@@ -50,12 +50,12 @@ export function DirectSalesContext({
             {hints > 0 ? " · " + t("direct.salesCatalogHints", { count: hints }) : ""}
           </p>
           {automation?.missing_fields?.length ? (
-            <p className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-200">
+            <p className="mt-1 hidden text-xs font-semibold text-amber-700 dark:text-amber-200 sm:block">
               {t("direct.salesMissingData")}
             </p>
           ) : null}
         </div>
-        <div className="flex min-w-0 flex-wrap gap-2">
+        <div className="flex min-w-0 flex-wrap gap-2 [&>a]:justify-center [&>button]:justify-center">
           {canManage && !customer && !loading ? (
             <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
               disabled={ensuringCustomer} onClick={onEnsureCustomer}>
@@ -77,6 +77,7 @@ export function DirectSalesContext({
       </div>
       <details className="mt-2 border-t border-border-subtle pt-2" data-direct-sales-details>
         <summary className="cursor-pointer text-xs font-semibold text-text-secondary">{t("direct.salesExpandCustomer")}</summary>
+        {automation?.missing_fields?.length ? <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-200 sm:hidden">{t("direct.salesMissingData")}</p> : null}
         <div className="mt-2 grid gap-2 rounded-xl bg-surface-2 p-3 text-sm">
           <p className="break-words font-semibold">
             {customer ? customer.name : t("direct.notCreated")}
