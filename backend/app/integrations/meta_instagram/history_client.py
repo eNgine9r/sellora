@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -43,6 +43,7 @@ class MetaMessageDetails:
     message: str | None
     is_unsupported: bool
     reply_to_mid: str | None = None
+    attachments: list[dict[str, str]] = field(default_factory=list)
 
 
 class MetaInstagramHistoryClient:
@@ -99,9 +100,14 @@ class MetaInstagramHistoryClient:
             "fields": f"messages.limit({bounded_limit}){{id,created_time,is_unsupported}}",
         }
         if after:
-            params["after"] = after
-        payload = await self._get(f"/{conversation_id}", params=params)
-        messages_payload = payload.get("messages") if isinstance(payload, dict) else None
+            payload = await self._get(
+                f"/{conversation_id}/messages",
+                params={"fields": "id,created_time,is_unsupported", "limit": bounded_limit, "after": after},
+            )
+            messages_payload = payload
+        else:
+            payload = await self._get(f"/{conversation_id}", params=params)
+            messages_payload = payload.get("messages") if isinstance(payload, dict) else None
         rows = messages_payload.get("data") if isinstance(messages_payload, dict) else None
         messages = [
             MetaMessageSummary(
@@ -119,12 +125,13 @@ class MetaInstagramHistoryClient:
 
     async def get_message(self, message_id: str) -> MetaMessageDetails:
         try:
-            payload = await self._get(
-                f"/{message_id}",
-                params={
-                    "fields": "id,created_time,from,to,message,is_unsupported,reply_to",
-                },
-            )
+            fields = "id,created_time,from,to,message,is_unsupported,reply_to"
+            try:
+                payload = await self._get(f"/{message_id}", params={"fields": fields + ",attachments"})
+            except MetaInstagramError as media_error:
+                if media_error.code in {"META_HISTORY_ACCESS_DENIED", "META_HISTORY_MESSAGE_UNAVAILABLE"}:
+                    raise
+                payload = await self._get(f"/{message_id}", params={"fields": fields})
         except MetaInstagramError as exc:
             if exc.code == "META_HISTORY_ACCESS_DENIED":
                 raise MetaInstagramError(
@@ -137,6 +144,23 @@ class MetaInstagramHistoryClient:
         recipients = payload.get("to") if isinstance(payload.get("to"), dict) else {}
         to_data = recipients.get("data") if isinstance(recipients.get("data"), list) else []
         reply_to = payload.get("reply_to") if isinstance(payload.get("reply_to"), dict) else {}
+        from app.integrations.meta_instagram.media import normalize_attachments
+        provider_attachments = payload.get("attachments")
+        if isinstance(provider_attachments, dict):
+            provider_attachments = provider_attachments.get("data", [])
+        if not isinstance(provider_attachments, list):
+            provider_attachments = []
+        converted = []
+        for item in provider_attachments:
+            if not isinstance(item, dict):
+                continue
+            image = item.get("image_data") or {}
+            video = item.get("video_data") or {}
+            media_url = (item.get("file_url") or image.get("url")
+                         or video.get("url") or (item.get("payload") or {}).get("url"))
+            kind = item.get("type") or ("video" if video else "image")
+            converted.append({"type": kind, "payload": {"url": media_url}})
+        attachments = normalize_attachments({"attachments": converted})
         return MetaMessageDetails(
             id=str(payload.get("id") or message_id),
             created_time=str(payload.get("created_time")) if payload.get("created_time") else None,
@@ -146,6 +170,7 @@ class MetaInstagramHistoryClient:
             message=str(payload.get("message")) if payload.get("message") is not None else None,
             is_unsupported=bool(payload.get("is_unsupported", False)),
             reply_to_mid=str(reply_to.get("mid")) if reply_to.get("mid") else None,
+            attachments=attachments,
         )
 
     async def _get(self, path: str, *, params: dict[str, Any]) -> dict[str, Any]:

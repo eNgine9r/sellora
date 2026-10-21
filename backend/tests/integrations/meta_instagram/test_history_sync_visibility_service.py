@@ -222,7 +222,7 @@ async def test_existing_messages_link_provider_thread_and_count_visible_dialog()
     assert sync.messages_existing == 1
     assert conversation.external_thread_id == "thread-1"
     assert conversation.external_conversation_id == "thread-1"
-    assert conversation.provider_sync_status == "HISTORY_SYNCED"
+    assert conversation.provider_sync_status == "HISTORY_CHECKED"
     assert len(conversations.rows) == 0
 
 
@@ -275,3 +275,49 @@ async def test_existing_conversation_thread_is_not_overwritten_by_another_provid
     assert sync.conversations_synced == 0
     assert conversation.external_thread_id == "thread-original"
     assert conversation.external_conversation_id == "thread-original"
+
+
+@pytest.mark.asyncio
+async def test_two_history_message_pages_are_counted_without_duplicate_messages():
+    from app.integrations.meta_instagram.history_client import MetaConversationSummary, MetaConversationPage
+
+    class TwoPages:
+        def __init__(self):
+            self.cursors = []
+
+        async def list_conversations(self, account_id, after=None, limit=10):
+            return MetaConversationPage(conversations=[MetaConversationSummary(id="thread-1")])
+
+        async def list_messages(self, conversation_id, after=None, limit=20):
+            self.cursors.append(after)
+            if after is None:
+                return MetaMessagePage(
+                    messages=[MetaMessageSummary(id="m1")], after_cursor="next-page"
+                )
+            return MetaMessagePage(messages=[MetaMessageSummary(id="m2")], after_cursor=None)
+
+        async def get_message(self, message_id):
+            raise AssertionError("Already-imported message must not be fetched")
+
+    client = TwoPages()
+    ws, connection_id, sync, conversations, messages, service = make_service(client)
+    sync.messages_per_conversation = 40
+    conversation = SimpleNamespace(
+        id=uuid4(), workspace_id=ws, instagram_connection_id=connection_id,
+        external_thread_id=None, external_conversation_id=None,
+        participant_scoped_id="customer-1", provider_sync_status=None,
+    )
+    conversations.rows.append(conversation)
+    for mid in ("m1", "m2"):
+        messages.rows.append(SimpleNamespace(
+            workspace_id=ws, conversation_id=conversation.id,
+            provider="INSTAGRAM", provider_message_id=mid,
+        ))
+
+    await service.process_next()
+
+    assert client.cursors == [None, "next-page"]
+    assert sync.messages_discovered == 2
+    assert sync.messages_existing == 2
+    assert sync.messages_imported == 0
+    assert sync.conversations_synced == 1

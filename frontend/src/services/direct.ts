@@ -1,4 +1,4 @@
-import { apiRequest } from "@/services/api";
+import { apiRequest, authenticatedFetch } from "@/services/api";
 import {
   DirectConversation,
   DirectCustomerAutomationState,
@@ -45,7 +45,7 @@ export function applyDirectCustomerExtraction(conversationId: string, analysisId
   });
 }
 export function fetchInstagramHistorySync() { return apiRequest<InstagramHistorySync | null>("/direct/history-sync"); }
-export function startInstagramHistorySync(conversationLimit = 100, messagesPerConversation = 20) {
+export function startInstagramHistorySync(conversationLimit = 100, messagesPerConversation = 100) {
   return apiRequest<InstagramHistorySync>("/direct/history-sync", {
     method: "POST",
     body: JSON.stringify({ conversation_limit: conversationLimit, messages_per_conversation: messagesPerConversation }),
@@ -57,3 +57,11 @@ export function prepareDirectReply(conversationId: string, messageText: string, 
 export function sendDirectReply(conversationId: string, messageText: string, idempotencyKey: string) { return apiRequest(`/direct/conversations/${conversationId}/reply/send`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify({ message_text: messageText }) }); }
 export function fetchMessageOperation(operationId: string) { return apiRequest<MessageOperation>(`/direct/message-operations/${operationId}`); }
 export function reconcileMessageOperation(operationId: string) { return apiRequest<MessageOperation>(`/direct/message-operations/${operationId}/reconcile`, { method: "POST" }); }
+
+
+export async function fetchDirectAttachment(messageId: string, index: number, signal?: AbortSignal): Promise<Blob> {
+  const path = `/direct/messages/${encodeURIComponent(messageId)}/attachments/${index}`;
+  const response = await authenticatedFetch(path, { signal });
+  if (!response.ok) throw new Error("DIRECT_MEDIA_UNAVAILABLE");
+  return response.blob();
+}
