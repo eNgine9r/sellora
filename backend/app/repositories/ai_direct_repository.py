@@ -143,6 +143,19 @@ class DirectMessageRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
+    def get_for_attachment(self, workspace_id: UUID, message_id: UUID) -> DirectMessage | None:
+        return self.db.execute(
+            select(DirectMessage)
+            .join(DirectConversation, DirectConversation.id == DirectMessage.conversation_id)
+            .where(
+                DirectMessage.id == message_id,
+                DirectMessage.workspace_id == workspace_id,
+                DirectMessage.deleted_at.is_(None),
+                DirectConversation.workspace_id == workspace_id,
+                DirectConversation.deleted_at.is_(None),
+            )
+        ).scalar_one_or_none()
+
     def list_for_conversation(self, workspace_id: UUID, conversation_id: UUID) -> list[DirectMessage]:
         return list(
             self.db.execute(

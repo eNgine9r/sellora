@@ -66,6 +66,7 @@ class DirectMessageResponse(BaseModel):
     provider_message_id: str | None = None
     delivery_status: str | None = None
     message_payload_type: str | None = None
+    attachments: list[dict[str, Any]] = Field(default_factory=list)
     seen_at: datetime | None = None
     edited_at: datetime | None = None
     edit_count: int = 0

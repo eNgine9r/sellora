@@ -37,6 +37,7 @@ import {
   fetchDirectConversations,
   fetchDirectCustomerAutomation,
   fetchDirectMessages,
+  fetchDirectAttachment,
   fetchMessageOperation,
   fetchInstagramHistorySync,
   markDirectConversationRead,
@@ -268,7 +269,7 @@ export default function DirectPage() {
     },
   });
   const historyMutation = useMutation({
-    mutationFn: (conversationLimit: number) => startInstagramHistorySync(conversationLimit, 10),
+    mutationFn: (conversationLimit: number) => startInstagramHistorySync(conversationLimit, 100),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-history-sync", workspaceId] }),
   });
   const readMutation = useMutation({
@@ -819,7 +820,15 @@ function MessageThread({
           <div key={message.id} className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[82%] break-words rounded-2xl px-4 py-3 text-sm ${message.direction === "OUTBOUND" ? "bg-primary/15 text-text-primary" : "bg-surface-2"}`}>
               {message.delivery_status === "FAILED" ? <p className="mb-1 text-xs font-semibold text-rose-600">{messageStatusLabel(message, t)}</p> : null}
-              <p>{message.text}</p>
+              {message.text && !message.attachments?.length ? <p>{message.text}</p> : null}
+              {message.text && message.attachments?.length && !message.text.startsWith("[") ? <p className="mb-2">{message.text}</p> : null}
+              {message.attachments?.length ? (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {message.attachments.map((attachment) => (
+                    <DirectAttachmentPreview key={attachment.index} messageId={message.id} attachment={attachment} />
+                  ))}
+                </div>
+              ) : null}
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
                 {message.edit_count ? <span>{t("direct.edited", { count: message.edit_count })}</span> : null}
                 {message.reaction ? <span className="rounded-full bg-surface-1 px-2 py-0.5">{message.reaction}</span> : null}
@@ -846,6 +855,57 @@ function MessageThread({
         {operationError ? <p role="alert" className="mt-2 text-xs text-rose-600">{t("direct.statusError")}</p> : null}
       </footer>
     </section>
+  );
+}
+
+function DirectAttachmentPreview({
+  messageId,
+  attachment,
+}: {
+  messageId: string;
+  attachment: import("@/types/direct").DirectAttachment;
+}) {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!attachment.available) return;
+    const controller = new AbortController();
+    let mounted = true;
+    let localUrl: string | null = null;
+    fetchDirectAttachment(messageId, attachment.index, controller.signal)
+      .then((blob) => {
+        if (!mounted) return;
+        localUrl = URL.createObjectURL(blob);
+        setObjectUrl(localUrl);
+      })
+      .catch(() => {
+        if (mounted && !controller.signal.aborted) setFailed(true);
+      });
+    return () => {
+      mounted = false;
+      controller.abort();
+      if (localUrl) URL.revokeObjectURL(localUrl);
+    };
+  }, [messageId, attachment.index, attachment.available]);
+
+  const type = attachment.type;
+  const isVideo = type === "video" || type === "reel";
+  const isImage = ["image", "ig_post", "share", "sticker", "template"].includes(type);
+  if (!attachment.available || failed) {
+    return <div className="rounded-xl border border-border-subtle bg-surface-1 px-3 py-4 text-xs text-text-muted">{attachment.label}: медіа недоступне в Meta</div>;
+  }
+  return (
+    <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface-1">
+      {objectUrl && isImage ? (
+        <a href={objectUrl} target="_blank" rel="noopener noreferrer" aria-label={`Відкрити: ${attachment.label}`}>
+          <img src={objectUrl} alt={attachment.label} loading="lazy" className="max-h-80 w-full object-contain" />
+        </a>
+      ) : null}
+      {objectUrl && isVideo ? <video src={objectUrl} controls preload="none" className="max-h-80 w-full" /> : null}
+      {objectUrl && !isVideo && !isImage ? <a href={objectUrl} download="instagram-attachment" className="block p-3 text-sm text-primary underline">Відкрити вкладення</a> : null}
+      {!objectUrl ? <div className="flex min-h-24 items-center justify-center p-3 text-xs text-text-muted">Завантажуємо вкладення…</div> : null}
+      <p className="border-t border-border-subtle px-2 py-1 text-xs text-text-muted">{attachment.label}</p>
+    </div>
   );
 }
 

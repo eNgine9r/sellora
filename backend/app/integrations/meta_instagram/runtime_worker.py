@@ -14,6 +14,7 @@ from app.ai.services.direct_customer_data_extraction_service import (
 )
 from app.database.session import SessionLocal
 from app.core.runtime_health import worker_phase, worker_finished
+from app.integrations.meta_instagram.media_worker import cache_pending_media_batch
 from app.integrations.meta_instagram.services.history_sync_visibility_service import (
     InstagramHistorySyncVisibilityService as InstagramHistorySyncService,
 )
@@ -43,6 +44,10 @@ def webhook_poll_seconds() -> float:
         return min(max(float(raw), 1.0), 60.0)
     except ValueError:
         return 5.0
+
+
+def media_cache_enabled() -> bool:
+    return os.getenv("DIRECT_MEDIA_CACHE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def customer_extraction_poll_seconds() -> float:
@@ -118,6 +123,7 @@ async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
     interval = webhook_poll_seconds()
     extraction_interval = customer_extraction_poll_seconds()
     next_extraction_at = 0.0
+    next_media_at = 0.0
     logger.info(
         "Instagram webhook worker started",
         extra={
@@ -154,6 +160,20 @@ async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
             logger.error("Instagram history sync job failed", extra={"error_type": type(exc).__name__})
 
         monotonic_now = time.monotonic()
+        if media_cache_enabled() and monotonic_now >= next_media_at:
+            next_media_at = monotonic_now + 30.0
+            try:
+                worker_phase("media")
+                counts = await asyncio.to_thread(cache_pending_media_batch)
+                worker_finished()
+                if counts["messages"]:
+                    logger.info("Direct private media cache", extra={"cached": counts["cached"],
+                                                                 "unavailable": counts["unavailable"]})
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                worker_finished(exc)
+                logger.warning("Direct media cache failed", extra={"error_type": type(exc).__name__})
         if monotonic_now >= next_extraction_at:
             next_extraction_at = monotonic_now + extraction_interval
             try:

@@ -3,10 +3,13 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_min_role
+from app.integrations.meta_instagram.media import public_attachments
+from app.integrations.meta_instagram.services.media_access_service import InstagramMediaAccessService
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
 from app.integrations.meta_instagram.repositories.inbox_sync_repository import (
     InstagramMessageStateRepository,
@@ -32,6 +35,7 @@ router = APIRouter(prefix="/direct", tags=["direct-instagram-sync"])
 
 def message_response(message, state=None) -> DirectMessageResponse:
     data = DirectMessageResponse.model_validate(message).model_dump()
+    data["attachments"] = public_attachments(message.attachment_metadata)
     if state:
         data.update(
             seen_at=state.seen_at,
@@ -41,6 +45,31 @@ def message_response(message, state=None) -> DirectMessageResponse:
             reaction_updated_at=state.reaction_updated_at,
         )
     return DirectMessageResponse(**data)
+
+
+@router.get("/messages/{message_id}/attachments/{index}")
+def private_message_attachment(
+    message_id: UUID,
+    index: int,
+    workspace_id: UUID = Depends(get_workspace_id),
+    _: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    """Authenticated, workspace-scoped private media. No provider URL exposed."""
+    try:
+        path, mime = InstagramMediaAccessService(db).resolve(workspace_id, message_id, index)
+    except MetaInstagramError as exc:
+        raise HTTPException(exc.status_code, exc.code) from None
+    return FileResponse(
+        path,
+        media_type=mime,
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+        },
+        content_disposition_type="attachment" if mime in {"application/pdf", "application/octet-stream"} else "inline",
+    )
 
 
 @router.get(
