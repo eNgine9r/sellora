@@ -55,11 +55,19 @@ class NovaPoshtaProviderShipmentService(NovaPoshtaShipmentService):
         }
         cod_amount = getattr(shipment, "cod_amount", None)
         if cod_amount and cod_amount > 0:
-            payload["BackwardDeliveryData"] = [
-                {
-                    "PayerType": "Recipient",
-                    "CargoType": "Money",
-                    "RedeliveryString": str(cod_amount),
-                }
-            ]
+            mode = settings.get("cod_payment_mode", "MONEY_RETURN")
+            if mode == "PAYMENT_CONTROL":
+                # FOP/business payment to the sender account; mutually exclusive
+                # with a backward money-delivery request.
+                payload["AfterpaymentOnGoodsCost"] = str(cod_amount)
+            elif mode == "MONEY_RETURN":
+                payload["BackwardDeliveryData"] = [
+                    {
+                        "PayerType": "Recipient",
+                        "CargoType": "Money",
+                        "RedeliveryString": str(cod_amount),
+                    }
+                ]
+            else:
+                raise NovaPoshtaServiceError("NOVA_POSHTA_COD_PAYMENT_MODE_INVALID")
         return payload

@@ -85,8 +85,9 @@ class NovaPoshtaSettingsService:
         *,
         api_key_rotated: bool,
         sender_settings_changed: bool,
+        payment_mode_changed: bool = False,
     ) -> None:
-        if not api_key_rotated and not sender_settings_changed:
+        if not api_key_rotated and not sender_settings_changed and not payment_mode_changed:
             return
         connection.provider_connection_verified_at = None
         connection.provider_writes_allowed = False
@@ -100,6 +101,7 @@ class NovaPoshtaSettingsService:
                 "provider": IntegrationProvider.NOVA_POSHTA.value,
                 "api_key_rotated": api_key_rotated,
                 "sender_settings_changed": sender_settings_changed,
+                "payment_mode_changed": payment_mode_changed,
                 "provider_writes_disabled": True,
             },
         )
@@ -183,6 +185,10 @@ class NovaPoshtaSettingsService:
                 raise NovaPoshtaServiceError("INVALID_UA_PHONE") from exc
         api_key_rotated = bool(payload.api_key)
         sender_settings_changed = self._material_sender_settings_changed(existing_settings, material_updates)
+        payment_mode_changed = (
+            "cod_payment_mode" in material_updates
+            and material_updates["cod_payment_mode"] != existing_settings.get("cod_payment_mode", "MONEY_RETURN")
+        )
         settings = {**existing_settings, **material_updates}
         if material_updates.get("sender_counterparty_ref") != existing_settings.get("sender_counterparty_ref") and "sender_counterparty_ref" in material_updates:
             settings["sender_contact_ref"] = material_updates.get("sender_contact_ref")
@@ -218,8 +224,18 @@ class NovaPoshtaSettingsService:
                 credential.encrypted_access_token = encrypted
         elif credential is None:
             raise NovaPoshtaServiceError("Nova Poshta API key is required for the first connection")
-        self._invalidate_verification(connection, actor_user_id, api_key_rotated=api_key_rotated, sender_settings_changed=sender_settings_changed)
-        audit_action = "NOVA_POSHTA_CONNECTED" if payload.api_key else "NOVA_POSHTA_SENDER_SETTINGS_UPDATED"
+        self._invalidate_verification(
+            connection,
+            actor_user_id,
+            api_key_rotated=api_key_rotated,
+            sender_settings_changed=sender_settings_changed,
+            payment_mode_changed=payment_mode_changed,
+        )
+        audit_action = (
+            "NOVA_POSHTA_CONNECTED" if payload.api_key
+            else "NOVA_POSHTA_PAYMENT_SETTINGS_UPDATED" if payment_mode_changed
+            else "NOVA_POSHTA_SENDER_SETTINGS_UPDATED"
+        )
         self.audit_logs.create(
             workspace_id=workspace_id,
             user_id=actor_user_id,

@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import UUID
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -18,6 +19,7 @@ class NovaPoshtaSettingsRequest(BaseModel):
     sender_counterparty_ref: str | None = None
     sender_contact_ref: str | None = None
     sender_phone: str | None = None
+    cod_payment_mode: Literal["MONEY_RETURN", "PAYMENT_CONTROL"] = "MONEY_RETURN"
 
 
 class NovaPoshtaWritePermissionRequest(BaseModel):
@@ -36,6 +38,7 @@ class NovaPoshtaSettingsResponse(BaseModel):
     sender_counterparty_ref: str | None = None
     sender_contact_ref: str | None = None
     sender_phone: str | None = None
+    cod_payment_mode: Literal["MONEY_RETURN", "PAYMENT_CONTROL"] = "MONEY_RETURN"
     environment_capability: bool = False
     workspace_permission: bool = False
     provider_writes_enabled: bool = False
