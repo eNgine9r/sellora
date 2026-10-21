@@ -212,7 +212,7 @@ def test_api_analyst_read_is_provider_free_and_workspace_isolated(sql, monkeypat
     client = TestClient(app); statements.clear()
     response = client.get(f"/api/v1/direct/conversations/{d.conversation}/order-proposal", headers={"X-Workspace-ID": str(d.workspace)})
     assert response.status_code == 200
-    assert set(response.json()) == {"conversation_id", "analysis_id", "analysis_created_at", "analysis_context_message_id", "analysis_state", "catalog_truncated", "context_truncated", "lines"}
+    assert set(response.json()) == {"conversation_id", "analysis_id", "analysis_created_at", "analysis_context_message_id", "analysis_state", "commercial_stage", "commercial_reason", "catalog_truncated", "context_truncated", "lines"}
     assert all(statement.lstrip().upper().startswith("SELECT") for statement in statements)
     assert len(statements) <= 6  # Conversation, analysis, messages, catalog, inventory, freshness.
     assert client.get(f"/api/v1/direct/conversations/{d.conversation}/order-proposal", headers={"X-Workspace-ID": str(d.other)}).status_code == 403
@@ -290,3 +290,101 @@ def test_clipping_cannot_manufacture_an_exact_sku_token(sql, boundary):
                    received_at=STAMP, created_at=STAMP + timedelta(minutes=i + 1))
     result = get(db, d)
     assert result.context_truncated and result.lines == []
+
+
+def test_generic_category_creates_review_only_candidates_not_auto_order(sql):
+    db, _ = sql; d = seed(db)
+    db.execute(Product.__table__.update().where(Product.id == d.product).values(name="Браслет сріблястий",category="Браслети"))
+    db.execute(DirectMessage.__table__.update().where(DirectMessage.id == d.message).values(text="Яка ціна на браслет?"))
+    result = get(db,d)
+    assert result.commercial_stage=="PRODUCT_QUESTION"
+    hints=[x for x in result.lines if x.source=="INBOUND_PRODUCT"]
+    assert len(hints)==1
+    assert hints[0].matched_by=="PRODUCT_CATEGORY"
+    assert hints[0].match_status=="MATCHED"
+    assert hints[0].requires_review
+    assert hints[0].candidates[0].variant_id==d.variant
+    assert hints[0].quantity==1
+    assert hints[0].evidence[0].snippet=="браслет"
+    assert result.analysis_state=="MISSING"
+
+
+def test_category_ambiguity_never_auto_selects_first_variant(sql):
+    db,_=sql; d=seed(db)
+    db.execute(Product.__table__.update().where(Product.id==d.product).values(category="Сережки"))
+    second=insert(db,Product,workspace_id=d.workspace,name="Сережки круглі",category="Сережки",is_active=True)
+    variant=insert(db,ProductVariant,workspace_id=d.workspace,product_id=second,sku="EAR-2",price=Decimal("220"),is_active=True)
+    db.execute(DirectMessage.__table__.update().where(DirectMessage.id==d.message).values(text="Чи є у вас сережки?"))
+    lines=[x for x in get(db,d).lines if x.source=="INBOUND_PRODUCT"]
+    assert len(lines)==1 and lines[0].match_status=="AMBIGUOUS"
+    assert lines[0].requires_review
+    assert {x.variant_id for x in lines[0].candidates}=={d.variant,variant}
+
+
+def test_exact_multiword_title_must_match_whole_phrase(sql):
+    db,_=sql; d=seed(db)
+    db.execute(Product.__table__.update().where(Product.id==d.product).values(name="Жіночий годинник",category="Годинники"))
+    db.execute(DirectMessage.__table__.update().where(DirectMessage.id==d.message).values(text="А цей жіночий годинник є?"))
+    lines=[x for x in get(db,d).lines if x.source=="INBOUND_PRODUCT"]
+    assert len(lines)==1 and lines[0].matched_by=="EXACT_PRODUCT_TITLE"
+    assert lines[0].requires_review
+    db.execute(DirectMessage.__table__.update().where(DirectMessage.id==d.message).values(text="А цей жіночий годинниковий є?"))
+    assert not [x for x in get(db,d).lines if x.matched_by=="EXACT_PRODUCT_TITLE"]
+
+
+def test_no_product_hint_for_foreign_or_inactive_catalog(sql):
+    db,_=sql; d=seed(db)
+    db.execute(Product.__table__.update().where(Product.id==d.product).values(category="Браслети",workspace_id=d.other))
+    db.execute(DirectMessage.__table__.update().where(DirectMessage.id==d.message).values(text="Скільки коштує браслет?"))
+    assert not get(db,d).lines
+
+
+def test_sku_evidence_has_precedence_to_prevent_duplicate_hints(sql):
+    db,_=sql; d=seed(db)
+    db.execute(Product.__table__.update().where(Product.id==d.product).values(category="Браслети"))
+    db.execute(DirectMessage.__table__.update().where(DirectMessage.id==d.message).values(text="Хочу купити SKU-1 браслет"))
+    result=get(db,d)
+    assert result.commercial_stage=="PURCHASE_REQUEST"
+    assert [x.source for x in result.lines]==["INBOUND_SKU"]
+
+
+def test_neither_greeting_nor_delivery_only_selects_arbitrary_product(sql):
+    db,_=sql; d=seed(db)
+    db.execute(Product.__table__.update().where(Product.id==d.product).values(category="Годинники"))
+    for text in ["Привіт", "Дякую за відповідь", "Скільки доставка?"]:
+        db.execute(DirectMessage.__table__.update().where(DirectMessage.id==d.message).values(text=text))
+        assert get(db,d).lines==[]
+
+
+def test_many_category_variants_are_ambiguous_and_truncated(sql):
+    db,_=sql; d=seed(db)
+    db.execute(Product.__table__.update().where(Product.id==d.product).values(category="Браслети"))
+    db.execute(DirectMessage.__table__.update().where(DirectMessage.id==d.message).values(text="Покажіть браслети"))
+    for idx in range(12):
+        prod=insert(db,Product,workspace_id=d.workspace,name=f"Браслет {idx}",category="Браслети",is_active=True)
+        insert(db,ProductVariant,workspace_id=d.workspace,product_id=prod,sku=f"B-{idx}",is_active=True)
+    line=next(x for x in get(db,d).lines if x.source=="INBOUND_PRODUCT")
+    assert line.match_status=="AMBIGUOUS"
+    assert line.candidates_truncated and len(line.candidates)==10
+    assert line.requires_review
+
+def test_negated_product_request_never_suggests_or_auto_selects(sql):
+    db,_=sql; d=seed(db)
+    db.execute(Product.__table__.update().where(Product.id==d.product).values(category="Браслети"))
+    for text in ("Не хочу SKU-1 браслет", "Тільки не браслети", "Не замовляйте SKU-1"):
+        db.execute(DirectMessage.__table__.update().where(DirectMessage.id==d.message).values(text=text))
+        proposal=get(db,d)
+        assert proposal.commercial_stage=="NONE"
+        assert proposal.lines==[]
+
+def test_category_synonyms_across_messages_do_not_duplicate_suggestions(sql):
+    db,_=sql; d=seed(db)
+    db.execute(Product.__table__.update().where(Product.id==d.product).values(category="Браслети"))
+    db.execute(DirectMessage.__table__.update().where(DirectMessage.id==d.message).values(text="Є браслет?"))
+    insert(db,DirectMessage,workspace_id=d.workspace,conversation_id=d.conversation,
+           direction="INBOUND",sender_type="CUSTOMER",message_type="TEXT",
+           text="Яка ціна на браслети?",received_at=STAMP+timedelta(minutes=1),
+           created_at=STAMP+timedelta(minutes=1))
+    lines=[x for x in get(db,d).lines if x.source=="INBOUND_PRODUCT"]
+    assert len(lines)==1
+    assert lines[0].requires_review

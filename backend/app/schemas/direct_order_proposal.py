@@ -26,7 +26,7 @@ class OrderProposalLine(BaseModel):
     id: str
     mention_text: str = Field(max_length=240)
     quantity: int = Field(ge=1, le=999)
-    source: Literal["ANALYSIS_CONTEXT", "INBOUND_SKU"]
+    source: Literal["ANALYSIS_CONTEXT", "INBOUND_SKU", "INBOUND_PRODUCT"]
     evidence: list[OrderProposalEvidence] = Field(default_factory=list, max_length=1)
     requires_review: bool
     match_status: Literal["MATCHED", "AMBIGUOUS", "NOT_FOUND"]
@@ -42,6 +42,8 @@ class DirectOrderProposal(BaseModel):
     analysis_created_at: datetime | None = None
     analysis_context_message_id: UUID | None = None
     analysis_state: Literal["MISSING", "COMPLETED", "STALE", "FAILED", "MALFORMED", "PENDING"]
+    commercial_stage: Literal["NONE", "INTEREST", "PRODUCT_QUESTION", "PURCHASE_REQUEST"] = "NONE"
+    commercial_reason: str | None = None
     catalog_truncated: bool = False
     context_truncated: bool = False
     lines: list[OrderProposalLine] = Field(default_factory=list, max_length=40)

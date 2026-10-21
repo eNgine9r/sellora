@@ -71,6 +71,11 @@ export function DirectOrderProducts({ workspaceId, conversationId, currencyCode,
     {query.isPending ? <p role="status">{t("proposal.loading")}</p> : null}
     {query.isError ? <p role="alert" className="text-sm text-danger">{t("proposal.error")}</p> : null}
     {proposal ? <>
+      <div className="grid min-w-0 gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3" data-direct-commercial-stage={proposal.commercial_stage}>
+        <p className="text-xs font-semibold text-text-secondary">{t("proposal.commercialStageLabel")}</p>
+        <p className="text-sm font-black text-text-primary">{t(`proposal.commercialStage.${proposal.commercial_stage}`)}</p>
+        {proposal.commercial_stage === "PURCHASE_REQUEST" ? <p className="text-xs font-semibold text-amber-700 dark:text-amber-200">{t("proposal.unconfirmedOrderWarning")}</p> : null}
+      </div>
       <p className="text-sm text-text-secondary">{t(`proposal.state.${proposal.analysis_state}`)}</p>
       {proposal.catalog_truncated ? <p className="text-sm font-semibold">{t("proposal.catalogLimit")}</p> : null}
       {proposal.context_truncated ? <p className="text-xs text-text-secondary">{t("proposal.contextLimit")}</p> : null}
@@ -83,6 +88,7 @@ export function DirectOrderProducts({ workspaceId, conversationId, currencyCode,
           <p className="text-xs text-text-secondary">{t(`proposal.source.${line.source}`)} · {t(`proposal.reason.${line.reason}`)}</p>
           {line.evidence.map((evidence) => <blockquote className="break-words text-xs text-text-secondary" key={evidence.message_id}>{evidence.snippet}</blockquote>)}
           {line.source === "ANALYSIS_CONTEXT" ? <p className="text-xs text-text-secondary">{t("proposal.contextOnly")}</p> : null}
+          {line.source === "INBOUND_PRODUCT" ? <p className="text-xs font-semibold text-amber-700 dark:text-amber-200">{t("proposal.inboundProductReview")}</p> : null}
           {line.candidates.length ? <>
             <label className="grid gap-1 text-sm font-semibold">{t("proposal.variant")}<select aria-label={t("proposal.variant")} className={control} value={selected.variantId} onChange={(event) => update(line, { variantId: event.target.value })}><option value="">{t("proposal.chooseCandidate")}</option>{line.candidates.map((item) => <option value={item.variant_id} key={item.variant_id}>{[item.product_name, item.sku, item.color, item.size].filter(Boolean).join(" · ")}</option>)}</select></label>
             {candidate ? <dl className="grid min-w-0 grid-cols-2 gap-2 text-sm" data-proposal-selected-details>

@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.ai.schemas.structured_output import DirectMessageAnalysisOutput, ProductMention
 from app.ai.services.product_matching_service import CatalogMatch, ProductMatchingService, normalize_product_text
+from app.ai.services.direct_catalog_hints import suggest_from_catalog
+from app.ai.services.direct_commercial_intent_service import classify_commercial_conversation, classify_commercial_message
 from app.repositories.ai_direct_repository import AIRepository, DirectConversationRepository, DirectMessageRepository
 from app.repositories.inventory_repository import InventoryRepository
 from app.repositories.product_repository import ProductRepository, ProductVariantRepository
@@ -44,6 +46,9 @@ class DirectOrderProposalService:
         )
         bounded = []
         remaining = 20000
+        commercial_signal = classify_commercial_conversation(inbound[:50])
+        proposal.commercial_stage = commercial_signal.stage.value
+        proposal.commercial_reason = commercial_signal.reason
         for message in inbound[:50]:
             text = message.text or ""
             if remaining <= 0:
@@ -102,6 +107,8 @@ class DirectOrderProposalService:
             pattern = re.compile(r"(?<!\S)" + r"\s+".join(re.escape(part) for part in variant.sku.strip().split()) + r"(?!\S)", re.IGNORECASE)
             evidence = None
             for message, text in bounded:
+                if classify_commercial_message(text).reason == "NEGATED":
+                    continue
                 found = pattern.search(text)
                 if found:
                     start = max(0, found.start() - 40)
@@ -116,6 +123,44 @@ class DirectOrderProposalService:
             if sum(line.source == "INBOUND_SKU" for line in proposal.lines) >= 20:
                 proposal.context_truncated = True
                 break
+        # Only fully visible, active, workspace-scoped catalogs can support a
+        # product hint. Keep AI-derived suggestions and exact SKUs authoritative;
+        # never replace either with a broad category guess.
+        if not truncated:
+            sku_evidence = {
+                evidence.message_id
+                for line in proposal.lines if line.source == "INBOUND_SKU"
+                for evidence in line.evidence
+            }
+            used_hint_keys: set[tuple[str, str]] = set()
+            for message, text in bounded:
+                if message.id in sku_evidence or classify_commercial_message(text).reason == "NEGATED":
+                    continue
+                for hint in suggest_from_catalog(text, catalog):
+                    identity = (hint.matched_by, hint.identity)
+                    if identity in used_hint_keys:
+                        continue
+                    used_hint_keys.add(identity)
+                    candidates = hint.rows
+                    product_mention = ProductMention(text=hint.phrase[:240], quantity=1)
+                    match = CatalogMatch(
+                        "AMBIGUOUS" if len(candidates) > 1 else "MATCHED",
+                        "MULTIPLE_VARIANTS" if len(candidates) > 1 else "UNIQUE_EXACT_MATCH",
+                        hint.matched_by,
+                        candidates,
+                    )
+                    line = self._line(
+                        f"product:{message.id}:{len(used_hint_keys)}",
+                        product_mention, match, stock, "INBOUND_PRODUCT",
+                        [OrderProposalEvidence(message_id=message.id, snippet=hint.phrase[:160])],
+                    )
+                    # Always require operator review even if exactly one
+                    # catalog variant exists. Mention != agreement to buy.
+                    line.requires_review = True
+                    proposal.lines.append(line)
+                    if len(proposal.lines) >= 40:
+                        proposal.context_truncated = True
+                        return proposal
         return proposal
 
     @staticmethod
