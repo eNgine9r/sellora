@@ -244,8 +244,9 @@ class NovaPoshtaSettingsService:
                 return "NOVA_POSHTA_SENDER_COUNTERPARTY_INVALID"
             if not client.contact_belongs_to_counterparty(settings["sender_counterparty_ref"], settings["sender_contact_ref"]):
                 return "NOVA_POSHTA_SENDER_CONTACT_INVALID"
-            if not client.sender_address_belongs_to_sender(settings["sender_counterparty_ref"], settings["sender_warehouse_ref"]):
-                return "NOVA_POSHTA_SENDER_ADDRESS_INVALID"
+            # For warehouse dispatches, SenderAddress is the Ref returned by
+            # Address.getWarehouses. A sender's saved counterparty address book
+            # may be empty; it is not the source of valid warehouse references.
             if not client.warehouse_belongs_to_city(settings["sender_city_ref"], settings["sender_warehouse_ref"]):
                 return "NOVA_POSHTA_SENDER_CITY_MISMATCH"
         except NovaPoshtaClientError:
