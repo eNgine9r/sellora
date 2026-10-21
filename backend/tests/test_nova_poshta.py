@@ -417,12 +417,24 @@ def test_disconnect_clears_verification_and_permission(monkeypatch) -> None:
     assert not service.connections.connection.provider_writes_allowed
 
 
+def test_sender_warehouse_validation_does_not_require_saved_counterparty_addresses() -> None:
+    """Warehouse pickup must work when the sender has no saved address-book entries."""
+    service = _settings_service(lambda credential: FakeClient(credential, sender_error="address"))
+    workspace_id = uuid4()
+    service.save_settings(workspace_id, _complete_settings(), uuid4())
+
+    response = service.test_connection(workspace_id, uuid4())
+
+    assert response.success
+    assert response.errors == []
+    assert service.connections.connection.provider_connection_verified_at is not None
+
+
 @pytest.mark.parametrize(
     ("sender_error", "expected_code"),
     [
         ("counterparty", "NOVA_POSHTA_SENDER_COUNTERPARTY_INVALID"),
         ("contact", "NOVA_POSHTA_SENDER_CONTACT_INVALID"),
-        ("address", "NOVA_POSHTA_SENDER_ADDRESS_INVALID"),
         ("city", "NOVA_POSHTA_SENDER_CITY_MISMATCH"),
         ("unavailable", "NOVA_POSHTA_SENDER_VALIDATION_UNAVAILABLE"),
     ],
