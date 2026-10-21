@@ -13,6 +13,7 @@ export type NovaPoshtaSettings = {
   sender_contact_ref: string | null;
   sender_phone: string | null;
   cod_payment_mode: "MONEY_RETURN" | "PAYMENT_CONTROL";
+  cargo_description: string | null;
   environment_capability: boolean;
   workspace_permission: boolean;
   provider_writes_enabled: boolean;
@@ -41,6 +42,7 @@ export type NovaPoshtaSettingsPayload = {
   sender_contact_ref?: string | null;
   sender_phone?: string | null;
   cod_payment_mode?: "MONEY_RETURN" | "PAYMENT_CONTROL";
+  cargo_description?: string | null;
 };
 
 export type NovaPoshtaDirectoryItem = { ref: string; description: string; number?: string | null };

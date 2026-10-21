@@ -39,7 +39,7 @@ class NovaPoshtaProviderShipmentService(NovaPoshtaShipmentService):
             "Weight": "0.5",
             "ServiceType": "WarehouseWarehouse",
             "SeatsAmount": "1",
-            "Description": "Товар",
+            "Description": (settings.get("cargo_description") or "Товари").strip() or "Товари",
             "Cost": str(shipment.declared_value or 0),
             "CitySender": settings.get("sender_city_ref"),
             "Sender": settings.get("sender_counterparty_ref"),

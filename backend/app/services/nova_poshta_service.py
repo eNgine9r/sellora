@@ -177,6 +177,8 @@ class NovaPoshtaSettingsService:
         existing_settings = dict(connection.settings or {}) if connection else {}
         updates = payload.model_dump(exclude={"api_key"}, exclude_unset=True)
         # Omitted fields preserve settings; explicit null clears a selected value.
+        if "cargo_description" in updates and updates["cargo_description"] is not None:
+            updates["cargo_description"] = updates["cargo_description"].strip() or None
         material_updates = updates
         if material_updates.get("sender_phone") is not None:
             try:
@@ -571,7 +573,10 @@ class NovaPoshtaShipmentService:
         shipment.nova_poshta_last_error_code = None
         self.db.commit()
 
-        payload = {**base_payload, "Description": operation.provider_marker}
+        # The human-readable cargo Description must never be replaced by our UUID.
+        # Keep the stable reconciliation marker in the provider's separate metadata
+        # field; older documents still reconcile by Description.
+        payload = {**base_payload, "AdditionalInformation": operation.provider_marker}
         client = self.settings.client_factory(api_key)
         try:
             result = client.create_internet_document(payload)

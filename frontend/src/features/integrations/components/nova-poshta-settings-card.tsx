@@ -35,6 +35,7 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
   const [senderContactRef, setSenderContactRef] = useState(settings?.sender_contact_ref ?? "");
   const [senderPhone, setSenderPhone] = useState(settings?.sender_phone ?? "");
   const [codPaymentMode, setCodPaymentMode] = useState<"MONEY_RETURN" | "PAYMENT_CONTROL">(settings?.cod_payment_mode ?? "MONEY_RETURN");
+  const [cargoDescription, setCargoDescription] = useState(settings?.cargo_description ?? "");
   const [senderCitySearch, setSenderCitySearch] = useState("");
   const [senderWarehouseSearch, setSenderWarehouseSearch] = useState("");
   const [senderQuery, setSenderQuery] = useState("");
@@ -64,6 +65,7 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
     setSenderContactRef(settings?.sender_contact_ref ?? "");
     setSenderPhone(settings?.sender_phone ?? "");
     setCodPaymentMode(settings?.cod_payment_mode ?? "MONEY_RETURN");
+    setCargoDescription(settings?.cargo_description ?? "");
   }, [settings]);
 
   const missingSenderFields = useMemo(() => [
@@ -85,6 +87,7 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
       sender_contact_ref: senderContactRef || null,
       sender_phone: senderPhone || null,
       cod_payment_mode: codPaymentMode,
+      cargo_description: cargoDescription.trim() || null,
     });
     setApiKey("");
   }
@@ -135,6 +138,11 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
           {senders.isError || contacts.isError ? <p role="alert" className="text-sm text-amber-700">{t("novaPoshta.senderLookupFailed")} <button type="button" className="underline" onClick={() => { void senders.refetch(); if (senderCounterpartyRef) void contacts.refetch(); }}>{t("novaPoshta.retryLookup")}</button></p> : null}
           {senders.isSuccess && !senders.data.length ? <p className="text-sm">{t("novaPoshta.noSenders")}</p> : null}
           {contacts.isSuccess && !contacts.data.length ? <p className="text-sm">{t("novaPoshta.noContacts")}</p> : null}
+          <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            <span>{t("novaPoshta.cargoDescriptionLabel")}</span>
+            <input className={inputClass} maxLength={60} value={cargoDescription} onChange={event => setCargoDescription(event.target.value)} placeholder={t("novaPoshta.cargoDescriptionPlaceholder")} />
+            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">{t("novaPoshta.cargoDescriptionHelp")}</span>
+          </label>
           <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
             <span>{t("novaPoshta.codModeLabel")}</span>
             <select className={inputClass} value={codPaymentMode} onChange={event => setCodPaymentMode(event.target.value as "MONEY_RETURN" | "PAYMENT_CONTROL")}>
