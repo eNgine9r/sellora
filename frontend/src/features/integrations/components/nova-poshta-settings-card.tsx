@@ -34,6 +34,7 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
   const [senderCounterpartyRef, setSenderCounterpartyRef] = useState(settings?.sender_counterparty_ref ?? "");
   const [senderContactRef, setSenderContactRef] = useState(settings?.sender_contact_ref ?? "");
   const [senderPhone, setSenderPhone] = useState(settings?.sender_phone ?? "");
+  const [codPaymentMode, setCodPaymentMode] = useState<"MONEY_RETURN" | "PAYMENT_CONTROL">(settings?.cod_payment_mode ?? "MONEY_RETURN");
   const [senderCitySearch, setSenderCitySearch] = useState("");
   const [senderWarehouseSearch, setSenderWarehouseSearch] = useState("");
   const [senderQuery, setSenderQuery] = useState("");
@@ -62,6 +63,7 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
     setSenderCounterpartyRef(settings?.sender_counterparty_ref ?? "");
     setSenderContactRef(settings?.sender_contact_ref ?? "");
     setSenderPhone(settings?.sender_phone ?? "");
+    setCodPaymentMode(settings?.cod_payment_mode ?? "MONEY_RETURN");
   }, [settings]);
 
   const missingSenderFields = useMemo(() => [
@@ -82,6 +84,7 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
       sender_counterparty_ref: senderCounterpartyRef || null,
       sender_contact_ref: senderContactRef || null,
       sender_phone: senderPhone || null,
+      cod_payment_mode: codPaymentMode,
     });
     setApiKey("");
   }
@@ -132,6 +135,14 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
           {senders.isError || contacts.isError ? <p role="alert" className="text-sm text-amber-700">{t("novaPoshta.senderLookupFailed")} <button type="button" className="underline" onClick={() => { void senders.refetch(); if (senderCounterpartyRef) void contacts.refetch(); }}>{t("novaPoshta.retryLookup")}</button></p> : null}
           {senders.isSuccess && !senders.data.length ? <p className="text-sm">{t("novaPoshta.noSenders")}</p> : null}
           {contacts.isSuccess && !contacts.data.length ? <p className="text-sm">{t("novaPoshta.noContacts")}</p> : null}
+          <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            <span>{t("novaPoshta.codModeLabel")}</span>
+            <select className={inputClass} value={codPaymentMode} onChange={event => setCodPaymentMode(event.target.value as "MONEY_RETURN" | "PAYMENT_CONTROL")}>
+              <option value="MONEY_RETURN">{t("novaPoshta.codModeMoneyReturn")}</option>
+              <option value="PAYMENT_CONTROL">{t("novaPoshta.codModePaymentControl")}</option>
+            </select>
+            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">{t("novaPoshta.codModeHelp")}</span>
+          </label>
           <button type="submit" className="min-h-11 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white disabled:opacity-60" disabled={isSaving || !hasSavedKey || missingSenderFields.length > 0}>{t("novaPoshta.saveSender")}</button>
           {missingSenderFields.length ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100">{t("novaPoshta.senderWarning")} {t("novaPoshta.missingSenderFields")}: {missingSenderFields.join(", ")}.</p> : <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100">{t("novaPoshta.senderReady")}</p>}
         </section>

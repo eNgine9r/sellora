@@ -90,6 +90,44 @@ def test_provider_payload_sends_cod_as_backward_delivery_money() -> None:
     ]
 
 
+def test_provider_payload_uses_payment_control_for_fop_without_backward_money() -> None:
+    shipment = Shipment(
+        workspace_id=uuid4(),
+        recipient_name="Олена Петренко",
+        recipient_phone="+380671234567",
+        city="Київ",
+        warehouse="Відділення №12",
+        nova_poshta_city_ref="city-ref",
+        nova_poshta_warehouse_ref="warehouse-ref",
+        declared_value=Decimal("500"),
+        cod_amount=Decimal("450"),
+    )
+    service = NovaPoshtaProviderShipmentService.__new__(NovaPoshtaProviderShipmentService)
+    service.settings = SimpleNamespace(
+        _require_connection=lambda workspace_id: (None, "synthetic-key"),
+        client_factory=lambda key: SimpleNamespace(
+            resolve_recipient_warehouse=lambda city_ref, warehouse_ref: ("Київ", "12")
+        ),
+    )
+    sender = {
+        "sender_city_ref": "sender-city",
+        "sender_warehouse_ref": "sender-warehouse",
+        "sender_counterparty_ref": "sender",
+        "sender_contact_ref": "contact",
+        "sender_phone": "+380501234567",
+        "cod_payment_mode": "PAYMENT_CONTROL",
+    }
+    payload = service._document_payload(shipment, sender)
+    assert payload["AfterpaymentOnGoodsCost"] == "450"
+    assert "BackwardDeliveryData" not in payload
+    assert payload["Cost"] == "500"
+
+    shipment.cod_amount = Decimal("0")
+    no_cod = service._document_payload(shipment, sender)
+    assert "AfterpaymentOnGoodsCost" not in no_cod
+    assert "BackwardDeliveryData" not in no_cod
+
+
 def test_sender_validation_uses_counterparty_model_for_contacts_and_addresses() -> None:
     client = NovaPoshtaClient("synthetic-key")
     calls = []

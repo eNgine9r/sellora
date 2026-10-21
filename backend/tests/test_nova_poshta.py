@@ -388,6 +388,43 @@ def test_material_settings_change_invalidates_verification_and_permission(monkey
     assert service.audit_logs.records[-2]["action"] == "NOVA_POSHTA_VERIFICATION_INVALIDATED"
 
 
+def test_cod_payment_mode_change_invalidates_live_write_permission(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    service = _settings_service()
+    workspace_id = uuid4()
+    service.save_settings(workspace_id, _complete_settings(), uuid4())
+    assert service.get_settings(workspace_id).cod_payment_mode == "MONEY_RETURN"
+    assert service.test_connection(workspace_id, uuid4()).success
+    service.set_write_permission(workspace_id, NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+
+    updated = service.save_settings(
+        workspace_id,
+        NovaPoshtaSettingsRequest(cod_payment_mode="PAYMENT_CONTROL"),
+        uuid4(),
+    )
+    assert updated.cod_payment_mode == "PAYMENT_CONTROL"
+    assert updated.connection_verified is False
+    assert updated.provider_writes_enabled is False
+    assert updated.workspace_permission is False
+    assert service.audit_logs.records[-2]["action"] == "NOVA_POSHTA_VERIFICATION_INVALIDATED"
+    assert service.audit_logs.records[-1]["action"] == "NOVA_POSHTA_PAYMENT_SETTINGS_UPDATED"
+    assert service.test_connection(workspace_id, uuid4()).success
+    service.set_write_permission(workspace_id, NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+    repeat = service.save_settings(
+        workspace_id,
+        NovaPoshtaSettingsRequest(cod_payment_mode="PAYMENT_CONTROL"),
+        uuid4(),
+    )
+    assert repeat.provider_writes_enabled is True
+
+
+def test_cod_payment_mode_rejects_unknown_mode() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        NovaPoshtaSettingsRequest(cod_payment_mode="INVALID")
+
+
 def test_unchanged_sender_settings_do_not_invalidate_verification(monkeypatch) -> None:
     monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
     service = _settings_service(); workspace_id = uuid4()
