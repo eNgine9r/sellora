@@ -67,3 +67,12 @@ export type ShipmentSummary = {
   delivered_today: number;
   returned_this_month: number;
 };
+
+
+export type ShipmentTrackingEvent = {
+  at: string;
+  event: string;
+  status: ShipmentStatus | null;
+  previous_status: ShipmentStatus | null;
+  provider_status_code: string | null;
+};

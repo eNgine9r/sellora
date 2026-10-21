@@ -1,5 +1,5 @@
 import { apiRequest } from "@/services/api";
-import { Shipment, ShipmentCreatePayload, ShipmentStatus, ShipmentSummary } from "@/types/shipments";
+import { Shipment, ShipmentCreatePayload, ShipmentStatus, ShipmentSummary, ShipmentTrackingEvent } from "@/types/shipments";
 
 function workspaceHeaders(workspaceId?: string): HeadersInit {
   return workspaceId ? { "X-Workspace-ID": workspaceId } : {};
@@ -50,4 +50,9 @@ export async function changeShipmentStatus(workspaceId: string, shipmentId: stri
 
 export async function deleteShipment(workspaceId: string, shipmentId: string): Promise<void> {
   return apiRequest<void>(`/shipments/${shipmentId}`, { method: "DELETE", headers: workspaceHeaders(workspaceId) });
+}
+
+
+export async function fetchShipmentTrackingHistory(workspaceId: string, shipmentId: string): Promise<ShipmentTrackingEvent[]> {
+  return apiRequest<ShipmentTrackingEvent[]>(`/shipments/${encodeURIComponent(shipmentId)}/status-history`, { headers: workspaceHeaders(workspaceId) });
 }

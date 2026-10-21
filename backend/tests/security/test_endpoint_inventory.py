@@ -68,12 +68,12 @@ EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 5,
     "COOKIE_SESSION": 3,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 201,
+    "WORKSPACE_SCOPED": 202,
     "FEATURE_GATED": 16,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-# Added GET /advertising/crm-attribution and Direct order-proposal: scoped reads, no mutations.
-EXPECTED_TOTAL_ROUTES = 231
+# Added GET /shipments/{shipment_id}/status-history: ANALYST-guarded workspace-scoped read, no mutations.
+EXPECTED_TOTAL_ROUTES = 232
 EXPECTED_MUTATION_ROUTES = 130
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
@@ -286,3 +286,17 @@ def test_meta_ads_public_callback_is_only_a_forwarding_boundary():
         assert any(getattr(dep.call, "__name__", "") == "guard"
                    and getclosurevars(dep.call).nonlocals.get("minimum_role") == RoleName.OWNER
                    for dep in dependencies)
+
+
+def test_tracking_history_requires_workspace_membership_and_analyst_role() -> None:
+    path = "/api/v1/shipments/{shipment_id}/status-history"
+    route = next(route for route_path, route in _api_routes() if route_path == path)
+    assert route.methods == {"GET"}
+    assert _primary_scope(path) == "WORKSPACE_SCOPED"
+    deps = {dep.call for dep in route.dependant.dependencies}
+    assert get_workspace_id in deps
+    assert any(
+        getattr(dep.call, "__name__", "") == "guard"
+        and RoleName.ANALYST in getclosurevars(dep.call).nonlocals.values()
+        for dep in route.dependant.dependencies
+    )

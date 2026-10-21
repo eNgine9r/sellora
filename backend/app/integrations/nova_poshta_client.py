@@ -45,6 +45,12 @@ class NovaPoshtaDocumentResult:
     status: str | None = None
 
 
+@dataclass(frozen=True)
+class NovaPoshtaTrackingResult:
+    status: str
+    code: str | None = None
+
+
 class NovaPoshtaClient:
     def __init__(self, api_key: str, base_url: str | None = None, timeout_seconds: int = 10) -> None:
         self.api_key = api_key
@@ -289,11 +295,26 @@ class NovaPoshtaClient:
             )
         return matches[0] if matches else None
 
-    def get_document_status(self, tracking_number: str) -> str | None:
+    def get_document_tracking(self, tracking_number: str) -> NovaPoshtaTrackingResult | None:
         body = self._call(
             "TrackingDocument",
             "getStatusDocuments",
             {"Documents": [{"DocumentNumber": tracking_number}]},
         )
-        item = body.get("data", [{}])[0] if body.get("data") else {}
-        return str(item.get("Status") or item.get("StatusCode") or "") or None
+        items = body.get("data") or []
+        if not items or not isinstance(items[0], dict):
+            return None
+        item = items[0]
+        provider_number = str(item.get("Number") or item.get("DocumentNumber") or "")
+        if provider_number and provider_number != tracking_number:
+            raise NovaPoshtaClientError(
+                "Nova Poshta returned a different tracking number",
+                code="NOVA_POSHTA_TRACKING_NUMBER_MISMATCH",
+            )
+        status = str(item.get("Status") or "").strip()
+        code = str(item.get("StatusCode") or "").strip() or None
+        return NovaPoshtaTrackingResult(status=status, code=code) if status or code else None
+
+    def get_document_status(self, tracking_number: str) -> str | None:
+        result = self.get_document_tracking(tracking_number)
+        return result.status or result.code if result else None
