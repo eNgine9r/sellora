@@ -85,6 +85,7 @@ async def instagram_oauth_callback(state: str = Query(...), code: str = Query(..
             "META_ACCOUNT_TYPE_UNVERIFIED": "account_type_unverified",
             "META_PERMISSION_MISSING": "permission_missing",
             "META_PERMISSION_VALIDATION_FAILED": "permission_failed",
+            "META_ACCOUNT_SWITCH_REQUIRES_DISCONNECT": "switch_requires_disconnect",
             "META_OAUTH_STATE_ALREADY_USED": "invalid_state",
             "META_OAUTH_STATE_EXPIRED": "invalid_state",
             "META_OAUTH_STATE_INVALID": "invalid_state",
