@@ -1736,6 +1736,7 @@
       "failed": "Dry-run failed"
     },
     "validation": {
+      "directCustomer": "This conversation has no confirmed linked customer. Return to Direct, link the customer, then reopen the order form.",
       "row": "Row {row}",
       "recognizedColumns": "Recognized columns",
       "missingRequiredColumns": "Missing required columns",
@@ -2289,6 +2290,21 @@
     }
   },
   "direct": {
+    "salesWorkspaceTitle": "Customer and sale",
+    "salesCustomerLoading": "Loading customer…",
+    "salesCustomerUnlinked": "No customer linked yet",
+    "salesCatalogHints": "Product suggestions: {count}",
+    "salesMissingData": "Complete customer contact details before an order",
+    "salesExpandCustomer": "Customer details and additional actions",
+    "participantDetails": "Instagram profile details",
+    "sendUnavailableByPolicy": "Sending from Sellora is currently disabled. You can review messages and prepare orders, but not send messages.",
+    "historyAdvanced": "History import — advanced settings",
+    "historyImportWarning": "Import adds real messages and may lead to CRM leads later. Verify the scope before running.",
+    "historySmallScan": "Import 5 conversations",
+    "historyConfirmTitle": "Confirm Instagram history import",
+    "historyConfirmDescription": "Import up to {count} conversations and 10 messages each? This writes actual conversations to Sellora; it will not send messages to customers.",
+    "historyConfirmAction": "Start import",
+    "salesField": {"name": "name", "phone": "phone", "city": "city", "delivery_address": "Nova Poshta branch"},
     "kicker": "Shop messages",
     "title": "Direct",
     "description": "Reply to customers and create orders from a conversation.",

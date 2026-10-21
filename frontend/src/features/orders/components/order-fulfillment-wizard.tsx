@@ -175,8 +175,11 @@ export function OrderFulfillmentWizard({
   const inventoryByVariant = useMemo(() => new Map(inventory.map((stock) => [stock.product_variant_id, stock])), [inventory]);
   const filteredCustomers = useMemo(() => {
     const query = customerSearch.trim().toLocaleLowerCase();
-    return customers.filter((customer) => !query || [customer.name, customer.phone, customer.instagram_username].some((value) => value?.toLocaleLowerCase().includes(query))).slice(0, 8);
-  }, [customerSearch, customers]);
+    return customers.filter((customer) =>
+      (!sourceDirectConversationId || (initialCustomerId && customer.id === initialCustomerId)) &&
+      (!query || [customer.name, customer.phone, customer.instagram_username].some((value) => value?.toLocaleLowerCase().includes(query)))
+    ).slice(0, 8);
+  }, [customerSearch, customers, initialCustomerId, sourceDirectConversationId]);
   const total = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
   const normalizedPhone = normalizeUaPhonePreview(recipientPhone);
   const normalizedCustomerPhone = normalizeUaPhonePreview(customerPhone);
@@ -243,6 +246,10 @@ export function OrderFulfillmentWizard({
   }
 
   function validateStep(nextStep: number) {
+    if (sourceDirectConversationId && (
+      !initialCustomerId || customerId !== initialCustomerId ||
+      !customers.some((customer) => customer.id === initialCustomerId && customer.workspace_id === workspaceId)
+    )) return t("fulfillment.validation.directCustomer");
     if (nextStep > 1) {
       if (mode === "existing" && !customerId) return t("fulfillment.validation.customer");
       if (mode === "new" && !customerName.trim()) return t("fulfillment.validation.name");
@@ -286,6 +293,7 @@ export function OrderFulfillmentWizard({
     mutation.mutate({
       idempotency_key: idempotencyKey.current,
       customer_id: mode === "existing" ? customerId : null,
+      source_direct_conversation_id: sourceDirectConversationId || null,
       customer_name: mode === "new" ? customerName.trim() : null,
       customer_phone: mode === "new" ? (normalizedCustomerPhone || normalizedPhone) : null,
       instagram_username: mode === "new" ? instagram.trim() || null : null,
@@ -350,6 +358,12 @@ export function OrderFulfillmentWizard({
             <button className={`min-h-11 rounded-lg font-bold ${mode === "existing" ? "bg-surface-1 shadow-sm" : "text-text-secondary"}`} type="button" onClick={() => setMode("existing")}>{t("fulfillment.existingCustomer")}</button>
             <button className={`min-h-11 rounded-lg font-bold ${mode === "new" ? "bg-surface-1 shadow-sm" : "text-text-secondary"}`} type="button" disabled={Boolean(sourceDirectConversationId)} onClick={() => { setMode("new"); setCustomerId(""); }}>{t("fulfillment.newCustomer")}</button>
           </div>
+          {sourceDirectConversationId && (!initialCustomerId || !customers.some((c) => c.id === initialCustomerId && c.workspace_id === workspaceId)) ? (
+            <div className="grid gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-500/15 dark:text-amber-100" role="alert" data-direct-missing-customer>
+              <p className="font-semibold">{t("fulfillment.validation.directCustomer")}</p>
+              <Link className="w-fit font-bold underline underline-offset-4" href={"/direct?conversation=" + encodeURIComponent(sourceDirectConversationId)}>{t("fulfillment.returnDirect")}</Link>
+            </div>
+          ) : null}
           {mode === "existing" ? <section className="grid gap-3 rounded-2xl border border-border-subtle p-3">
             <input className={inputClass} placeholder={t("orders.customerSearchPlaceholder")} value={customerSearch} onChange={(event) => setCustomerSearch(event.target.value)} />
             <div className="grid max-h-44 gap-1 overflow-y-auto">

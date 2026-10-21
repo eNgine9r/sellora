@@ -11,22 +11,21 @@ import {
   Send,
   ShoppingBag,
   Sparkles,
-  UserPlus,
   UserRound,
   Users,
   Wifi,
   WifiOff,
   ArrowLeft,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Button, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { DirectTtnDraft } from "@/components/direct-ttn-draft";
+import { DirectSalesContext } from "@/features/direct-sales/direct-sales-context";
 import { useDirectLive } from "@/components/direct-live-provider";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
-import { Drawer } from "@/components/ui/overlay";
+import { ConfirmationDialog, Drawer } from "@/components/ui/overlay";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 import { ApiError } from "@/services/api";
@@ -52,7 +51,6 @@ import { fetchInstagramStatus } from "@/services/meta-instagram";
 import { AISuggestion } from "@/types/ai";
 import {
   DirectConversation,
-  DirectCustomerAutomationState,
   DirectMessage,
   InstagramHistorySync,
 } from "@/types/direct";
@@ -87,6 +85,7 @@ export default function DirectPage() {
   const { isLive, isError: liveError, orderIntentConversationIds } = useDirectLive();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [pendingHistoryLimit, setPendingHistoryLimit] = useState<number | null>(null);
   type Draft = { text: string; revision: number };
   type ReplyContext = { workspaceId: string; conversationId: string; key: string; text: string; revision: number; editorId: string };
   const [editorId] = useState(() => crypto.randomUUID());
@@ -97,7 +96,6 @@ export default function DirectPage() {
   const [preparations, setPreparations] = useState<Record<string, { revision: number; result?: PrepareResult; error?: boolean }>>({});
   const profileRefreshAttempted = useRef(new Set<string>());
   const readAttempted = useRef(new Set<string>());
-  const customerAutomationAttempted = useRef(new Set<string>());
 
   const workspaceId = currentWorkspace?.workspace_id;
   const canManage = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
@@ -268,7 +266,7 @@ export default function DirectPage() {
     },
   });
   const historyMutation = useMutation({
-    mutationFn: (conversationLimit: number) => startInstagramHistorySync(conversationLimit, 20),
+    mutationFn: (conversationLimit: number) => startInstagramHistorySync(conversationLimit, 10),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-history-sync", workspaceId] }),
   });
   const readMutation = useMutation({
@@ -287,7 +285,6 @@ export default function DirectPage() {
     setAiPanelOpen(false);
     profileRefreshAttempted.current.clear();
     readAttempted.current.clear();
-    customerAutomationAttempted.current.clear();
   }, [workspaceId]);
 
   useEffect(() => {
@@ -315,16 +312,8 @@ export default function DirectPage() {
     readMutation.mutate(selectedConversation.id);
   }, [readMutation, selectedConversation]);
 
-  useEffect(() => {
-    const conversationId = selectedConversation?.id;
-    if (!conversationId || !canManage) return;
-    if (!orderIntentConversationIds.has(conversationId)) return;
-    if (automationQuery.data?.stage !== "NOT_CREATED") return;
-    if (customerAutomationAttempted.current.has(conversationId)) return;
-    customerAutomationAttempted.current.add(conversationId);
-    ensureCustomerMutation.mutate(conversationId);
-  }, [automationQuery.data?.stage, canManage, ensureCustomerMutation, orderIntentConversationIds, selectedConversation?.id]);
-
+  // Merely opening a conversation must never create a CRM customer.
+  // Owner approval happens through the explicit Create Customer action.
   const historyStatus = historyQuery.data?.status;
   useEffect(() => {
     if (!historyStatus || !["COMPLETED", "PARTIAL"].includes(historyStatus)) return;
@@ -352,14 +341,6 @@ export default function DirectPage() {
               {liveError ? <WifiOff className="h-4 w-4" /> : <Wifi className={`h-4 w-4 ${isLive ? "" : "animate-pulse"}`} />}
               {liveError ? t("direct.liveUnavailable") : isLive ? t("direct.live") : t("direct.connecting")}
             </span>
-            <Button
-              variant="secondary"
-              onClick={() => historyMutation.mutate(100)}
-              disabled={!canManage || historyMutation.isPending || historyActive || statusQuery.data?.status !== "CONNECTED"}
-            >
-              <RefreshCw className={`h-4 w-4 ${historyMutation.isPending || historyActive ? "animate-spin" : ""}`} />
-              {historyActive ? t("direct.syncActive") : t("direct.syncHistory")}
-            </Button>
             <Button onClick={() => conversationsQuery.refetch()}>
               <RefreshCw className="h-4 w-4" />
               {t("direct.refresh")}
@@ -370,7 +351,7 @@ export default function DirectPage() {
       </div>
 
       {historyMutation.isError || profileMutation.isError ? <p role="alert" className="text-sm text-rose-600">{t("direct.actionError")}</p> : null}
-      <div className={selectedConversation ? "hidden lg:block" : ""}><HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} canStart={Boolean(canManage && statusQuery.data?.status === "CONNECTED")} isStarting={historyMutation.isPending} onStart={(limit) => historyMutation.mutate(limit)} /></div>
+      <div className={selectedConversation ? "hidden lg:block" : ""}><HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} canStart={Boolean(canManage && statusQuery.data?.status === "CONNECTED")} isStarting={historyMutation.isPending} onStart={setPendingHistoryLimit} /></div>
 
       <div className={`${selectedConversation ? "hidden lg:block" : "block"} min-[1440px]:hidden`}>
         <button
@@ -386,7 +367,6 @@ export default function DirectPage() {
       {selectedConversation ? <div className="flex min-w-0 items-center gap-2 lg:hidden" data-direct-mobile-controls>
         <Button variant="secondary" className="min-w-0 flex-1 px-2 text-xs" onClick={() => { setSelectedId(null); setAiPanelOpen(false); router.replace("/direct", { scroll: false }); }}><ArrowLeft className="h-4 w-4 shrink-0" />{t("direct.backToDialogs")}</Button>
         <Button variant="secondary" className="px-3 text-xs" onClick={() => setAiPanelOpen(true)} aria-label={t("direct.openAiPanel")}><Bot className="h-4 w-4" />{t("direct.aiShort")}</Button>
-        <Button variant="secondary" className="w-11 shrink-0 px-0" aria-label={historyActive ? t("direct.syncActive") : t("direct.syncHistory")} onClick={() => historyMutation.mutate(100)} disabled={!canManage || historyMutation.isPending || historyActive || statusQuery.data?.status !== "CONNECTED"}><RefreshCw className={`h-4 w-4 ${historyActive || historyMutation.isPending ? "animate-spin" : ""}`} /></Button>
       </div> : null}
       <section
         className={`grid ${selectedConversation ? "h-[calc(100dvh-260px)] min-h-[380px] lg:h-[max(540px,calc(100dvh-var(--topbar-height,72px)-240px))]" : "h-[max(540px,calc(100dvh-var(--topbar-height,72px)-240px))]"} min-w-0 gap-3 lg:grid-cols-[280px_minmax(0,1fr)] min-[1440px]:grid-cols-[280px_minmax(0,1fr)_300px]`}
@@ -406,26 +386,25 @@ export default function DirectPage() {
         />
         </div>
         <div className={`${selectedConversation ? "flex" : "hidden lg:flex"} min-h-0 min-w-0 flex-col`}>
-          {selectedConversation && commercialQuery.data?.conversation_id === selectedConversation.id && commercialQuery.data.commercial_stage !== "NONE" ? (
-            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs" data-direct-commercial-status={commercialQuery.data.commercial_stage}>
-              <ShoppingBag className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-              <strong>{t(`proposal.commercialStage.${commercialQuery.data.commercial_stage}`)}</strong>
-              <span className="text-text-secondary">{t("proposal.managerConfirmationRequired")}</span>
-            </div>
-          ) : null}
+          {selectedConversation ? <DirectSalesContext
+            key={selectedConversation.id}
+            conversation={selectedConversation}
+            proposal={commercialQuery.data?.conversation_id === selectedConversation.id ? commercialQuery.data : undefined}
+            automation={automationQuery.data?.conversation_id === selectedConversation.id ? automationQuery.data : undefined}
+            loading={automationQuery.isLoading}
+            error={automationQuery.isError || ensureCustomerMutation.isError}
+            canManage={canManage}
+            ensuringCustomer={ensureCustomerMutation.isPending}
+            ensuringLead={ensureLeadMutation.isPending}
+            leadError={ensureLeadMutation.isError}
+            onEnsureLead={() => ensureLeadMutation.mutate(selectedConversation.id)}
+            onEnsureCustomer={() => ensureCustomerMutation.mutate(selectedConversation.id)}
+          /> : null}
         <MessageThread
           handoffKey={ttnOrderId && ttnShipmentId ? `${draftKey}:${ttnOrderId}:${ttnShipmentId}` : undefined}
           handoff={canManage && workspaceId && selectedConversation && selectedConversation.id === searchParams.get("conversation") && ttnOrderId && ttnShipmentId ? <DirectTtnDraft key={`${draftKey}:${ttnOrderId}:${ttnShipmentId}`} workspaceId={workspaceId} conversationId={selectedConversation.id} orderId={ttnOrderId} shipmentId={ttnShipmentId} draftText={replyText} onInsert={setReplyText} /> : null}
           conversation={selectedConversation}
-          automation={automationQuery.data}
-          automationLoading={automationQuery.isLoading}
-          automationError={automationQuery.isError || ensureCustomerMutation.isError}
           canManage={canManage}
-          ensuringCustomer={ensureCustomerMutation.isPending}
-          ensuringLead={ensureLeadMutation.isPending}
-          leadError={ensureLeadMutation.isError}
-          onEnsureLead={() => selectedConversation && ensureLeadMutation.mutate(selectedConversation.id)}
-          onEnsureCustomer={() => selectedConversation && ensureCustomerMutation.mutate(selectedConversation.id)}
           loading={messagesQuery.isLoading}
           error={messagesQuery.isError}
           messages={messagesQuery.data ?? []}
@@ -441,6 +420,7 @@ export default function DirectPage() {
             || !selectedConversation
             || selectedConversation.channel !== "INSTAGRAM"
             || statusQuery.data?.status !== "CONNECTED"
+            || statusQuery.data?.send_enabled !== true
             || sendMutation.isPending
           }
           prepareResult={preparation?.revision === draft.revision ? preparation.result : undefined}
@@ -451,7 +431,7 @@ export default function DirectPage() {
           operationError={operationQuery.isError}
           onCheckOperation={() => operationQuery.refetch()}
           sendPending={sendMutation.isPending}
-          noAutoSend={t("direct.noAutoSend")}
+          noAutoSend={statusQuery.data?.send_enabled === true ? t("direct.noAutoSend") : t("direct.sendUnavailableByPolicy")}
         />
         </div>
         <div className="hidden min-h-0 overflow-y-auto min-[1440px]:block">
@@ -467,6 +447,20 @@ export default function DirectPage() {
         </div>
       </section>
 
+      <ConfirmationDialog
+        open={pendingHistoryLimit !== null}
+        title={t("direct.historyConfirmTitle")}
+        description={t("direct.historyConfirmDescription", { count: pendingHistoryLimit ?? 0 })}
+        actionLabel={t("direct.historyConfirmAction")}
+        isSubmitting={historyMutation.isPending}
+        onCancel={() => setPendingHistoryLimit(null)}
+        onConfirm={() => {
+          if (pendingHistoryLimit !== null && !historyMutation.isPending && canManage && !historyActive && statusQuery.data?.status === "CONNECTED") {
+            historyMutation.mutate(pendingHistoryLimit);
+            setPendingHistoryLimit(null);
+          }
+        }}
+      />
       <Drawer open={aiPanelOpen} title={t("direct.aiPanel")} onClose={() => setAiPanelOpen(false)}>
         <AiPanel loading={suggestionsQuery.isLoading} suggestions={suggestionsQuery.data ?? []}
           onAnalyze={() => { const context = replyContext(); if (context) analysisMutation.mutate(context); }}
@@ -491,7 +485,12 @@ function HistorySyncBanner({ sync, loading, canStart, isStarting, onStart }: { s
     FAILED_SAFE: t("direct.historyFailed"),
   };
   return (
-    <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)]">
+    <details className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)]" data-direct-history-advanced>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 text-sm font-semibold">
+        <span>{t("direct.historyAdvanced")}</span>
+        <span className="text-xs font-normal text-text-secondary">{statusLabel[sync.status] ?? t("direct.unknownStatus")}</span>
+      </summary>
+      <div className="border-t border-border-subtle p-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-black">{statusLabel[sync.status] ?? t("direct.unknownStatus")}</p>
@@ -510,7 +509,11 @@ function HistorySyncBanner({ sync, loading, canStart, isStarting, onStart }: { s
           {t("direct.historyErrors", { unavailable: sync.messages_unavailable, errors: sync.error_count })}
         </p>
       ) : null}
+      <p className="mt-3 text-xs font-semibold text-amber-700 dark:text-amber-200">{t("direct.historyImportWarning")}</p>
       <div className="mt-3 flex flex-wrap gap-2">
+        <Button variant="secondary" disabled={!canStart || active || isStarting} onClick={() => onStart(5)}>
+          {t("direct.historySmallScan")}
+        </Button>
         <Button variant="secondary" disabled={!canStart || active || isStarting} onClick={() => onStart(100)}>
           <RefreshCw className={`h-4 w-4 ${active || isStarting ? "animate-spin" : ""}`} />
           {t("direct.historyRescan")}
@@ -519,7 +522,8 @@ function HistorySyncBanner({ sync, loading, canStart, isStarting, onStart }: { s
           {t("direct.historyDeepScan")}
         </Button>
       </div>
-    </section>
+      </div>
+    </details>
   );
 }
 
@@ -638,15 +642,7 @@ function MessageThread({
   handoffKey,
   handoff,
   conversation,
-  automation,
-  automationLoading,
-  automationError,
   canManage,
-  ensuringCustomer,
-  onEnsureCustomer,
-  ensuringLead,
-  leadError,
-  onEnsureLead,
   loading,
   error,
   messages,
@@ -670,15 +666,7 @@ function MessageThread({
   handoffKey?: string;
   handoff?: ReactNode;
   conversation?: DirectConversation | null;
-  automation?: DirectCustomerAutomationState;
-  automationLoading: boolean;
-  automationError: boolean;
   canManage: boolean;
-  ensuringCustomer: boolean;
-  onEnsureCustomer: () => void;
-  ensuringLead: boolean;
-  leadError: boolean;
-  onEnsureLead: () => void;
   loading: boolean;
   error: boolean;
   messages: DirectMessage[];
@@ -741,7 +729,7 @@ function MessageThread({
   if (!conversation) return <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4"><EmptyState title={t("direct.selectTitle")}  description={t("direct.selectHint")}  /></section>;
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)]">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3 py-2"><p className="min-w-0 truncate text-sm font-black">{conversation.participant_display_name ?? conversation.participant_username ?? t("direct.customer")}</p><Button variant="secondary" className="shrink-0 px-2 text-xs" onClick={() => { followLatest.current = false; scrollContainer.current?.scrollTo({ top: 0, behavior: "auto" }); }}>{t("direct.customerAndOrder")}</Button></div>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3 py-2"><p className="min-w-0 truncate text-sm font-black">{conversation.participant_display_name ?? conversation.participant_username ?? t("direct.customer")}</p><span className="shrink-0 text-xs text-text-muted">{conversation.channel === "INSTAGRAM" ? "Instagram" : t("direct.synthetic")}</span></div>
       <div ref={scrollContainer} className="sellora-scrollbar min-h-0 flex-1 overflow-y-auto" data-direct-live-thread
         onWheel={() => { followLatest.current = false; }}
         onTouchMove={() => { followLatest.current = false; }}
@@ -750,19 +738,10 @@ function MessageThread({
         onScroll={(event) => { const pane = event.currentTarget; if (pane.scrollHeight - pane.clientHeight - pane.scrollTop < 4) followLatest.current = true; }}>
       <div ref={scrollContent} className="space-y-3">
       {handoff}
-      <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
-      <CustomerAutomationCard
-        conversation={conversation}
-        automation={automation}
-        loading={automationLoading}
-        error={automationError}
-        canManage={canManage}
-        ensuring={ensuringCustomer}
-        onEnsure={onEnsureCustomer}
-        ensuringLead={ensuringLead}
-        leadError={leadError}
-        onEnsureLead={onEnsureLead}
-      />
+      <details className="border-b border-border-subtle" data-direct-participant-details>
+        <summary className="cursor-pointer px-4 py-2 text-xs font-semibold text-text-secondary">{t("direct.participantDetails")}</summary>
+        <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
+      </details>
       <div className="space-y-3 p-3">
         {loading ? <LoadingSkeleton /> : null}
         {error ? <ErrorState title={t("direct.messagesError")}  description={t("direct.messagesErrorHint")}  /> : null}
@@ -795,106 +774,6 @@ function MessageThread({
         {sendOutcome && !TERMINAL_SEND_STATUSES.has(sendOutcome) ? operationKnown ? <Button variant="secondary" onClick={onCheckOperation} disabled={operationChecking}>{t("direct.checkSendStatus")}</Button> : <p className="mt-2 text-xs text-text-muted">{t("direct.unknownSendHelp")}</p> : null}
         {operationError ? <p role="alert" className="mt-2 text-xs text-rose-600">{t("direct.statusError")}</p> : null}
       </footer>
-    </section>
-  );
-}
-
-function CustomerAutomationCard({
-  conversation,
-  automation,
-  loading,
-  error,
-  canManage,
-  ensuring,
-  onEnsure,
-  ensuringLead,
-  leadError,
-  onEnsureLead,
-}: {
-  conversation: DirectConversation;
-  automation?: DirectCustomerAutomationState;
-  loading: boolean;
-  error: boolean;
-  canManage: boolean;
-  ensuring: boolean;
-  onEnsure: () => void;
-  ensuringLead: boolean;
-  leadError: boolean;
-  onEnsureLead: () => void;
-}) {
-  const { t } = useI18n();
-  const customer = automation?.customer;
-  const missingLabels: Record<string, string> = {
-    name: t("direct.fullName"),
-    phone: t("direct.phone"),
-    city: t("direct.city"),
-    delivery_address: t("direct.warehouse"),
-  };
-  if (loading) return <div className="border-b border-border-subtle px-4 py-3"><LoadingSkeleton rows={1} /></div>;
-  return (
-    <section className="border-b border-border-subtle bg-surface-2/60 px-4 py-3" data-direct-customer-automation>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-black">{t("direct.orderSection")}</p>
-            <span className={`rounded-full px-2 py-1 text-xs font-black ${automation?.profile_complete ? "bg-emerald-500/15 text-emerald-700" : customer ? "bg-amber-500/15 text-amber-700" : "bg-surface-1 text-text-muted"}`}>
-              {automation?.profile_complete ? t("direct.profileComplete") : customer ? t("direct.prospect") : t("direct.notCreated")}
-            </span>
-          </div>
-          {conversation.channel === "INSTAGRAM" && conversation.linked_lead_id ? (
-            <p className="mt-1 text-xs font-semibold text-emerald-700">{t("direct.leadLinked")}</p>
-          ) : null}
-          {customer ? (
-            <p className="mt-1 text-sm text-text-secondary">
-              {customer.name}{customer.instagram_username ? ` · @${customer.instagram_username}` : ""}
-            </p>
-          ) : (
-            <p className="mt-1 text-sm text-text-secondary">{t("direct.prospectHint")}</p>
-          )}
-          {automation?.missing_fields.length ? (
-            <p className="mt-1 text-xs font-semibold text-amber-700">{t("direct.missingFields", { fields: automation.missing_fields.map((field) => missingLabels[field] ?? t("direct.otherField")).join(", ") })}</p>
-          ) : null}
-          {error ? <p className="mt-1 text-xs font-semibold text-rose-600">{t("direct.customerError")}</p> : null}
-          {leadError ? <p role="alert" className="mt-1 text-xs font-semibold text-rose-600">{t("direct.leadError")}</p> : null}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {canManage && conversation.channel === "INSTAGRAM" && !conversation.linked_lead_id ? (
-            <Button variant="secondary" onClick={onEnsureLead} disabled={ensuringLead}>
-              {ensuringLead ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-              {t("direct.createLead")}
-            </Button>
-          ) : null}
-          {conversation.linked_lead_id ? (
-            <Link className="inline-flex min-h-10 items-center rounded-2xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-black text-text-primary" href="/leads">
-              {t("direct.openLeads")}
-            </Link>
-          ) : null}
-          {!customer && canManage ? (
-            <Button variant="secondary" onClick={onEnsure} disabled={ensuring}>
-              {ensuring ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-              {t("direct.createProspect")}
-            </Button>
-          ) : null}
-          {customer && automation?.can_create_order && canManage ? (
-            <Link
-              className="inline-flex min-h-10 items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-black text-primary-foreground"
-              href={`/orders?create=1&customer_id=${encodeURIComponent(customer.id)}&direct_conversation_id=${encodeURIComponent(conversation.id)}`}
-            >
-              <ShoppingBag className="h-4 w-4" />
-              {t(automation?.linked_order_id ? "direct.createAnotherOrder" : "direct.createOrder")}
-            </Link>
-          ) : null}
-          {automation?.linked_order_id ? (
-            <Link
-              className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-black text-primary"
-              href={`/orders?order_id=${encodeURIComponent(automation.linked_order_id)}`}
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              {t("direct.openOrder")}
-            </Link>
-          ) : null}
-        </div>
-      </div>
     </section>
   );
 }

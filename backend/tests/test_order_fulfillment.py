@@ -206,3 +206,65 @@ def test_fulfillment_migration_is_workspace_unique_and_rls_protected() -> None:
     assert 'down_revision: str | None = "202607160023"' in migration
     assert "uq_order_fulfillments_workspace_idempotency_key" in migration
     assert 'ENABLE ROW LEVEL SECURITY' in migration
+
+
+def test_direct_checkout_blocks_missing_customer_before_any_operation(monkeypatch):
+    from app.services.order_fulfillment_service import OrderFulfillmentValidationError
+    service=OrderFulfillmentService.__new__(OrderFulfillmentService)
+    service.db=object()
+    service._prepare_operation=lambda *a,**k: (_ for _ in ()).throw(AssertionError("unexpected operation creation"))
+    payload=_payload().model_copy(update={
+        "source_direct_conversation_id": uuid4(),
+        "customer_id": None,
+    })
+    import pytest
+    with pytest.raises(OrderFulfillmentValidationError,match="DIRECT_LINKED_CUSTOMER_REQUIRED"):
+        service.create(uuid4(),payload,None)
+
+
+def test_direct_checkout_rejects_foreign_or_unlinked_customer_before_order(monkeypatch):
+    from app.services.order_fulfillment_service import OrderFulfillmentValidationError
+    import app.services.order_fulfillment_service as module
+    import pytest
+    workspace=uuid4()
+    conversation=uuid4()
+    customer=uuid4()
+    other_customer=uuid4()
+    service=OrderFulfillmentService.__new__(OrderFulfillmentService)
+    service.db=object()
+    service._prepare_operation=lambda *a,**k: (_ for _ in ()).throw(AssertionError("unexpected operation creation"))
+    fake_repo=SimpleNamespace(get=lambda w,c: SimpleNamespace(linked_customer_id=other_customer) if (w,c)==(workspace,conversation) else None)
+    monkeypatch.setattr(module,"DirectConversationRepository",lambda db:fake_repo)
+    payload=_payload().model_copy(update={
+        "source_direct_conversation_id": conversation,
+        "customer_id": customer,
+    })
+    with pytest.raises(OrderFulfillmentValidationError,match="DIRECT_CUSTOMER_CONVERSATION_MISMATCH"):
+        service.create(workspace,payload,None)
+    with pytest.raises(OrderFulfillmentValidationError,match="DIRECT_CUSTOMER_CONVERSATION_MISMATCH"):
+        service.create(uuid4(),payload,None)
+
+
+def test_direct_checkout_allows_correct_scoped_customer_for_idempotent_order(monkeypatch):
+    import app.services.order_fulfillment_service as module
+    import pytest
+    workspace=uuid4()
+    conversation=uuid4()
+    customer=uuid4()
+    service=OrderFulfillmentService.__new__(OrderFulfillmentService)
+    service.db=object()
+    observed=[]
+    def matched_get(w,c):
+        observed.append((w,c))
+        return SimpleNamespace(linked_customer_id=customer) if (w,c)==(workspace,conversation) else None
+    monkeypatch.setattr(module,"DirectConversationRepository",lambda db:SimpleNamespace(get=matched_get))
+    def checked_prepare(*args):
+        raise RuntimeError("FAKE_PREPARE_AFTER_SUCCESSFUL_DIRECT_VALIDATION")
+    service._prepare_operation=checked_prepare
+    payload=_payload().model_copy(update={
+        "source_direct_conversation_id": conversation,
+        "customer_id": customer,
+    })
+    with pytest.raises(RuntimeError,match="FAKE_PREPARE_AFTER_SUCCESSFUL_DIRECT_VALIDATION"):
+        service.create(workspace,payload,None)
+    assert observed==[(workspace,conversation)]
