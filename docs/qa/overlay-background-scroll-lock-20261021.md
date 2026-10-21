@@ -53,3 +53,16 @@ Chrome, both 1440px and 390px passed: the nested drawer scroll advanced by
 420px, background app scroll remained unchanged at 190px, and original lock
 state and scroll position were restored after closing. The child retains
 overscroll-contain via Tailwind.
+
+## Final Chrome investigation — wrapper overflow
+
+Chrome's wheel events could reach the scrollable dialog inner DIV without
+moving it when its flex parent was overflow: hidden. Removing only wrapper
+overscroll behavior was insufficient on the subsequent exact deployment.
+Changing the wrapper to overflow: clip preserved visual clipping and removed
+the synthetic scroll-container boundary. Direct Chrome test with this single
+CSS override passed both 1440×900 and 390×844: +420px internal scroll,
+unchanged 190px background scroll, original page position restored after close,
+modal lock present and no real API mutations. Make this permanent on the
+shared Drawer, Modal, BottomSheet and independent FeedbackDialog wrappers.
+Verification of final deployed source must be repeated with NO test overrides.

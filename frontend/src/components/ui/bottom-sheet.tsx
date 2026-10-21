@@ -44,7 +44,7 @@ export function BottomSheet({ open, title, closeLabel, children, onClose }: { op
     <Portal>
       <div className="fixed inset-0 z-[200] md:hidden" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <button className="absolute inset-0 h-full w-full cursor-default bg-[var(--overlay-background)] backdrop-blur-sm" type="button" aria-label={closeLabel} onClick={onClose} />
-        <section ref={panelRef} className="sellora-dialog-panel absolute inset-x-0 bottom-0 z-[210] flex max-h-[94dvh] min-w-0 flex-col overflow-hidden rounded-t-[28px] border border-b-0 border-border-subtle bg-surface-1 shadow-[var(--shadow-overlay)]">
+        <section ref={panelRef} className="sellora-dialog-panel absolute inset-x-0 bottom-0 z-[210] flex max-h-[94dvh] min-w-0 flex-col overflow-clip rounded-t-[28px] border border-b-0 border-border-subtle bg-surface-1 shadow-[var(--shadow-overlay)]">
           <div className="flex items-center gap-3 border-b border-border-subtle bg-surface-1/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
             <div className="min-w-0 flex-1">
               <div className="mb-2 h-1.5 w-12 rounded-full bg-surface-3" aria-hidden="true" />
