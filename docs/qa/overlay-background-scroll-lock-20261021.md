@@ -26,8 +26,10 @@ independent overflow effects that could conflict if dialogs overlapped.
 
 - One shared reference-counted lock utility for all portal-based dialogs,
   bottom sheets and the feedback dialog.
-- html/body overflow locked and app's separately scrolling main pane
-  locked by CSS while a dialog is open.
+- html/body overflow locked directly via inline styles. The full-screen
+  portal backdrop captures the pointer. Do not apply additional
+  CSS-important overflow rules or disable nested app scroll containers:
+  Chrome's wheel handling for React-portal children then stops working.
 - Preserve scroll position and original styles.
 - Do not inert the app root: Chrome also suppressed wheel scroll events
   in React portal content.

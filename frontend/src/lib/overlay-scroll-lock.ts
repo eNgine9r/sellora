@@ -50,8 +50,9 @@ export function acquireOverlayScrollLock(): () => void {
 
     // Do not set inert on the app shell: React portal event ancestry can
     // otherwise suppress wheel scrolling inside the actual modal content.
-    // Its full-viewport backdrop intercepts pointer interaction, while the
-    // data-sellora-scroll-locked CSS blocks the nested page scroll region.
+    // The portal backdrop intercepts input, and document root overflow is
+    // locked by inline styles. Never add global CSS-important overflow rules:
+    // these interfere with nested scrolling in React portal dialogs.
 
     restoreLastLock = () => {
       if (previousRootAttribute === null) html.removeAttribute("data-sellora-scroll-locked");
