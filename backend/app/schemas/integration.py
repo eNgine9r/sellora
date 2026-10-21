@@ -21,6 +21,7 @@ class NovaPoshtaSettingsRequest(BaseModel):
     sender_phone: str | None = None
     cod_payment_mode: Literal["MONEY_RETURN", "PAYMENT_CONTROL"] = "MONEY_RETURN"
     cargo_description: str | None = Field(default=None, max_length=60)
+    cargo_description_mode: Literal["STATIC", "AUTO_ACCESSORIES"] = "STATIC"
 
 
 class NovaPoshtaWritePermissionRequest(BaseModel):
@@ -41,6 +42,7 @@ class NovaPoshtaSettingsResponse(BaseModel):
     sender_phone: str | None = None
     cod_payment_mode: Literal["MONEY_RETURN", "PAYMENT_CONTROL"] = "MONEY_RETURN"
     cargo_description: str | None = None
+    cargo_description_mode: Literal["STATIC", "AUTO_ACCESSORIES"] = "STATIC"
     environment_capability: bool = False
     workspace_permission: bool = False
     provider_writes_enabled: bool = False

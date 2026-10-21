@@ -36,6 +36,7 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
   const [senderPhone, setSenderPhone] = useState(settings?.sender_phone ?? "");
   const [codPaymentMode, setCodPaymentMode] = useState<"MONEY_RETURN" | "PAYMENT_CONTROL">(settings?.cod_payment_mode ?? "MONEY_RETURN");
   const [cargoDescription, setCargoDescription] = useState(settings?.cargo_description ?? "");
+  const [cargoDescriptionMode, setCargoDescriptionMode] = useState<"STATIC" | "AUTO_ACCESSORIES">(settings?.cargo_description_mode ?? "STATIC");
   const [senderCitySearch, setSenderCitySearch] = useState("");
   const [senderWarehouseSearch, setSenderWarehouseSearch] = useState("");
   const [senderQuery, setSenderQuery] = useState("");
@@ -66,6 +67,7 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
     setSenderPhone(settings?.sender_phone ?? "");
     setCodPaymentMode(settings?.cod_payment_mode ?? "MONEY_RETURN");
     setCargoDescription(settings?.cargo_description ?? "");
+    setCargoDescriptionMode(settings?.cargo_description_mode ?? "STATIC");
   }, [settings]);
 
   const missingSenderFields = useMemo(() => [
@@ -88,6 +90,7 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
       sender_phone: senderPhone || null,
       cod_payment_mode: codPaymentMode,
       cargo_description: cargoDescription.trim() || null,
+      cargo_description_mode: cargoDescriptionMode,
     });
     setApiKey("");
   }
@@ -139,9 +142,21 @@ export function NovaPoshtaSettingsCard({ workspaceId, settings, message, isSavin
           {senders.isSuccess && !senders.data.length ? <p className="text-sm">{t("novaPoshta.noSenders")}</p> : null}
           {contacts.isSuccess && !contacts.data.length ? <p className="text-sm">{t("novaPoshta.noContacts")}</p> : null}
           <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-            <span>{t("novaPoshta.cargoDescriptionLabel")}</span>
+            <span>{t("novaPoshta.cargoDescriptionModeLabel")}</span>
+            <select className={inputClass} value={cargoDescriptionMode} onChange={event => setCargoDescriptionMode(event.target.value as "STATIC" | "AUTO_ACCESSORIES")}>
+              <option value="STATIC">{t("novaPoshta.cargoDescriptionModeManual")}</option>
+              <option value="AUTO_ACCESSORIES">{t("novaPoshta.cargoDescriptionModeAutomatic")}</option>
+            </select>
+            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+              {t(cargoDescriptionMode === "AUTO_ACCESSORIES" ? "novaPoshta.cargoDescriptionModeAutoHelp" : "novaPoshta.cargoDescriptionModeManualHelp")}
+            </span>
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            <span>{t(cargoDescriptionMode === "AUTO_ACCESSORIES" ? "novaPoshta.cargoDescriptionFallbackLabel" : "novaPoshta.cargoDescriptionLabel")}</span>
             <input className={inputClass} maxLength={60} value={cargoDescription} onChange={event => setCargoDescription(event.target.value)} placeholder={t("novaPoshta.cargoDescriptionPlaceholder")} />
-            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">{t("novaPoshta.cargoDescriptionHelp")}</span>
+            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+              {t(cargoDescriptionMode === "AUTO_ACCESSORIES" ? "novaPoshta.cargoDescriptionFallbackHelp" : "novaPoshta.cargoDescriptionHelp")}
+            </span>
           </label>
           <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
             <span>{t("novaPoshta.codModeLabel")}</span>
