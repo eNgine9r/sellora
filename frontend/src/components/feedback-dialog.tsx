@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, ReactNode, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { MessageSquare, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/i18n/provider";
 import { submitPilotFeedback } from "@/services/feedback";
 import { FeedbackCategory } from "@/services/feedback";
+import { acquireOverlayScrollLock } from "@/lib/overlay-scroll-lock";
 
 const CATEGORIES: FeedbackCategory[] = ["ISSUE", "IDEA", "CONFUSION", "PRAISE", "OTHER"];
 
@@ -25,6 +26,11 @@ export function FeedbackDialog({ workspaceId, buttonClassName, buttonContent, on
   const [rating, setRating] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+
+  useEffect(() => {
+    if (!open) return;
+    return acquireOverlayScrollLock();
+  }, [open]);
 
   function setDialogOpen(nextOpen: boolean) {
     setOpen(nextOpen);
@@ -47,7 +53,7 @@ export function FeedbackDialog({ workspaceId, buttonClassName, buttonContent, on
 
   const modal = open ? (
     <div className="feedback-modal fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={t("feedback.form.title")}>
-          <section className="max-h-[min(92vh,760px)] w-full overflow-hidden rounded-t-[30px] bg-white shadow-2xl dark:bg-slate-950 sm:max-w-lg sm:rounded-[30px]">
+          <section className="max-h-[min(92vh,760px)] w-full overflow-clip rounded-t-[30px] bg-white shadow-2xl dark:bg-slate-950 sm:max-w-lg sm:rounded-[30px]">
             <div className="max-h-[min(92vh,760px)] overflow-y-auto overscroll-contain p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>

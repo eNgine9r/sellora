@@ -384,7 +384,10 @@ input[type="file"]::file-selector-button {
 }
 
 .sellora-dialog-panel {
-  overscroll-behavior: contain;
+  /* The wrapper uses overflow: clip instead of overflow: hidden, because
+     hidden creates a scroll container that traps wheel scroll intended for
+     its nested overflow-y-auto dialog content in desktop Chrome.
+     Overscroll containment stays on the actual scrollable child. */
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
 }

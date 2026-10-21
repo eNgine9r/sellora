@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { Button, IconButton } from "@/components/ui/primitives";
 import { Portal } from "@/components/ui/portal";
 import { useI18n } from "@/i18n/provider";
+import { acquireOverlayScrollLock } from "@/lib/overlay-scroll-lock";
 
 type OverlaySize = "sm" | "md" | "lg" | "xl";
 const modalSizeClass: Record<OverlaySize, string> = {
@@ -17,15 +18,16 @@ const modalSizeClass: Record<OverlaySize, string> = {
 export function useOverlayLifecycle(open: boolean, onClose: () => void) {
   const panelRef = useRef<HTMLElement | null>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     previousFocus.current = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseScrollLock = acquireOverlayScrollLock();
     const id = window.setTimeout(() => panelRef.current?.focus(), 0);
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
       if (event.key !== "Tab" || !panelRef.current) return;
       const focusable = panelRef.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])');
       if (!focusable.length) return;
@@ -37,11 +39,11 @@ export function useOverlayLifecycle(open: boolean, onClose: () => void) {
     document.addEventListener("keydown", onKeyDown);
     return () => {
       window.clearTimeout(id);
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
       document.removeEventListener("keydown", onKeyDown);
       previousFocus.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return panelRef;
 }
@@ -56,7 +58,7 @@ export function Drawer({ open, title, description, children, footer, onClose }: 
     <Portal>
       <div className="fixed inset-0 z-[var(--z-overlay)]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <button className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("actions.close")} onClick={onClose} />
-        <section ref={panelRef} tabIndex={-1} className="sellora-dialog-panel absolute inset-x-0 bottom-0 flex max-h-[96dvh] min-h-0 flex-col overflow-hidden rounded-t-[28px] border border-b-0 border-border-subtle bg-surface-1 shadow-[var(--shadow-overlay)] outline-none sm:inset-y-4 sm:left-auto sm:right-4 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:w-[min(520px,calc(100vw-2rem))] sm:rounded-[var(--radius-shell)] sm:border md:inset-y-0 md:right-0 md:h-dvh md:max-h-dvh md:rounded-none md:border-y-0 md:border-r-0">
+        <section ref={panelRef} tabIndex={-1} className="sellora-dialog-panel absolute inset-x-0 bottom-0 flex max-h-[96dvh] min-h-0 flex-col overflow-clip rounded-t-[28px] border border-b-0 border-border-subtle bg-surface-1 shadow-[var(--shadow-overlay)] outline-none sm:inset-y-4 sm:left-auto sm:right-4 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:w-[min(520px,calc(100vw-2rem))] sm:rounded-[var(--radius-shell)] sm:border md:inset-y-0 md:right-0 md:h-dvh md:max-h-dvh md:rounded-none md:border-y-0 md:border-r-0">
           <header className="sticky top-0 z-10 flex min-w-0 items-start justify-between gap-3 border-b border-border-subtle bg-surface-1/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur sm:p-5">
             <div className="min-w-0"><h2 id={titleId} className="break-words text-xl font-black text-text-primary">{title}</h2>{description ? <p className="mt-1 break-words text-sm leading-6 text-text-secondary">{description}</p> : null}</div>
             <IconButton variant="ghost" onClick={onClose} aria-label={t("actions.close")}><X className="h-5 w-5" /></IconButton>
@@ -79,7 +81,7 @@ export function Modal({ open, title, description, children, onClose, size = "md"
     <Portal>
       <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end justify-center overflow-hidden sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <button className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("actions.close")} onClick={onClose} />
-        <section ref={panelRef} tabIndex={-1} className={`sellora-dialog-panel relative flex max-h-[96dvh] w-full ${modalSizeClass[size]} min-w-0 flex-col overflow-hidden rounded-t-[28px] border border-b-0 border-border-subtle bg-surface-1 shadow-[var(--shadow-overlay)] outline-none sm:max-h-[calc(100dvh-2rem)] sm:rounded-[var(--radius-shell)] sm:border`}>
+        <section ref={panelRef} tabIndex={-1} className={`sellora-dialog-panel relative flex max-h-[96dvh] w-full ${modalSizeClass[size]} min-w-0 flex-col overflow-clip rounded-t-[28px] border border-b-0 border-border-subtle bg-surface-1 shadow-[var(--shadow-overlay)] outline-none sm:max-h-[calc(100dvh-2rem)] sm:rounded-[var(--radius-shell)] sm:border`}>
           <header className="flex min-w-0 items-start justify-between gap-3 border-b border-border-subtle bg-surface-1/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur sm:p-5">
             <div className="min-w-0"><h2 id={titleId} className="break-words text-xl font-black text-text-primary">{title}</h2>{description ? <p className="mt-1 break-words text-sm leading-6 text-text-secondary">{description}</p> : null}</div>
             <IconButton variant="ghost" onClick={onClose} aria-label={t("actions.close")}><X className="h-5 w-5" /></IconButton>
