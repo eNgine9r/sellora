@@ -35,3 +35,16 @@ Chrome QA uses a fully intercepted **synthetic user and synthetic conversations*
 - Frontend-only: backend image, Meta flags, NP tracking and actual workspace records unchanged.
 - Draft PR stacked on Direct Sales #277; **do not merge into main** until legacy Render deploy automation is safely retired.
 - Vercel explicit staging alias from exact SHA after Chrome QA.
+
+## Final Chrome results (after mobile footer fix)
+
+Latest **single-process production build PASS**, TypeScript / ESLint PASS.
+
+Chrome synthetic-browser PASS at **1440, 1024, 768, 390, 320 px**:
+- Conversation timeline heights: **500, 371, 437, 421, 277 px** respectively.
+- Desktop 1440px: 290px dialog list + 872px message pane; no permanent AI.
+- Mobile 390px: 85px sales context, 421px message pane, send policy footer ends at **740px**, above the bottom navigation.
+- Mobile 320px: send policy footer ends at **596px**, above the bottom navigation.
+- All three inspector tabs opened successfully, no horizontal overflow or runtime errors.
+- All 35 intercepted API requests were synthetic, **0 real backend requests**, no Meta sends or CRM writes.
+- Fix: mobile shell height accounts for the fixed navigation; compact mobile-only intent and send-disabled labels.
