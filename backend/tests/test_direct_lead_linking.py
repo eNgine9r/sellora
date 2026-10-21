@@ -224,7 +224,7 @@ def test_webhook_inbound_qualified_message_links_once_and_preserves_replay(monke
     inbound._ensure_customer_safe = lambda *args: None
     event = SimpleNamespace(workspace_id=conversation.workspace_id, event_external_id='event-1',
                             payload={'entry':[{'id':'business-id'}]})
-    connection = SimpleNamespace(id=conversation.instagram_connection_id, last_message_received_at=None)
+    connection = SimpleNamespace(id=conversation.instagram_connection_id, instagram_account_id='business-id', last_message_received_at=None)
     incoming = {'sender': {'id': conversation.participant_scoped_id},
                 'recipient': {'id':'business-id'}, 'timestamp': 1784538000000,
                 'message': {'mid':'mid-qualified-1', 'text':'Хочу купити'}}
@@ -272,7 +272,7 @@ def test_lead_failure_does_not_drop_verified_incoming_message():
     inbound._enrich_profile_safe=lambda *a:None
     inbound._ensure_customer_safe=lambda *a:None
     event=SimpleNamespace(workspace_id=c.workspace_id,event_external_id='evt',payload={'entry':[{'id':'shop'}]})
-    connection=SimpleNamespace(id=c.instagram_connection_id,last_message_received_at=None)
+    connection=SimpleNamespace(id=c.instagram_connection_id,instagram_account_id='shop',last_message_received_at=None)
     msg={'sender':{'id':c.participant_scoped_id},'recipient':{'id':'shop'},
          'message':{'mid':'mid-1','text':'Куплю'}}
     assert inbound._process_item(event,connection,msg)==1
