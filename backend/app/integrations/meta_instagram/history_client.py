@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -44,6 +44,7 @@ class MetaMessageDetails:
     message: str | None
     is_unsupported: bool
     reply_to_mid: str | None = None
+    attachments: list[dict[str, str]] = field(default_factory=list)
 
 
 class MetaInstagramHistoryClient:
@@ -104,15 +105,29 @@ class MetaInstagramHistoryClient:
         rich_params = {"fields": rich_fields}
         basic_params = {"fields": basic_fields}
         if after:
-            rich_params["after"] = after
-            basic_params["after"] = after
-        try:
-            payload = await self._get(f"/{conversation_id}", params=rich_params)
-        except MetaInstagramError as exc:
-            if not self._unsupported_fields_error(exc):
-                raise
-            payload = await self._get(f"/{conversation_id}", params=basic_params)
-        messages_payload = payload.get("messages") if isinstance(payload, dict) else None
+            # The cursor belongs to the nested messages edge, not the thread object.
+            edge_params = {
+                "fields": "id,created_time,message,from,to,is_unsupported",
+                "limit": bounded_limit, "after": after,
+            }
+            try:
+                payload = await self._get(f"/{conversation_id}/messages", params=edge_params)
+            except MetaInstagramError as exc:
+                if not self._unsupported_fields_error(exc):
+                    raise
+                payload = await self._get(
+                    f"/{conversation_id}/messages",
+                    params={"fields": "id,created_time", "limit": bounded_limit, "after": after},
+                )
+            messages_payload = payload
+        else:
+            try:
+                payload = await self._get(f"/{conversation_id}", params=rich_params)
+            except MetaInstagramError as exc:
+                if not self._unsupported_fields_error(exc):
+                    raise
+                payload = await self._get(f"/{conversation_id}", params=basic_params)
+            messages_payload = payload.get("messages") if isinstance(payload, dict) else None
         rows = messages_payload.get("data") if isinstance(messages_payload, dict) else None
         messages = [
             MetaMessageSummary(
@@ -136,7 +151,14 @@ class MetaInstagramHistoryClient:
         full_fields = "id,created_time,from,to,message,is_unsupported,reply_to"
         basic_fields = "id,created_time,from,to,message"
         try:
-            payload = await self._get(f"/{message_id}", params={"fields": full_fields})
+            try:
+                payload = await self._get(
+                    f"/{message_id}", params={"fields": full_fields + ",attachments"}
+                )
+            except MetaInstagramError as media_error:
+                if not self._unsupported_fields_error(media_error):
+                    raise
+                payload = await self._get(f"/{message_id}", params={"fields": full_fields})
         except MetaInstagramError as exc:
             if self._unsupported_fields_error(exc):
                 try:
@@ -157,6 +179,25 @@ class MetaInstagramHistoryClient:
         if isinstance(payload.get("to"), list):
             to_data = payload["to"]
         reply_to = payload.get("reply_to") if isinstance(payload.get("reply_to"), dict) else {}
+        from app.integrations.meta_instagram.media import normalize_attachments
+        provider_attachments = payload.get("attachments")
+        if isinstance(provider_attachments, dict):
+            provider_attachments = provider_attachments.get("data", [])
+        if not isinstance(provider_attachments, list):
+            provider_attachments = []
+        converted = []
+        for entry in provider_attachments:
+            if not isinstance(entry, dict):
+                continue
+            image = entry.get("image_data") or {}
+            video = entry.get("video_data") or {}
+            media_url = (
+                entry.get("file_url") or image.get("url") or video.get("url")
+                or (entry.get("payload") or {}).get("url")
+            )
+            kind = entry.get("type") or ("video" if video else "image")
+            converted.append({"type": kind, "payload": {"url": media_url}})
+        attachments = normalize_attachments({"attachments": converted})
         return MetaMessageDetails(
             id=str(payload.get("id") or fallback_id),
             created_time=str(payload["created_time"]) if payload.get("created_time") else None,
@@ -166,6 +207,7 @@ class MetaInstagramHistoryClient:
             message=str(payload["message"]) if payload.get("message") is not None else None,
             is_unsupported=bool(payload.get("is_unsupported", False)),
             reply_to_mid=str(reply_to["mid"]) if reply_to.get("mid") else None,
+            attachments=attachments,
         )
 
     @staticmethod
