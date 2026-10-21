@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from app.integrations.nova_poshta_client import NovaPoshtaClientError
+from app.repositories.nova_poshta_cargo_repository import NovaPoshtaCargoRepository
+from app.services.nova_poshta_cargo_description import accessory_cargo_description
 from app.services.nova_poshta_service import NovaPoshtaServiceError, NovaPoshtaShipmentService
 from app.utils.phone import to_nova_poshta_phone
 
@@ -30,6 +32,12 @@ class NovaPoshtaProviderShipmentService(NovaPoshtaShipmentService):
         except NovaPoshtaClientError as exc:
             # Never expose raw provider data or credentials via a route exception.
             raise NovaPoshtaServiceError(exc.code) from exc
+        cargo_description = (settings.get("cargo_description") or "Товари").strip() or "Товари"
+        if settings.get("cargo_description_mode", "STATIC") == "AUTO_ACCESSORIES":
+            categories = NovaPoshtaCargoRepository(self.db).list_order_categories(
+                shipment.workspace_id, shipment.order_id
+            )
+            cargo_description = accessory_cargo_description(categories) or cargo_description
         payload = {
             "PayerType": "Recipient",
             "PaymentMethod": "Cash",
@@ -39,7 +47,7 @@ class NovaPoshtaProviderShipmentService(NovaPoshtaShipmentService):
             "Weight": "0.5",
             "ServiceType": "WarehouseWarehouse",
             "SeatsAmount": "1",
-            "Description": "Товар",
+            "Description": cargo_description,
             "Cost": str(shipment.declared_value or 0),
             "CitySender": settings.get("sender_city_ref"),
             "Sender": settings.get("sender_counterparty_ref"),

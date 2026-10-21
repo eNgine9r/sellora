@@ -73,8 +73,10 @@ class FakeClient:
         self.status = status
         self.create_calls = 0
         self.find_calls = 0
+        self.last_create_payload = None
 
     def create_internet_document(self, _payload):
+        self.last_create_payload = _payload
         self.create_calls += 1
         if self.ambiguous:
             raise NovaPoshtaClientError(
@@ -166,6 +168,8 @@ def test_successful_create_is_idempotent_across_service_instances() -> None:
     assert repeated.success
     assert repeated.reused_existing_result
     assert first_client.create_calls == 1
+    assert first_client.last_create_payload["AdditionalInformation"] == operations.operation.provider_marker
+    assert first_client.last_create_payload.get("Description") != operations.operation.provider_marker
     assert first.settings.connection.provider_connection_verified_at is None
     assert second_client.create_calls == 0
     assert operations.operation.state == NovaPoshtaOperationState.COMPLETED.value

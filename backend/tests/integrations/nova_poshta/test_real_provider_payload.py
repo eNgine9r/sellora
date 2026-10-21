@@ -43,6 +43,7 @@ def test_real_provider_payload_contains_required_new_recipient_fields() -> None:
     assert payload["Weight"] == "0.5"
     assert payload["VolumeGeneral"] == "0.001"
     assert payload["SeatsAmount"] == "1"
+    assert payload["Description"] == "Товари"
     assert payload["DateTime"]
     assert payload["SendersPhone"] == "380671234567"
     assert payload["RecipientsPhone"] == "380671234567"
@@ -81,3 +82,35 @@ def test_reference_lookup_rejects_invalid_warehouse_without_provider_write() -> 
     with pytest.raises(NovaPoshtaClientError) as exc:
         client.resolve_recipient_warehouse("city-ref", "missing-wh")
     assert exc.value.code == "NOVA_POSHTA_RECIPIENT_WAREHOUSE_INVALID"
+
+
+def test_workspace_cargo_description_is_human_readable_and_keeps_payment_control() -> None:
+    shipment = SimpleNamespace(
+        workspace_id=uuid4(),
+        nova_poshta_city_ref="city-ref",
+        nova_poshta_warehouse_ref="warehouse-ref",
+        declared_value=600,
+        cod_amount=600,
+        recipient_name="Іван Петренко",
+        recipient_phone="380671234567",
+    )
+    service = NovaPoshtaProviderShipmentService.__new__(NovaPoshtaProviderShipmentService)
+    service.settings = SimpleNamespace(
+        _require_connection=lambda _: (None, "synthetic-key"),
+        client_factory=lambda key: SimpleNamespace(
+            resolve_recipient_warehouse=lambda city, warehouse: ("Луцьк", "4")
+        ),
+    )
+    settings = {
+        "sender_city_ref": "sender-city-ref",
+        "sender_warehouse_ref": "sender-warehouse-ref",
+        "sender_counterparty_ref": "sender-counterparty-ref",
+        "sender_contact_ref": "sender-contact-ref",
+        "sender_phone": "380671234567",
+        "cod_payment_mode": "PAYMENT_CONTROL",
+        "cargo_description": "Біжутерія",
+    }
+    payload = service._document_payload(shipment, settings)
+    assert payload["Description"] == "Біжутерія"
+    assert payload["AfterpaymentOnGoodsCost"] == "600"
+    assert "BackwardDeliveryData" not in payload

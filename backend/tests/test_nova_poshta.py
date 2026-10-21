@@ -418,6 +418,47 @@ def test_cod_payment_mode_change_invalidates_live_write_permission(monkeypatch) 
     assert repeat.provider_writes_enabled is True
 
 
+def test_cargo_description_can_be_configured_without_disabling_ttn(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    service = _settings_service()
+    workspace_id = uuid4()
+    service.save_settings(workspace_id, _complete_settings(), uuid4())
+    service.test_connection(workspace_id, uuid4())
+    service.set_write_permission(workspace_id, NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+
+    updated = service.save_settings(
+        workspace_id,
+        NovaPoshtaSettingsRequest(cargo_description="  Біжутерія  "),
+        uuid4(),
+    )
+
+    assert updated.cargo_description == "Біжутерія"
+    assert updated.provider_writes_enabled
+    assert updated.connection_verified
+    assert updated.workspace_permission
+
+
+def test_cargo_description_mode_can_be_enabled_without_disabling_ttn(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.nova_poshta_service.get_settings", lambda: SimpleNamespace(staging_nova_poshta_allow_writes=True))
+    service = _settings_service()
+    workspace_id = uuid4()
+    service.save_settings(workspace_id, _complete_settings(), uuid4())
+    service.test_connection(workspace_id, uuid4())
+    service.set_write_permission(workspace_id, NovaPoshtaWritePermissionRequest(allowed=True), uuid4())
+    updated = service.save_settings(
+        workspace_id, NovaPoshtaSettingsRequest(cargo_description_mode="AUTO_ACCESSORIES"), uuid4()
+    )
+    assert updated.cargo_description_mode == "AUTO_ACCESSORIES"
+    assert updated.provider_writes_enabled
+
+
+def test_cargo_description_mode_rejects_unknown_value() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        NovaPoshtaSettingsRequest(cargo_description_mode="UNSAFE")
+
+
 def test_cod_payment_mode_rejects_unknown_mode() -> None:
     from pydantic import ValidationError
 
