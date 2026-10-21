@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   MessageCircle,
   ImageOff,
+  ExternalLink,
   RefreshCw,
   Send,
   Sparkles,
@@ -39,6 +40,7 @@ import {
   fetchDirectCustomerAutomation,
   fetchDirectMessages,
   fetchDirectAttachment,
+  linkMissingInstagramPost,
   fetchMessageOperation,
   fetchInstagramHistorySync,
   markDirectConversationRead,
@@ -822,10 +824,7 @@ function MessageThread({
             <div className={`max-w-[82%] break-words rounded-2xl px-4 py-3 text-sm ${message.direction === "OUTBOUND" ? "bg-primary/15 text-text-primary" : "bg-surface-2"}`}>
               {message.delivery_status === "FAILED" ? <p className="mb-1 text-xs font-semibold text-rose-600">{messageStatusLabel(message, t)}</p> : null}
               {!message.text?.trim() && !message.attachments?.length ? (
-                <p className="flex items-center gap-2 text-xs text-text-muted" data-direct-unavailable-content>
-                  <ImageOff className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span>{t("direct.contentUnavailable")}</span>
-                </p>
+                <MissingDirectContent messageId={message.id} canManage={canManage} />
               ) : null}
               {message.text && !message.attachments?.length ? <p>{message.text}</p> : null}
               {message.text && message.attachments?.length && !message.text.startsWith("[") ? <p className="mb-2">{message.text}</p> : null}
@@ -865,6 +864,47 @@ function MessageThread({
   );
 }
 
+function MissingDirectContent({ messageId, canManage }: { messageId: string; canManage: boolean }) {
+  const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [url, setUrl] = useState("");
+  const linkMutation = useMutation({
+    mutationFn: () => linkMissingInstagramPost(messageId, url.trim()),
+    onSuccess: () => {
+      setEditing(false);
+      setUrl("");
+      void queryClient.invalidateQueries({ queryKey: ["direct-messages"] });
+    },
+  });
+  return (
+    <div className="space-y-2 text-xs text-text-muted" data-direct-unavailable-content>
+      <p className="flex items-start gap-2">
+        <ImageOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>{t("direct.contentUnavailable")}</span>
+      </p>
+      {canManage && !editing ? (
+        <button type="button" onClick={() => setEditing(true)} className="text-left font-semibold text-primary underline underline-offset-2">
+          {t("direct.attachMissingPost")}
+        </button>
+      ) : null}
+      {canManage && editing ? (
+        <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); if (!linkMutation.isPending) linkMutation.mutate(); }}>
+          <label className="block text-text-secondary">{t("direct.attachPostHint")}
+            <input type="url" required value={url} onChange={(event) => setUrl(event.target.value)}
+              placeholder="https://www.instagram.com/p/..." className="mt-2 min-h-10 w-full rounded-lg border border-border-subtle bg-surface-1 px-2 text-sm text-text-primary" />
+          </label>
+          {linkMutation.isError ? <p role="alert" className="text-rose-600">{t("direct.attachPostError")}</p> : null}
+          <div className="flex gap-2">
+            <Button size="sm" disabled={linkMutation.isPending || !url.trim()} type="submit">{t("direct.attachPostSave")}</Button>
+            <Button size="sm" variant="secondary" disabled={linkMutation.isPending} type="button" onClick={() => setEditing(false)}>{t("actions.cancel")}</Button>
+          </div>
+        </form>
+      ) : null}
+    </div>
+  );
+}
+
 function DirectAttachmentPreview({
   messageId,
   attachment,
@@ -872,10 +912,12 @@ function DirectAttachmentPreview({
   messageId: string;
   attachment: import("@/types/direct").DirectAttachment;
 }) {
+  const { t } = useI18n();
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const hasBlob = attachment.media_available ?? (attachment.available && !attachment.post_url);
   useEffect(() => {
-    if (!attachment.available) return;
+    if (!hasBlob) return;
     const controller = new AbortController();
     let mounted = true;
     let localUrl: string | null = null;
@@ -893,13 +935,22 @@ function DirectAttachmentPreview({
       controller.abort();
       if (localUrl) URL.revokeObjectURL(localUrl);
     };
-  }, [messageId, attachment.index, attachment.available]);
+  }, [messageId, attachment.index, hasBlob]);
 
   const type = attachment.type;
   const isVideo = type === "video" || type === "reel";
   const isImage = ["image", "ig_post", "share", "sticker", "template"].includes(type);
-  if (!attachment.available || failed) {
-    return <div className="rounded-xl border border-border-subtle bg-surface-1 px-3 py-4 text-xs text-text-muted">{attachment.label}: медіа недоступне в Meta</div>;
+  if ((!attachment.available || failed) && !attachment.post_url) {
+    return <div className="rounded-xl border border-border-subtle bg-surface-1 px-3 py-4 text-xs text-text-muted">{attachment.label}: {t("direct.mediaUnavailable")}</div>;
+  }
+  if (attachment.post_url && (!hasBlob || failed)) {
+    return (
+      <a href={attachment.post_url} target="_blank" rel="noopener noreferrer"
+        className="flex items-center gap-2 rounded-xl border border-border-subtle bg-surface-1 px-3 py-4 text-sm font-semibold text-primary">
+        <ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {t("direct.viewInstagramPost")}
+      </a>
+    );
   }
   return (
     <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface-1">
@@ -911,7 +962,8 @@ function DirectAttachmentPreview({
       {objectUrl && isVideo ? <video src={objectUrl} controls preload="none" className="max-h-80 w-full" /> : null}
       {objectUrl && !isVideo && !isImage ? <a href={objectUrl} download="instagram-attachment" className="block p-3 text-sm text-primary underline">Відкрити вкладення</a> : null}
       {!objectUrl ? <div className="flex min-h-24 items-center justify-center p-3 text-xs text-text-muted">Завантажуємо вкладення…</div> : null}
-      <p className="border-t border-border-subtle px-2 py-1 text-xs text-text-muted">{attachment.label}</p>
+      {attachment.post_url ? <a href={attachment.post_url} target="_blank" rel="noopener noreferrer" className="block border-t border-border-subtle px-2 py-1 text-xs text-primary underline">{t("direct.viewInstagramPost")}</a> :
+        <p className="border-t border-border-subtle px-2 py-1 text-xs text-text-muted">{attachment.label}</p>}
     </div>
   );
 }

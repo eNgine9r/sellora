@@ -70,3 +70,10 @@ export async function fetchDirectAttachment(messageId: string, index: number, si
   if (!response.ok) throw new Error("DIRECT_MEDIA_UNAVAILABLE");
   return response.blob();
 }
+
+export function linkMissingInstagramPost(messageId: string, permalink: string) {
+  return apiRequest<DirectMessage>(`/direct/messages/${encodeURIComponent(messageId)}/instagram-post`, {
+    method: "PUT",
+    body: JSON.stringify({ permalink }),
+  });
+}

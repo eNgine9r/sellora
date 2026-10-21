@@ -36,6 +36,8 @@ export type DirectAttachment = {
   type: string;
   label: string;
   available: boolean;
+  media_available?: boolean;
+  post_url?: string | null;
 };
 
 export type DirectMessage = {
