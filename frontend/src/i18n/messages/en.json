@@ -2503,6 +2503,11 @@
     }
   },
   "proposal": {
+    "commercialStageLabel": "Direct conversation signal",
+    "managerConfirmationRequired": "Manager reviews before creating the order",
+    "unconfirmedOrderWarning": "A purchase request is not a confirmed order. Check the product, quantity, and customer before creating one.",
+    "inboundProductReview": "Suggestion based on a product title or category, not a confirmed customer choice. Select a variant and verify it.",
+    "commercialStage": {"NONE": "No purchase request identified", "INTEREST": "Product interest", "PRODUCT_QUESTION": "Product or delivery question", "PURCHASE_REQUEST": "Customer requests a purchase"},
     "currentPrice": "Current price",
     "title": "Products from conversation",
     "refresh": "Refresh proposal",

@@ -31,6 +31,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 import { ApiError } from "@/services/api";
 import { fetchAISuggestions } from "@/services/ai";
+import { fetchDirectOrderProposal } from "@/services/direct";
+import type { DirectOrderProposal } from "@/types/order-proposal";
 import {
   ensureDirectCustomer,
   ensureDirectLead,
@@ -146,6 +148,13 @@ export default function DirectPage() {
     queryKey: ["ai-suggestions", workspaceId, selectedConversation?.id],
     queryFn: () => fetchAISuggestions(selectedConversation!.id),
     enabled: Boolean(selectedConversation?.id),
+  });
+  const commercialQuery = useQuery<DirectOrderProposal>({
+    queryKey: ["direct-order-proposal", workspaceId, selectedConversation?.id],
+    queryFn: () => fetchDirectOrderProposal(workspaceId!, selectedConversation!.id),
+    enabled: Boolean(workspaceId && selectedConversation?.id),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
   });
   const statusQuery = useQuery({
     queryKey: ["instagram-connection-status", workspaceId],
@@ -397,7 +406,13 @@ export default function DirectPage() {
         />
         </div>
         <div className={`${selectedConversation ? "flex" : "hidden lg:flex"} min-h-0 min-w-0 flex-col`}>
-
+          {selectedConversation && commercialQuery.data?.conversation_id === selectedConversation.id && commercialQuery.data.commercial_stage !== "NONE" ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs" data-direct-commercial-status={commercialQuery.data.commercial_stage}>
+              <ShoppingBag className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <strong>{t(`proposal.commercialStage.${commercialQuery.data.commercial_stage}`)}</strong>
+              <span className="text-text-secondary">{t("proposal.managerConfirmationRequired")}</span>
+            </div>
+          ) : null}
         <MessageThread
           handoffKey={ttnOrderId && ttnShipmentId ? `${draftKey}:${ttnOrderId}:${ttnShipmentId}` : undefined}
           handoff={canManage && workspaceId && selectedConversation && selectedConversation.id === searchParams.get("conversation") && ttnOrderId && ttnShipmentId ? <DirectTtnDraft key={`${draftKey}:${ttnOrderId}:${ttnShipmentId}`} workspaceId={workspaceId} conversationId={selectedConversation.id} orderId={ttnOrderId} shipmentId={ttnShipmentId} draftText={replyText} onInsert={setReplyText} /> : null}
