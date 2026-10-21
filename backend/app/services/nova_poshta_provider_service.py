@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from app.services.nova_poshta_service import NovaPoshtaShipmentService
+from app.integrations.nova_poshta_client import NovaPoshtaClientError
+from app.services.nova_poshta_service import NovaPoshtaServiceError, NovaPoshtaShipmentService
 from app.utils.phone import to_nova_poshta_phone
 
 
@@ -15,6 +16,20 @@ class NovaPoshtaProviderShipmentService(NovaPoshtaShipmentService):
     """
 
     def _document_payload(self, shipment, settings: dict) -> dict:
+        # The user-facing city/warehouse labels are not valid NewAddress values:
+        # e.g. "м. Луцьк, Волинська обл." / "Відділення №4: вул. ...".
+        # Resolve verified provider references without changing the saved labels.
+        _connection, api_key = self.settings._require_connection(shipment.workspace_id)
+        try:
+            recipient_city, recipient_warehouse = self.settings.client_factory(
+                api_key
+            ).resolve_recipient_warehouse(
+                shipment.nova_poshta_city_ref,
+                shipment.nova_poshta_warehouse_ref,
+            )
+        except NovaPoshtaClientError as exc:
+            # Never expose raw provider data or credentials via a route exception.
+            raise NovaPoshtaServiceError(exc.code) from exc
         payload = {
             "PayerType": "Recipient",
             "PaymentMethod": "Cash",
@@ -32,8 +47,8 @@ class NovaPoshtaProviderShipmentService(NovaPoshtaShipmentService):
             "ContactSender": settings.get("sender_contact_ref"),
             "SendersPhone": to_nova_poshta_phone(settings.get("sender_phone")),
             "NewAddress": "1",
-            "RecipientCityName": shipment.city,
-            "RecipientAddressName": shipment.warehouse,
+            "RecipientCityName": recipient_city,
+            "RecipientAddressName": recipient_warehouse,
             "RecipientName": shipment.recipient_name,
             "RecipientType": "PrivatePerson",
             "RecipientsPhone": to_nova_poshta_phone(shipment.recipient_phone),

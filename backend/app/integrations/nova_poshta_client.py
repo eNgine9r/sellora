@@ -171,6 +171,39 @@ class NovaPoshtaClient:
         return [NovaPoshtaCity(ref=str(item["Ref"]), description=str(item.get("Description") or " ".join(str(item.get(key) or "") for key in ("LastName", "FirstName", "MiddleName")).strip()))
                 for item in body.get("data", [])[:limit] if item.get("Ref")]
 
+    def resolve_recipient_warehouse(self, city_ref: str, warehouse_ref: str) -> tuple[str, str]:
+        """Get canonical NewAddress values from the provider's trusted Ref directory."""
+        if not city_ref or not warehouse_ref:
+            raise NovaPoshtaClientError(
+                "Recipient city and warehouse references are required",
+                code="NOVA_POSHTA_RECIPIENT_REFS_REQUIRED",
+            )
+        cities = self._call("Address", "getCities", {"Ref": city_ref}).get("data", [])
+        matches = [
+            item for item in cities
+            if item.get("Ref") == city_ref and item.get("Description")
+        ]
+        if len(matches) != 1:
+            raise NovaPoshtaClientError(
+                "Recipient city not found in Nova Poshta directory",
+                code="NOVA_POSHTA_RECIPIENT_CITY_INVALID",
+            )
+        warehouses = self._call(
+            "Address",
+            "getWarehouses",
+            {"CityRef": city_ref, "Ref": warehouse_ref},
+        ).get("data", [])
+        matches_wh = [
+            item for item in warehouses
+            if item.get("Ref") == warehouse_ref and item.get("Number")
+        ]
+        if len(matches_wh) != 1:
+            raise NovaPoshtaClientError(
+                "Recipient warehouse not found in selected city",
+                code="NOVA_POSHTA_RECIPIENT_WAREHOUSE_INVALID",
+            )
+        return str(matches[0]["Description"]).strip(), str(matches_wh[0]["Number"]).strip()
+
     def counterparty_exists(self, counterparty_ref: str) -> bool:
         body = self._call("Counterparty", "getCounterparties", {"Ref": counterparty_ref, "CounterpartyProperty": "Sender", "Page": "1"})
         return any(str(item.get("Ref") or "") == counterparty_ref for item in body.get("data", []))
