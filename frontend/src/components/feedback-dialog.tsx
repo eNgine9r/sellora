@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, ReactNode, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { MessageSquare, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/i18n/provider";
 import { submitPilotFeedback } from "@/services/feedback";
 import { FeedbackCategory } from "@/services/feedback";
+import { acquireOverlayScrollLock } from "@/lib/overlay-scroll-lock";
 
 const CATEGORIES: FeedbackCategory[] = ["ISSUE", "IDEA", "CONFUSION", "PRAISE", "OTHER"];
 
@@ -25,6 +26,11 @@ export function FeedbackDialog({ workspaceId, buttonClassName, buttonContent, on
   const [rating, setRating] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+
+  useEffect(() => {
+    if (!open) return;
+    return acquireOverlayScrollLock();
+  }, [open]);
 
   function setDialogOpen(nextOpen: boolean) {
     setOpen(nextOpen);

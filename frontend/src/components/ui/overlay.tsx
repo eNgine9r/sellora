@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { Button, IconButton } from "@/components/ui/primitives";
 import { Portal } from "@/components/ui/portal";
 import { useI18n } from "@/i18n/provider";
+import { acquireOverlayScrollLock } from "@/lib/overlay-scroll-lock";
 
 type OverlaySize = "sm" | "md" | "lg" | "xl";
 const modalSizeClass: Record<OverlaySize, string> = {
@@ -17,15 +18,16 @@ const modalSizeClass: Record<OverlaySize, string> = {
 export function useOverlayLifecycle(open: boolean, onClose: () => void) {
   const panelRef = useRef<HTMLElement | null>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     previousFocus.current = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseScrollLock = acquireOverlayScrollLock();
     const id = window.setTimeout(() => panelRef.current?.focus(), 0);
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
       if (event.key !== "Tab" || !panelRef.current) return;
       const focusable = panelRef.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])');
       if (!focusable.length) return;
@@ -37,11 +39,11 @@ export function useOverlayLifecycle(open: boolean, onClose: () => void) {
     document.addEventListener("keydown", onKeyDown);
     return () => {
       window.clearTimeout(id);
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
       document.removeEventListener("keydown", onKeyDown);
       previousFocus.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return panelRef;
 }

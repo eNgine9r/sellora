@@ -4,20 +4,22 @@ import { ReactNode, useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import { Portal } from "@/components/ui/portal";
 import { IconButton } from "@/components/ui/primitives";
+import { acquireOverlayScrollLock } from "@/lib/overlay-scroll-lock";
 
 export function BottomSheet({ open, title, closeLabel, children, onClose }: { open: boolean; title: string; closeLabel: string; children: ReactNode; onClose: () => void }) {
   const titleId = useId();
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     previousFocusRef.current = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseScrollLock = acquireOverlayScrollLock();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
       if (event.key !== "Tab" || !panelRef.current) return;
       const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>("button, a, input, select, textarea, [tabindex]:not([tabindex='-1'])")).filter((element) => !element.hasAttribute("disabled") && element.tabIndex !== -1);
       if (!focusable.length) return;
@@ -30,11 +32,11 @@ export function BottomSheet({ open, title, closeLabel, children, onClose }: { op
     const id = window.setTimeout(() => closeButtonRef.current?.focus(), 0);
     return () => {
       window.clearTimeout(id);
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
       document.removeEventListener("keydown", onKeyDown);
       previousFocusRef.current?.focus?.();
     };
-  }, [onClose, open]);
+  }, [open]);
 
   if (!open) return null;
 

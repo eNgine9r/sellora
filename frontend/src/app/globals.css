@@ -424,3 +424,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .dark input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1) brightness(1.45) contrast(1.05);
 }
+
+
+/* When a modal or drawer is open the application must not scroll behind it.
+   The dialog's portal remains independently scrollable. */
+html[data-sellora-scroll-locked="true"],
+html[data-sellora-scroll-locked="true"] body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html[data-sellora-scroll-locked="true"] [data-app-main-scroll] {
+  overflow-y: hidden !important;
+  overscroll-behavior: none;
+}

@@ -111,7 +111,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onSwitchWorkspace={switchWorkspace}
             onWorkspaceCreated={reloadCurrentUser}
           />
-          <div className="min-w-0 overflow-x-hidden lg:min-h-0 lg:overflow-y-auto">
+          <div className="min-w-0 overflow-x-hidden lg:min-h-0 lg:overflow-y-auto" data-app-main-scroll>
             {error ? <p className="mx-4 mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-warning md:mx-6">{error}</p> : null}
             {!currentWorkspaceId ? <NoWorkspaceOnboarding onWorkspaceCreated={reloadCurrentUser} onSwitchWorkspace={switchWorkspace} /> : children}
           </div>
