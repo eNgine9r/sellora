@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     // Sellora overlays. A body-only overflow class does not stop the nested
     // app-shell scrolling on mobile devices. The navigation is portaled to
     // document.body so it stays outside the background scroll container.
-    const releaseScrollLock = acquireOverlayScrollLock();
+    const releaseScrollLock = acquireOverlayScrollLock({ forceFixedBody: true });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMobileMenuOpen(false);
     };

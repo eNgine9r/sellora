@@ -29,3 +29,15 @@
 
 The initial implementation temporarily changed AppShell overflow to clip when opening the menu. Chrome revealed that this reset a scrolled page position (115px -> 0px) even though later wheels no longer moved the background. This is unacceptable.
 The final version instead portals the fixed menu to document.body and uses the existing shared root scroll lock with no AppShell overflow changes. The final deployed Chrome regression must verify the original scroll offset is unchanged both while open and after close, and internal menu scrolling remains functional.
+
+
+## Mobile Chrome scroll-offset preservation
+
+Even with the menu portaled outside AppShell, Mobile Chrome may reset the
+document's numeric scrollY when root overflow becomes hidden. To preserve
+the *visual* background position, mobile hamburger menus request the shared
+scroll utility's forceFixedBody option. It fixes the body at the negative
+pre-open scroll offset and restores original window.scrollY on final release.
+Other overlays keep their prior behavior; this branch changes only menu calls.
+Chrome QA checks body.style.top against the pre-open scrollY, ensures it does
+not move on backdrop wheel/touch gestures, and verifies the restored scrollY.

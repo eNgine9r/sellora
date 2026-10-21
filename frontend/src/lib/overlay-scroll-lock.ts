@@ -5,7 +5,7 @@
 let lockCount = 0;
 let restoreLastLock: (() => void) | null = null;
 
-export function acquireOverlayScrollLock(): () => void {
+export function acquireOverlayScrollLock(options: { forceFixedBody?: boolean } = {}): () => void {
   if (typeof document === "undefined") return () => undefined;
 
   if (lockCount === 0) {
@@ -32,6 +32,7 @@ export function acquireOverlayScrollLock(): () => void {
     // page rubber-banding; other browsers use overflow and a modal backdrop.
     const isIOSWebKit = /iPad|iPhone|iPod/.test(navigator.userAgent)
       || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const useFixedBody = isIOSWebKit || options.forceFixedBody === true;
     const scrollbarGap = Math.max(0, window.innerWidth - html.clientWidth);
     if (scrollbarGap > 0) {
       body.style.paddingRight = `calc(${getComputedStyle(body).paddingRight} + ${scrollbarGap}px)`;
@@ -41,7 +42,7 @@ export function acquireOverlayScrollLock(): () => void {
     html.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
     body.style.overscrollBehavior = "none";
-    if (isIOSWebKit) {
+    if (useFixedBody) {
       body.style.position = "fixed";
       body.style.top = `-${position.y}px`;
       body.style.left = `-${position.x}px`;

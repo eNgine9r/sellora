@@ -55,7 +55,7 @@ function useMobileMenu(open: boolean, onClose: () => void) {
   useEffect(() => {
     if (!open) return;
     previousFocus.current = document.activeElement as HTMLElement | null;
-    const releaseScrollLock = acquireOverlayScrollLock();
+    const releaseScrollLock = acquireOverlayScrollLock({ forceFixedBody: true });
     const id = window.setTimeout(() => panelRef.current?.focus(), 0);
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCloseRef.current();
