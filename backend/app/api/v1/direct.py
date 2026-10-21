@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from pydantic import BaseModel, Field
+
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
@@ -9,6 +11,7 @@ from app.ai.services.direct_intelligence_service import DirectIntelligenceServic
 from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_min_role, require_roles
 from app.integrations.meta_instagram.media import public_attachments
+from app.integrations.meta_instagram.services.share_link_service import InstagramPostLinkError, InstagramPostLinkService
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
 from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
 from app.models.meta_instagram import InstagramConnectionStatus
@@ -79,6 +82,34 @@ def _visible_for_connected_instagram(conversations, active_instagram):
         if conversation.channel != DirectChannel.INSTAGRAM.value
         or conversation.instagram_connection_id == active_instagram.id
     ]
+
+
+
+
+class InstagramPostLinkRequest(BaseModel):
+    permalink: str = Field(min_length=20, max_length=1024)
+
+
+@router.put("/messages/{message_id}/instagram-post", response_model=DirectMessageResponse)
+def link_missing_instagram_post(
+    message_id: UUID,
+    payload: InstagramPostLinkRequest,
+    workspace_id: UUID = Depends(get_workspace_id),
+    user: User = Depends(require_roles(RoleName.OWNER, RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    """Manager-confirmed post reference for history where Meta returned no share link."""
+    try:
+        message = InstagramPostLinkService(db).link(
+            workspace_id, message_id, user.id, payload.permalink
+        )
+    except InstagramPostLinkError as exc:
+        raise HTTPException(exc.status_code, exc.code) from exc
+    db.commit()
+    db.refresh(message)
+    return DirectMessageResponse.model_validate(message).model_copy(
+        update={"attachments": public_attachments(message.attachment_metadata)}
+    )
 
 
 @router.get("/conversations", response_model=list[DirectConversationResponse])

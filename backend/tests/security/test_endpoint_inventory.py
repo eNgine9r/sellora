@@ -68,13 +68,13 @@ EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 5,
     "COOKIE_SESSION": 3,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 203,
+    "WORKSPACE_SCOPED": 204,
     "FEATURE_GATED": 16,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
 # Added GET /shipments/{shipment_id}/status-history: ANALYST-guarded workspace-scoped read, no mutations.
-EXPECTED_TOTAL_ROUTES = 233
-EXPECTED_MUTATION_ROUTES = 130
+EXPECTED_TOTAL_ROUTES = 234
+EXPECTED_MUTATION_ROUTES = 131
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -298,5 +298,20 @@ def test_tracking_history_requires_workspace_membership_and_analyst_role() -> No
     assert any(
         getattr(dep.call, "__name__", "") == "guard"
         and RoleName.ANALYST in getclosurevars(dep.call).nonlocals.values()
+        for dep in route.dependant.dependencies
+    )
+
+
+def test_manual_instagram_post_link_is_workspace_scoped_and_manager_guarded() -> None:
+    path = "/api/v1/direct/messages/{message_id}/instagram-post"
+    route = next(route for route_path, route in _api_routes() if route_path == path)
+    assert route.methods == {"PUT"}
+    assert _primary_scope(path) == "WORKSPACE_SCOPED"
+    dependencies = {dep.call for dep in route.dependant.dependencies}
+    assert get_workspace_id in dependencies
+    assert any(
+        getattr(dep.call, "__name__", "") == "guard"
+        and set(getclosurevars(dep.call).nonlocals.get("allowed_roles", ()))
+        == {RoleName.OWNER, RoleName.MANAGER}
         for dep in route.dependant.dependencies
     )

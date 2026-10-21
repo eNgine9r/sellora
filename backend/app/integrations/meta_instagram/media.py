@@ -6,6 +6,7 @@ the Direct API payload. Media is fetched only from trusted Meta CDN hosts.
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from urllib.parse import urlsplit
 from uuid import UUID
@@ -46,6 +47,30 @@ def valid_source_url(url: str) -> bool:
     )
 
 
+INSTAGRAM_POST_PATH = re.compile(r"^/(p|reel|tv)/([A-Za-z0-9_-]{5,48})/?$")
+
+
+def normalize_instagram_post_url(raw: str | None) -> str | None:
+    """Allow only a real Instagram public post/reel permalink, no tracking data."""
+    if not isinstance(raw, str) or len(raw) > 1024:
+        return None
+    try:
+        parsed = urlsplit(raw.strip())
+        host = (parsed.hostname or "").lower().rstrip(".")
+        port = parsed.port
+    except ValueError:
+        return None
+    match = INSTAGRAM_POST_PATH.fullmatch(parsed.path)
+    if (
+        parsed.scheme != "https"
+        or host not in {"instagram.com", "www.instagram.com", "m.instagram.com"}
+        or parsed.username or parsed.password or port not in (None, 443)
+        or not match
+    ):
+        return None
+    return f"https://www.instagram.com/{match.group(1)}/{match.group(2)}/"
+
+
 def normalize_attachments(message: dict) -> list[dict[str, str]]:
     raw = message.get("attachments")
     if isinstance(raw, dict):
@@ -54,6 +79,8 @@ def normalize_attachments(message: dict) -> list[dict[str, str]]:
         raw = []
     if isinstance(message.get("attachment"), dict):
         raw = [*raw, message["attachment"]]
+    if isinstance(message.get("share"), dict):
+        raw = [*raw, {"type": "share", "payload": message["share"]}]
     result: list[dict[str, str]] = []
     for item in raw[:30]:
         if not isinstance(item, dict):
@@ -63,9 +90,14 @@ def normalize_attachments(message: dict) -> list[dict[str, str]]:
         payload = payload if isinstance(payload, dict) else {}
         url = payload.get("url") or payload.get("media_url")
         source_url = url if isinstance(url, str) and valid_source_url(url) else None
+        post_url = normalize_instagram_post_url(
+            payload.get("link") or (url if kind in {"share", "ig_post", "reel"} else None)
+        )
         record: dict[str, str] = {"type": kind}
         if source_url:
             record["source_url"] = source_url
+        if post_url:
+            record["post_url"] = post_url
         result.append(record)
     return result
 
@@ -81,7 +113,9 @@ def public_attachments(metadata: dict | None) -> list[dict]:
             "index": index,
             "type": str(item.get("type") or "file")[:32],
             "label": MEDIA_LABELS.get(str(item.get("type") or "").lower(), "Вкладення"),
-            "available": bool(item.get("source_url") or item.get("cached")),
+            "available": bool(item.get("source_url") or item.get("cached") or normalize_instagram_post_url(item.get("post_url"))),
+            "media_available": bool(item.get("source_url") or item.get("cached")),
+            "post_url": normalize_instagram_post_url(item.get("post_url")),
         }
         for index, item in enumerate(items)
         if isinstance(item, dict)

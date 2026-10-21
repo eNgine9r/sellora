@@ -215,6 +215,11 @@ class MetaInstagramHistoryClient:
             )
             kind = entry.get("type") or ("video" if video else "image")
             converted.append({"type": kind, "payload": {"url": media_url}})
+        shared = payload.get("shares")
+        if isinstance(shared, dict):
+            for entry in shared.get("data", [])[:10]:
+                if isinstance(entry, dict):
+                    converted.append({"type": "share", "payload": {"link": entry.get("link")}})
         attachments = normalize_attachments({"attachments": converted})
         return MetaMessageDetails(
             id=str(payload.get("id") or fallback_id),

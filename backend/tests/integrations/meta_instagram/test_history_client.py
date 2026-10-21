@@ -160,3 +160,16 @@ async def test_history_client_does_not_discard_rate_limit_during_media_fallback(
         await client.get_message("mid-photo")
     assert exc.value.code == "META_HISTORY_RATE_LIMITED"
     assert len(calls) == 1
+
+
+def test_history_client_normalizes_public_shared_post_link_without_guessing_thumbnail():
+    from app.integrations.meta_instagram.history_client import MetaInstagramHistoryClient
+    detail = MetaInstagramHistoryClient._details_from_payload({
+        "id": "mid-shared-post",
+        "from": {"id": "instagram-user"},
+        "to": {"data": [{"id": "business-account"}]},
+        "shares": {"data": [{"link": "https://www.instagram.com/p/ABCdef9/"}]},
+    })
+    assert detail.attachments == [
+        {"type": "share", "post_url": "https://www.instagram.com/p/ABCdef9/"}
+    ]
