@@ -5,13 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { hasUsableTtn, ttnDraftHref } from "@/lib/ttn-draft";
 import { fetchDirectConversations } from "@/services/direct";
+import { fetchShipmentTrackingHistory } from "@/services/shipments";
 import type { ReactNode } from "react";
 import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
 import { Shipment, ShipmentStatus } from "@/types/shipments";
 import { NovaPoshtaShipmentPanel } from "@/features/integrations/components/nova-poshta-shipment-panel";
 import { ShipmentStatusBadge } from "./shipment-status-badge";
-import { CopyTtnButton, TtnDocumentLimitation } from "./ttn-actions";
+import { CopyTtnButton } from "./ttn-actions";
 
 const NEXT_ACTIONS: Record<ShipmentStatus, ShipmentStatus[]> = {
   DRAFT: ["CREATED", "CANCELLED"],
@@ -41,6 +42,12 @@ export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shi
   const hasProviderDocument = Boolean(shipment.nova_poshta_document_ref || shipment.nova_poshta_document_number);
   const actions = NEXT_ACTIONS[shipment.status];
   const trackingNumber = shipment.nova_poshta_document_number ?? shipment.tracking_number;
+  const historyQuery = useQuery({
+    queryKey: ["shipment-tracking-history", workspaceId, shipment.id],
+    queryFn: () => fetchShipmentTrackingHistory(workspaceId, shipment.id),
+    enabled: shipment.carrier === "NOVA_POSHTA" && Boolean(trackingNumber),
+    refetchInterval: 60_000,
+  });
   return (
     <div className="grid min-w-0 gap-5">
       <div className="flex min-w-0 flex-col gap-3 border-b border-slate-100 pb-4 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between">
@@ -67,20 +74,46 @@ export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shi
       </Section>
 
       <Section title={t("shipments.trackingSection")}>
-        <div className="grid gap-3 sm:grid-cols-2"><DetailRow label={t("shipments.carrier")} value={shipment.carrier} /><DetailRow label={t("shipments.trackingTtn")} value={trackingNumber} /><DetailRow label={t("novaPoshta.documentRef")} value={shipment.nova_poshta_document_ref ? t("common.yes") : null} /><DetailRow label={t("shipments.externalStatus")} value={shipment.nova_poshta_raw_status ?? shipment.external_status} /><DetailRow label={t("shipments.lastSynced")} value={shipment.nova_poshta_synced_at ? new Date(shipment.nova_poshta_synced_at).toLocaleString() : null} /><DetailRow label={t("shipments.updated")} value={new Date(shipment.updated_at).toLocaleString()} /></div>
+        <div className="grid gap-3 sm:grid-cols-2"><DetailRow label={t("shipments.carrier")} value={shipment.carrier === "NOVA_POSHTA" ? t("shipments.novaPoshtaSection") : shipment.carrier} /><DetailRow label={t("shipments.trackingTtn")} value={trackingNumber} /><DetailRow label={t("novaPoshta.documentRef")} value={shipment.nova_poshta_document_ref ? t("common.yes") : null} /><DetailRow label={t("shipments.externalStatus")} value={shipment.nova_poshta_raw_status ?? shipment.external_status} /><DetailRow label={t("shipments.lastSynced")} value={shipment.nova_poshta_synced_at ? new Date(shipment.nova_poshta_synced_at).toLocaleString() : null} /><DetailRow label={t("shipments.updated")} value={new Date(shipment.updated_at).toLocaleString()} /></div>
         <div className="grid gap-2 sm:grid-cols-2"><CopyTtnButton trackingNumber={trackingNumber} variant="primary" />{canManage && hasUsableTtn(shipment) && linkedConversation ? <Link className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border-subtle px-4 py-2 text-center text-sm font-bold" href={ttnDraftHref(linkedConversation.id, shipment.order_id, shipment.id)}>{t("fulfillment.prepareTtnMessage")}</Link> : null}</div>
-        <TtnDocumentLimitation />
       </Section>
 
       <Section title={t("shipments.statusSection")}>
+        {shipment.carrier === "NOVA_POSHTA" && trackingNumber ? (
+          <div className="grid gap-2 rounded-xl bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-500/15 dark:text-blue-100">
+            <p className="font-semibold">{t("shipments.deliverySyncedAutomatically")}</p>
+            <p className="text-xs">{t("shipments.deliveryNotPayment")}</p>
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-3"><ShipmentStatusBadge status={shipment.status} />{shipment.external_status ? <span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-white/10 dark:text-slate-100">{t("shipments.novaPoshtaStatus")}: {shipment.external_status}</span> : <span className="text-sm text-slate-500 dark:text-slate-400">{t("novaPoshta.statusSyncUnavailableShort")}</span>}</div>
         <div className="grid gap-2 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-white/[0.05] dark:text-slate-300"><span>{t("shipments.shipped")}: {shipment.shipped_at ? new Date(shipment.shipped_at).toLocaleString() : "—"}</span><span>{t("shipments.delivered")}: {shipment.delivered_at ? new Date(shipment.delivered_at).toLocaleString() : "—"}</span><span>{t("shipments.returned")}: {shipment.returned_at ? new Date(shipment.returned_at).toLocaleString() : "—"}</span></div>
+        {shipment.carrier === "NOVA_POSHTA" && trackingNumber ? (
+          <div className="grid gap-2">
+            <h4 className="text-sm font-bold text-text-primary">{t("shipments.trackingHistoryTitle")}</h4>
+            {historyQuery.isLoading ? <p className="text-xs text-text-muted">{t("common.loading")}</p> : null}
+            {historyQuery.isError ? <p className="text-xs text-text-muted">{t("shipments.trackingHistoryUnavailable")}</p> : null}
+            {historyQuery.data?.length === 0 ? <p className="text-xs text-text-muted">{t("shipments.trackingHistoryEmpty")}</p> : null}
+            {historyQuery.data && historyQuery.data.length > 0 ? (
+              <ol className="grid min-w-0 gap-2" data-shipment-tracking-history>
+                {historyQuery.data.slice(0, 8).map((event, index) => (
+                  <li key={`${event.at}-${event.event}-${index}`} className="flex min-w-0 items-start gap-3 rounded-xl border border-border-subtle px-3 py-2 text-sm">
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-hidden="true" />
+                    <div className="min-w-0">
+                      <strong className="break-words text-text-primary">{event.status ? formatStatus("shipment", event.status) : t("shipments.externalStatus")}</strong>
+                      <p className="mt-1 text-xs text-text-secondary">{new Date(event.at).toLocaleString()}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </div>
+        ) : null}
       </Section>
 
       {shipment.notes ? <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600 dark:bg-white/[0.05] dark:text-slate-300">{shipment.notes}</p> : null}
       <NovaPoshtaShipmentPanel workspaceId={workspaceId} shipment={shipment} />
       {hasProviderDocument ? <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100">{t("shipments.archiveNpDescription")}</p> : null}
-      {actions.length ? <div className="grid gap-2 sm:grid-cols-2">{actions.map((status) => <button key={status} className="min-h-11 rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/10" onClick={() => onStatusChange(status)}>{formatStatus("shipment", status)}</button>)}</div> : <p className="text-sm text-slate-500 dark:text-slate-400">{t("shipments.noNextActions")}</p>}
+      {actions.length && !(shipment.carrier === "NOVA_POSHTA" && hasProviderDocument) ? <div className="grid gap-2 sm:grid-cols-2">{actions.map((status) => <button key={status} className="min-h-11 rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/10" onClick={() => onStatusChange(status)}>{formatStatus("shipment", status)}</button>)}</div> : <p className="text-sm text-slate-500 dark:text-slate-400">{t("shipments.noNextActions")}</p>}
     </div>
   );
 }
