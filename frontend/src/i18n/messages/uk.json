@@ -1736,6 +1736,7 @@
       "failed": "Dry-run не пройшов"
     },
     "validation": {
+      "directCustomer": "Цей діалог не має підтвердженого клієнта. Поверніться в Direct, прив’яжіть клієнта та повторно відкрийте оформлення.",
       "row": "Рядок {row}",
       "recognizedColumns": "Розпізнані колонки",
       "missingRequiredColumns": "Відсутні обовʼязкові колонки",
@@ -2289,6 +2290,21 @@
     }
   },
   "direct": {
+    "salesWorkspaceTitle": "Клієнт і продаж",
+    "salesCustomerLoading": "Завантажуємо дані клієнта…",
+    "salesCustomerUnlinked": "Клієнта ще не створено",
+    "salesCatalogHints": "Пропозицій товарів: {count}",
+    "salesMissingData": "Для замовлення потрібно доповнити контактні дані",
+    "salesExpandCustomer": "Дані клієнта та додаткові дії",
+    "participantDetails": "Деталі Instagram-профілю",
+    "sendUnavailableByPolicy": "Надсилання через Sellora наразі вимкнено. Ви можете переглядати переписки й готувати замовлення, але не надсилати повідомлення.",
+    "historyAdvanced": "Імпорт історії — додаткові налаштування",
+    "historyImportWarning": "Імпорт може додати повідомлення, а згодом — ліди з реальних переписок. Перед запуском перевірте обсяг.",
+    "historySmallScan": "Перевірити 5 діалогів",
+    "historyConfirmTitle": "Підтвердити імпорт Instagram",
+    "historyConfirmDescription": "Імпортувати до {count} діалогів по 10 повідомлень? Ця дія записує реальні переписки в Sellora. Відправлення повідомлень покупцям не виконуватиметься.",
+    "historyConfirmAction": "Розпочати імпорт",
+    "salesField": {"name": "ім’я", "phone": "телефон", "city": "місто", "delivery_address": "відділення Нової пошти"},
     "kicker": "Повідомлення магазину",
     "title": "Direct",
     "description": "Відповідайте клієнтам і оформлюйте замовлення з діалогу.",
