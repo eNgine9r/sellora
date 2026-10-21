@@ -9,13 +9,12 @@ import {
   MessageCircle,
   RefreshCw,
   Send,
-  ShoppingBag,
   Sparkles,
   UserRound,
   Users,
-  Wifi,
-  WifiOff,
   ArrowLeft,
+  PanelRightOpen,
+  MoreHorizontal,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -51,6 +50,7 @@ import { fetchInstagramStatus } from "@/services/meta-instagram";
 import { AISuggestion } from "@/types/ai";
 import {
   DirectConversation,
+  DirectCustomerAutomationState,
   DirectMessage,
   InstagramHistorySync,
 } from "@/types/direct";
@@ -84,7 +84,9 @@ export default function DirectPage() {
   const queryClient = useQueryClient();
   const { isLive, isError: liveError, orderIntentConversationIds } = useDirectLive();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [inspectorTab, setInspectorTab] = useState<"profile" | "crm" | "ai">("crm");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pendingHistoryLimit, setPendingHistoryLimit] = useState<number | null>(null);
   type Draft = { text: string; revision: number };
   type ReplyContext = { workspaceId: string; conversationId: string; key: string; text: string; revision: number; editorId: string };
@@ -282,7 +284,8 @@ export default function DirectPage() {
 
   useEffect(() => {
     setSelectedId(null);
-    setAiPanelOpen(false);
+    setInspectorOpen(false);
+    setAdvancedOpen(false);
     profileRefreshAttempted.current.clear();
     readAttempted.current.clear();
   }, [workspaceId]);
@@ -328,48 +331,50 @@ export default function DirectPage() {
     router.replace(`/direct?conversation=${encodeURIComponent(conversationId)}`, { scroll: false });
   };
 
+  const inspectorTitle = t("direct.inspectorTitle");
+  const openInspector = (tab: "profile" | "crm" | "ai") => {
+    setInspectorTab(tab);
+    setInspectorOpen(true);
+  };
+
   return (
-    <WorkspacePage className="min-h-full [&>div]:gap-2 lg:[&>div]:gap-5">
+    <WorkspacePage className="min-h-full [&>div]:gap-2 lg:[&>div]:gap-3">
       <div className={selectedConversation ? "hidden lg:block" : ""}>
-      <WorkspaceHeader
-        eyebrow={t("direct.kicker")}
-        title={t("direct.title")}
-        description={t("direct.description")}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex min-h-10 items-center gap-2 rounded-2xl border px-3 text-xs font-black ${liveError ? "border-rose-500/30 bg-rose-500/10 text-rose-600" : isLive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-amber-500/30 bg-amber-500/10 text-amber-600"}`} data-direct-live-status>
-              {liveError ? <WifiOff className="h-4 w-4" /> : <Wifi className={`h-4 w-4 ${isLive ? "" : "animate-pulse"}`} />}
-              {liveError ? t("direct.liveUnavailable") : isLive ? t("direct.live") : t("direct.connecting")}
-            </span>
-            <Button onClick={() => conversationsQuery.refetch()}>
-              <RefreshCw className="h-4 w-4" />
-              {t("direct.refresh")}
-            </Button>
-          </div>
-        }
-      />
+        <WorkspaceHeader
+          title={t("direct.title")}
+          description={t("direct.description")}
+          actions={
+            <div className="flex items-center gap-2">
+              <span className={`hidden items-center gap-1.5 text-xs font-medium sm:inline-flex ${liveError ? "text-rose-600" : isLive ? "text-emerald-600" : "text-text-muted"}`} data-direct-live-status>
+                <span className={`h-1.5 w-1.5 rounded-full ${liveError ? "bg-rose-500" : isLive ? "bg-emerald-500" : "bg-amber-500"}`} />
+                {liveError ? t("direct.liveUnavailable") : isLive ? t("direct.live") : t("direct.connecting")}
+              </span>
+              <Button variant="secondary" onClick={() => conversationsQuery.refetch()} aria-label={t("direct.refresh")}>
+                <RefreshCw className="h-4 w-4" />
+                <span className="hidden sm:inline">{t("direct.refresh")}</span>
+              </Button>
+              <button type="button" className="grid min-h-10 min-w-10 place-items-center rounded-xl text-text-secondary hover:bg-surface-2"
+                aria-label={t("direct.advancedActions")} onClick={() => setAdvancedOpen(true)} data-direct-advanced-trigger>
+                <MoreHorizontal className="h-5 w-5" />
+              </button>
+            </div>
+          }
+        />
       </div>
-
       {historyMutation.isError || profileMutation.isError ? <p role="alert" className="text-sm text-rose-600">{t("direct.actionError")}</p> : null}
-      <div className={selectedConversation ? "hidden lg:block" : ""}><HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} canStart={Boolean(canManage && statusQuery.data?.status === "CONNECTED")} isStarting={historyMutation.isPending} onStart={setPendingHistoryLimit} /></div>
-
-      <div className={`${selectedConversation ? "hidden lg:block" : "block"} min-[1440px]:hidden`}>
-        <button
-          type="button"
-          disabled={!selectedConversation}
-          onClick={() => setAiPanelOpen(true)}
-          className="min-h-11 w-full rounded-2xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-black text-primary shadow-[var(--shadow-card)]"
-        >
-          {t("direct.openAiPanel")}
-        </button>
-      </div>
-
-      {selectedConversation ? <div className="flex min-w-0 items-center gap-2 lg:hidden" data-direct-mobile-controls>
-        <Button variant="secondary" className="min-w-0 flex-1 px-2 text-xs" onClick={() => { setSelectedId(null); setAiPanelOpen(false); router.replace("/direct", { scroll: false }); }}><ArrowLeft className="h-4 w-4 shrink-0" />{t("direct.backToDialogs")}</Button>
-        <Button variant="secondary" className="px-3 text-xs" onClick={() => setAiPanelOpen(true)} aria-label={t("direct.openAiPanel")}><Bot className="h-4 w-4" />{t("direct.aiShort")}</Button>
-      </div> : null}
+      {selectedConversation ? (
+        <div className="flex min-w-0 items-center justify-between gap-2 lg:hidden" data-direct-mobile-controls>
+          <Button variant="secondary" className="min-w-0 px-2 text-xs" onClick={() => {
+            setSelectedId(null);
+            setInspectorOpen(false);
+            router.replace("/direct", { scroll: false });
+          }}>
+            <ArrowLeft className="h-4 w-4 shrink-0" />{t("direct.backToDialogs")}
+          </Button>
+        </div>
+      ) : null}
       <section
-        className={`grid ${selectedConversation ? "h-[calc(100dvh-260px)] min-h-[380px] lg:h-[max(540px,calc(100dvh-var(--topbar-height,72px)-240px))]" : "h-[max(540px,calc(100dvh-var(--topbar-height,72px)-240px))]"} min-w-0 gap-3 lg:grid-cols-[280px_minmax(0,1fr)] min-[1440px]:grid-cols-[280px_minmax(0,1fr)_300px]`}
+        className={`grid ${selectedConversation ? "h-[calc(100dvh-240px)] min-h-[330px] lg:h-[max(560px,calc(100dvh-var(--topbar-height,72px)-155px))]" : "h-[max(560px,calc(100dvh-var(--topbar-height,72px)-155px))]"} min-w-0 gap-2 lg:grid-cols-[minmax(260px,290px)_minmax(0,1fr)]`}
         data-direct-shell-content
       >
         <div className={`${selectedConversation ? "hidden lg:block" : "block"} min-h-0 overflow-hidden`}>
@@ -381,8 +386,6 @@ export default function DirectPage() {
           onSelect={handleSelectConversation}
           instagramStatus={statusQuery.data}
           orderIntentConversationIds={orderIntentConversationIds}
-          isLive={isLive}
-          liveError={liveError}
         />
         </div>
         <div className={`${selectedConversation ? "flex" : "hidden lg:flex"} min-h-0 min-w-0 flex-col`}>
@@ -404,6 +407,9 @@ export default function DirectPage() {
           handoffKey={ttnOrderId && ttnShipmentId ? `${draftKey}:${ttnOrderId}:${ttnShipmentId}` : undefined}
           handoff={canManage && workspaceId && selectedConversation && selectedConversation.id === searchParams.get("conversation") && ttnOrderId && ttnShipmentId ? <DirectTtnDraft key={`${draftKey}:${ttnOrderId}:${ttnShipmentId}`} workspaceId={workspaceId} conversationId={selectedConversation.id} orderId={ttnOrderId} shipmentId={ttnShipmentId} draftText={replyText} onInsert={setReplyText} /> : null}
           conversation={selectedConversation}
+          inspectorTrigger={<button type="button" className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-semibold text-text-secondary hover:bg-surface-2" onClick={() => openInspector("crm")} aria-label={t("direct.inspectorTitle")} data-direct-inspector-trigger>
+            <PanelRightOpen className="h-4 w-4" /><span className="hidden sm:inline">{t("direct.inspectorTitle")}</span>
+          </button>}
           canManage={canManage}
           loading={messagesQuery.isLoading}
           error={messagesQuery.isError}
@@ -412,8 +418,6 @@ export default function DirectPage() {
           setReplyText={setReplyText}
           onPrepare={() => { const context = replyContext(); if (context) prepareMutation.mutate(context); }}
           onSend={() => { const context = replyContext(); if (context && !sendMutation.isPending && !sendBlocked) sendMutation.mutate(context); }}
-          onRefreshProfile={() => canManage && selectedConversation && profileMutation.mutate(selectedConversation.id)}
-          profileRefreshing={!canManage || profileMutation.isPending}
           sendDisabled={
             !canManage
             || sendBlocked
@@ -435,17 +439,6 @@ export default function DirectPage() {
           noAutoSend={statusQuery.data?.send_enabled === true ? t("direct.noAutoSend") : t("direct.sendUnavailableByPolicy")}
         />
         </div>
-        <div className="hidden min-h-0 overflow-y-auto min-[1440px]:block">
-          <AiPanel
-            loading={suggestionsQuery.isLoading}
-            suggestions={suggestionsQuery.data ?? []}
-            onAnalyze={() => { const context = replyContext(); if (context) analysisMutation.mutate(context); }}
-            analyzing={analysisMutation.isPending || !canManage || !selectedConversation}
-            analysisError={analysisMutation.isError && analysisMutation.variables?.key === draftKey}
-            onUseDraft={(text) => setReplyText(text)}
-            connectionStatus={statusQuery.data?.status ?? "DISCONNECTED"}
-          />
-        </div>
       </section>
 
       <ConfirmationDialog
@@ -462,14 +455,96 @@ export default function DirectPage() {
           }
         }}
       />
-      <Drawer open={aiPanelOpen} title={t("direct.aiPanel")} onClose={() => setAiPanelOpen(false)}>
-        <AiPanel loading={suggestionsQuery.isLoading} suggestions={suggestionsQuery.data ?? []}
-          onAnalyze={() => { const context = replyContext(); if (context) analysisMutation.mutate(context); }}
-          analyzing={analysisMutation.isPending || !canManage || !selectedConversation}
-          analysisError={analysisMutation.isError && analysisMutation.variables?.key === draftKey}
-          onUseDraft={(text) => setReplyText(text)} connectionStatus={statusQuery.data?.status ?? "DISCONNECTED"} embedded />
+      <Drawer open={inspectorOpen} title={inspectorTitle} onClose={() => setInspectorOpen(false)}>
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-surface-2 p-1" role="tablist" aria-label={t("direct.inspectorTitle")}>
+          {(["profile", "crm", "ai"] as const).map((tab) => (
+            <button key={tab} type="button" role="tab" aria-selected={inspectorTab === tab}
+              onClick={() => setInspectorTab(tab)}
+              className={`min-h-11 rounded-lg px-2 text-xs font-semibold transition ${inspectorTab === tab ? "bg-surface-1 text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"}`}
+              data-direct-inspector-tab={tab}>{t("direct.inspectorTab." + tab)}</button>
+          ))}
+        </div>
+        {inspectorTab === "profile" ? (
+          <div role="tabpanel" className="mt-4" data-direct-inspector-content="profile">
+            {selectedConversation ? <ParticipantProfileCard conversation={selectedConversation}
+              onRefresh={() => canManage && profileMutation.mutate(selectedConversation.id)}
+              refreshing={!canManage || profileMutation.isPending} /> : <p className="text-sm text-text-muted">{t("direct.selectTitle")}</p>}
+          </div>
+        ) : inspectorTab === "crm" ? (
+          <div role="tabpanel" className="mt-4" data-direct-inspector-content="crm">
+            {selectedConversation ? (
+              <DirectCrmDetails conversation={selectedConversation}
+                proposal={commercialQuery.data?.conversation_id === selectedConversation.id ? commercialQuery.data : undefined}
+                automation={automationQuery.data?.conversation_id === selectedConversation.id ? automationQuery.data : undefined}
+                loading={automationQuery.isLoading} error={automationQuery.isError || ensureCustomerMutation.isError || ensureLeadMutation.isError}
+                canManage={canManage} ensuringCustomer={ensureCustomerMutation.isPending} ensuringLead={ensureLeadMutation.isPending}
+                onEnsureCustomer={() => ensureCustomerMutation.mutate(selectedConversation.id)}
+                onEnsureLead={() => ensureLeadMutation.mutate(selectedConversation.id)} />
+            ) : <p className="text-sm text-text-muted">{t("direct.selectTitle")}</p>}
+          </div>
+        ) : <div role="tabpanel" className="mt-4" data-direct-inspector-content="ai">
+          {selectedConversation ? <AiPanel loading={suggestionsQuery.isLoading} suggestions={suggestionsQuery.data ?? []}
+            onAnalyze={() => { const context = replyContext(); if (context) analysisMutation.mutate(context); }}
+            analyzing={analysisMutation.isPending || !canManage || !selectedConversation}
+            analysisError={analysisMutation.isError && analysisMutation.variables?.key === draftKey}
+            onUseDraft={(text) => setReplyText(text)} connectionStatus={statusQuery.data?.status ?? "DISCONNECTED"} embedded />
+          : <p className="text-sm text-text-muted">{t("direct.selectTitle")}</p>}
+        </div>}
+      </Drawer>
+      <Drawer open={advancedOpen} title={t("direct.advancedActions")} onClose={() => setAdvancedOpen(false)}>
+        <HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading}
+          canStart={Boolean(canManage && statusQuery.data?.status === "CONNECTED")} isStarting={historyMutation.isPending}
+          onStart={(limit) => {setPendingHistoryLimit(limit);setAdvancedOpen(false);}} />
       </Drawer>
     </WorkspacePage>
+  );
+}
+
+function DirectCrmDetails({
+  conversation, proposal, automation, loading, error, canManage,
+  ensuringLead, ensuringCustomer, onEnsureLead, onEnsureCustomer,
+}: {
+  conversation: DirectConversation;
+  proposal?: DirectOrderProposal;
+  automation?: DirectCustomerAutomationState;
+  loading: boolean;
+  error: boolean;
+  canManage: boolean;
+  ensuringLead: boolean;
+  ensuringCustomer: boolean;
+  onEnsureLead: () => void;
+  onEnsureCustomer: () => void;
+}) {
+  const { t } = useI18n();
+  const customer = automation?.customer;
+  const missing = automation?.missing_fields ?? [];
+  const known = ["name", "phone", "city", "delivery_address"];
+  return (
+    <div className="space-y-4 text-sm" data-direct-crm-details>
+      <section className="space-y-2 rounded-xl bg-surface-2/65 p-4">
+        <p className="text-xs font-semibold text-text-muted">{t("direct.inspectorCustomer")}</p>
+        {loading ? <LoadingSkeleton /> : (
+          <>
+            <p className="font-semibold text-text-primary">{customer?.name ?? t("direct.salesCustomerUnlinked")}</p>
+            {customer?.instagram_username ? <p className="break-words text-xs text-text-secondary">@{customer.instagram_username.replace(/^@/, "")}</p> : null}
+            {customer?.phone ? <p className="text-xs text-text-secondary">{customer.phone}</p> : null}
+            {missing.length ? <p className="text-xs text-amber-700 dark:text-amber-200">{t("direct.missingFields", { fields: missing.map((field) => known.includes(field) ? t("direct.salesField." + field) : t("direct.otherField")).join(", ") })}</p> : null}
+          </>
+        )}
+      </section>
+      <section className="space-y-2">
+        <p className="text-xs font-semibold text-text-muted">{t("direct.inspectorInterest")}</p>
+        <p className="font-medium">{t("proposal.commercialStage." + (proposal?.commercial_stage ?? "NONE"))}</p>
+        {proposal?.lines.length ? <p className="text-xs text-text-secondary">{t("direct.inspectorCatalog", { count: proposal.lines.length })}</p> : null}
+        {conversation.linked_lead_id ? <p className="text-xs text-emerald-700">{t("direct.leadLinked")}</p> : null}
+      </section>
+      {canManage ? <section className="flex flex-wrap gap-2 border-t border-border-subtle pt-4">
+        {!customer && !loading ? <Button disabled={ensuringCustomer} onClick={onEnsureCustomer}>{t("direct.createProspect")}</Button> : null}
+        {conversation.channel === "INSTAGRAM" && !conversation.linked_lead_id ?
+          <Button variant="secondary" disabled={ensuringLead} onClick={onEnsureLead}>{t("direct.createLead")}</Button> : null}
+      </section> : null}
+      {error ? <p role="alert" className="text-xs text-rose-600">{t("direct.customerError")}</p> : null}
+    </div>
   );
 }
 
@@ -556,8 +631,6 @@ function ConversationList({
   onSelect,
   instagramStatus,
   orderIntentConversationIds,
-  isLive,
-  liveError,
 }: {
   loading: boolean;
   error: boolean;
@@ -566,8 +639,6 @@ function ConversationList({
   onSelect: (id: string) => void;
   instagramStatus?: { status: string; webhook_active?: boolean; token_present?: boolean };
   orderIntentConversationIds: Set<string>;
-  isLive: boolean;
-  liveError: boolean;
 }) {
   const { t } = useI18n();
   const [search, setSearch] = useState("");
@@ -585,40 +656,41 @@ function ConversationList({
   if (loading) return <aside className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-3"><LoadingSkeleton /></aside>;
   if (error) return <aside className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-3"><ErrorState title={t("direct.listError")}  description={t("direct.listErrorHint")}  /></aside>;
   return (
-    <aside className="flex h-full min-h-0 min-w-0 flex-col rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-3 shadow-[var(--shadow-card)]" data-direct-list>
+    <aside className="flex h-full min-h-0 min-w-0 flex-col rounded-2xl bg-surface-1 p-3" data-direct-list>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-black">{t("direct.dialogs")}</h2>
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-black ${liveError ? "bg-rose-500/15 text-rose-600" : isLive ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600"}`}>
-          {liveError ? <WifiOff className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}
-          {liveError ? t("direct.offline") : isLive ? t("direct.live") : "…"}
-        </span>
+        <h2 className="text-sm font-bold">{t("direct.dialogs")}</h2>
+        <span className="text-xs text-text-muted">{conversations.length}</span>
       </div>
-      <input aria-label={t("direct.search")} value={search} onChange={(event) => setSearch(event.target.value)} className="mb-3 min-h-11 w-full rounded-2xl border border-border-subtle bg-surface-2 px-3 text-sm" placeholder={t("direct.search")} />
-      <div className="flex flex-wrap gap-1 pb-3" role="group" aria-label={t("direct.filters")}>
-        {["all", "unread", "instagram", "intent"].map((candidate) => <button type="button" key={candidate} aria-pressed={filter === candidate} onClick={() => setFilter(candidate)} className={`min-h-9 rounded-xl px-2 text-xs font-bold ${filter === candidate ? "bg-primary/15 text-primary" : "bg-surface-2 text-text-secondary"}`}>{t(`direct.filter.${candidate}`)} ({searched.filter((item) => matchesFilter(item, candidate)).length})</button>)}
+      <input aria-label={t("direct.search")} value={search} onChange={(event) => setSearch(event.target.value)} className="mb-2 min-h-10 w-full rounded-xl border border-border-subtle bg-surface-2/60 px-3 text-xs" placeholder={t("direct.search")} />
+      <div className="mb-2 flex items-center gap-2">
+        <label className="sr-only" htmlFor="direct-conversation-filter">{t("direct.filters")}</label>
+        <select id="direct-conversation-filter" value={filter} onChange={(event) => setFilter(event.target.value)}
+          className="min-h-9 w-full min-w-0 rounded-lg border border-border-subtle bg-surface-1 px-2 text-xs font-semibold text-text-secondary" data-direct-filter>
+          {["all", "unread", "instagram", "intent"].map((candidate) =>
+            <option key={candidate} value={candidate}>{t("direct.filter." + candidate)} ({searched.filter((item) => matchesFilter(item, candidate)).length})</option>)}
+        </select>
       </div>
       {!conversations.length ? <DirectEmptyState instagramStatus={instagramStatus} /> : !orderedConversations.length ? <div role="status"><EmptyState title={t("direct.filteredEmpty")} description={t("direct.filteredHint")} /><Button variant="secondary" onClick={() => { setSearch(""); setFilter("all"); }}>{t("direct.resetFilters")}</Button></div> : (
-        <div className="sellora-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto">
+        <div className="sellora-scrollbar min-h-0 flex-1 space-y-0.5 overflow-y-auto">
           {orderedConversations.map((item) => {
             const orderIntent = orderIntentConversationIds.has(item.id);
             return (
-              <button type="button" key={item.id} onClick={() => onSelect(item.id)} aria-pressed={selectedId === item.id} data-conversation-id={item.id} className={`w-full rounded-2xl border p-3 text-left transition ${orderIntent ? "border-warning/50 bg-[var(--warning-surface)]" : selectedId === item.id ? "border-primary bg-primary/10" : "border-border-subtle bg-surface-2"}`}>
-                <div className="flex items-start gap-3">
+              <button type="button" key={item.id} onClick={() => onSelect(item.id)} aria-pressed={selectedId === item.id} data-conversation-id={item.id} className={`w-full rounded-xl border-l-2 px-2 py-2.5 text-left transition ${selectedId === item.id ? "border-primary bg-primary/10" : "border-transparent hover:bg-surface-2/60"}`}>
+                <div className="flex items-center gap-2.5">
                   <ParticipantAvatar conversation={item} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <h3 className="flex items-center gap-1 truncate font-black">{item.participant_display_name ?? t("direct.customer")}{item.participant_is_verified_user ? <BadgeCheck className="h-4 w-4 shrink-0 text-sky-500" /> : null}</h3>
+                        <h3 className="flex items-center gap-1 truncate text-sm font-semibold">{item.participant_display_name ?? t("direct.customer")}{item.participant_is_verified_user ? <BadgeCheck className="h-4 w-4 shrink-0 text-sky-500" /> : null}</h3>
                         <p className="truncate text-xs text-text-muted">{item.participant_username ? `@${item.participant_username}` : item.participant_scoped_id ?? "—"}</p>
                       </div>
                       {item.unread_count ? <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-black text-white">{item.unread_count}</span> : null}
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {orderIntent ? <span className="inline-flex items-center gap-1 rounded-full bg-[var(--warning-surface)] px-2 py-1 text-xs font-black text-[var(--warning-foreground)]"><ShoppingBag className="h-3 w-3" />{t("direct.orderIntent")}</span> : null}
-                      {item.linked_order_id ? <span className="rounded-full bg-blue-500/15 px-2 py-1 text-xs font-bold text-blue-700">{t("direct.orderCreated")}</span> : item.linked_customer_id ? <span className="rounded-full bg-cyan-500/15 px-2 py-1 text-xs font-bold text-cyan-700">{t("direct.prospect")}</span> : null}
-                      <span className="rounded-full bg-violet-500/15 px-2 py-1 text-xs font-bold text-primary">{item.channel === "INSTAGRAM" ? "Instagram" : t("direct.synthetic")}</span>
-
-                    </div>
+                    {(orderIntent || item.linked_order_id || item.linked_customer_id) ? (
+                      <p className={`mt-1 truncate text-[11px] ${orderIntent ? "text-amber-700 dark:text-amber-300" : "text-text-muted"}`}>
+                        {orderIntent ? t("direct.orderIntent") : item.linked_order_id ? t("direct.orderCreated") : t("direct.prospect")}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               </button>
@@ -643,6 +715,7 @@ function MessageThread({
   handoffKey,
   handoff,
   conversation,
+  inspectorTrigger,
   canManage,
   loading,
   error,
@@ -651,8 +724,6 @@ function MessageThread({
   setReplyText,
   onPrepare,
   onSend,
-  onRefreshProfile,
-  profileRefreshing,
   sendDisabled,
   prepareResult,
   prepareError,
@@ -668,6 +739,7 @@ function MessageThread({
   handoffKey?: string;
   handoff?: ReactNode;
   conversation?: DirectConversation | null;
+  inspectorTrigger?: ReactNode;
   canManage: boolean;
   loading: boolean;
   error: boolean;
@@ -676,8 +748,6 @@ function MessageThread({
   setReplyText: (value: string) => void;
   onPrepare: () => void;
   onSend: () => void;
-  onRefreshProfile: () => void;
-  profileRefreshing: boolean;
   sendDisabled: boolean;
   prepareResult?: PrepareResult;
   prepareError: boolean;
@@ -732,7 +802,7 @@ function MessageThread({
   if (!conversation) return <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4"><EmptyState title={t("direct.selectTitle")}  description={t("direct.selectHint")}  /></section>;
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)]">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3 py-2"><p className="min-w-0 truncate text-sm font-black">{conversation.participant_display_name ?? conversation.participant_username ?? t("direct.customer")}</p><span className="shrink-0 text-xs text-text-muted">{conversation.channel === "INSTAGRAM" ? "Instagram" : t("direct.synthetic")}</span></div>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3 py-2"><p className="min-w-0 truncate text-sm font-black">{conversation.participant_display_name ?? conversation.participant_username ?? t("direct.customer")}</p><div className="flex shrink-0 items-center gap-2"><span className="hidden text-xs text-text-muted sm:inline">{conversation.channel === "INSTAGRAM" ? "Instagram" : t("direct.synthetic")}</span>{inspectorTrigger}</div></div>
       <div ref={scrollContainer} className="sellora-scrollbar min-h-0 flex-1 overflow-y-auto" data-direct-live-thread
         onWheel={() => { followLatest.current = false; }}
         onTouchMove={() => { followLatest.current = false; }}
@@ -741,10 +811,6 @@ function MessageThread({
         onScroll={(event) => { const pane = event.currentTarget; if (pane.scrollHeight - pane.clientHeight - pane.scrollTop < 4) followLatest.current = true; }}>
       <div ref={scrollContent} className="space-y-3">
       {handoff}
-      <details className="border-b border-border-subtle" data-direct-participant-details>
-        <summary className="cursor-pointer px-4 py-2 text-xs font-semibold text-text-secondary">{t("direct.participantDetails")}</summary>
-        <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
-      </details>
       <div className="space-y-3 p-3">
         {loading ? <LoadingSkeleton /> : null}
         {error ? <ErrorState title={t("direct.messagesError")}  description={t("direct.messagesErrorHint")}  /> : null}
@@ -752,7 +818,7 @@ function MessageThread({
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[82%] break-words rounded-2xl px-4 py-3 text-sm ${message.direction === "OUTBOUND" ? "bg-primary/15 text-text-primary" : "bg-surface-2"}`}>
-              <p className="mb-1 text-xs font-black text-text-muted">{t(`direct.direction.${message.direction}`)} · {messageStatusLabel(message, t)}</p>
+              {message.delivery_status === "FAILED" ? <p className="mb-1 text-xs font-semibold text-rose-600">{messageStatusLabel(message, t)}</p> : null}
               <p>{message.text}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
                 {message.edit_count ? <span>{t("direct.edited", { count: message.edit_count })}</span> : null}
@@ -772,7 +838,7 @@ function MessageThread({
           <Button variant="secondary" onClick={onPrepare} disabled={!canManage || !replyText}>{t("direct.prepare")}</Button>
           <Button onClick={onSend} disabled={sendDisabled || !replyText}>{sendPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{t("direct.send")}</Button>
         </div>
-        </> : <p role="status" className="flex min-w-0 items-start gap-2 text-xs font-semibold text-text-secondary"><Send className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />{noAutoSend}</p>}
+        </> : <p role="status" className="flex min-w-0 items-start gap-2 text-xs font-semibold text-text-secondary"><Send className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><span className="sm:hidden">{t("direct.sendDisabledShort")}</span><span className="hidden sm:inline">{noAutoSend}</span></p>}
         {prepareResult ? <p role="status" className="mt-2 text-sm text-text-secondary">{t(prepareResult.ready ? "direct.ready" : "direct.blocked")}</p> : null}
         {prepareError ? <p role="alert" className="mt-2 text-sm text-rose-600">{t("direct.prepareError")}</p> : null}
         {sendOutcome ? <p role="status" className="mt-2 text-sm text-text-secondary">{t(`direct.sendState.${["COMPLETED", "CANCELLED", "PREPARED", "SENDING", "PROVIDER_SUCCEEDED", "FAILED_SAFE", "RETRY_PENDING", "RECONCILIATION_REQUIRED"].includes(sendOutcome) ? sendOutcome : "UNKNOWN"}`)}</p> : null}
@@ -821,13 +887,13 @@ function ParticipantProfileCard({ conversation, onRefresh, refreshing }: { conve
 
 function AiPanel({ loading, suggestions, onAnalyze, analyzing, analysisError, onUseDraft, connectionStatus, embedded = false }: { loading: boolean; suggestions: AISuggestion[]; onAnalyze: () => void; analyzing: boolean; analysisError: boolean; onUseDraft: (text: string) => void; connectionStatus: string; embedded?: boolean }) {
   const { t } = useI18n();
-  return <aside className={`${embedded ? "" : "h-full"} min-w-0 rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)]`} data-direct-ai-panel>
+  return <aside className={embedded ? "min-w-0" : "h-full min-w-0 rounded-2xl bg-surface-1 p-4"} data-direct-ai-panel>
     {!embedded ? <h2 className="mb-3 flex items-center gap-2 font-black"><Bot className="h-5 w-5 text-primary" />{t("direct.aiPanel")}</h2> : null}
-    <p className="mb-3 rounded-xl bg-surface-2 p-3 text-sm">{t(connectionStatus === "CONNECTED" ? "direct.connected" : "direct.disconnected")}</p>
+    {connectionStatus !== "CONNECTED" ? <p className="mb-3 text-xs text-amber-700">{t("direct.disconnected")}</p> : null}
     <Button onClick={onAnalyze} disabled={analyzing}><Sparkles className="h-4 w-4" />{t("direct.analyze")}</Button>
     {analysisError ? <p role="alert">{t("direct.analysisError")}</p> : null}
     <div className="mt-4 space-y-3 text-sm">{loading ? <LoadingSkeleton /> : null}
-      {!loading && !suggestions.length ? <EmptyState title={t("direct.noSuggestions")} description={t("direct.suggestionHint")} /> : null}
+      {!loading && !suggestions.length ? <p className="py-5 text-center text-xs leading-5 text-text-muted">{t("direct.suggestionHint")}</p> : null}
       {suggestions.map((suggestion) => <section key={suggestion.id}><Card icon={<MessageCircle />} title={suggestion.title ?? t("direct.suggestion")} body={suggestion.draft_text ?? suggestion.summary ?? t("direct.suggestionHint")} />{suggestion.draft_text ? <Button variant="secondary" disabled={analyzing} onClick={() => onUseDraft(suggestion.draft_text!)}>{t("direct.useDraft")}</Button> : null}</section>)}
       <p className="text-xs text-text-muted">{t("direct.noAutoSend")}</p>
     </div>

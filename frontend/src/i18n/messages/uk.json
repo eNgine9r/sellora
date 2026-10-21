@@ -2290,6 +2290,14 @@
     }
   },
   "direct": {
+    "sendDisabledShort": "Надсилання вимкнено",
+    "salesStageShort": {"NONE": "Без запиту", "INTEREST": "Цікавиться", "PRODUCT_QUESTION": "Питання про товар", "PURCHASE_REQUEST": "Хоче купити"},
+    "inspectorTitle": "Деталі",
+    "inspectorTab": {"profile": "Профіль", "crm": "Клієнт", "ai": "AI"},
+    "advancedActions": "Додаткові дії",
+    "inspectorCustomer": "Клієнт",
+    "inspectorInterest": "Зацікавленість",
+    "inspectorCatalog": "Пропозицій товарів: {count}",
     "salesWorkspaceTitle": "Клієнт і продаж",
     "salesCustomerLoading": "Завантажуємо дані клієнта…",
     "salesCustomerUnlinked": "Клієнта ще не створено",

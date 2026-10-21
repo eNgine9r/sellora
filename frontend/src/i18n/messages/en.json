@@ -2290,6 +2290,14 @@
     }
   },
   "direct": {
+    "sendDisabledShort": "Sending disabled",
+    "salesStageShort": {"NONE": "No request", "INTEREST": "Interested", "PRODUCT_QUESTION": "Product question", "PURCHASE_REQUEST": "Wants to buy"},
+    "inspectorTitle": "Details",
+    "inspectorTab": {"profile": "Profile", "crm": "Customer", "ai": "AI"},
+    "advancedActions": "More actions",
+    "inspectorCustomer": "Customer",
+    "inspectorInterest": "Interest",
+    "inspectorCatalog": "Product suggestions: {count}",
     "salesWorkspaceTitle": "Customer and sale",
     "salesCustomerLoading": "Loading customer…",
     "salesCustomerUnlinked": "No customer linked yet",
