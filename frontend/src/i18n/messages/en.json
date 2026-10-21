@@ -2423,6 +2423,7 @@
     "historyDeepScan": "Find older conversations (up to 500)"
   },
   "instagramSettings": {
+    "accountSwitchHint": "To connect another Instagram shop, disconnect the current account first. Existing messages stay saved separately from the new connection.",
     "title": "Instagram Direct",
     "description": "Connect an Instagram Professional account for the controlled Direct messaging pilot. Sending requires explicit manager confirmation.",
     "connect": "Connect Instagram",

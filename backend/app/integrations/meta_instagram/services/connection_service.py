@@ -74,6 +74,22 @@ class InstagramConnectionService:
                 409,
             )
 
+        switching_account = bool(
+            existing
+            and existing.instagram_account_id
+            and existing.instagram_account_id != profile.instagram_account_id
+        )
+        if switching_account and existing.status != InstagramConnectionStatus.DISCONNECTED.value:
+            # Never replace an active (or half-configured) business identity by
+            # merely signing in as someone else. The owner must disconnect the
+            # test account first, preserving its immutable historical relation.
+            oauth_state.consumed_at = datetime.now(UTC)
+            raise MetaInstagramError(
+                "META_ACCOUNT_SWITCH_REQUIRES_DISCONNECT",
+                "Disconnect the currently linked Instagram account before connecting another one.",
+                409,
+            )
+
         normalized_account_type = (profile.account_type or "").upper()
         if not normalized_account_type:
             oauth_state.consumed_at = datetime.now(UTC)
@@ -109,7 +125,11 @@ class InstagramConnectionService:
                     "Required Instagram messaging permissions are missing.",
                     400,
                 )
-            connection = existing or self.repo.create(
+            connection = (
+                existing if not switching_account else self.repo.get_by_workspace_account(
+                    oauth_state.workspace_id, profile.instagram_account_id,
+                )
+            ) or self.repo.create(
                 InstagramConnection(workspace_id=oauth_state.workspace_id, created_by=oauth_state.user_id)
             )
             self._apply_profile(connection, profile)
@@ -151,7 +171,19 @@ class InstagramConnectionService:
             candidate.connected_at = datetime.now(UTC)
             candidate.disconnected_at = None
 
-        if existing:
+        if switching_account:
+            # Retain the old InstagramConnection row and ID: historical Direct
+            # conversations reference it. Reuse the new account's old record
+            # (if one exists) to respect workspace/account uniqueness on swapback.
+            target = self.repo.get_by_workspace_account(
+                oauth_state.workspace_id, profile.instagram_account_id,
+            )
+            if target:
+                self._copy_candidate(target, candidate)
+                connection = target
+            else:
+                connection = self.repo.create(candidate)
+        elif existing:
             self._copy_candidate(existing, candidate)
             connection = existing
         else:

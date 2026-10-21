@@ -9,6 +9,9 @@ from app.ai.services.direct_intelligence_service import DirectIntelligenceServic
 from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_min_role, require_roles
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
+from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
+from app.models.meta_instagram import InstagramConnectionStatus
+from app.models.ai_direct import DirectChannel
 from app.integrations.meta_instagram.repositories.participant_profile_repository import InstagramParticipantProfileRepository
 from app.integrations.meta_instagram.schemas import (
     MessageOperationResponse,
@@ -65,6 +68,18 @@ def conversation_response(conversation, profile=None) -> DirectConversationRespo
     return DirectConversationResponse(**data)
 
 
+def _visible_for_connected_instagram(conversations, active_instagram):
+    if not active_instagram or active_instagram.status != InstagramConnectionStatus.CONNECTED.value:
+        return conversations
+    # Keep history in storage but show only the linked live-account inbox.
+    # Non-Instagram channels are unaffected.
+    return [
+        conversation for conversation in conversations
+        if conversation.channel != DirectChannel.INSTAGRAM.value
+        or conversation.instagram_connection_id == active_instagram.id
+    ]
+
+
 @router.get("/conversations", response_model=list[DirectConversationResponse])
 def list_conversations(
     workspace_id: UUID = Depends(get_workspace_id),
@@ -72,6 +87,8 @@ def list_conversations(
     db: Session = Depends(get_db),
 ):
     conversations = DirectConversationRepository(db).list(workspace_id)
+    active_instagram = InstagramConnectionRepository(db).get_active(workspace_id)
+    conversations = _visible_for_connected_instagram(conversations, active_instagram)
     profiles = InstagramParticipantProfileRepository(db).list_for_conversations(
         workspace_id,
         [conversation.id for conversation in conversations],
