@@ -43,3 +43,13 @@ independent overflow effects that could conflict if dialogs overlapped.
   drawer, internal drawer scroll, closing restoration and real confirmation
   modal with no network mutations.
 - Production Vercel staging smoke on exact commit, no backend rollout.
+
+## Chrome regression finding
+
+The shared dialog wrapper had overscroll-behavior: contain even though it is
+not the scrolling pane. Chrome swallowed the wheel event over its
+overflow-y-auto child. After removing that wrapper-level declaration in
+Chrome, both 1440px and 390px passed: the nested drawer scroll advanced by
+420px, background app scroll remained unchanged at 190px, and original lock
+state and scroll position were restored after closing. The child retains
+overscroll-contain via Tailwind.

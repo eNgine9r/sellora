@@ -29,7 +29,7 @@ export function acquireOverlayScrollLock(): () => void {
 
     // Desktop Chromium cannot wheel-scroll an internal dialog reliably when
     // body is position:fixed. Only iOS WebKit needs that fallback to stop
-    // page rubber-banding; other browsers use overflow+inert background.
+    // page rubber-banding; other browsers use overflow and a modal backdrop.
     const isIOSWebKit = /iPad|iPhone|iPod/.test(navigator.userAgent)
       || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const scrollbarGap = Math.max(0, window.innerWidth - html.clientWidth);
