@@ -7,6 +7,7 @@ import {
   Bot,
   CheckCircle2,
   MessageCircle,
+  ImageOff,
   RefreshCw,
   Send,
   Sparkles,
@@ -820,6 +821,12 @@ function MessageThread({
           <div key={message.id} className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[82%] break-words rounded-2xl px-4 py-3 text-sm ${message.direction === "OUTBOUND" ? "bg-primary/15 text-text-primary" : "bg-surface-2"}`}>
               {message.delivery_status === "FAILED" ? <p className="mb-1 text-xs font-semibold text-rose-600">{messageStatusLabel(message, t)}</p> : null}
+              {!message.text?.trim() && !message.attachments?.length ? (
+                <p className="flex items-center gap-2 text-xs text-text-muted" data-direct-unavailable-content>
+                  <ImageOff className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>{t("direct.contentUnavailable")}</span>
+                </p>
+              ) : null}
               {message.text && !message.attachments?.length ? <p>{message.text}</p> : null}
               {message.text && message.attachments?.length && !message.text.startsWith("[") ? <p className="mb-2">{message.text}</p> : null}
               {message.attachments?.length ? (
@@ -898,7 +905,7 @@ function DirectAttachmentPreview({
     <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface-1">
       {objectUrl && isImage ? (
         <a href={objectUrl} target="_blank" rel="noopener noreferrer" aria-label={`Відкрити: ${attachment.label}`}>
-          <img src={objectUrl} alt={attachment.label} loading="lazy" className="max-h-80 w-full object-contain" />
+          <img src={objectUrl} alt={attachment.label} loading="lazy" onError={() => setFailed(true)} className="max-h-80 w-full object-contain" />
         </a>
       ) : null}
       {objectUrl && isVideo ? <video src={objectUrl} controls preload="none" className="max-h-80 w-full" /> : null}
