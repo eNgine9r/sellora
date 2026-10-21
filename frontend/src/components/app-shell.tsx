@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BarChart3, Home, Package, ShoppingBag, MessageCircle } from "lucide-react";
@@ -13,6 +14,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useI18n } from "@/i18n/provider";
 import { useAuth } from "@/hooks/use-auth";
+import { acquireOverlayScrollLock } from "@/lib/overlay-scroll-lock";
 
 const protectedRoutes = [
   "/dashboard",
@@ -65,8 +67,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [protectedPath, router, status]);
 
   useEffect(() => {
-    document.body.classList.toggle("overflow-hidden", mobileMenuOpen);
-    return () => document.body.classList.remove("overflow-hidden");
+    if (!mobileMenuOpen) return;
+    // Lock the viewport with the same reference-counted helper as all other
+    // Sellora overlays. A body-only overflow class does not stop the nested
+    // app-shell scrolling on mobile devices. The navigation is portaled to
+    // document.body so it stays outside the background scroll container.
+    const releaseScrollLock = acquireOverlayScrollLock({ forceFixedBody: true });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      releaseScrollLock();
+    };
   }, [mobileMenuOpen]);
 
   const handleLogout = async () => {
@@ -130,10 +144,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </nav>
 
-        {mobileMenuOpen ? (
-          <div className="mobile-sidebar-drawer fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={t("mobileNavigation.drawer")}>
+        {mobileMenuOpen ? createPortal(
+          <div className="mobile-sidebar-drawer fixed inset-0 z-50 text-text-primary lg:hidden" role="dialog" aria-modal="true" aria-label={t("mobileNavigation.drawer")}>
             <button className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("actions.close")} onClick={() => setMobileMenuOpen(false)} />
-            <div className="relative h-full w-[88vw] max-w-sm overflow-hidden bg-sidebar shadow-2xl">
+            <div className="relative h-full w-[88vw] max-w-sm overflow-clip bg-sidebar shadow-2xl">
               <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
               <div className="mobile-sidebar-footer-compact absolute inset-x-0 bottom-0 border-t border-border-subtle bg-sidebar p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <div className="mb-2 flex min-w-0 items-center gap-3 rounded-2xl bg-surface-1 p-3 text-sm text-text-secondary">
@@ -144,7 +158,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <button className="mt-2 min-h-11 w-full rounded-2xl border border-border-subtle bg-surface-2 px-3 text-sm font-bold text-text-primary transition hover:bg-surface-hover" onClick={handleLogout}>{t("actions.logout")}</button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
         ) : null}
       </div>
     </DirectLiveProvider>

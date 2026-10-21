@@ -63,6 +63,15 @@ function harness({ initialInert = false, rootAttribute = null, ios = false } = {
   assert.deepEqual(d.scrollToCalls, [[25,347],[25,347]]);
 }
 {
+  const d=harness();
+  const release=d.acquire({forceFixedBody:true});
+  assert.equal(d.body.style.position, "fixed", "hamburger needs fixed body on mobile Chromium");
+  assert.equal(d.body.style.top,"-347px");
+  release();
+  assert.deepEqual(d.body.style,d.previousBody);
+  assert.deepEqual(d.scrollToCalls,[[25,347]]);
+}
+{
   const d = harness({ ios: true });
   const release=d.acquire();
   assert.equal(d.body.style.position, "fixed", "iOS keeps the fixed-body fallback");
