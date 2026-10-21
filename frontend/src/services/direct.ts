@@ -47,7 +47,7 @@ export function applyDirectCustomerExtraction(conversationId: string, analysisId
   });
 }
 export function fetchInstagramHistorySync() { return apiRequest<InstagramHistorySync | null>("/direct/history-sync"); }
-export function startInstagramHistorySync(conversationLimit = 100, messagesPerConversation = 100) {
+export function startInstagramHistorySync(conversationLimit = 100, messagesPerConversation = 200) {
   return apiRequest<InstagramHistorySync>("/direct/history-sync", {
     method: "POST",
     body: JSON.stringify({ conversation_limit: conversationLimit, messages_per_conversation: messagesPerConversation }),

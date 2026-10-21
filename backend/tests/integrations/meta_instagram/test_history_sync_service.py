@@ -37,6 +37,9 @@ class FakeSyncRepo:
     def get(self, workspace_id):
         return self.sync if self.sync.workspace_id == workspace_id else None
 
+    def get_for_update(self, workspace_id):
+        return self.get(workspace_id)
+
 
 class FakeConversationRepo:
     def __init__(self):
@@ -240,3 +243,35 @@ async def test_history_sync_qualifying_inbound_replays_without_duplicate_leads(m
     await service.process_next()
     assert sync.messages_existing==1
     assert len(service.lead_service.calls)==1
+
+
+def test_maximum_history_request_persists_200_messages_for_2000_threads(monkeypatch):
+    from app.integrations.meta_instagram.schemas import InstagramHistorySyncRequest
+
+    workspace_id, sync, _, _, service = make_service(monkeypatch, FakeHistoryClient())
+    sync.status = "COMPLETED"
+    actor = uuid4()
+    payload = InstagramHistorySyncRequest(
+        conversation_limit=2000, messages_per_conversation=200
+    )
+    result = service.request_sync(
+        workspace_id, actor, conversation_limit=payload.conversation_limit,
+        messages_per_conversation=payload.messages_per_conversation,
+    )
+    assert result is sync
+    assert sync.conversation_limit == 2000
+    assert sync.messages_per_conversation == 200
+    assert sync.status == "PENDING"
+    assert sync.requested_by == actor
+
+
+def test_maximum_history_request_is_bounded_even_for_internal_calls(monkeypatch):
+    workspace_id, sync, _, _, service = make_service(monkeypatch, FakeHistoryClient())
+    sync.status = "COMPLETED"
+    result = service.request_sync(
+        workspace_id, uuid4(), conversation_limit=100000,
+        messages_per_conversation=100000,
+    )
+    assert result is sync
+    assert sync.conversation_limit == 2000
+    assert sync.messages_per_conversation == 200

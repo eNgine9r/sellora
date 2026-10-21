@@ -56,7 +56,7 @@ class InstagramHistorySyncService:
         user_id: UUID,
         *,
         conversation_limit: int = 100,
-        messages_per_conversation: int = 20,
+        messages_per_conversation: int = 200,
     ) -> InstagramHistorySync:
         connection = self.connections.get_active(workspace_id)
         if (
@@ -85,8 +85,8 @@ class InstagramHistorySyncService:
         sync.requested_by = user_id
         sync.status = InstagramHistorySyncStatus.PENDING.value
         sync.conversation_cursor = None
-        sync.conversation_limit = max(1, min(conversation_limit, 500))
-        sync.messages_per_conversation = max(1, min(messages_per_conversation, 20))
+        sync.conversation_limit = max(1, min(conversation_limit, 2000))
+        sync.messages_per_conversation = max(1, min(messages_per_conversation, 200))
         sync.conversation_pages_processed = 0
         sync.conversations_discovered = 0
         sync.conversations_synced = 0
