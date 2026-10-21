@@ -60,7 +60,17 @@ def test_provider_payload_sends_cod_as_backward_delivery_money() -> None:
         declared_value=Decimal("500"),
         cod_amount=Decimal("500"),
     )
-    payload = NovaPoshtaProviderShipmentService.__new__(NovaPoshtaProviderShipmentService)._document_payload(
+    shipment.workspace_id = uuid4()
+    shipment.nova_poshta_city_ref = "city-ref"
+    shipment.nova_poshta_warehouse_ref = "warehouse-ref"
+    service = NovaPoshtaProviderShipmentService.__new__(NovaPoshtaProviderShipmentService)
+    service.settings = SimpleNamespace(
+        _require_connection=lambda workspace_id: (None, "synthetic-key"),
+        client_factory=lambda key: SimpleNamespace(
+            resolve_recipient_warehouse=lambda city_ref, warehouse_ref: ("Київ", "12")
+        ),
+    )
+    payload = service._document_payload(
         shipment,
         {
             "sender_city_ref": "sender-city",
