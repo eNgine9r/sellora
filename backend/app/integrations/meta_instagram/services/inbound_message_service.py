@@ -53,7 +53,11 @@ class InstagramInboundMessageService:
             if event.workspace_id
             else None
         )
-        if not connection or connection.status != InstagramConnectionStatus.CONNECTED.value:
+        if (
+            not connection
+            or connection.status != InstagramConnectionStatus.CONNECTED.value
+            or (event.instagram_connection_id and event.instagram_connection_id != connection.id)
+        ):
             event.status = MetaWebhookEventStatus.IGNORED.value
             event.safe_error_code = "META_CONNECTION_NOT_READY"
             event.processed_at = datetime.now(UTC)
@@ -61,15 +65,20 @@ class InstagramInboundMessageService:
 
         created = 0
         for entry in event.payload.get("entry", []) or []:
+            # A signed batch can contain multiple business account IDs. Never
+            # place another account's message in the selected tenant.
+            account_id = str(entry.get("id") or "")
+            if not account_id or account_id != connection.instagram_account_id:
+                continue
             for item in entry.get("messaging", []) or []:
-                created += self._process_item(event, connection, item)
+                created += self._process_item(event, connection, item, account_id)
 
         event.status = MetaWebhookEventStatus.PROCESSED.value
         event.processed_at = datetime.now(UTC)
         connection.last_webhook_at = datetime.now(UTC)
         return created
 
-    def _process_item(self, event: MetaWebhookEvent, connection, item: dict[str, Any]) -> int:
+    def _process_item(self, event: MetaWebhookEvent, connection, item: dict[str, Any], account_id: str | None = None) -> int:
         if item.get("read"):
             self._process_seen(event, item)
             return 0
@@ -84,11 +93,11 @@ class InstagramInboundMessageService:
         sender_id = str((item.get("sender") or {}).get("id") or "")
         message = item.get("message") or {}
         postback = item.get("postback") or {}
-        is_echo = bool(message.get("is_echo")) or bool(
-            sender_id
-            and recipient_id
-            and sender_id == str(event.payload.get("entry", [{}])[0].get("id", ""))
-        )
+        own_id = account_id or str(getattr(connection, "instagram_account_id", "") or "")
+        if not own_id or (sender_id != own_id and recipient_id != own_id):
+            return 0
+        # Never trust a foreign sender merely because it flagged is_echo.
+        is_echo = sender_id == own_id
         participant_id = recipient_id if is_echo else sender_id
         if not participant_id:
             return 0
@@ -249,13 +258,16 @@ class InstagramInboundMessageService:
 
     def _ensure_customer_safe(self, workspace_id, conversation, text: str | None) -> None:
         try:
-            state = self.customer_automation.ensure_from_inbound_order_intent(
-                workspace_id,
-                conversation.id,
-                text,
-            )
-            if state and state.customer:
-                conversation.provider_sync_status = "CUSTOMER_PROSPECT_READY"
+            # A failed customer association must not poison the surrounding
+            # transaction and roll back the verified inbound message.
+            with self.db.begin_nested():
+                state = self.customer_automation.ensure_from_inbound_order_intent(
+                    workspace_id,
+                    conversation.id,
+                    text,
+                )
+                if state and state.customer:
+                    conversation.provider_sync_status = "CUSTOMER_PROSPECT_READY"
         except Exception:
             conversation.provider_sync_status = "CUSTOMER_AUTOMATION_FAILED_SAFE"
 

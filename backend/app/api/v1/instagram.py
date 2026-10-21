@@ -137,7 +137,11 @@ async def receive_webhook(request: Request, x_hub_signature_256: str | None = He
     service = InstagramWebhookService(db)
     body = await request.body()
     try:
-        service.validate_signature(body, x_hub_signature_256); payload = service.parse_body(body); event = service.persist_verified_event(body, payload); db.commit(); return {"accepted": True, "event_id": str(event.id), "status": event.status}
+        service.validate_signature(body, x_hub_signature_256)
+        payload = service.parse_body(body)
+        events = service.persist_verified_events(body, payload)
+        db.commit()
+        return {"accepted": True, "event_id": str(events[0].id), "status": events[0].status}
     except MetaInstagramError as exc: db.rollback(); _raise(exc)
 
 @router.delete("/data")
