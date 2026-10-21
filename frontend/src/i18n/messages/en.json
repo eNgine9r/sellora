@@ -2444,7 +2444,7 @@
     "historyProviderLimits": "Meta permits import of only available history. Very old messages and inactive Requests may not be exposed. A new scan will not delete existing conversations.",
     "historyProviderError": "Meta history import error: {code}. New messages remain active.",
     "historyRescan": "Retry history import",
-    "historyDeepScan": "Find older conversations (up to 500)"
+    "historyDeepScan": "Maximum import (up to 2,000 conversations)"
   },
   "instagramSettings": {
     "accountSwitchHint": "To connect another Instagram shop, disconnect the current account first. Existing messages stay saved separately from the new connection.",

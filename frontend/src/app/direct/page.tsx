@@ -269,7 +269,7 @@ export default function DirectPage() {
     },
   });
   const historyMutation = useMutation({
-    mutationFn: (conversationLimit: number) => startInstagramHistorySync(conversationLimit, 100),
+    mutationFn: (conversationLimit: number) => startInstagramHistorySync(conversationLimit, 200),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-history-sync", workspaceId] }),
   });
   const readMutation = useMutation({
@@ -595,7 +595,7 @@ function HistorySyncBanner({ sync, loading, canStart, isStarting, onStart }: { s
           <RefreshCw className={`h-4 w-4 ${active || isStarting ? "animate-spin" : ""}`} />
           {t("direct.historyRescan")}
         </Button>
-        <Button variant="secondary" disabled={!canStart || active || isStarting} onClick={() => onStart(500)}>
+        <Button variant="secondary" disabled={!canStart || active || isStarting} onClick={() => onStart(2000)}>
           {t("direct.historyDeepScan")}
         </Button>
       </div>
