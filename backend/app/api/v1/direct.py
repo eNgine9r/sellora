@@ -8,6 +8,7 @@ from app.ai.services.direct_conversation_service import DirectConversationServic
 from app.ai.services.direct_intelligence_service import DirectIntelligenceService
 from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_min_role, require_roles
+from app.integrations.meta_instagram.media import public_attachments
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
 from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
 from app.models.meta_instagram import InstagramConnectionStatus
@@ -198,7 +199,12 @@ def list_messages(
     _: User = Depends(require_min_role(RoleName.ANALYST)),
     db: Session = Depends(get_db),
 ):
-    return DirectMessageRepository(db).list_for_conversation(workspace_id, conversation_id)
+    return [
+        DirectMessageResponse.model_validate(message).model_copy(
+            update={"attachments": public_attachments(message.attachment_metadata)}
+        )
+        for message in DirectMessageRepository(db).list_for_conversation(workspace_id, conversation_id)
+    ]
 
 
 @router.post(

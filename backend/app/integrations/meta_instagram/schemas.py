@@ -49,7 +49,7 @@ class InstagramValidateResponse(BaseModel):
 
 class InstagramHistorySyncRequest(BaseModel):
     conversation_limit: int = Field(default=100, ge=1, le=500)
-    messages_per_conversation: int = Field(default=20, ge=1, le=20)
+    messages_per_conversation: int = Field(default=100, ge=1, le=200)
 
 class InstagramHistorySyncResponse(BaseModel):
     id: UUID
