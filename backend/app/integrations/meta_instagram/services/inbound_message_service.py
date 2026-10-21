@@ -5,6 +5,7 @@ import hashlib
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.integrations.meta_instagram.media import normalize_attachments
 from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
 from app.integrations.meta_instagram.repositories.inbox_sync_repository import InstagramMessageStateRepository
 from app.integrations.meta_instagram.repositories.message_operation_repository import MetaMessageOperationRepository
@@ -283,8 +284,12 @@ class InstagramInboundMessageService:
                 str(postback.get("title") or postback.get("payload") or "Instagram postback"),
                 DirectMessageType.SYSTEM_EVENT.value,
             )
+        attachments = normalize_attachments(message)
         if message.get("text"):
             return "TEXT", str(message.get("text")), DirectMessageType.TEXT.value
+        if attachments:
+            kind = attachments[0]["type"]
+            return kind.upper(), f"[{kind} Instagram attachment]", DirectMessageType.SYSTEM_EVENT.value
         for key, label in MEDIA_TYPES.items():
             if message.get(key):
                 return (
@@ -297,7 +302,11 @@ class InstagramInboundMessageService:
     def _metadata(self, message: dict[str, Any], postback: dict[str, Any]) -> dict[str, Any]:
         if postback:
             return {"postback_payload_present": bool(postback.get("payload"))}
-        return {key: True for key in MEDIA_TYPES if message.get(key)}
+        metadata = {key: True for key in MEDIA_TYPES if message.get(key)}
+        attachments = normalize_attachments(message)
+        if attachments:
+            metadata["attachments"] = attachments
+        return metadata
 
     def _hash_item(self, item: dict[str, Any]) -> str:
         return hashlib.sha256(repr(sorted(item.items())).encode()).hexdigest()

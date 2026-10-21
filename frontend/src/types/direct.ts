@@ -31,7 +31,15 @@ export type DirectConversation = {
   provider_sync_status?: string | null;
 };
 
+export type DirectAttachment = {
+  index: number;
+  type: string;
+  label: string;
+  available: boolean;
+};
+
 export type DirectMessage = {
+  attachments?: DirectAttachment[];
   id: string;
   conversation_id: string;
   direction: DirectMessageDirection;
