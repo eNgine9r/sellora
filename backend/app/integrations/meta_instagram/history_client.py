@@ -100,14 +100,15 @@ class MetaInstagramHistoryClient:
         # Meta may provide message details inline within a conversation. This
         # avoids fetching each older message by its ID, which may be rejected
         # even when the thread and its message IDs remain available.
-        rich_fields = f"messages.limit({bounded_limit}){{id,created_time,message,from,to}}"
+        rich_fields = f"messages.limit({bounded_limit}){{id,created_time,message,from,to,attachments}}"
+        rich_without_media = f"messages.limit({bounded_limit}){{id,created_time,message,from,to}}"
         basic_fields = f"messages.limit({bounded_limit}){{id,created_time}}"
         rich_params = {"fields": rich_fields}
         basic_params = {"fields": basic_fields}
         if after:
             # The cursor belongs to the nested messages edge, not the thread object.
             edge_params = {
-                "fields": "id,created_time,message,from,to,is_unsupported",
+                "fields": "id,created_time,message,from,to,attachments",
                 "limit": bounded_limit, "after": after,
             }
             try:
@@ -115,10 +116,18 @@ class MetaInstagramHistoryClient:
             except MetaInstagramError as exc:
                 if not self._unsupported_fields_error(exc):
                     raise
-                payload = await self._get(
-                    f"/{conversation_id}/messages",
-                    params={"fields": "id,created_time", "limit": bounded_limit, "after": after},
-                )
+                try:
+                    payload = await self._get(
+                        f"/{conversation_id}/messages",
+                        params={"fields": "id,created_time,message,from,to", "limit": bounded_limit, "after": after},
+                    )
+                except MetaInstagramError as fallback_exc:
+                    if not self._unsupported_fields_error(fallback_exc):
+                        raise
+                    payload = await self._get(
+                        f"/{conversation_id}/messages",
+                        params={"fields": "id,created_time", "limit": bounded_limit, "after": after},
+                    )
             messages_payload = payload
         else:
             try:
@@ -126,7 +135,12 @@ class MetaInstagramHistoryClient:
             except MetaInstagramError as exc:
                 if not self._unsupported_fields_error(exc):
                     raise
-                payload = await self._get(f"/{conversation_id}", params=basic_params)
+                try:
+                    payload = await self._get(f"/{conversation_id}", params={"fields": rich_without_media})
+                except MetaInstagramError as fallback_exc:
+                    if not self._unsupported_fields_error(fallback_exc):
+                        raise
+                    payload = await self._get(f"/{conversation_id}", params=basic_params)
             messages_payload = payload.get("messages") if isinstance(payload, dict) else None
         rows = messages_payload.get("data") if isinstance(messages_payload, dict) else None
         messages = [
@@ -136,7 +150,7 @@ class MetaInstagramHistoryClient:
                 is_unsupported=bool(item.get("is_unsupported", False)),
                 details=self._details_from_payload(item) if (
                     ("from" in item or "to" in item) and
-                    (item.get("message") is not None or item.get("is_unsupported"))
+                    (item.get("message") is not None or item.get("is_unsupported") or item.get("attachments"))
                 ) else None,
             )
             for item in rows or []
@@ -148,27 +162,31 @@ class MetaInstagramHistoryClient:
         )
 
     async def get_message(self, message_id: str) -> MetaMessageDetails:
-        full_fields = "id,created_time,from,to,message,is_unsupported,reply_to"
-        basic_fields = "id,created_time,from,to,message"
-        try:
+        # Invalid optional fields (notably reply_to on some Instagram messages)
+        # must never cause us to drop otherwise accessible attachment URLs.
+        field_sets = (
+            "id,created_time,from,to,message,is_unsupported,reply_to,attachments",
+            "id,created_time,from,to,message,attachments",
+            "id,created_time,from,to,message,is_unsupported,reply_to",
+            "id,created_time,from,to,message",
+        )
+        for fields in field_sets:
             try:
-                payload = await self._get(
-                    f"/{message_id}", params={"fields": full_fields + ",attachments"}
-                )
-            except MetaInstagramError as media_error:
-                if not self._unsupported_fields_error(media_error):
-                    raise
-                payload = await self._get(f"/{message_id}", params={"fields": full_fields})
-        except MetaInstagramError as exc:
-            if self._unsupported_fields_error(exc):
-                try:
-                    payload = await self._get(f"/{message_id}", params={"fields": basic_fields})
-                except MetaInstagramError as retry_exc:
-                    self._raise_if_unavailable(retry_exc)
-                    raise
-            else:
+                payload = await self._get(f"/{message_id}", params={"fields": fields})
+                break
+            except MetaInstagramError as exc:
+                if self._unsupported_fields_error(exc):
+                    continue
                 self._raise_if_unavailable(exc)
                 raise
+        else:
+            # No fields combination was supported; don't report empty content
+            # or pretend the provider successfully returned the attachment.
+            raise MetaInstagramError(
+                "META_HISTORY_ACCESS_DENIED",
+                "Meta did not support the requested historical message fields.",
+                400,
+            )
         return self._details_from_payload(payload, fallback_id=message_id)
 
     @staticmethod

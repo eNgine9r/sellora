@@ -2391,6 +2391,7 @@
     "webhookTitle": "Message updates inactive",
     "webhookHint": "Instagram is connected. Enable incoming messages in integration settings.",
     "noMessages": "No messages yet",
+    "contentUnavailable": "Meta did not provide the message content. This may have been a photo or another attachment.",
     "noMessagesHint": "New Instagram messages will appear here. You can also sync available history.",
     "selectTitle": "Select a conversation",
     "selectHint": "Select a conversation to see messages and AI suggestions.",
