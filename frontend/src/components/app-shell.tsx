@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BarChart3, Home, Package, ShoppingBag, MessageCircle } from "lucide-react";
@@ -69,7 +70,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!mobileMenuOpen) return;
     // Lock the viewport with the same reference-counted helper as all other
     // Sellora overlays. A body-only overflow class does not stop the nested
-    // app-shell scrolling on mobile devices.
+    // app-shell scrolling on mobile devices. The navigation is portaled to
+    // document.body so it stays outside the background scroll container.
     const releaseScrollLock = acquireOverlayScrollLock();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMobileMenuOpen(false);
@@ -101,14 +103,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <DirectLiveProvider workspaceId={currentWorkspaceId}>
       {logoutError ? <div role="alert" className="fixed bottom-4 left-4 right-4 z-[100] mx-auto max-w-md rounded-xl border border-danger/30 bg-surface-1 p-4 text-sm font-semibold text-danger shadow-xl">{logoutError}</div> : null}
-      <div
-        className="min-h-screen w-full overflow-x-hidden bg-canvas text-text-primary lg:grid lg:[--sidebar-width:220px] lg:[--topbar-height:72px] lg:[grid-template-columns:var(--sidebar-width)_minmax(0,1fr)] lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]"
-        data-protected-shell-grid
-        data-mobile-menu-open={mobileMenuOpen ? "true" : undefined}
-        // The base overflow-x-hidden also creates a vertical scroll container.
-        // While open, clip both axes without creating a scroll container.
-        style={mobileMenuOpen ? { overflow: "clip" } : undefined}
-      >
+      <div className="min-h-screen w-full overflow-x-hidden bg-canvas text-text-primary lg:grid lg:[--sidebar-width:220px] lg:[--topbar-height:72px] lg:[grid-template-columns:var(--sidebar-width)_minmax(0,1fr)] lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]" data-protected-shell-grid>
         <div className="hidden min-w-0 border-b border-r border-border-subtle bg-canvas/92 px-4 backdrop-blur-xl lg:flex lg:h-[var(--topbar-height)] lg:w-[var(--sidebar-width)] lg:items-center" data-shell-brand-cell>
           <Link href="/dashboard" aria-label={t("navigation.dashboard")} className="flex min-w-0 items-center rounded-2xl border border-transparent px-1 py-1 transition hover:border-border-subtle hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
             <BrandLockup markClassName="h-10 w-10" textClassName="text-text-primary" />
@@ -149,8 +144,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </nav>
 
-        {mobileMenuOpen ? (
-          <div className="mobile-sidebar-drawer fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={t("mobileNavigation.drawer")}>
+        {mobileMenuOpen ? createPortal(
+          <div className="mobile-sidebar-drawer fixed inset-0 z-50 text-text-primary lg:hidden" role="dialog" aria-modal="true" aria-label={t("mobileNavigation.drawer")}>
             <button className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("actions.close")} onClick={() => setMobileMenuOpen(false)} />
             <div className="relative h-full w-[88vw] max-w-sm overflow-clip bg-sidebar shadow-2xl">
               <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
@@ -163,7 +158,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <button className="mt-2 min-h-11 w-full rounded-2xl border border-border-subtle bg-surface-2 px-3 text-sm font-bold text-text-primary transition hover:bg-surface-hover" onClick={handleLogout}>{t("actions.logout")}</button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
         ) : null}
       </div>
     </DirectLiveProvider>
