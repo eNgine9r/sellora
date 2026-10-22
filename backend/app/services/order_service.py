@@ -162,8 +162,56 @@ class OrderService:
         return self.get(workspace_id, order_id) or order
 
     def _replace_items_for_update(self, workspace_id: UUID, order: Order, item_payloads: list, actor_user_id: UUID | None, old_value: dict | None = None) -> None:
-        if OrderStatus(order.status) not in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
+        historical = bool(order.is_historical)
+        if not historical and OrderStatus(order.status) not in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
             raise OrderServiceError("Order items cannot be edited after shipment workflow has started")
+
+        # Historical orders were imported without stock reservations. Correcting
+        # their product/price/cost snapshots must NEVER change today's stock.
+        if historical:
+            previous_variant_ids = {item.product_variant_id for item in order.items}
+            prepared_items = []
+            for payload in item_payloads:
+                if payload.product_variant_id in previous_variant_ids:
+                    variant = self.db.get(ProductVariant, payload.product_variant_id)
+                    if variant is None or variant.workspace_id != workspace_id or variant.deleted_at is not None:
+                        raise OrderServiceError("Historical product variant is no longer available")
+                else:
+                    variant = self._get_variant(workspace_id, payload.product_variant_id)
+                prepared_items.append((payload, variant))
+            for item in list(order.items):
+                self.orders.delete_item(item)
+            order.items = []
+            revenue = Decimal("0")
+            product_cost = Decimal("0")
+            for payload, variant in prepared_items:
+                line_total = payload.unit_price * payload.quantity
+                line_cost = payload.unit_cost * payload.quantity
+                revenue += line_total
+                product_cost += line_cost
+                self.orders.add_item(OrderItem(
+                    workspace_id=workspace_id,
+                    order_id=order.id,
+                    product_variant_id=variant.id,
+                    sku=variant.sku,
+                    product_name=variant.product.name,
+                    quantity=payload.quantity,
+                    unit_price=payload.unit_price,
+                    unit_cost=payload.unit_cost,
+                    line_total=line_total,
+                    line_cost=line_cost,
+                ))
+            order.revenue = revenue
+            order.product_cost = product_cost
+            self.audit_logs.create(
+                workspace_id=workspace_id, user_id=actor_user_id,
+                entity_type="Order", entity_id=order.id,
+                action="HISTORICAL_ORDER_ITEMS_CORRECTED",
+                old_value=old_value,
+                new_value={"item_count": len(prepared_items), "affect_inventory": False},
+            )
+            return
+
         prepared_items = []
         old_quantities: dict[UUID, int] = {}
         new_quantities: dict[UUID, int] = {}
@@ -272,6 +320,9 @@ class OrderService:
         return order
 
     def _apply_transition_inventory(self, workspace_id: UUID, order: Order, old_status: OrderStatus, new_status: OrderStatus, actor_user_id: UUID | None) -> None:
+        if order.is_historical:
+            # No stock was ever reserved for historical imports; never change physical inventory.
+            return
         for item in sorted(order.items, key=lambda value: str(value.product_variant_id)):
             inventory = self.inventory.get_by_variant(workspace_id, item.product_variant_id)
             if inventory is None:
