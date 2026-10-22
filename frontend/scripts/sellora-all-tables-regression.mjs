@@ -37,6 +37,9 @@ for (const p of reportFiles) {
     `Wide minimums introduce nested horizontal scrolling: ${p}`);
   assert(!source.includes("<table"), `Legacy raw table still exists outside shared report component: ${p}`);
 }
+const auxiliaryTopProducts = read("frontend/src/features/analytics/components/top-products-table.tsx");
+assert(auxiliaryTopProducts.includes("showProfit = false") && auxiliaryTopProducts.includes("...(showProfit ? ["),
+  "Auxiliary product report must not expose profit without explicit RBAC permission");
 const analytics = read("frontend/src/app/analytics/page.tsx");
 assert.equal((analytics.match(/<ResponsiveReportTable/g) ?? []).length, 5,
   "All five analytics reports must support adaptive tables and cards");
