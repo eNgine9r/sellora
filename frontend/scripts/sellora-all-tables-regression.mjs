@@ -13,8 +13,10 @@ assert(shared.includes("sellora-adaptive-table") && shared.includes("sellora-ada
 assert(shared.includes("<th") && shared.includes("<dt") && shared.includes("<dd"),
   "Card metrics must have readable metric labels and values");
 assert(shared.includes("rowKey"), "Row identity must remain stable");
-assert(css.includes("@container (min-width: 780px)") && css.includes("@container (min-width: 980px)"),
-  "Adaptive breakpoints must remain consistent with CRM lists");
+assert(css.includes("@container (min-width: 780px)") && css.includes("@container (min-width: 980px)") && css.includes("@container (min-width: 1200px)"),
+  "Adaptive breakpoints must remain consistent with CRM lists and wide analytical reports");
+assert(shared.includes("columns.length >= 8") && shared.includes("sellora-adaptive-dense-list"),
+  "Reports with eight or more columns must switch to labeled cards until wider container width");
 
 const reportFiles = [
   "frontend/src/features/analytics/components/low-stock-table.tsx",
