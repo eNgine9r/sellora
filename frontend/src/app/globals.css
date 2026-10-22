@@ -502,3 +502,55 @@ main [data-direct-compact-composer] textarea[data-direct-reply-input] {
     height: max(21rem, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 7.5rem));
   }
 }
+
+/* Sellora Orbit: global bootstrap/auth loader for desktop and mobile. */
+.sellora-orbit-track,
+.sellora-orbit-spinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.sellora-orbit-track {
+  border: 3px solid var(--border-subtle);
+}
+
+.sellora-orbit-spinner {
+  --orbit-stroke: 3px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(124, 58, 237, 0.16) 155deg,
+    var(--primary-solid) 280deg,
+    #d8b4fe 345deg,
+    transparent 360deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - var(--orbit-stroke) - 1px),
+    #000 calc(100% - var(--orbit-stroke))
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - var(--orbit-stroke) - 1px),
+    #000 calc(100% - var(--orbit-stroke))
+  );
+  animation: sellora-orbit-rotate 1.5s linear infinite;
+}
+
+@keyframes sellora-orbit-rotate {
+  to { transform: rotate(360deg); }
+}
+
+@media (min-width: 768px) {
+  .sellora-orbit-track { border-width: 4px; }
+  .sellora-orbit-spinner { --orbit-stroke: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sellora-orbit-spinner {
+    animation: none;
+    transform: rotate(45deg);
+  }
+}
