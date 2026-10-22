@@ -554,3 +554,24 @@ main [data-direct-compact-composer] textarea[data-direct-reply-input] {
     transform: rotate(45deg);
   }
 }
+
+
+/* CRM table/card switch follows the actual available width, including an open detail panel.
+   This avoids nested horizontal scrolling on desktop split views. */
+.sellora-adaptive-list {
+  container-type: inline-size;
+}
+.sellora-adaptive-table {
+  display: none;
+}
+.sellora-adaptive-cards {
+  display: grid;
+}
+@container (min-width: 780px) {
+  .sellora-adaptive-table {
+    display: block;
+  }
+  .sellora-adaptive-cards {
+    display: none;
+  }
+}
