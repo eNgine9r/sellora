@@ -25,7 +25,7 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
               <th className="px-4 py-3">SKU</th>
               <th className="px-4 py-3">{t("tables.status")}</th>
               <th className="px-4 py-3">{t("tables.created")}</th>
-              <th className="w-[92px] px-4 py-3 text-center">{t("tables.actions")}</th>
+              <th className="w-[108px] px-4 py-3 text-center">{t("tables.actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
