@@ -228,6 +228,18 @@ function DirectPageContent() {
     ensureCustomerMutation.mutate(conversationId);
   }, [automationQuery.data?.stage, canManage, ensureCustomerMutation, orderIntentConversationIds, selectedConversation?.id]);
 
+  const lastComposerConversationId = useRef<string | null>(null);
+  const { reset: clearPreparedReply } = prepareMutation;
+  const { reset: clearSendState } = sendMutation;
+  useEffect(() => {
+    const id = selectedConversation?.id ?? null;
+    if (lastComposerConversationId.current === id) return;
+    lastComposerConversationId.current = id;
+    setReplyText("");
+    clearPreparedReply();
+    clearSendState();
+  }, [selectedConversation?.id, clearPreparedReply, clearSendState]);
+
   const historyStatus = historyQuery.data?.status;
   useEffect(() => {
     if (!historyStatus || !["COMPLETED", "PARTIAL"].includes(historyStatus)) return;
