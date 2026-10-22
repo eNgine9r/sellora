@@ -55,11 +55,11 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, m
           <Menu className="h-5 w-5" />
         </IconButton>
 
-        <div className="flex min-w-0 flex-1 items-center gap-3 md:hidden">
-          <BrandIcon className="h-10 w-10 shrink-0" priority />
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-black text-text-primary">Sellora</p>
-            <p className="truncate text-xs text-text-muted">{currentWorkspace?.workspace_name ?? t("accountMenu.workspace")}</p>
+        <div className="mobile-brand-lockup flex min-w-0 flex-1 items-center gap-2.5 md:hidden" data-mobile-brand-lockup>
+          <BrandIcon className="h-10 w-10 shrink-0" priority unoptimized />
+          <div className="mobile-brand-copy min-w-0 leading-tight">
+            <p className="mobile-brand-title truncate text-base font-bold tracking-tight text-text-primary">Sellora</p>
+            <p className="truncate text-xs font-medium text-text-secondary">{currentWorkspace?.workspace_name ?? t("accountMenu.workspace")}</p>
           </div>
         </div>
 

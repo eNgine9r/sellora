@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: "CRM/ERP для лідів, замовлень, складу, реклами, доставок і прибутку Instagram-магазину.",
   applicationName: "Sellora",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "Sellora", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Sellora", statusBarStyle: "black" },
   icons: {
     icon: [{ url: "/brand/sellora-icon.webp", type: "image/webp" }],
     apple: [{ url: "/brand/sellora-icon.webp", type: "image/webp" }],

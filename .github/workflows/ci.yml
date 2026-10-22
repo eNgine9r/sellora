@@ -232,6 +232,8 @@ jobs:
       - name: Run mobile navigation and safe-area static regression
         working-directory: frontend
         run: npm run mobile:audit:static
+      - name: Run iPhone PWA crisp brand regression
+        run: node frontend/scripts/ios-pwa-crisp-brand-regression.mjs
       - name: Run secure cookie-session frontend contract
         run: node frontend/scripts/cookie-session-runtime-contract.mjs
       - name: Run Direct mobile inbox and PWA header regression

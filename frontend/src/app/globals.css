@@ -231,7 +231,7 @@ html {
 }
 
 @supports (padding-top: env(safe-area-inset-top)) {
-  /* iOS standalone PWAs draw behind the translucent status bar. */
+  /* In standalone mode the status bar is opaque; reserve any browser-reported safe inset. */
   .mobile-safe-top {
     padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
     padding-left: max(0.75rem, env(safe-area-inset-left));
@@ -456,7 +456,28 @@ main [data-direct-compact-composer] textarea[data-direct-reply-input] {
     background-color: var(--canvas) !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
-    isolation: isolate;
+    isolation: auto;
+    transform: none;
+    will-change: auto;
+  }
+
+  /* Keep text and the full-resolution mark in the same non-composited layer. */
+  .mobile-brand-lockup,
+  .mobile-brand-copy,
+  .mobile-brand-title,
+  .mobile-brand-lockup img {
+    -webkit-filter: none !important;
+    filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    transform: none !important;
+    text-shadow: none !important;
+    opacity: 1;
+  }
+
+  .mobile-brand-title {
+    -webkit-font-smoothing: antialiased;
+    font-synthesis: none;
   }
 
   .mobile-safe-top .mobile-topbar-compact {
