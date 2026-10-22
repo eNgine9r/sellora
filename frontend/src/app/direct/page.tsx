@@ -3,6 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowLeft,
   BadgeCheck,
   Bot,
   CheckCircle2,
@@ -19,8 +20,8 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { useDirectLive } from "@/components/direct-live-provider";
@@ -53,9 +54,16 @@ import {
 const ACTIVE_HISTORY_STATUSES = new Set(["PENDING", "RUNNING", "RETRY_PENDING"]);
 
 export default function DirectPage() {
+  return <Suspense fallback={<LoadingSkeleton />}><DirectPageContent /></Suspense>;
+}
+
+function DirectPageContent() {
   const { t } = useI18n();
   const { currentWorkspace } = useAuth();
   const router = useRouter();
+  const requestedConversationId = useSearchParams().get("conversation");
+  const [isMobile, setIsMobile] = useState(false);
+  const listScrollPosition = useRef(0);
   const queryClient = useQueryClient();
   const { isLive, isError: liveError, orderIntentConversationIds } = useDirectLive();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -75,9 +83,19 @@ export default function DirectPage() {
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
   });
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1023px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
   const selectedConversation = useMemo(
-    () => conversationsQuery.data?.find((item) => item.id === selectedId) ?? conversationsQuery.data?.[0],
-    [conversationsQuery.data, selectedId],
+    () => selectedId
+      ? (conversationsQuery.data?.find((item) => item.id === selectedId) ?? null)
+      : (isMobile ? null : (conversationsQuery.data?.[0] ?? null)),
+    [conversationsQuery.data, isMobile, selectedId],
   );
   const messagesQuery = useQuery({
     queryKey: ["direct-messages", workspaceId, selectedConversation?.id],
@@ -160,12 +178,18 @@ export default function DirectPage() {
   }, [workspaceId]);
 
   useEffect(() => {
-    if (!conversationsQuery.data?.length || typeof window === "undefined") return;
-    const requestedId = new URLSearchParams(window.location.search).get("conversation");
-    if (requestedId && conversationsQuery.data.some((item) => item.id === requestedId)) {
-      setSelectedId(requestedId);
-    }
-  }, [conversationsQuery.data]);
+    if (!conversationsQuery.data) return;
+    const requestedId = requestedConversationId && conversationsQuery.data.some((item) => item.id === requestedConversationId)
+      ? requestedConversationId
+      : null;
+    setSelectedId(requestedId);
+  }, [conversationsQuery.data, requestedConversationId]);
+
+  useEffect(() => {
+    if (!isMobile || selectedId || listScrollPosition.current === 0) return;
+    const frame = window.requestAnimationFrame(() => window.scrollTo(0, listScrollPosition.current));
+    return () => window.cancelAnimationFrame(frame);
+  }, [isMobile, selectedId]);
 
   useEffect(() => {
     const draft = suggestionsQuery.data?.find((item) => item.draft_text)?.draft_text;
@@ -212,12 +236,23 @@ export default function DirectPage() {
   }, [historyStatus, queryClient, selectedConversation?.id, workspaceId]);
 
   const handleSelectConversation = (conversationId: string) => {
+    if (isMobile) {
+      listScrollPosition.current = window.scrollY;
+      window.scrollTo(0, 0);
+    }
     setSelectedId(conversationId);
-    router.replace(`/direct?conversation=${encodeURIComponent(conversationId)}`, { scroll: false });
+    router.push(`/direct?conversation=${encodeURIComponent(conversationId)}`, { scroll: false });
   };
+  const handleBackToInbox = () => {
+    setSelectedId(null);
+    setAiPanelOpen(false);
+    router.replace("/direct", { scroll: false });
+  };
+  const threadOpenOnMobile = Boolean(selectedId);
 
   return (
-    <WorkspacePage className="min-h-full">
+    <WorkspacePage className={threadOpenOnMobile ? "min-h-full !px-3 !py-2 lg:!px-6 lg:!py-4" : "min-h-full"}>
+      <div className={threadOpenOnMobile ? "hidden lg:block" : ""}>
       <WorkspaceHeader
         eyebrow={t("direct.kicker")}
         title={t("direct.title")}
@@ -245,8 +280,9 @@ export default function DirectPage() {
       />
 
       <HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} />
+      </div>
 
-      <div className="lg:hidden">
+      <div className={threadOpenOnMobile ? "hidden lg:block" : "lg:hidden"}>
         <button
           type="button"
           onClick={() => setAiPanelOpen(true)}
@@ -257,10 +293,12 @@ export default function DirectPage() {
       </div>
 
       <section
-        className="grid min-h-[calc(100dvh-var(--topbar-height,72px)-190px)] min-w-0 gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)_minmax(320px,380px)]"
+        className="grid min-w-0 gap-4 lg:min-h-[calc(100dvh-var(--topbar-height,72px)-190px)] lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)_minmax(320px,380px)]"
         data-direct-shell-content
       >
+        <div className={threadOpenOnMobile ? "hidden min-w-0 lg:block" : "min-w-0"}>
         <ConversationList
+          key={workspaceId}
           loading={conversationsQuery.isLoading}
           error={conversationsQuery.isError}
           conversations={conversationsQuery.data ?? []}
@@ -271,7 +309,11 @@ export default function DirectPage() {
           isLive={isLive}
           liveError={liveError}
         />
+        </div>
+        <div className={threadOpenOnMobile ? "min-w-0" : "hidden min-w-0 lg:block"}>
         <MessageThread
+          onBack={handleBackToInbox}
+          onOpenAiPanel={() => setAiPanelOpen(true)}
           conversation={selectedConversation}
           automation={automationQuery.data}
           automationLoading={automationQuery.isLoading}
@@ -298,6 +340,7 @@ export default function DirectPage() {
           sendPending={sendMutation.isPending}
           noAutoSend={t("direct.noAutoSend")}
         />
+        </div>
         <div className="hidden lg:block">
           <AiPanel
             loading={suggestionsQuery.isLoading}
