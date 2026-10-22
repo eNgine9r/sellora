@@ -53,11 +53,11 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 3,
     "AUTHENTICATED_GLOBAL": 4,
-    "WORKSPACE_SCOPED": 196,
+    "WORKSPACE_SCOPED": 197,
     "FEATURE_GATED": 12,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 215
+EXPECTED_TOTAL_ROUTES = 216
 EXPECTED_MUTATION_ROUTES = 122
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
@@ -127,6 +127,16 @@ def test_endpoint_inventory_permission_subsets_are_not_counted_as_primary_scopes
     assert len(owner_only) == len(OWNER_ONLY_ENDPOINTS)
     assert len(mutation_routes) == EXPECTED_MUTATION_ROUTES
     assert all(_primary_scope(path) in {"WORKSPACE_SCOPED", "FEATURE_GATED"} for _method, path in owner_only)
+
+
+def test_customer_order_history_is_workspace_scoped_and_not_public() -> None:
+    path = "/api/v1/customers/{customer_id}/orders"
+    routes = _api_routes()
+    matches = [(route_path, route) for route_path, route in routes if route_path == path]
+    assert len(matches) == 1
+    assert matches[0][1].methods == {"GET"}
+    assert _primary_scope(path) == "WORKSPACE_SCOPED"
+    assert path not in PUBLIC_ENDPOINTS and path not in AUTHENTICATED_GLOBAL_ENDPOINTS
 
 
 def test_global_endpoint_whitelist_is_explicit_and_small() -> None:
