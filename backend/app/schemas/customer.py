@@ -59,3 +59,15 @@ class CustomerResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class CustomerOrderSummary(BaseModel):
+    id: UUID
+    order_number: str
+    status: str
+    payment_status: str
+    is_historical: bool
+    revenue: Decimal
+    created_at: datetime
+    shipment_tracking: str | None = None
+    shipment_status: str | None = None
+    shipment_city: str | None = None
