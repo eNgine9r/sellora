@@ -30,11 +30,12 @@
 | October 1–22 | 68 | 50 |
 | **Total** | **795** | **597** |
 
-Subsequent parsing of spaced/hyphenated Ukrainian phone numbers safely recovered another **10 May records**, for **607 reconstructed orders**. Additional months require an authorized bounded second pass; attempts were blocked by Nova Poshta's provider rate restriction, so no claim of complete second-pass coverage is made.
+Subsequent parsing of spaced/hyphenated Ukrainian phone numbers safely recovered another **10 May records**, for **607 reconstructed orders**. Final workspace-verified totals after all committed writes: **607 customers, 600 addresses, 1,098 orders, 608 shipments and 1,113 order items**. Exactly **607** orders carry the immutable `NP-<TTN>` importer prefix, all with zero revenue/net profit, payment PENDING, and audit provenance. Provider TТН duplicates: zero. Additional months require an authorized bounded second pass; attempts were blocked by Nova Poshta's provider rate restriction, so no claim of complete second-pass coverage is made.
 
 ## Validation and operations
 
 - Encrypted full database snapshot made before write and off-host Google Drive upload verified.
+- Fresh post-recovery encrypted snapshot `sellora-db-20261022-041400.pgdump.enc` was uploaded and its ciphertext verified in Google Drive after an initial provider quota failure.
 - May full execution passed an actual transaction `flush()` of 104 candidate orders/customers/addresses/shipments and was explicitly rolled back before the first commit.
 - Each month committed atomically, and DB count/profit/duplicate guards verified after release.
 - No new registered Sellora users, changes to OAuth credentials, new payment confirmation, outbound Meta messages or Nova Poshta label creation.
