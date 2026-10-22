@@ -234,6 +234,8 @@ jobs:
       - name: Run mobile navigation and safe-area static regression
         working-directory: frontend
         run: npm run mobile:audit:static
+      - name: Run full CRM and report table consistency regression
+        run: node frontend/scripts/sellora-all-tables-regression.mjs
       - name: Run desktop CRM table consistency regression
         run: node frontend/scripts/desktop-crm-table-consistency-regression.mjs
       - name: Run iPhone PWA crisp brand regression
