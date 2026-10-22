@@ -1,20 +1,29 @@
 "use client";
 
-import { CampaignPerformance } from "@/types/advertising";
-import { MetricValue } from "./metric-value";
+import { ResponsiveReportTable, type ReportTableColumn } from "@/components/ui/responsive-report-table";
 import { useI18n } from "@/i18n/provider";
+import type { CampaignPerformance } from "@/types/advertising";
+import { MetricValue } from "./metric-value";
 
 export function CampaignPerformanceTable({ rows }: { rows: CampaignPerformance[] }) {
   const { t } = useI18n();
+  const columns: ReportTableColumn<CampaignPerformance>[] = [
+    { key: "campaign", label: t("advertising.campaignComparison"), emphasis: true, render: (row) =>
+      <><span className="block">{row.campaign_name}</span><span className="block text-xs font-normal text-text-muted">{row.platform}</span></> },
+    { key: "spend", label: t("advertising.spend"), render: (row) => row.spend },
+    { key: "revenue", label: t("advertising.revenue"), render: (row) =>
+      <><span className="block">{row.revenue}</span><span className="block text-xs text-text-muted">{t("finance.netProfit")}: <MetricValue value={row.net_profit} /></span></> },
+    { key: "results", label: t("advertising.orders"), render: (row) =>
+      <><span className="block">{row.orders}</span><span className="block text-xs text-text-muted">{t("advertising.leads")}: {row.leads} · {t("advertising.messages")}: {row.messages}</span></> },
+    { key: "cost", label: "CPA / CPL", render: (row) =>
+      <><span className="block">CPA: <MetricValue value={row.cpa} /></span><span className="block text-xs">CPL: <MetricValue value={row.cpl} /></span></> },
+    { key: "roas", label: "ROAS / ROI", render: (row) =>
+      <><span className="block">ROAS: <MetricValue value={row.roas} /></span><span className="block text-xs">ROI: <MetricValue value={row.roi} suffix="%" /></span></> },
+  ];
   return (
-    <section className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm">
-      <h2 className="text-lg font-semibold text-text-primary">Ефективність кампаній</h2>
-      <div className="sellora-scrollbar mt-3 max-w-full overflow-x-auto">
-        <table className="w-full min-w-[920px] text-left text-sm">
-          <thead><tr className="border-b border-border-subtle text-text-muted"><th>{t("advertising.campaign")}</th><th>{t("advertising.platform")}</th><th>{t("advertising.spend")}</th><th>{t("advertising.revenue")}</th><th>{t("advertising.orders")}</th><th>{t("advertising.leads")}</th><th>{t("advertising.messages")}</th><th>CPA</th><th>CPL</th><th>ROAS</th><th>{t("finance.netProfit")}</th><th>ROI</th></tr></thead>
-          <tbody>{rows.map((row) => <tr key={row.campaign_id} className="border-b border-border-subtle last:border-0 hover:bg-surface-hover"><td className="py-2 font-medium text-text-primary">{row.campaign_name}</td><td>{row.platform}</td><td>{row.spend}</td><td>{row.revenue}</td><td>{row.orders}</td><td>{row.leads}</td><td>{row.messages}</td><td><MetricValue value={row.cpa} /></td><td><MetricValue value={row.cpl} /></td><td><MetricValue value={row.roas} /></td><td><MetricValue value={row.net_profit} /></td><td><MetricValue value={row.roi} suffix="%" /></td></tr>)}</tbody>
-        </table>
-      </div>
+    <section className="w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm">
+      <h2 className="mb-3 text-lg font-semibold text-text-primary">{t("advertising.campaigns")}</h2>
+      <ResponsiveReportTable rows={rows} columns={columns} rowKey={(row) => row.campaign_id} wide />
     </section>
   );
 }

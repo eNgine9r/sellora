@@ -5,6 +5,7 @@ import { DateRangeSelector } from "@/components/date-range-selector";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
+import { ResponsiveReportTable } from "@/components/ui/responsive-report-table";
 import { clampPage, paginateItems, PaginationControls, PAGE_SIZE_OPTIONS } from "@/components/pagination-controls";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
@@ -25,10 +26,6 @@ function ReportCard({ title, subtitle, children }: { title: string; subtitle?: s
 
 function MetricCard({ label, value, helper }: { label: string; value: string | number; helper?: string }) {
   return <article className="min-w-0 rounded-2xl border border-border-subtle bg-surface-2 p-4 "><p className="break-words text-xs font-black uppercase tracking-[0.18em] text-text-muted">{label}</p><p className="mt-2 break-words text-2xl font-black text-text-primary">{value}</p>{helper ? <p className="mt-1 break-words text-xs font-semibold text-text-muted">{helper}</p> : null}</article>;
-}
-
-function TableShell({ children }: { children: React.ReactNode }) {
-  return <div className="sellora-scrollbar min-w-0 overflow-x-auto rounded-2xl border border-slate-100 dark:border-white/10">{children}</div>;
 }
 
 export default function AnalyticsPage() {
@@ -136,26 +133,97 @@ export default function AnalyticsPage() {
           <div className="mb-4 grid gap-3 md:grid-cols-4"><MetricCard label={t("analytics.metrics.revenue")} value={formatMoney(toFiniteNumber(salesReport.data?.revenue ?? orderSummary.revenue), currencyCode)} helper={t("analytics.tooltips.revenue")} /><MetricCard label={t("analytics.metrics.netProfit")} value={(salesReport.data?.can_view_profit ?? canSeeProfit) ? formatMoney(toFiniteNumber(salesReport.data?.net_profit ?? profit.data?.total_net_profit ?? orderSummary.netProfit), currencyCode) : t("analytics.metrics.restricted")} helper={t("analytics.tooltips.netProfit")} /><MetricCard label={t("analytics.metrics.aov")} value={(salesReport.data?.aov ?? orderSummary.aov) == null ? UNAVAILABLE : formatMoney(toFiniteNumber(salesReport.data?.aov ?? orderSummary.aov), currencyCode)} helper={t("analytics.tooltips.aov")} /><MetricCard label={t("analytics.metrics.returnRate")} value={formatPercentValue(toFiniteNumber(salesReport.data?.return_rate ?? orderSummary.returnRate))} helper={t("analytics.tooltips.returnRate")} /></div>
           <div className="mb-4 grid gap-3 md:grid-cols-4"><MetricCard label={t("analytics.metrics.orders")} value={orderSummary.ordersCount} /><MetricCard label={t("analytics.metrics.margin")} value={canSeeProfit ? formatPercentValue(orderSummary.margin) : t("analytics.metrics.restricted")} helper={t("analytics.tooltips.margin")} /><MetricCard label={t("analytics.metrics.cancelledOrders")} value={orderSummary.cancelledOrders} /><MetricCard label={t("analytics.metrics.deliveredOrders")} value={orderSummary.deliveredOrders} /></div>
           <div className="analytics-pagination-section grid gap-3">
-            <TableShell><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-white/5 dark:text-slate-400"><tr><th className="px-3 py-2">{t("analytics.tables.date")}</th><th>{t("analytics.tables.orders")}</th><th>{t("analytics.tables.revenue")}</th>{canSeeProfit ? <th>{t("analytics.tables.netProfit")}</th> : null}<th>{t("analytics.tables.aov")}</th><th>{t("analytics.tables.returns")}</th><th>{t("analytics.tables.cancelled")}</th></tr></thead><tbody>{paginatedSalesRows.map((row) => <tr key={row.date} className="border-t border-slate-100 dark:border-white/10"><td className="px-3 py-2 font-bold">{row.date}</td><td>{row.orders}</td><td>{formatMoney(row.revenue, currencyCode)}</td>{canSeeProfit ? <td>{formatMoney(row.netProfit, currencyCode)}</td> : null}<td>{row.aov == null ? UNAVAILABLE : formatMoney(row.aov, currencyCode)}</td><td>{row.returns}</td><td>{row.cancelled}</td></tr>)}</tbody></table>{!salesRows.length ? <EmptyState title={t("analytics.emptyStates.noSales")} description={t("analytics.emptyStates.noSalesDescription")} /> : null}</TableShell>{salesRows.length > 0 ? <PaginationControls page={analyticsPage} pageSize={analyticsPageSize} totalItems={salesRows.length} onPageChange={setAnalyticsPage} onPageSizeChange={(nextPageSize) => setAnalyticsPageSize(nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number])} /> : null}
+            <ResponsiveReportTable
+  rows={paginatedSalesRows}
+  rowKey={(row) => row.date}
+  columns={[
+    { key: "date", label: t("analytics.tables.date"), render: (row) => row.date ,emphasis: true },
+    { key: "orders", label: t("analytics.tables.orders"), render: (row) => row.orders },
+    { key: "revenue", label: t("analytics.tables.revenue"), render: (row) => formatMoney(row.revenue, currencyCode) },
+    ...(canSeeProfit ? [{key: "profit", label: t("analytics.tables.netProfit"), render: (row: (typeof paginatedSalesRows)[number]) => formatMoney(row.netProfit, currencyCode)}] : []),
+    { key: "aov", label: t("analytics.tables.aov"), render: (row) => row.aov == null ? UNAVAILABLE : formatMoney(row.aov, currencyCode) },
+    { key: "returns", label: t("analytics.tables.returns"), render: (row) => row.returns },
+    { key: "cancelled", label: t("analytics.tables.cancelled"), render: (row) => row.cancelled },
+  ]}
+  empty={<EmptyState title={t("analytics.emptyStates.noSales")} description={t("analytics.emptyStates.noSalesDescription")} />}
+  wide
+/>{salesRows.length > 0 ? <PaginationControls page={analyticsPage} pageSize={analyticsPageSize} totalItems={salesRows.length} onPageChange={setAnalyticsPage} onPageSizeChange={(nextPageSize) => setAnalyticsPageSize(nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number])} /> : null}
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2"><div className="rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.05]"><h3 className="font-black dark:text-white">{t("analytics.sales.byStatus")}</h3><div className="mt-3 grid gap-2">{ANALYTICS_ORDER_STATUSES.map((status) => <div key={status} className="flex justify-between text-sm"><span>{formatStatus("order", status)}</span><strong>{orderSummary.statusCounts[status]}</strong></div>)}</div></div><div className="rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.05]"><h3 className="font-black dark:text-white">{t("analytics.sales.byPayment")}</h3><div className="mt-3 grid gap-2">{ANALYTICS_PAYMENT_STATUSES.map((status) => <div key={status} className="flex justify-between text-sm"><span>{formatStatus("payment", status)}</span><strong>{orderSummary.paymentCounts[status]}</strong></div>)}</div></div></div>
         </ReportCard>
 
         <ReportCard title={t("analytics.products.title")} subtitle={t("analytics.products.subtitle")}>
           <div className="mb-4 grid gap-3 md:grid-cols-3"><MetricCard label={t("analytics.products.topByRevenue")} value={productRows[0]?.product_name ?? UNAVAILABLE} /><MetricCard label={t("analytics.products.lowStockBestSellers")} value={productRows.filter((row) => row.stockQuantity <= 0 || row.status === t("analytics.inventory.lowStockStatus")).length} /><MetricCard label={t("analytics.products.categoriesTracked")} value={topCategories.length} /></div>
-          <TableShell><table className="w-full min-w-[880px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-white/5"><tr><th className="px-3 py-2">{t("analytics.tables.product")}</th><th>{t("analytics.tables.sku")}</th><th>{t("analytics.tables.category")}</th><th>{t("analytics.tables.quantitySold")}</th><th>{t("analytics.tables.revenue")}</th>{canSeeProfit ? <th>{t("analytics.tables.netProfit")}</th> : null}<th>{t("analytics.tables.stock")}</th><th>{t("analytics.tables.reserved")}</th><th>{t("analytics.tables.status")}</th></tr></thead><tbody>{productRows.map((row) => <tr key={row.variant_id} className="border-t border-slate-100 dark:border-white/10"><td className="px-3 py-2 font-bold">{row.product_name}</td><td>{row.variant_sku}</td><td>{row.category}</td><td>{row.quantity_sold}</td><td>{formatMoney(row.revenue, currencyCode)}</td>{canSeeProfit ? <td>{formatMoney(row.net_profit, currencyCode)}</td> : null}<td>{row.stockQuantity}</td><td>{row.reservedQuantity}</td><td>{row.status}</td></tr>)}</tbody></table>{!productRows.length ? <EmptyState title={t("analytics.emptyStates.noProducts")} description={t("analytics.emptyStates.noProductsDescription")} /> : null}</TableShell>
+          <ResponsiveReportTable
+  rows={productRows}
+  rowKey={(row) => row.variant_id}
+  columns={[
+    { key: "product", label: t("analytics.tables.product"), render: (row) => row.product_name ,emphasis: true },
+    { key: "sku", label: t("analytics.tables.sku"), render: (row) => row.variant_sku },
+    { key: "category", label: t("analytics.tables.category"), render: (row) => row.category },
+    { key: "qty", label: t("analytics.tables.quantitySold"), render: (row) => row.quantity_sold },
+    { key: "revenue", label: t("analytics.tables.revenue"), render: (row) => formatMoney(row.revenue, currencyCode) },
+    ...(canSeeProfit ? [{key: "profit", label: t("analytics.tables.netProfit"), render: (row: (typeof productRows)[number]) => formatMoney(row.net_profit, currencyCode)}] : []),
+    { key: "stock", label: t("analytics.tables.stock"), render: (row) => row.stockQuantity },
+    { key: "reserved", label: t("analytics.tables.reserved"), render: (row) => row.reservedQuantity },
+    { key: "status", label: t("analytics.tables.status"), render: (row) => row.status },
+  ]}
+  empty={<EmptyState title={t("analytics.emptyStates.noProducts")} description={t("analytics.emptyStates.noProductsDescription")} />}
+  wide
+/>
           <div className="mt-4 grid gap-3 md:grid-cols-2">{topCategories.map((row) => <div key={row.category} className="rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.05]"><h3 className="font-black text-text-primary">{row.category}</h3><p className="text-sm text-text-muted">{row.quantity} {t("analytics.products.unitsSold")} · {formatMoney(row.revenue, currencyCode)} · {row.share}</p></div>)}</div>
         </ReportCard>
 
         <ReportCard title={t("analytics.advertising.title")} subtitle={t("analytics.advertising.subtitle")}>
           <div className="mb-4 grid gap-3 md:grid-cols-4"><MetricCard label={t("analytics.metrics.spend")} value={formatMoney(toFiniteNumber(backendAdSummary?.spend ?? adSummary.spend), currencyCode)} /><MetricCard label={t("analytics.metrics.roas")} value={formatDecimal(adSummary.roas)} helper={t("analytics.tooltips.roas")} /><MetricCard label={t("analytics.metrics.cpa")} value={(backendAdSummary?.cpa ?? adSummary.cpa) == null ? UNAVAILABLE : formatMoney(toFiniteNumber(backendAdSummary?.cpa ?? adSummary.cpa), currencyCode)} helper={t("analytics.tooltips.cpa")} /><MetricCard label={t("analytics.metrics.cpl")} value={(backendAdSummary?.cpl ?? adSummary.cpl) == null ? UNAVAILABLE : formatMoney(toFiniteNumber(backendAdSummary?.cpl ?? adSummary.cpl), currencyCode)} helper={t("analytics.tooltips.cpl")} /></div>
-          <TableShell><table className="w-full min-w-[780px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-white/5"><tr><th className="px-3 py-2">{t("analytics.tables.campaign")}</th><th>{t("analytics.tables.platform")}</th><th>{t("analytics.tables.spend")}</th><th>{t("analytics.tables.revenue")}</th>{canSeeProfit ? <th>{t("analytics.tables.netProfit")}</th> : null}<th>{t("analytics.tables.orders")}</th><th>{t("analytics.tables.leads")}</th><th>{t("analytics.tables.roas")}</th></tr></thead><tbody>{(campaignPerformance.data ?? []).map((row) => <tr key={row.campaign_id} className="border-t border-slate-100 dark:border-white/10"><td className="px-3 py-2 font-bold">{row.campaign_name}</td><td>{row.platform}</td><td>{formatMoney(row.spend, currencyCode)}</td><td>{formatMoney(row.revenue, currencyCode)}</td>{canSeeProfit ? <td>{row.net_profit ? formatMoney(row.net_profit, currencyCode) : UNAVAILABLE}</td> : null}<td>{row.orders}</td><td>{row.leads}</td><td>{row.roas ?? UNAVAILABLE}</td></tr>)}</tbody></table>{!campaignPerformance.data?.length ? <EmptyState title={t("analytics.emptyStates.noAdvertising")} description={t("analytics.emptyStates.noAdvertisingDescription")} /> : null}</TableShell>
+          <ResponsiveReportTable
+  rows={campaignPerformance.data ?? []}
+  rowKey={(row) => row.campaign_id}
+  columns={[
+    { key: "campaign", label: t("analytics.tables.campaign"), render: (row) => row.campaign_name ,emphasis: true },
+    { key: "platform", label: t("analytics.tables.platform"), render: (row) => row.platform },
+    { key: "spend", label: t("analytics.tables.spend"), render: (row) => formatMoney(row.spend, currencyCode) },
+    { key: "revenue", label: t("analytics.tables.revenue"), render: (row) => formatMoney(row.revenue, currencyCode) },
+    ...(canSeeProfit ? [{key: "profit", label: t("analytics.tables.netProfit"), render: (row: NonNullable<typeof campaignPerformance.data>[number]) => row.net_profit == null ? UNAVAILABLE : formatMoney(row.net_profit, currencyCode)}] : []),
+    { key: "orders", label: t("analytics.tables.orders"), render: (row) => row.orders },
+    { key: "leads", label: t("analytics.tables.leads"), render: (row) => row.leads },
+    { key: "roas", label: t("analytics.tables.roas"), render: (row) => row.roas ?? UNAVAILABLE },
+  ]}
+  empty={<EmptyState title={t("analytics.emptyStates.noAdvertising")} description={t("analytics.emptyStates.noAdvertisingDescription")} />}
+  wide
+/>
           <p className="mt-3 text-xs font-semibold text-text-muted">{t("analytics.advertising.trendNote", { days: advertisingTrend.data?.length ?? 0 })}</p>
         </ReportCard>
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <ReportCard title={t("analytics.customers.title")} subtitle={t("analytics.customers.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.newCustomers")} value={customersSummary.data?.new_customers ?? 0} /><MetricCard label={t("analytics.metrics.repeatCustomerRate")} value={formatPercentValue(customerSummary.repeatCustomerRate)} helper={t("analytics.tooltips.repeatCustomerRate")} /><MetricCard label={t("analytics.metrics.averageSpend") } value={customerSummary.averageSpend == null ? UNAVAILABLE : formatMoney(customerSummary.averageSpend, currencyCode)} /><MetricCard label={t("analytics.metrics.customersWithOrders")} value={customerSummary.customersWithOrders} /><MetricCard label={t("analytics.metrics.leadConversionRate")} value={formatPercentValue(leadConversionRate)} helper={t("analytics.tooltips.conversionRate")} /></div><TableShell><table className="w-full min-w-[640px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-white/5"><tr><th className="px-3 py-2">{t("analytics.tables.customer")}</th><th>{t("analytics.tables.contact")}</th><th>{t("analytics.tables.orders")}</th><th>{t("analytics.tables.totalSpent")}</th><th>{t("analytics.tables.lastOrder")}</th></tr></thead><tbody>{(customers.data ?? []).slice(0, 8).map((customer) => <tr key={customer.id} className="border-t border-slate-100 dark:border-white/10"><td className="px-3 py-2 font-bold">{customer.name}</td><td>{customer.instagram_username ?? customer.phone ?? UNAVAILABLE}</td><td>{customer.total_orders}</td><td>{formatMoney(customer.total_spent, currencyCode)}</td><td>{customer.last_order_at?.slice(0, 10) ?? UNAVAILABLE}</td></tr>)}</tbody></table>{!customers.data?.length ? <EmptyState title={t("analytics.emptyStates.noCustomers")} description={t("analytics.emptyStates.noCustomersDescription")} /> : null}</TableShell></ReportCard>
-          <ReportCard title={t("analytics.inventory.title")} subtitle={t("analytics.inventory.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.lowStock")} value={inventoryReport.data?.low_stock_count ?? inventoryRollup.lowStockCount} helper={t("analytics.tooltips.lowStock")} /><MetricCard label={t("analytics.metrics.outOfStock")} value={inventoryReport.data?.out_of_stock_count ?? inventoryRollup.outOfStockCount} /><MetricCard label={t("analytics.metrics.reservedStock")} value={inventoryRollup.reservedQuantity} helper={t("analytics.tooltips.reservedStock")} /><MetricCard label={t("analytics.metrics.incomingStock")} value={inventoryRollup.incomingQuantity} /></div><TableShell><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-white/5"><tr><th className="px-3 py-2">{t("analytics.tables.product")}</th><th>{t("analytics.tables.sku")}</th><th>{t("analytics.tables.stock")}</th><th>{t("analytics.tables.reserved")}</th><th>{t("analytics.tables.incoming")}</th><th>{t("analytics.tables.minimum")}</th><th>{t("analytics.tables.salesInPeriod")}</th></tr></thead><tbody>{(inventorySummary.data?.low_stock_items ?? []).map((item) => <tr key={item.variant_id} className="border-t border-slate-100 dark:border-white/10"><td className="px-3 py-2 font-bold">{item.product_name}</td><td>{item.variant_sku}</td><td>{item.stock_quantity}</td><td>{item.reserved_quantity}</td><td>{item.incoming_quantity}</td><td>{item.minimum_quantity}</td><td>{productRows.find((row) => row.variant_id === item.variant_id)?.quantity_sold ?? 0}</td></tr>)}</tbody></table>{!inventorySummary.data?.low_stock_items?.length ? <EmptyState title={t("analytics.emptyStates.noInventoryAlerts")} description={t("analytics.emptyStates.noInventoryAlertsDescription")} /> : null}</TableShell></ReportCard>
+          <ReportCard title={t("analytics.customers.title")} subtitle={t("analytics.customers.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.newCustomers")} value={customersSummary.data?.new_customers ?? 0} /><MetricCard label={t("analytics.metrics.repeatCustomerRate")} value={formatPercentValue(customerSummary.repeatCustomerRate)} helper={t("analytics.tooltips.repeatCustomerRate")} /><MetricCard label={t("analytics.metrics.averageSpend") } value={customerSummary.averageSpend == null ? UNAVAILABLE : formatMoney(customerSummary.averageSpend, currencyCode)} /><MetricCard label={t("analytics.metrics.customersWithOrders")} value={customerSummary.customersWithOrders} /><MetricCard label={t("analytics.metrics.leadConversionRate")} value={formatPercentValue(leadConversionRate)} helper={t("analytics.tooltips.conversionRate")} /></div><ResponsiveReportTable
+  rows={(customers.data ?? []).slice(0, 8)}
+  rowKey={(row) => row.id}
+  columns={[
+    { key: "customer", label: t("analytics.tables.customer"), render: (row) => row.name ,emphasis: true },
+    { key: "contact", label: t("analytics.tables.contact"), render: (row) => row.instagram_username ?? row.phone ?? UNAVAILABLE },
+    { key: "orders", label: t("analytics.tables.orders"), render: (row) => row.total_orders },
+    { key: "spent", label: t("analytics.tables.totalSpent"), render: (row) => formatMoney(row.total_spent, currencyCode) },
+    { key: "last", label: t("analytics.tables.lastOrder"), render: (row) => row.last_order_at?.slice(0, 10) ?? UNAVAILABLE },
+  ]}
+  empty={<EmptyState title={t("analytics.emptyStates.noCustomers")} description={t("analytics.emptyStates.noCustomersDescription")} />}
+  wide
+/></ReportCard>
+          <ReportCard title={t("analytics.inventory.title")} subtitle={t("analytics.inventory.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.lowStock")} value={inventoryReport.data?.low_stock_count ?? inventoryRollup.lowStockCount} helper={t("analytics.tooltips.lowStock")} /><MetricCard label={t("analytics.metrics.outOfStock")} value={inventoryReport.data?.out_of_stock_count ?? inventoryRollup.outOfStockCount} /><MetricCard label={t("analytics.metrics.reservedStock")} value={inventoryRollup.reservedQuantity} helper={t("analytics.tooltips.reservedStock")} /><MetricCard label={t("analytics.metrics.incomingStock")} value={inventoryRollup.incomingQuantity} /></div><ResponsiveReportTable
+  rows={inventorySummary.data?.low_stock_items ?? []}
+  rowKey={(row) => row.variant_id}
+  columns={[
+    { key: "product", label: t("analytics.tables.product"), render: (row) => row.product_name ,emphasis: true },
+    { key: "sku", label: t("analytics.tables.sku"), render: (row) => row.variant_sku },
+    { key: "stock", label: t("analytics.tables.stock"), render: (row) => row.stock_quantity },
+    { key: "reserved", label: t("analytics.tables.reserved"), render: (row) => row.reserved_quantity },
+    { key: "incoming", label: t("analytics.tables.incoming"), render: (row) => row.incoming_quantity },
+    { key: "minimum", label: t("analytics.tables.minimum"), render: (row) => row.minimum_quantity },
+    { key: "sales", label: t("analytics.tables.salesInPeriod"), render: (row) => productRows.find((product) => product.variant_id === row.variant_id)?.quantity_sold ?? 0 },
+  ]}
+  empty={<EmptyState title={t("analytics.emptyStates.noInventoryAlerts")} description={t("analytics.emptyStates.noInventoryAlertsDescription")} />}
+  wide
+/></ReportCard>
         </section>
     </WorkspacePage>
   );

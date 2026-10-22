@@ -37,3 +37,19 @@ Prevent wide and vertically oversized row-action columns, accidental nested hori
 - `frontend/scripts/desktop-crm-table-consistency-regression.mjs` is required in `frontend-production` CI.
 
 This standard does not imply every dense financial report has zero scrolling by design; if data cannot be meaningfully condensed, use explicitly identified overflow or a drill-down view.
+
+## Shared read-only tables and analytical reports (October 2026)
+
+The same UX standard also applies to Dashboard, Analytics, Advertising reporting, Import Center, Team, and product variants:
+
+- Operational lists with destructive actions continue using `RowActionButtons` (40 × 40 px, accessible names, confirmation, no accidental row selection). In particular, the team list must preserve the last-active-OWNER and current-user deactivation guards.
+- Read-only reports use `ResponsiveReportTable` from `frontend/src/components/ui/responsive-report-table.tsx`. Each report supplies localized column labels, a stable row key, and the same renderers for table cells and narrow labeled cards. At narrow widths, values remain associated with their metric labels instead of requiring a long horizontal swipe.
+- Summary reports may group related metrics under one desktop column. Full secondary metrics belong in labeled disclosures or drilldowns, never discarded.
+- Dynamic Excel import previews derive labels from the uploaded column headings. They use wide breakpoints and accessible labeled mobile cards, with no change to import or validation data.
+- Profit-sensitive columns must be removed from the caller's column collection when the user's permissions do not allow them. Responsive cards must not inadvertently reintroduce hidden financial data.
+- The dashboard's recent orders and Team's interactive member table use the same `sellora-adaptive-list`, `sellora-adaptive-table`, `sellora-adaptive-cards` CSS contract to preserve their existing actions and pagination.
+- Some analytical reports have many metrics. Those may need export or richer drilldown in a future sprint, but a split view or mobile card must not make critical text or actions inaccessible.
+
+### Verification
+- `node frontend/scripts/sellora-all-tables-regression.mjs` checks 8 primary CRM list surfaces and 12 additional report/table surfaces. It runs in GitHub CI alongside the original desktop CRM test.
+- Static tests demonstrate structural consistency, **not** visual correctness. Before declaring visual QA complete, inspect authenticated pages at 375, 768, 1024 and 1366 pixels with narrow split panels, both languages, light/dark themes, empty/loading/error states and user permissions. Recheck variant archive, last-owner team guard, and profitability access.
