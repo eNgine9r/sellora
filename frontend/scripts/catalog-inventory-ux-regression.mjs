@@ -20,7 +20,7 @@ const en = read("frontend/src/i18n/messages/en.json");
 assert(existsSync("frontend/src/lib/categories.ts"), "category utility exists");
 assert(categories.includes("CATEGORY_KEYS") && categories.includes("normalizeCategoryKey") && categories.includes("categoryMatches"), "category normalization and filtering helpers exist");
 assert(productsPage.includes("categoryFilter") && productsPage.includes("categories.allProducts") && productsPage.includes("productSearchMatches"), "products page has category filter chips/search markers");
-assert(productTable.includes("products.category") && productTable.includes("displayCategory") && productTable.includes("lg:hidden"), "product table/cards show localized category");
+assert(productTable.includes("products.category") && productTable.includes("displayCategory") && productTable.includes("sellora-adaptive-cards"), "product table/cards show localized category");
 assert(productForm.includes("products.productCategory") && productForm.includes("translatedCategoryOptions") && productForm.includes("category"), "product form supports localized category select");
 assert(orderForm.includes("orders.selectCategory") && orderForm.includes("selectCategory") && orderForm.includes("CategoryFilter"), "order form has category selector per item");
 assert(orderForm.includes("orders.searchProduct") && orderForm.includes("selectProduct") && orderForm.includes("filteredProducts"), "order form has product selector/search scoped by category");
