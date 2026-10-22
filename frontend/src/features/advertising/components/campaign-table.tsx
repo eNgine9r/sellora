@@ -1,55 +1,83 @@
 "use client";
 
+import { RowActionButtons } from "@/components/ui/row-action-buttons";
 import { useI18n } from "@/i18n/provider";
 import { statusBadgeClass } from "@/lib/status-styles";
 import { AdCampaign } from "@/types/advertising";
 
 export function CampaignTable({ campaigns, selectedCampaignId, onSelect, onEdit, onArchive }: { campaigns: AdCampaign[]; selectedCampaignId?: string; onSelect?: (campaign: AdCampaign) => void; onEdit?: (campaign: AdCampaign) => void; onArchive?: (campaign: AdCampaign) => void }) {
   const { t, formatStatus } = useI18n();
+  const campaignStatus = (campaign: AdCampaign) => statusBadgeClass(campaign.status === "ACTIVE" ? "success" : campaign.status === "ARCHIVED" ? "neutral" : campaign.status === "PAUSED" ? "warning" : "info");
 
   return (
-    <section className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm" data-campaign-mapping-source="manual-import-meta-ready">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+    <section className="sellora-adaptive-list w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm" data-campaign-mapping-source="manual-import-meta-ready">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold">{t("advertising.campaigns")}</h2>
           <p className="mt-1 text-sm text-text-secondary">{t("advertising.mappingHint")}</p>
         </div>
-        <span className="w-fit rounded-full bg-surface-2 px-3 py-1 text-xs font-bold text-text-secondary">{t("advertising.manualSource")}</span>
+        <span className="w-fit shrink-0 rounded-full bg-surface-2 px-3 py-1 text-xs font-bold text-text-secondary">{t("advertising.manualSource")}</span>
       </div>
-      <div className="sellora-scrollbar mt-3 max-w-full overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-border-subtle text-text-muted">
-              <th>{t("tables.name")}</th>
-              <th>{t("advertising.platform")}</th>
-              <th>{t("advertising.source")}</th>
-              <th>{t("tables.status")}</th>
-              <th>{t("advertising.objective")}</th>
-              <th>{t("advertising.dailyBudget")}</th>
-              <th>{t("advertising.totalBudget")}</th>
-              <th>{t("advertising.startDate")}</th>
-              <th>{t("advertising.endDate")}</th>
-              <th>{t("tables.actions")}</th>
+      <div className="sellora-adaptive-table mt-3 min-w-0">
+        <table className="w-full table-fixed text-left text-sm">
+          <colgroup>
+            <col style={{ width: "27%" }} />
+            <col style={{ width: "13%" }} />
+            <col style={{ width: "17%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "11%" }} />
+          </colgroup>
+          <thead className="text-xs uppercase tracking-wide text-text-muted">
+            <tr className="border-b border-border-subtle">
+              <th className="px-2 py-3">{t("tables.name")}</th>
+              <th className="px-2 py-3">{t("tables.status")}</th>
+              <th className="px-2 py-3">{t("advertising.objective")}</th>
+              <th className="px-2 py-3">{t("advertising.dailyBudget")}</th>
+              <th className="px-2 py-3">{t("advertising.startDate")}</th>
+              <th className="px-2 py-3 text-right">{t("tables.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {campaigns.map((campaign) => (
-              <tr key={campaign.id} className={`cursor-pointer border-b border-border-subtle last:border-0 hover:bg-surface-hover ${selectedCampaignId === campaign.id ? "bg-surface-selected" : ""}`} onClick={() => onSelect?.(campaign)}>
-                <td className="py-2 font-medium">{campaign.name}</td>
-                <td>{campaign.platform}</td>
-                <td><span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">{t("advertising.manualSource")}</span></td>
-                <td><span className={statusBadgeClass(campaign.status === "ACTIVE" ? "success" : campaign.status === "ARCHIVED" ? "neutral" : campaign.status === "PAUSED" ? "warning" : "info")}>{formatStatus("campaign", campaign.status)}</span></td>
-                <td>{campaign.objective}</td>
-                <td>{campaign.daily_budget ?? "—"}</td>
-                <td>{campaign.total_budget ?? "—"}</td>
-                <td>{campaign.start_date ?? "—"}</td>
-                <td>{campaign.end_date ?? "—"}</td>
-                <td><div className="flex flex-wrap gap-2">{onEdit ? <button aria-label={`${t("advertising.editCampaign")} ${campaign.name}`} className="rounded-lg border border-border-subtle px-3 py-2 font-semibold" onClick={(event) => { event.stopPropagation(); onEdit(campaign); }}>{t("advertising.editCampaign")}</button> : <span className="text-text-muted">{t("common.readOnly")}</span>}{onArchive ? <button aria-label={`${t("actions.archive")} ${campaign.name}`} className="rounded-lg border border-danger/30 px-3 py-2 font-semibold text-danger" onClick={(event) => { event.stopPropagation(); onArchive(campaign); }}>{t("actions.archive")}</button> : null}</div></td>
+              <tr key={campaign.id} className={`cursor-pointer border-b border-border-subtle last:border-0 transition hover:bg-surface-hover ${selectedCampaignId === campaign.id ? "bg-surface-selected" : ""}`} onClick={() => onSelect?.(campaign)}>
+                <td className="min-w-0 px-2 py-3">
+                  <span className="block truncate font-semibold text-text-primary" title={campaign.name}>{campaign.name}</span>
+                  <span className="block truncate text-xs text-text-muted">{campaign.platform} · {t("advertising.manualSource")}</span>
+                </td>
+                <td className="px-2 py-3"><span className={campaignStatus(campaign)}>{formatStatus("campaign", campaign.status)}</span></td>
+                <td className="min-w-0 truncate px-2 py-3 text-text-secondary" title={campaign.objective ?? undefined}>{campaign.objective ?? "—"}</td>
+                <td className="px-2 py-3 text-text-secondary">
+                  <span className="block">{campaign.daily_budget ?? "—"}</span>
+                  <span className="block text-xs text-text-muted">{t("advertising.totalBudget")}: {campaign.total_budget ?? "—"}</span>
+                </td>
+                <td className="px-2 py-3 text-xs text-text-secondary">
+                  <span className="block">{campaign.start_date ?? "—"}</span>
+                  <span className="block">{campaign.end_date ?? "—"}</span>
+                </td>
+                <td className="px-1 py-2"><RowActionButtons entityLabel={campaign.name} editLabel={t("advertising.editCampaign")} archiveLabel={t("actions.archive")} onEdit={onEdit ? () => onEdit(campaign) : undefined} onArchive={onArchive ? () => onArchive(campaign) : undefined} /></td>
               </tr>
             ))}
-            {campaigns.length === 0 ? <tr><td className="py-6 text-center text-text-muted" colSpan={10}>{t("advertising.emptyCampaigns")} {t("advertising.manualImportFirst")}</td></tr> : null}
+            {campaigns.length === 0 ? <tr><td className="p-6 text-center text-text-muted" colSpan={6}>{t("advertising.emptyCampaigns")} {t("advertising.manualImportFirst")}</td></tr> : null}
           </tbody>
         </table>
+      </div>
+      <div className="sellora-adaptive-cards mt-3 grid gap-3">
+        {campaigns.map((campaign) => (
+          <article key={campaign.id} className={`min-w-0 rounded-xl border border-border-subtle bg-surface-2 p-3 ${selectedCampaignId === campaign.id ? "bg-surface-selected" : ""}`}>
+            <button type="button" className="w-full min-w-0 text-left" onClick={() => onSelect?.(campaign)}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0"><h3 className="truncate font-semibold text-text-primary">{campaign.name}</h3><p className="text-xs text-text-muted">{campaign.platform} · {t("advertising.manualSource")}</p></div>
+                <span className={campaignStatus(campaign)}>{formatStatus("campaign", campaign.status)}</span>
+              </div>
+              <p className="mt-2 text-sm text-text-secondary">{t("advertising.objective")}: {campaign.objective ?? "—"}</p>
+              <p className="mt-1 text-sm text-text-secondary">{t("advertising.dailyBudget")}: {campaign.daily_budget ?? "—"} · {t("advertising.totalBudget")}: {campaign.total_budget ?? "—"}</p>
+              <p className="mt-1 text-xs text-text-muted">{campaign.start_date ?? "—"} — {campaign.end_date ?? "—"}</p>
+            </button>
+            <div className="mt-2 flex justify-end"><RowActionButtons entityLabel={campaign.name} editLabel={t("advertising.editCampaign")} archiveLabel={t("actions.archive")} onEdit={onEdit ? () => onEdit(campaign) : undefined} onArchive={onArchive ? () => onArchive(campaign) : undefined} /></div>
+          </article>
+        ))}
+        {campaigns.length === 0 ? <p className="p-4 text-center text-text-muted">{t("advertising.emptyCampaigns")}</p> : null}
       </div>
     </section>
   );
