@@ -44,12 +44,12 @@ export function AdMetricTable({ metrics, onEdit, onDelete }: { metrics: AdMetric
       <div className="sellora-adaptive-table mt-3 w-full min-w-0">
         <table className="w-full table-fixed text-left text-sm">
           <colgroup>
-            <col style={{ width: "24%" }} />
+            <col style={{ width: "23%" }} />
             <col style={{ width: "13%" }} />
             <col style={{ width: "21%" }} />
             <col style={{ width: "13%" }} />
             <col style={{ width: "18%" }} />
-            <col style={{ width: "11%" }} />
+            <col style={{ width: "12%" }} />
           </colgroup>
           <thead className="text-xs uppercase tracking-wide text-text-muted">
             <tr className="border-b border-border-subtle">
