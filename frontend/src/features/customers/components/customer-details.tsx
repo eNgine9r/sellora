@@ -152,6 +152,7 @@ export function CustomerDetails({
               <p className="text-text-secondary">{t("customers.orderValue")}: {order.is_historical && Number(order.revenue) === 0 ? t("orders.unknownAmount") : formatMoney(order.revenue, currencyCode)}</p>
               {order.shipment_tracking ? <p className="mt-1 break-all text-text-secondary">{t("customers.tracking")}: {order.shipment_tracking} · {order.shipment_status ? formatStatus("shipment", order.shipment_status) : "—"}</p> : null}
               {order.shipment_city ? <p className="text-xs text-text-muted">{order.shipment_city}</p> : null}
+              {order.products.length ? <p className="mt-1.5 text-xs text-text-secondary">{order.products.map((item) => `${item.quantity} × ${item.name}`).join(" · ")}</p> : null}
             </article>
           ))}
           {customer.total_orders > orders.length ? <p className="text-xs text-text-muted">{t("customers.ordersPreviewLimit")}</p> : null}
