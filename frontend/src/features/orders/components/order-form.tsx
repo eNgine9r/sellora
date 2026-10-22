@@ -293,7 +293,7 @@ export function OrderForm({
     setFilter(index, { productId: variant?.product_id ?? "" });
     updateItem(index, {
       product_variant_id: variantId,
-      unit_price: variant?.price ? String(variant.price) : "0",
+      unit_price: initialOrder?.is_historical ? "" : (variant?.price ? String(variant.price) : "0"),
       unit_cost: "0",
     });
   }
