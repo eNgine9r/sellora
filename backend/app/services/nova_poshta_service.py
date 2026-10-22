@@ -884,7 +884,10 @@ class NovaPoshtaShipmentService:
         if current in {OrderStatus.DELIVERED, OrderStatus.COMPLETED} and target == OrderStatus.SHIPPED:
             return
         path = []
-        if current in {OrderStatus.NEW, OrderStatus.CONFIRMED} and target in {OrderStatus.DELIVERED, OrderStatus.RETURNED}:
+        if current == OrderStatus.NEW:
+            path.append(OrderStatus.CONFIRMED)
+            current = OrderStatus.CONFIRMED
+        if current == OrderStatus.CONFIRMED and target in {OrderStatus.DELIVERED, OrderStatus.RETURNED}:
             path.append(OrderStatus.SHIPPED)
             current = OrderStatus.SHIPPED
         if current == OrderStatus.SHIPPED and target == OrderStatus.RETURNED:
