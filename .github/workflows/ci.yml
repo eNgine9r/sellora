@@ -232,6 +232,8 @@ jobs:
       - name: Run mobile navigation and safe-area static regression
         working-directory: frontend
         run: npm run mobile:audit:static
+      - name: Run desktop CRM table consistency regression
+        run: node frontend/scripts/desktop-crm-table-consistency-regression.mjs
       - name: Run iPhone PWA crisp brand regression
         run: node frontend/scripts/ios-pwa-crisp-brand-regression.mjs
       - name: Run secure cookie-session frontend contract
