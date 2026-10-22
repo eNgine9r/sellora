@@ -242,6 +242,8 @@ jobs:
         run: node frontend/scripts/direct-compact-composer-regression.mjs
       - name: Run historical NP order reconciliation regression
         run: node frontend/scripts/np-historical-order-reconciliation-regression.mjs
+      - name: Run customer purchase profile regression
+        run: node frontend/scripts/customer-purchase-profile-regression.mjs
       - name: Run import-center static regression
         run: node frontend/scripts/import-center-pilot-regression.mjs
       - name: Run orders, inventory and shipments static regression
