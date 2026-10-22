@@ -648,7 +648,29 @@
       "activity": "Activity",
       "orders": "Orders"
     },
-    "ordersUnavailable": "Customer orders are unavailable in the current API."
+    "ordersUnavailable": "Customer orders are unavailable in the current API.",
+    "paidPurchases": "Paid purchases",
+    "paidSpent": "Paid total",
+    "verifiedSpendingHint": "Only explicitly paid orders count toward spending. Delivery or cash-on-delivery without confirmed payment does not prove receipt.",
+    "unpricedOrders": "Orders with unknown sale price",
+    "unpricedHint": "The sale price is not verified and is not included in paid spending.",
+    "missingContact": "No contact provided",
+    "noLinkedOrders": "No verified linked orders",
+    "source": "Source",
+    "sources": {
+      "MANUAL": "Manual",
+      "INSTAGRAM_DIRECT": "Instagram Direct",
+      "IMPORT": "Import"
+    },
+    "openDirect": "Open Direct conversation",
+    "orderStatus": "Order status",
+    "payment": "Payment",
+    "orderValue": "Order amount",
+    "tracking": "Tracking number",
+    "loadingOrders": "Loading order history…",
+    "ordersLoadFailed": "Unable to load customer orders.",
+    "ordersPreviewLimit": "Showing 100 most recent orders.",
+    "unlinkedHistoryNotice": "Historical sales without a verified customer link are not included here."
   },
   "orders": {
     "title": "Orders",

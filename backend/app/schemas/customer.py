@@ -46,10 +46,34 @@ class CustomerResponse(BaseModel):
     source_direct_conversation_id: UUID | None = None
     city: str | None
     region: str | None
+    # Derived from linked non-deleted orders; never read stale customer counters.
     total_orders: int
+    paid_orders: int = 0
     total_spent: Decimal
+    unpriced_orders: int = 0
     last_order_at: datetime | None
+    last_order_number: str | None = None
+    last_order_status: str | None = None
+    last_order_payment_status: str | None = None
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class CustomerOrderProduct(BaseModel):
+    name: str
+    quantity: int
+
+
+class CustomerOrderSummary(BaseModel):
+    id: UUID
+    order_number: str
+    status: str
+    payment_status: str
+    is_historical: bool
+    revenue: Decimal
+    created_at: datetime
+    shipment_tracking: str | None = None
+    shipment_status: str | None = None
+    shipment_city: str | None = None
+    products: list[CustomerOrderProduct] = Field(default_factory=list)

@@ -39,8 +39,17 @@ export type Customer = {
   city: string | null;
   region: string | null;
   total_orders: number;
+  paid_orders: number;
   total_spent: string;
+  unpriced_orders: number;
   last_order_at: string | null;
+  last_order_number: string | null;
+  last_order_status: string | null;
+  last_order_payment_status: string | null;
+  source: string;
+  lifecycle_status: string;
+  profile_status: string;
+  source_direct_conversation_id: string | null;
   created_at: string;
   updated_at: string;
 };

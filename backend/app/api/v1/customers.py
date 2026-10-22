@@ -7,7 +7,7 @@ from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_min_role
 from app.models.role import RoleName
 from app.models.user import User
-from app.schemas.customer import CustomerCreate, CustomerResponse, CustomerUpdate
+from app.schemas.customer import CustomerCreate, CustomerResponse, CustomerUpdate, CustomerOrderSummary
 from app.schemas.crm_completion import CustomerAddressCreate, CustomerAddressResponse, CustomerAddressUpdate, CustomerNoteCreate, CustomerNoteResponse, CustomerTagResponse
 from app.services.customer_service import CustomerService
 from app.services.crm_completion_service import CustomerCrmService, CrmCompletionServiceError
@@ -40,10 +40,22 @@ def get_customer(
     workspace_id: UUID = Depends(get_workspace_id),
     db: Session = Depends(get_db),
 ) -> CustomerResponse:
-    customer = CustomerService(db).get(workspace_id, customer_id)
+    customer = CustomerService(db).get_with_metrics(workspace_id, customer_id)
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
     return customer
+
+
+@router.get("/{customer_id}/orders", response_model=list[CustomerOrderSummary], dependencies=[Depends(require_min_role(RoleName.ANALYST))])
+def list_customer_orders(
+    customer_id: UUID,
+    workspace_id: UUID = Depends(get_workspace_id),
+    db: Session = Depends(get_db),
+) -> list[CustomerOrderSummary]:
+    service = CustomerService(db)
+    if service.get(workspace_id, customer_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    return [CustomerOrderSummary.model_validate(item) for item in service.list_orders(workspace_id, customer_id)]
 
 
 @router.put("/{customer_id}", response_model=CustomerResponse)

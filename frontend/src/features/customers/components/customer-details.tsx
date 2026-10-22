@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { DrawerTabs } from "@/components/crm-workspace";
 import { AddressList } from "@/features/customers/components/address-list";
@@ -8,6 +9,7 @@ import { TagBadge } from "@/features/customers/components/tag-badge";
 import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
 import { Customer } from "@/types/crm";
+import { CustomerOrderSummary } from "@/services/crm";
 import { Attachment, CustomerAddress, CustomerNote, CustomerTag, Tag } from "@/types/crm-completion";
 
 type CustomerDetailsProps = {
@@ -18,6 +20,9 @@ type CustomerDetailsProps = {
   addresses: CustomerAddress[];
   attachments: Attachment[];
   currencyCode?: string;
+  orders: CustomerOrderSummary[];
+  ordersLoading: boolean;
+  ordersError: boolean;
   onAddTag: (tagId: string) => void;
   onAddNote: (note: string) => void;
   onAddAddress: (addressLine1: string, isDefault: boolean) => void;
@@ -32,13 +37,16 @@ export function CustomerDetails({
   addresses,
   attachments,
   currencyCode = "UAH",
+  orders,
+  ordersLoading,
+  ordersError,
   onAddTag,
   onAddNote,
   onAddAddress,
   onAddAttachment,
 }: CustomerDetailsProps) {
   const [tagId, setTagId] = useState("");
-  const { t } = useI18n();
+  const { t, formatStatus } = useI18n();
   const [note, setNote] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
   const [fileUrl, setFileUrl] = useState("");
@@ -69,7 +77,11 @@ export function CustomerDetails({
           <strong>{customer.total_orders}</strong>
         </div>
         <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-text-muted">{t("customers.totalSpent")}</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-text-muted">{t("customers.paidPurchases")}</p>
+          <strong>{customer.paid_orders}</strong>
+        </div>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-text-muted">{t("customers.paidSpent")}</p>
           <strong>{formatMoney(customer.total_spent, currencyCode)}</strong>
         </div>
         <div>
@@ -77,11 +89,26 @@ export function CustomerDetails({
           <strong>{customer.last_order_at ? new Date(customer.last_order_at).toLocaleDateString() : "—"}</strong>
         </div>
       </section>
+      <p className="text-xs text-text-muted">{t("customers.verifiedSpendingHint")}</p>
+      {customer.unpriced_orders > 0 ? <p className="rounded-lg bg-amber-500/10 p-2.5 text-xs font-semibold text-amber-600">{t("customers.unpricedOrders")}: {customer.unpriced_orders}. {t("customers.unpricedHint")}</p> : null}
+      <section className="rounded-2xl border border-border-subtle bg-surface-2 p-3 text-sm">
+        <h3 className="font-semibold text-text-primary">{t("customers.lastOrder")}</h3>
+        {customer.last_order_number ? (
+          <>
+            <p className="mt-1 font-semibold text-text-primary">{customer.last_order_number}</p>
+            <p className="text-text-muted">{customer.last_order_status ? formatStatus("order", customer.last_order_status) : "—"} · {customer.last_order_payment_status ? formatStatus("payment", customer.last_order_payment_status) : "—"}</p>
+          </>
+        ) : <p className="mt-1 text-text-muted">{t("customers.noLinkedOrders")}</p>}
+      </section>
       <section className="rounded-2xl border border-border-subtle bg-surface-2 p-3 text-sm">
         <h3 className="font-semibold text-text-primary">{t("customers.contact")}</h3>
         <p className="mt-2">{t("tables.phone")}: {customer.phone ?? "—"}</p>
         <p>{t("tables.instagram")}: {customer.instagram_username ? `@${customer.instagram_username.replace(/^@/, "")}` : "—"}</p>
         <p>{t("shipments.city")}: {[customer.city, customer.region].filter(Boolean).join(", ") || "—"}</p>
+        <p>{t("customers.source")}: {t(`customers.sources.${customer.source}`)}</p>
+        {customer.source_direct_conversation_id ? (
+          <Link href={`/direct?conversation=${encodeURIComponent(customer.source_direct_conversation_id)}`} className="mt-2 inline-flex min-h-10 items-center rounded-xl px-3 font-semibold text-primary hover:bg-primary/10">{t("customers.openDirect")}</Link>
+        ) : null}
       </section>
 
       <section>
@@ -108,7 +135,30 @@ export function CustomerDetails({
 
       </> : null}
 
-      {activeTab === "orders" ? <section className="rounded-2xl border border-border-subtle bg-surface-2 p-4"><h3 className="font-semibold text-text-primary">{t("customers.tabs.orders")}</h3><p className="mt-2 text-sm text-text-secondary">{t("customers.ordersUnavailable")}</p></section> : null}
+      {activeTab === "orders" ? (
+        <section className="grid gap-2">
+          <h3 className="font-semibold text-text-primary">{t("customers.tabs.orders")} · {customer.total_orders}</h3>
+          {ordersLoading ? <p className="text-sm text-text-muted">{t("customers.loadingOrders")}</p> : null}
+          {ordersError ? <p role="alert" className="text-sm text-danger">{t("customers.ordersLoadFailed")}</p> : null}
+          {!ordersLoading && !ordersError && orders.length === 0 ? <p className="text-sm text-text-muted">{t("customers.noLinkedOrders")}</p> : null}
+          {!ordersError && orders.map((order) => (
+            <article key={order.id} className="rounded-2xl border border-border-subtle bg-surface-2 p-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <strong className="break-all text-text-primary">{order.order_number}</strong>
+                <span className="text-xs text-text-muted">{new Date(order.created_at).toLocaleDateString("uk-UA")}</span>
+              </div>
+              <p className="mt-1 text-text-secondary">{t("customers.orderStatus")}: {formatStatus("order", order.status)}</p>
+              <p className="text-text-secondary">{t("customers.payment")}: {formatStatus("payment", order.payment_status)}</p>
+              <p className="text-text-secondary">{t("customers.orderValue")}: {order.is_historical && Number(order.revenue) === 0 ? t("orders.unknownAmount") : formatMoney(order.revenue, currencyCode)}</p>
+              {order.shipment_tracking ? <p className="mt-1 break-all text-text-secondary">{t("customers.tracking")}: {order.shipment_tracking} · {order.shipment_status ? formatStatus("shipment", order.shipment_status) : "—"}</p> : null}
+              {order.shipment_city ? <p className="text-xs text-text-muted">{order.shipment_city}</p> : null}
+              {order.products.length ? <p className="mt-1.5 text-xs text-text-secondary">{order.products.map((item) => `${item.quantity} × ${item.name}`).join(" · ")}</p> : null}
+            </article>
+          ))}
+          {customer.total_orders > orders.length ? <p className="text-xs text-text-muted">{t("customers.ordersPreviewLimit")}</p> : null}
+          <p className="text-xs text-text-muted">{t("customers.unlinkedHistoryNotice")}</p>
+        </section>
+      ) : null}
 
       {activeTab === "notes" ? <section>
         <h3 className="font-semibold text-text-primary">{t("customers.notesTimeline")}</h3>

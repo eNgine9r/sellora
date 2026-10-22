@@ -22,7 +22,7 @@ import {
   fetchCustomerTags,
   fetchTags,
 } from "@/services/crm-completion";
-import { createCustomer, CustomerCreatePayload, deleteCustomer, fetchCustomers, updateCustomer } from "@/services/crm";
+import { createCustomer, CustomerCreatePayload, deleteCustomer, fetchCustomers, fetchCustomerOrders, updateCustomer } from "@/services/crm";
 import { Customer } from "@/types/crm";
 import { useAuth } from "@/hooks/use-auth";
 import { buildCustomerUpdatePayload } from "@/lib/payload-builders";
@@ -45,9 +45,14 @@ export default function CustomersPage() {
   const selectedId = selectedCustomer?.id ?? "";
 
   const customersQuery = useQuery({
-    queryKey: ["customers", workspaceId, search],
-    queryFn: () => fetchCustomers(workspaceId, search, undefined),
+    queryKey: ["customers", workspaceId],
+    queryFn: () => fetchCustomers(workspaceId, undefined, undefined),
     enabled,
+  });
+  const customerOrdersQuery = useQuery({
+    queryKey: ["customer-orders", workspaceId, selectedId],
+    queryFn: () => fetchCustomerOrders(workspaceId, selectedId),
+    enabled: enabled && Boolean(selectedId),
   });
   const tagsQuery = useQuery({
     queryKey: ["tags", workspaceId],
@@ -115,14 +120,22 @@ export default function CustomersPage() {
       addAttachment(workspaceId, { entity_type: "CUSTOMER", entity_id: selectedId, file_url: fileUrl }, undefined),
     onSuccess: invalidateDetails,
   });
-  const visibleCustomers = useMemo(() => [...(customersQuery.data ?? [])].sort((left, right) => {
+  const visibleCustomers = useMemo(() => (customersQuery.data ?? []).filter((customer) => {
+    const term = search.trim().toLocaleLowerCase("uk-UA");
+    return !term || [customer.name, customer.phone, customer.instagram_username]
+      .some((value) => (value ?? "").toLocaleLowerCase("uk-UA").includes(term));
+  }).sort((left, right) => {
     if (customerSort === "oldest") return left.created_at.localeCompare(right.created_at);
     if (customerSort === "nameAsc") return left.name.localeCompare(right.name);
     if (customerSort === "nameDesc") return right.name.localeCompare(left.name);
     return right.created_at.localeCompare(left.created_at);
-  }), [customersQuery.data, customerSort]);
+  }), [customersQuery.data, customerSort, search]);
   const hasActiveFilters = Boolean(search.trim());
   const allCustomers = customersQuery.data?.length ?? 0;
+  const customersWithPaidPurchases = customersQuery.data?.filter((item) => item.paid_orders > 0).length ?? 0;
+  const repeatCustomers = customersQuery.data?.filter((item) => item.paid_orders > 1).length ?? 0;
+  const customersWithoutOrders = customersQuery.data?.filter((item) => item.total_orders === 0).length ?? 0;
+  const selectedCustomerLive = customersQuery.data?.find((item) => item.id === selectedId) ?? selectedCustomer;
   const customersError = customersQuery.isError ? safeApiErrorMessage(customersQuery.error, t("customers.loadError")) : null;
 
   useEffect(() => {
@@ -135,9 +148,9 @@ export default function CustomersPage() {
 
         <CompactSummary items={[
           { label: t("customers.summary.all"), value: allCustomers },
-          { label: t("customers.summary.withPurchases"), value: null, unavailable: true, helper: t("customers.summary.unavailable") },
-          { label: t("customers.summary.repeat"), value: null, unavailable: true, helper: t("customers.summary.unavailable") },
-          { label: t("customers.summary.withoutOrders"), value: null, unavailable: true, helper: t("customers.summary.unavailable") },
+          { label: t("customers.summary.withPurchases"), value: customersWithPaidPurchases },
+          { label: t("customers.summary.repeat"), value: repeatCustomers },
+          { label: t("customers.summary.withoutOrders"), value: customersWithoutOrders },
         ]} />
 
         <FilterBar>
@@ -149,9 +162,12 @@ export default function CustomersPage() {
         <WorkspaceSplitView
           panelOpen={Boolean(selectedCustomer)}
           panel={selectedCustomer ? (
-            <EntitySidePanel open={Boolean(selectedCustomer)} title={selectedCustomer.name ?? t("customers.title")} description={selectedCustomer.instagram_username ? `@${selectedCustomer.instagram_username.replace(/^@/, "")}` : selectedCustomer.phone ?? undefined} onClose={() => setSelectedCustomer(null)} footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingCustomer(selectedCustomer)}>{t("customers.edit")}</Button><Button variant="danger" onClick={() => setArchivingCustomer(selectedCustomer)}>{t("customers.archive")}</Button></div> : undefined}>
+            <EntitySidePanel open={Boolean(selectedCustomer)} title={selectedCustomerLive?.name ?? t("customers.title")} description={selectedCustomerLive?.instagram_username ? `@${selectedCustomerLive.instagram_username.replace(/^@/, "")}` : selectedCustomerLive?.phone ?? undefined} onClose={() => setSelectedCustomer(null)} footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingCustomer(selectedCustomer)}>{t("customers.edit")}</Button><Button variant="danger" onClick={() => setArchivingCustomer(selectedCustomer)}>{t("customers.archive")}</Button></div> : undefined}>
               <CustomerDetails
-                customer={selectedCustomer}
+                customer={selectedCustomerLive!}
+                orders={customerOrdersQuery.data ?? []}
+                ordersLoading={customerOrdersQuery.isLoading}
+                ordersError={customerOrdersQuery.isError}
                 tags={tagsQuery.data ?? []}
                 customerTags={customerTagsQuery.data ?? []}
                 notes={notesQuery.data ?? []}
