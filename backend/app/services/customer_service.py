@@ -5,6 +5,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from sqlalchemy.orm import Session
 
@@ -83,7 +84,7 @@ class CustomerService:
                 Order.workspace_id == workspace_id,
                 Order.customer_id == customer_id,
                 Order.deleted_at.is_(None),
-            ).order_by(Order.created_at.desc(), Order.id.desc()).limit(100)
+            ).options(selectinload(Order.items)).order_by(Order.created_at.desc(), Order.id.desc()).limit(100)
         ))
         if not orders:
             return []
@@ -107,6 +108,7 @@ class CustomerService:
             "shipment_tracking": by_order[order.id].tracking_number if order.id in by_order else None,
             "shipment_status": by_order[order.id].status if order.id in by_order else None,
             "shipment_city": by_order[order.id].city if order.id in by_order else None,
+            "products": [{"name": item.product_name, "quantity": item.quantity} for item in order.items],
         } for order in orders]
 
     def create(self, workspace_id: UUID, payload: CustomerCreate, actor_user_id: UUID | None, *, commit: bool = True) -> Customer:
