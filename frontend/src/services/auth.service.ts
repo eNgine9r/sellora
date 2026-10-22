@@ -129,7 +129,7 @@ export const authStorage = {
     if (!isBrowser()) return;
     if (memoryActorId && memoryActorId !== user.id) {
       window.sessionStorage.removeItem("sellora.meta-ads.intent");
-      delete window.__selloraMetaAdsCallback;
+      Reflect.deleteProperty(window, "__selloraMetaAdsCallback");
     }
     memoryActorId = user.id;
     if (COOKIE_SESSION_AUTH_ENABLED) {
@@ -147,7 +147,7 @@ export const authStorage = {
     }
     if (window.localStorage.getItem(CURRENT_WORKSPACE_ID_KEY) !== normalizedWorkspaceId) {
       window.sessionStorage.removeItem("sellora.meta-ads.intent");
-      delete window.__selloraMetaAdsCallback;
+      Reflect.deleteProperty(window, "__selloraMetaAdsCallback");
     }
     window.localStorage.setItem(CURRENT_WORKSPACE_ID_KEY, normalizedWorkspaceId);
   },
@@ -160,7 +160,7 @@ export const authStorage = {
     window.localStorage.removeItem(CURRENT_USER_KEY);
     window.localStorage.removeItem(CURRENT_WORKSPACE_ID_KEY);
     window.sessionStorage.removeItem("sellora.meta-ads.intent");
-    delete window.__selloraMetaAdsCallback;
+    Reflect.deleteProperty(window, "__selloraMetaAdsCallback");
   },
 };
 
