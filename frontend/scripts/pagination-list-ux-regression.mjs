@@ -9,6 +9,8 @@ function assert(condition, label) {
 
 const pagination = read("frontend/src/components/pagination-controls.tsx");
 const productsPage = read("frontend/src/app/products/page.tsx");
+const leadsPage = read("frontend/src/app/leads/page.tsx");
+const customersPage = read("frontend/src/app/customers/page.tsx");
 const inventoryPage = read("frontend/src/app/inventory/page.tsx");
 const orderForm = read("frontend/src/features/orders/components/order-form.tsx");
 const shipmentsPage = read("frontend/src/app/shipments/page.tsx");
@@ -20,6 +22,16 @@ const uk = read("frontend/src/i18n/messages/uk.json");
 assert(existsSync("frontend/src/components/pagination-controls.tsx") && pagination.includes("PaginationControls"), "shared PaginationControls exists");
 assert(pagination.includes("[5, 15, 30]") && pagination.includes("pagination.previous") && pagination.includes("pagination.next"), "page size options 5/15/30 and localized controls exist");
 assert(productsPage.includes("paginatedProducts") && productsPage.includes("productPageSize") && productsPage.includes("PaginationControls"), "products page uses pagination");
+for (const [name, page, rowComponent, paginatedRows] of [
+  ["leads", leadsPage, "LeadTable", "paginatedLeads"],
+  ["customers", customersPage, "CustomerTable", "paginatedCustomers"],
+]) {
+  assert(page.includes('useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5)') && page.includes("PaginationControls"), `${name} uses shared 5/15/30 pagination`);
+  assert(page.includes("paginateItems(") && page.includes("clampPage("), `${name} paginates filtered records and clamps after data changes`);
+  assert(page.includes(`<${rowComponent}`) && page.includes(`${rowComponent === "LeadTable" ? "leads" : "customers"}={${paginatedRows}}`), `${name} only renders current page rows`);
+  assert(page.indexOf(`<${rowComponent}`) < page.indexOf("<PaginationControls"), `${name} pagination renders below its table`);
+  assert(page.includes("setPage(1)") && page.includes("totalItems={visible"), `${name} resets on filters and counts all filtered records`);
+}
 assert(productsPage.includes("paginatedVariants") && productsPage.includes("variantPageSize") && productsPage.includes("PaginationControls"), "product variants list uses pagination");
 assert(inventoryPage.includes("paginatedInventory") && inventoryPage.includes("inventoryPageSize") && inventoryPage.includes("PaginationControls"), "inventory page uses pagination");
 assert(productsPage.includes("categoryFilter") && productsPage.includes("productSearchMatches") && inventoryPage.includes("categoryMatches"), "pagination works with category/search markers");
