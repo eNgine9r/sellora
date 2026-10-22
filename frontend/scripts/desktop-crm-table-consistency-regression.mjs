@@ -9,6 +9,7 @@ const tablePaths = {
   products: "frontend/src/features/products/components/product-table.tsx",
   inventory: "frontend/src/features/inventory/components/inventory-table.tsx",
   campaigns: "frontend/src/features/advertising/components/campaign-table.tsx",
+  advertisingMetrics: "frontend/src/features/advertising/components/ad-metric-table.tsx",
 };
 const actions = read("frontend/src/components/ui/row-action-buttons.tsx");
 const css = read("frontend/src/app/globals.css");
@@ -32,6 +33,7 @@ for (const [module, path] of Object.entries(tablePaths)) {
 const leads = read(tablePaths.leads);
 const shipments = read(tablePaths.shipments);
 check(leads.includes("lead.instagram_username") && leads.includes("lead.phone") && leads.includes("lead.campaign_name"), "leads contact/source details preserved in merged columns");
+check(read(tablePaths.advertisingMetrics).includes("destructiveIcon=\"delete\""), "metric deletion has appropriate destructive icon");
 check(shipments.includes("CopyTtnButton") && shipments.includes("shipments.openOrder") && shipments.includes("shipments.createTtn"), "shipment TTN and linked-order actions preserved");
 check(!shipments.includes("grid min-w-[160px]") && !leads.includes('className="flex flex-wrap gap-2"'), "old tall desktop button stacks removed");
 
