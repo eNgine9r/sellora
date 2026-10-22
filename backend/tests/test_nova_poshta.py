@@ -278,6 +278,56 @@ def test_sync_status_without_tracking_is_blocked_before_api_call() -> None:
         service.sync_status(shipment.workspace_id, shipment.id, uuid4())
 
 
+
+def test_unknown_tracking_does_not_mark_unverified_archive_synced() -> None:
+    from datetime import UTC, datetime
+
+    shipment = Shipment(
+        id=uuid4(), workspace_id=uuid4(), order_id=uuid4(),
+        carrier=ShipmentCarrier.NOVA_POSHTA.value,
+        status=ShipmentStatus.CREATED.value,
+        tracking_number="TTN-001", nova_poshta_document_number="TTN-001",
+        nova_poshta_synced_at=datetime.now(UTC),
+    )
+    service = _shipment_service(shipment)
+    service.settings.client_factory = lambda credential: SimpleNamespace(
+        get_document_status=lambda tracking_number: "Номер не знайдено"
+    )
+    result = service.sync_status(shipment.workspace_id, shipment.id, None)
+
+    assert result.manual_review_required
+    assert shipment.status == ShipmentStatus.CREATED.value
+    assert shipment.nova_poshta_synced_at is None
+    assert result.synced_at is None
+    assert service.audit_logs.records[-1]["action"] == "NOVA_POSHTA_STATUS_UNVERIFIED"
+
+
+def test_unknown_tracking_preserves_existing_verified_delivery_evidence() -> None:
+    from datetime import UTC, datetime
+
+    verified_at = datetime.now(UTC)
+    shipment = Shipment(
+        id=uuid4(), workspace_id=uuid4(), order_id=uuid4(),
+        carrier=ShipmentCarrier.NOVA_POSHTA.value,
+        status=ShipmentStatus.DELIVERED.value,
+        tracking_number="TTN-002", nova_poshta_document_number="TTN-002",
+        nova_poshta_raw_status="Відправлення отримано",
+        external_status="Відправлення отримано",
+        nova_poshta_synced_at=verified_at,
+    )
+    service = _shipment_service(shipment)
+    service.settings.client_factory = lambda credential: SimpleNamespace(
+        get_document_status=lambda tracking_number: "Номер не знайдено"
+    )
+    result = service.sync_status(shipment.workspace_id, shipment.id, None)
+
+    assert result.manual_review_required
+    assert shipment.status == ShipmentStatus.DELIVERED.value
+    assert shipment.nova_poshta_synced_at == verified_at
+    assert shipment.nova_poshta_raw_status == "Відправлення отримано"
+    assert service.audit_logs.records[-1]["action"] == "NOVA_POSHTA_STATUS_UNVERIFIED"
+
+
 def test_sync_status_empty_response_returns_safe_unavailable_message() -> None:
     shipment = Shipment(id=uuid4(), workspace_id=uuid4(), order_id=uuid4(), customer_id=uuid4(), carrier=ShipmentCarrier.NOVA_POSHTA.value, status=ShipmentStatus.CREATED.value, tracking_number="TTN-001", nova_poshta_document_number="TTN-001", external_status="Previous status")
     service = _shipment_service(shipment)
