@@ -26,12 +26,12 @@ export function ShipmentTable({ shipments, selectedShipmentId, onSelect, onEdit,
       <div className="sellora-adaptive-table w-full min-w-0">
         <table className="w-full table-fixed text-left text-sm">
           <colgroup>
-            <col style={{ width: "23%" }} />
+            <col style={{ width: "21%" }} />
             <col style={{ width: "20%" }} />
             <col style={{ width: "22%" }} />
             <col style={{ width: "13%" }} />
             <col style={{ width: "12%" }} />
-            <col style={{ width: "10%" }} />
+            <col style={{ width: "12%" }} />
           </colgroup>
           <thead className="text-xs uppercase tracking-wide text-text-muted">
             <tr>{headings.map((heading, index) => <th className={`px-2 py-3 ${index === headings.length - 1 ? "text-right" : ""}`} key={heading}>{heading}</th>)}</tr>
