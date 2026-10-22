@@ -43,6 +43,14 @@ export function OrderDetails({
       <div className="grid min-w-0 grid-cols-[auto,minmax(0,1fr)] gap-2 text-sm">
         <span>{t("analytics.revenue")}</span>
         <strong>{formatMoney(order.revenue, currencyCode)}</strong>
+        {order.historical_order_value != null ? <>
+          <span>{t("orders.historicalOrderValue")}</span>
+          <strong>{formatMoney(order.historical_order_value, currencyCode)}</strong>
+          <p className="col-span-2 text-xs text-text-muted">
+            {t(`orders.historicalValueSource.${order.historical_value_source ?? "UNKNOWN"}`)}
+            {" · "}{t("orders.historicalValueWarning")}
+          </p>
+        </> : null}
         <span>{t("orders.productCost")}</span>
         <strong>{formatMoney(order.product_cost, currencyCode)}</strong>
         <span>{t("orders.adCost")}</span>

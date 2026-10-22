@@ -41,6 +41,10 @@ class Order(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Timestam
     payment_status: Mapped[str] = mapped_column(String(30), default=PaymentStatus.PENDING.value, nullable=False)
     is_historical: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     revenue: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
+    # Historical NP label evidence only. Never recognized as revenue/net profit.
+    historical_order_value: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    historical_value_source: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
     product_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     ad_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     shipping_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)

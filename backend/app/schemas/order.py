@@ -88,6 +88,8 @@ class OrderResponse(BaseModel):
     payment_status: PaymentStatus
     is_historical: bool = False
     revenue: Decimal
+    historical_order_value: Decimal | None = None
+    historical_value_source: str | None = None
     product_cost: Decimal
     ad_cost: Decimal
     shipping_cost: Decimal
