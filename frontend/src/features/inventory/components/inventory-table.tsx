@@ -3,6 +3,7 @@
 import type { KeyboardEvent } from "react";
 
 import { RemoteImage } from "@/components/ui/remote-image";
+import { RowActionButtons } from "@/components/ui/row-action-buttons";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
 import { statusBadgeClass } from "@/lib/status-styles";
@@ -139,22 +140,13 @@ export function InventoryTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    {onEdit ? (
-                      <button
-                        type="button"
-                        aria-label={`${t("inventory.editThresholds")} ${label}`}
-                        className="rounded-lg border border-slate-300 px-3 py-2 font-semibold dark:border-white/10"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onEdit(item);
-                        }}
-                      >
-                        {t("inventory.editThresholds")}
-                      </button>
-                    ) : (
-                      <span className="text-slate-400">{t("common.readOnly")}</span>
-                    )}
+                  <td className="px-2 py-3">
+                    <RowActionButtons
+                      entityLabel={label}
+                      editLabel={t("inventory.editThresholds")}
+                      archiveLabel={t("actions.archive")}
+                      onEdit={onEdit ? () => onEdit(item) : undefined}
+                    />
                   </td>
                 </tr>
               );
