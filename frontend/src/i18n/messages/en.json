@@ -751,14 +751,24 @@
     "historicalValueSource": {
       "NP_COD_REQUESTED": "COD amount requested on shipping label",
       "NP_DECLARED_VALUE": "Parcel insured/declared value (not a sale price)",
-      "UNKNOWN": "Amount source unknown"
+      "UNKNOWN": "Amount source unknown",
+      "DIRECT_CONFIRMED_TOTAL": "Seller total, buyer response and waybill; arithmetic verified",
+      "DIRECT_ESTIMATED_TOTAL": "Seller total and waybill estimate (no explicit buyer confirmation)"
     },
     "historicalValueSummaryTitle": "Historical shipment value estimates",
     "historicalCodTotal": "Requested COD total",
     "historicalDeclaredTotal": "Insured value without COD (estimate)",
     "historicalUnknownTotal": "No defensible estimate",
     "historicalDocuments": "waybills",
-    "historicalUnknownHint": "waybills without an estimated amount"
+    "historicalUnknownHint": "waybills without an estimated amount",
+    "historicalDirectEvidence": "Instagram Direct price evidence",
+    "historicalReviewRequired": "Chat prices need review",
+    "historicalReviewUnknown": "No reliable price found in chat",
+    "historicalConfidenceConfirmed": "Supported by messages",
+    "historicalConfidenceEstimated": "Estimated amount",
+    "historicalEvidenceOpen": "Open evidence in Direct",
+    "historicalReviewCandidates": "Chat price candidates",
+    "historicalDirectTotal": "Estimated total based on Direct conversations"
   },
   "products": {
     "title": "Products",
