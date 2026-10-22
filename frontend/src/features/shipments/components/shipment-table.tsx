@@ -41,7 +41,7 @@ export function ShipmentTable({ shipments, selectedShipmentId, onSelect, onEdit,
               const tracking = displayTtn(shipment, t("common.draft"));
               const isSelected = shipment.id === selectedShipmentId;
               return (
-                <tr key={shipment.id} className={cn("cursor-pointer border-t border-border-subtle align-middle transition hover:bg-surface-hover", isSelected && "bg-surface-selected ring-1 ring-inset ring-primary/30")} onClick={() => onSelect(shipment)}>
+                <tr key={shipment.id} className={cn("cursor-pointer border-t border-border-subtle align-middle transition hover:bg-surface-hover", isSelected && "bg-surface-selected ring-1 ring-inset ring-primary/30")} onClick={() => onSelect(shipment)} title={shipment.tracking_number ? t("common.details") : t("shipments.createTtn")}>
                   <td className="min-w-0 px-2 py-3">
                     <span className="block truncate font-semibold text-text-primary" title={tracking}>{tracking}</span>
                     <span className="block truncate text-xs text-text-muted" title={shipment.order_number ?? undefined}>{shipment.order_number ?? "—"}</span>
