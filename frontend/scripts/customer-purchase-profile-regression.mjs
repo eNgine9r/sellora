@@ -20,7 +20,7 @@ const checks = [
   ["selected customer fetches history lazily", page.includes('queryKey: ["customer-orders", workspaceId, selectedId]') && page.includes("enabled: enabled && Boolean(selectedId)")],
   ["workspace summary reports real counts", page.includes("customersWithPaidPurchases") && page.includes("repeatCustomers") && page.includes("customersWithoutOrders")],
   ["mobile cards have compact click-to-open UX", cards.includes("mobile-customer-card") && cards.includes("ChevronRight") && !cards.includes('onClick={(event) => { event.stopPropagation(); onEdit(customer); }')],
-  ["large destructive actions not repeated on every mobile card", cards.includes('className="grid gap-2 md:hidden"') && !cards.includes("Архівувати клієнта")],
+  ["large destructive actions not repeated on every mobile card", cards.includes('sellora-adaptive-cards grid gap-2') && !cards.includes("Архівувати клієнта")],
   ["details include Instagram Direct and linked products", details.includes("source_direct_conversation_id") && details.includes("order.products.map") && details.includes("shipment_tracking")],
   ["unattributed historical sales explicitly excluded", details.includes("unlinkedHistoryNotice")],
   ["new source labels translated", ["uk","en"].every((lang)=> (lang==="uk"?uk:en).customers.sources.INSTAGRAM_DIRECT)],
