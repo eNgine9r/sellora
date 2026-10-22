@@ -19,13 +19,13 @@ export function LeadTable({ leads, leadSources, selectedLeadId, onSelect, onEdit
     <div className="sellora-adaptive-table min-w-0 w-full">
       <table className="w-full table-fixed divide-y divide-border-subtle text-left text-sm">
         <colgroup>
-          <col style={{ width: "23%" }} />
+          <col style={{ width: "21%" }} />
           <col style={{ width: "12%" }} />
           <col style={{ width: "19%" }} />
           <col style={{ width: "12%" }} />
           <col style={{ width: "15%" }} />
           <col style={{ width: "9%" }} />
-          <col style={{ width: "10%" }} />
+          <col style={{ width: "12%" }} />
         </colgroup>
         <thead className="bg-surface-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
           <tr>
