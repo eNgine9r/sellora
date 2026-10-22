@@ -231,14 +231,29 @@ html {
 }
 
 @supports (padding-top: env(safe-area-inset-top)) {
+  /* iOS standalone PWAs draw behind the translucent status bar. */
   .mobile-safe-top {
-    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
     padding-left: max(0.75rem, env(safe-area-inset-left));
     padding-right: max(0.75rem, env(safe-area-inset-right));
   }
 
+  /* The drawer starts at the top edge of the screen, not below the app topbar. */
+  .mobile-sidebar-brand {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  }
+
   .mobile-safe-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  @media (min-width: 1024px) {
+    .mobile-safe-top {
+      padding-top: 0;
+    }
+    .mobile-sidebar-brand {
+      padding-top: 1.25rem;
+    }
   }
 }
 
