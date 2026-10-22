@@ -68,9 +68,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => document.body.classList.remove("overflow-hidden");
   }, [mobileMenuOpen]);
 
-  const handleLogout = () => {
-    logout();
-    router.replace("/login");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace("/login");
+    } catch {
+      // Do not navigate away if the server has not revoked the secure session.
+    }
   };
 
   if (!protectedPath) return <>{children}</>;
