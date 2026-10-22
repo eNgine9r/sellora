@@ -60,6 +60,11 @@ class CustomerResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class CustomerOrderProduct(BaseModel):
+    name: str
+    quantity: int
+
+
 class CustomerOrderSummary(BaseModel):
     id: UUID
     order_number: str
@@ -71,3 +76,4 @@ class CustomerOrderSummary(BaseModel):
     shipment_tracking: str | None = None
     shipment_status: str | None = None
     shipment_city: str | None = None
+    products: list[CustomerOrderProduct] = Field(default_factory=list)
