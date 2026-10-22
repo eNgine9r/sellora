@@ -19,6 +19,8 @@ const checks = [
   ["no keyboard auto-send shortcut", !direct.includes("onKeyDown={(event) => event.key === \"Enter\"")],
   ["send and preparation errors are visible", direct.includes("sendError ?") && direct.includes("prepareError ?")],
   ["old preview cleared as draft changes", direct.includes("prepareMutation.reset();") && direct.includes("sendMutation.reset();")],
+  ["draft does not leak between customers", direct.includes("lastComposerConversationId.current = id") && direct.includes("clearPreparedReply()") && direct.includes("clearSendState()")],
+  ["dark composer blends with input shell", css.includes("main [data-direct-compact-composer] textarea[data-direct-reply-input]") && css.includes("background: transparent")],
   ["backend API flow unchanged", direct.includes("sendDirectReply(selectedConversation!.id, replyText, crypto.randomUUID())") && direct.includes("prepareDirectReply(selectedConversation!.id, replyText)")],
 ];
 const failed = checks.filter(([, passed]) => !passed);
