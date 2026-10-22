@@ -568,10 +568,18 @@ main [data-direct-compact-composer] textarea[data-direct-reply-input] {
   display: grid;
 }
 @container (min-width: 780px) {
-  .sellora-adaptive-table {
+  .sellora-adaptive-list:not(.sellora-adaptive-wide-list) .sellora-adaptive-table {
     display: block;
   }
-  .sellora-adaptive-cards {
+  .sellora-adaptive-list:not(.sellora-adaptive-wide-list) .sellora-adaptive-cards {
+    display: none;
+  }
+}
+@container (min-width: 980px) {
+  .sellora-adaptive-wide-list .sellora-adaptive-table {
+    display: block;
+  }
+  .sellora-adaptive-wide-list .sellora-adaptive-cards {
     display: none;
   }
 }
