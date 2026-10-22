@@ -33,7 +33,7 @@ export function ResponsiveReportTable<Row>({
 }: Props<Row>) {
   return (
     <div
-      className={`sellora-adaptive-list min-w-0 max-w-full ${wide ? "sellora-adaptive-wide-list" : ""} ${className}`}
+      className={`sellora-adaptive-list min-w-0 max-w-full ${columns.length >= 8 ? "sellora-adaptive-dense-list" : wide ? "sellora-adaptive-wide-list" : ""} ${className}`}
       data-sellora-report-table
     >
       {rows.length ? (
