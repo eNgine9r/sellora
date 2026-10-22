@@ -568,10 +568,10 @@ main [data-direct-compact-composer] textarea[data-direct-reply-input] {
   display: grid;
 }
 @container (min-width: 780px) {
-  .sellora-adaptive-list:not(.sellora-adaptive-wide-list) .sellora-adaptive-table {
+  .sellora-adaptive-list:not(.sellora-adaptive-wide-list):not(.sellora-adaptive-dense-list) .sellora-adaptive-table {
     display: block;
   }
-  .sellora-adaptive-list:not(.sellora-adaptive-wide-list) .sellora-adaptive-cards {
+  .sellora-adaptive-list:not(.sellora-adaptive-wide-list):not(.sellora-adaptive-dense-list) .sellora-adaptive-cards {
     display: none;
   }
 }
@@ -580,6 +580,16 @@ main [data-direct-compact-composer] textarea[data-direct-reply-input] {
     display: block;
   }
   .sellora-adaptive-wide-list .sellora-adaptive-cards {
+    display: none;
+  }
+}
+
+/* Wider analytical reports with 8+ columns use cards until every header stays readable. */
+@container (min-width: 1200px) {
+  .sellora-adaptive-dense-list .sellora-adaptive-table {
+    display: block;
+  }
+  .sellora-adaptive-dense-list .sellora-adaptive-cards {
     display: none;
   }
 }
