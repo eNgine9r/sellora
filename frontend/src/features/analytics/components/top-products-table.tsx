@@ -1,2 +1,20 @@
-import { TopProduct } from "@/types/analytics";
-export function TopProductsTable({ products }: { products: TopProduct[] }) { return <div className="overflow-x-auto rounded-xl bg-white p-4 shadow-sm"><h3 className="mb-3 font-semibold">Top Products</h3><table className="w-full min-w-[640px] text-left text-sm"><thead><tr className="text-slate-500"><th>Product</th><th>Variant</th><th>Qty</th><th>Revenue</th><th>Profit</th></tr></thead><tbody>{products.map((product) => <tr key={product.variant_id} className="border-t"><td className="py-2">{product.product_name}</td><td>{product.variant_sku}</td><td>{product.quantity_sold}</td><td>{product.revenue}</td><td>{product.net_profit}</td></tr>)}</tbody></table></div>; }
+"use client";
+
+import { ResponsiveReportTable, type ReportTableColumn } from "@/components/ui/responsive-report-table";
+import { useI18n } from "@/i18n/provider";
+import type { TopProduct } from "@/types/analytics";
+
+export function TopProductsTable({ products }: { products: TopProduct[] }) {
+  const { t } = useI18n();
+  const columns: ReportTableColumn<TopProduct>[] = [
+    { key: "product", label: t("analytics.tables.product"), render: (item) => item.product_name, emphasis: true },
+    { key: "sku", label: t("analytics.tables.sku"), render: (item) => item.variant_sku },
+    { key: "quantity", label: t("analytics.tables.quantitySold"), render: (item) => item.quantity_sold },
+    { key: "revenue", label: t("analytics.tables.revenue"), render: (item) => item.revenue },
+    { key: "profit", label: t("analytics.tables.netProfit"), render: (item) => item.net_profit },
+  ];
+  return <section className="min-w-0 rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm">
+    <h3 className="mb-3 font-semibold text-text-primary">{t("analytics.products.title")}</h3>
+    <ResponsiveReportTable rows={products} columns={columns} rowKey={(item) => item.variant_id} />
+  </section>;
+}
