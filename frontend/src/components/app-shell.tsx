@@ -7,6 +7,7 @@ import { BarChart3, Home, LogOut, Package, Settings, ShoppingBag, Users } from "
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
 import { BrandLockup } from "@/components/brand";
+import { GlobalAppLoader } from "@/components/global-app-loader";
 import { DirectLiveProvider } from "@/components/direct-live-provider";
 import { NoWorkspaceOnboarding } from "@/components/no-workspace-onboarding";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -78,7 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   if (!protectedPath) return <>{children}</>;
-  if (status === "loading") return <div className="grid min-h-screen place-items-center bg-canvas text-text-secondary">{t("common.loadingSellora")}</div>;
+  if (status === "loading") return <GlobalAppLoader />;
   if (status === "unauthenticated") return <div className="grid min-h-screen place-items-center bg-canvas text-text-secondary">{t("common.redirectingLogin")}</div>;
 
   const profileInitial = ([currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ") || currentUser?.email || "S").slice(0, 1).toUpperCase();
