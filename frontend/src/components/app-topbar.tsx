@@ -49,7 +49,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, m
   };
 
   return (
-    <header className="mobile-safe-top sticky top-0 z-50 min-w-0 border-b border-border-subtle bg-canvas/92 px-3 py-3 text-text-primary backdrop-blur-xl sm:px-4 md:px-6 lg:static lg:h-[var(--topbar-height)] lg:bg-canvas/92 lg:py-0" data-shell-topbar>
+    <header className="mobile-safe-top sticky top-0 z-50 min-w-0 border-b border-border-subtle bg-canvas px-3 pb-2.5 pt-2.5 text-text-primary sm:px-4 md:px-6 lg:static lg:h-[var(--topbar-height)] lg:bg-canvas/92 lg:py-0 lg:backdrop-blur-xl" data-shell-topbar>
       <div className="mobile-topbar-compact flex w-full min-w-0 items-center gap-2 sm:gap-3 lg:h-full lg:gap-4">
         <IconButton className="lg:hidden" onClick={onOpenMenu} aria-label={t("mobileTopbar.openNavigation")}>
           <Menu className="h-5 w-5" />
