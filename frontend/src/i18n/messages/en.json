@@ -732,6 +732,8 @@
       "COD": "Cash on delivery",
       "REFUNDED": "Funds refunded"
     },
+    "historicalStatusUnverified": "Archived status — unverified",
+    "archivedProviderStatus": "Last archived Nova Poshta status",
     "historicalUnpaidProfitHint": "Historical order: margin is estimated until payment is verified.",
     "historicalCorrectionHint": "Historical order: correcting items, prices and costs does not move live inventory. Use verified figures only.",
     "revenue": "Revenue",
