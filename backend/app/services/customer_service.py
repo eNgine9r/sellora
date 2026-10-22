@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from uuid import UUID
 from collections import defaultdict
-from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -28,8 +27,11 @@ class CustomerService:
         customers = self.customers.list_for_workspace(workspace_id, search)
         return self._with_order_metrics(workspace_id, customers)
 
-    def get(self, workspace_id: UUID, customer_id: UUID) -> CustomerResponse | None:
-        customer = self.customers.get(workspace_id, customer_id)
+    def get(self, workspace_id: UUID, customer_id: UUID) -> Customer | None:
+        return self.customers.get(workspace_id, customer_id)
+
+    def get_with_metrics(self, workspace_id: UUID, customer_id: UUID) -> CustomerResponse | None:
+        customer = self.get(workspace_id, customer_id)
         return self._with_order_metrics(workspace_id, [customer])[0] if customer else None
 
     def _with_order_metrics(self, workspace_id: UUID, customers: list[Customer]) -> list[CustomerResponse]:
