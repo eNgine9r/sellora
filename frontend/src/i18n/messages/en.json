@@ -21,6 +21,8 @@
     "saving": "Saving…",
     "loading": "Loading…",
     "loadingWorkspace": "Preparing your workspace…",
+    "loadingSlow": "Connecting your store data…",
+    "loadingDelayed": "Loading is taking longer than expected.",
     "workspaceUnavailable": "Workspace unavailable",
     "workspaceUnavailableDescription": "Workspace is not ready yet. Refresh the page or select another workspace.",
     "retry": "Try again",
