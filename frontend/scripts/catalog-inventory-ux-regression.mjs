@@ -28,6 +28,6 @@ assert(orderForm.includes("variantOptions") && orderForm.includes("orders.availa
 assert(inventoryTable.includes("inventory.productImage") && inventoryTable.includes("inventory.category") && inventoryTable.includes("inventory.product") && inventoryTable.includes("tables.variantSku"), "inventory table/card displays image category product and variant SKU");
 assert(inventoryPage.includes("inventory.filterByCategory") && inventoryPage.includes("categoryMatches") && inventoryPage.includes("visibleInventory"), "inventory page has category filter and filtered rows");
 assert(uk.includes('"categories"') && en.includes('"categories"') && uk.includes("Каблучки") && en.includes("Rings"), "category i18n keys exist in uk/en dictionaries");
-assert(productsPage.includes("sellora-scrollbar") && inventoryTable.includes("sellora-scrollbar") && orderForm.includes("min-w-0"), "responsive/theme scrollbar markers preserved");
+assert(productsPage.includes("ResponsiveReportTable") && inventoryTable.includes("sellora-scrollbar") && orderForm.includes("min-w-0"), "responsive/theme scrollbar markers preserved");
 
 console.log(`Catalog inventory UX regression passed (${checks.length} checks).`);
