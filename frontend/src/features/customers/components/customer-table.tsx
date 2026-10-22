@@ -18,8 +18,8 @@ type Props = {
 export function CustomerTable({ customers, currencyCode = "UAH", selectedCustomerId, onSelect, onEdit, onArchive }: Props) {
   const { t } = useI18n();
   return (
-    <div className="mobile-card-list min-w-0 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-2 shadow-[var(--shadow-card)] md:p-3">
-      <div className="sellora-scrollbar hidden overflow-x-auto md:block">
+    <div className="sellora-adaptive-list sellora-adaptive-wide-list mobile-card-list min-w-0 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-2 shadow-[var(--shadow-card)] md:p-3">
+      <div className="sellora-scrollbar sellora-adaptive-table overflow-x-auto">
         <table className="w-full min-w-[850px] divide-y divide-border-subtle text-sm">
           <thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
             <tr>
@@ -51,7 +51,7 @@ export function CustomerTable({ customers, currencyCode = "UAH", selectedCustome
           </tbody>
         </table>
       </div>
-      <div className="grid gap-2 md:hidden">
+      <div className="sellora-adaptive-cards grid gap-2">
         {customers.map((customer) => (
           <button
             type="button"
