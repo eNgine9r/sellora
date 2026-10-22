@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <aside className="hidden min-h-0 lg:block lg:[grid-column:1] lg:[grid-row:2]">
           <AppSidebar showBrand={false} />
         </aside>
-        <div className="min-w-0 overflow-x-clip pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:[grid-column:2] lg:[grid-row:1/3] lg:grid lg:min-h-0 lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]">
+        <div className="min-w-0 overflow-x-clip pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:[grid-column:2] lg:[grid-row:1/3] lg:grid lg:min-h-0 lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]" data-shell-page-column>
           <AppTopbar
             currentUser={currentUser}
             currentWorkspace={currentWorkspace}

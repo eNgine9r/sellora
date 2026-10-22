@@ -10,6 +10,7 @@ import {
   MessageCircle,
   RefreshCw,
   Send,
+  ShieldCheck,
   ShoppingBag,
   Sparkles,
   UserPlus,
@@ -138,6 +139,7 @@ function DirectPageContent() {
     mutationFn: () => sendDirectReply(selectedConversation!.id, replyText, crypto.randomUUID()),
     onSuccess: () => {
       setReplyText("");
+      prepareMutation.reset();
       void queryClient.invalidateQueries({ queryKey: ["direct-messages", workspaceId, selectedConversation?.id] });
       void queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });
     },
@@ -226,6 +228,18 @@ function DirectPageContent() {
     ensureCustomerMutation.mutate(conversationId);
   }, [automationQuery.data?.stage, canManage, ensureCustomerMutation, orderIntentConversationIds, selectedConversation?.id]);
 
+  const lastComposerConversationId = useRef<string | null>(null);
+  const { reset: clearPreparedReply } = prepareMutation;
+  const { reset: clearSendState } = sendMutation;
+  useEffect(() => {
+    const id = selectedConversation?.id ?? null;
+    if (lastComposerConversationId.current === id) return;
+    lastComposerConversationId.current = id;
+    setReplyText("");
+    clearPreparedReply();
+    clearSendState();
+  }, [selectedConversation?.id, clearPreparedReply, clearSendState]);
+
   const historyStatus = historyQuery.data?.status;
   useEffect(() => {
     if (!historyStatus || !["COMPLETED", "PARTIAL"].includes(historyStatus)) return;
@@ -249,6 +263,13 @@ function DirectPageContent() {
     router.replace("/direct", { scroll: false });
   };
   const threadOpenOnMobile = Boolean(selectedId);
+
+  useEffect(() => {
+    // Treat an open conversation like a full-screen mobile messenger:
+    // global quick navigation remains accessible from the inbox and topbar.
+    document.body.classList.toggle("direct-thread-open", isMobile && threadOpenOnMobile);
+    return () => document.body.classList.remove("direct-thread-open");
+  }, [isMobile, threadOpenOnMobile]);
 
   return (
     <WorkspacePage className={threadOpenOnMobile ? "min-h-full !px-3 !py-2 lg:!px-6 lg:!py-4" : "min-h-full"}>
@@ -325,9 +346,16 @@ function DirectPageContent() {
           error={messagesQuery.isError}
           messages={messagesQuery.data ?? []}
           replyText={replyText}
-          setReplyText={setReplyText}
+          setReplyText={(value) => {
+            setReplyText(value);
+            prepareMutation.reset();
+            sendMutation.reset();
+          }}
           onPrepare={() => prepareMutation.mutate()}
           onSend={() => sendMutation.mutate()}
+          preparePending={prepareMutation.isPending}
+          prepareError={prepareMutation.isError}
+          sendError={sendMutation.isError}
           onRefreshProfile={() => selectedConversation && profileMutation.mutate(selectedConversation.id)}
           profileRefreshing={profileMutation.isPending}
           sendDisabled={
@@ -621,6 +649,9 @@ function MessageThread({
   prepareResult,
   sendPending,
   noAutoSend,
+  preparePending,
+  prepareError,
+  sendError,
   onBack,
   onOpenAiPanel,
 }: {
@@ -646,8 +677,19 @@ function MessageThread({
   prepareResult?: PrepareResult;
   sendPending: boolean;
   noAutoSend: string;
+  preparePending: boolean;
+  prepareError: boolean;
+  sendError: boolean;
 }) {
   const scrollContainer = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const textarea = composerRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 112)}px`;
+  }, [replyText]);
 
   useEffect(() => {
     const element = scrollContainer.current;
@@ -694,25 +736,67 @@ function MessageThread({
         {!loading && !error && messages.length === 0 ? <EmptyState title="Повідомлень ще немає" description="Нові Instagram webhooks або імпортована історія зʼявляться тут." /> : null}
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[82%] rounded-3xl px-4 py-3 text-sm ${message.direction === "OUTBOUND" ? "bg-primary/15 text-text-primary" : "bg-surface-2"}`}>
-              <p className="mb-1 text-xs font-black text-text-muted">{message.direction} · {messageStatusLabel(message)}</p>
-              <p>{message.text}</p>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
-                {message.edit_count ? <span>ред. {message.edit_count}</span> : null}
-                {message.reaction ? <span className="rounded-full bg-surface-1 px-2 py-0.5">{message.reaction}</span> : null}
+            <div className={`max-w-[88%] rounded-2xl px-3 py-2.5 text-sm leading-relaxed sm:max-w-[82%] lg:px-4 lg:py-3 ${message.direction === "OUTBOUND" ? "rounded-br-md bg-primary/15 text-text-primary" : "rounded-bl-md bg-surface-2 text-text-primary"}`}>
+              <p className="whitespace-pre-wrap break-words">{message.text}</p>
+              <div className={`mt-1 flex flex-wrap items-center gap-1.5 text-[10px] leading-4 text-text-muted ${message.direction === "OUTBOUND" ? "justify-end" : ""}`}>
+                <time dateTime={message.received_at}>{formatDirectMessageTime(message.received_at)}</time>
+                {message.direction === "OUTBOUND" ? <span aria-label={messageStatusLabel(message)}>· {messageStatusLabel(message)}</span> : null}
+                {message.edit_count ? <span>· ред.</span> : null}
+                {message.reaction ? <span className="rounded-full bg-surface-1 px-1.5">{message.reaction}</span> : null}
               </div>
             </div>
           </div>
         ))}
       </div>
-      <footer className="max-h-[36dvh] shrink-0 overflow-y-auto border-t border-border-subtle p-2.5 lg:max-h-none lg:p-3">
-        <div className="mb-2 rounded-2xl border border-dashed border-border-subtle p-3 text-sm text-text-muted">{`Чернетка AI — не відправлено. ${noAutoSend}`}</div>
-        <textarea value={replyText} onChange={(event) => setReplyText(event.target.value)} className="min-h-14 w-full rounded-xl border border-border-subtle bg-surface-2 p-2.5 text-sm lg:min-h-24 lg:rounded-2xl lg:p-3" placeholder="Відповідь менеджера" />
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={onPrepare} disabled={!replyText}>Перевірити відправлення</Button>
-          <Button onClick={onSend} disabled={sendDisabled || !replyText}>{sendPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Підтвердити send</Button>
+      <footer className="shrink-0 border-t border-border-subtle bg-surface-1 px-2.5 pb-2 pt-2.5 lg:p-3" data-direct-compact-composer>
+        <div className="flex min-w-0 items-end gap-1.5 rounded-[20px] border border-border-subtle bg-surface-2 p-1.5 transition-colors focus-within:border-primary/70 focus-within:ring-1 focus-within:ring-primary/20">
+          <label className="sr-only" htmlFor="direct-message-reply">Повідомлення клієнту</label>
+          <textarea
+            id="direct-message-reply"
+            ref={composerRef}
+            rows={1}
+            value={replyText}
+            onChange={(event) => setReplyText(event.target.value)}
+            className="min-h-11 max-h-28 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2.5 py-2.5 text-base leading-6 text-text-primary outline-none placeholder:text-text-muted"
+            placeholder="Написати повідомлення…"
+            aria-label="Відповідь менеджера"
+            data-direct-reply-input
+          />
+          <button
+            type="button"
+            aria-label="Надіслати повідомлення"
+            title="Надіслати вручну"
+            disabled={sendDisabled || !replyText.trim() || sendPending}
+            onClick={onSend}
+            className="grid h-11 w-11 min-h-11 min-w-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+            data-direct-send
+          >
+            {sendPending ? <RefreshCw className="h-5 w-5 animate-spin" aria-hidden="true" /> : <Send className="h-5 w-5" aria-hidden="true" />}
+          </button>
         </div>
-        {prepareResult ? <p className="mt-2 text-sm text-text-secondary">{prepareResult.ready ? "Готово до ручного підтвердження" : `Блокери: ${prepareResult.blockers.join(", ")}`}</p> : null}
+        <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2 px-1">
+          <span className="inline-flex min-w-0 items-center gap-1 text-[11px] font-medium text-text-muted" title={noAutoSend}>
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">AI-чернетки · лише вручну</span>
+          </span>
+          <button
+            type="button"
+            onClick={onPrepare}
+            disabled={!replyText.trim() || preparePending || sendPending}
+            className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-xl px-2.5 text-xs font-semibold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+            data-direct-prepare
+          >
+            {preparePending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />}
+            Перевірити
+          </button>
+        </div>
+        {prepareResult ? (
+          <p className={`mt-1 rounded-lg px-2 py-1.5 text-xs font-medium ${prepareResult.ready ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"}`} role="status">
+            {prepareResult.ready ? "Можна надсилати після ручного підтвердження." : `Відправлення заблоковано: ${prepareResult.blockers.join(", ")}`}
+          </p>
+        ) : null}
+        {prepareError ? <p className="mt-1 text-xs text-danger" role="alert">Не вдалося перевірити відправлення. Спробуйте пізніше.</p> : null}
+        {sendError ? <p className="mt-1 text-xs text-danger" role="alert">Не вдалося підтвердити надсилання. Перевірте переписку перед повторною спробою.</p> : null}
       </footer>
     </section>
   );
@@ -794,6 +878,13 @@ function CustomerAutomationCard({
       </div>
     </section>
   );
+}
+
+function formatDirectMessageTime(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : new Intl.DateTimeFormat("uk-UA", { hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
 function messageStatusLabel(message: DirectMessage) {
