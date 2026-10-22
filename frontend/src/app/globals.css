@@ -457,4 +457,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .direct-mobile-thread {
     height: max(21rem, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 10rem));
   }
+
+  /* Dedicated mobile chat should not compete with the global six-tab bar. */
+  body.direct-thread-open .mobile-bottom-nav {
+    display: none;
+  }
+
+  body.direct-thread-open [data-shell-page-column] {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  body.direct-thread-open .direct-mobile-thread {
+    height: max(21rem, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 7.5rem));
+  }
 }
