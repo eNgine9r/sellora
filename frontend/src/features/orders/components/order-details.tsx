@@ -108,10 +108,10 @@ export function OrderDetails({
               {t("shipments.carrier")}: {shipment.carrier === "NOVA_POSHTA" ? t("orders.novaPoshtaName") : shipment.carrier}
             </span>
             <span>
-              {t("tables.status")}: {formatStatus("shipment", shipment.status)}
+              {t("tables.status")}: {order.is_historical && !shipment.nova_poshta_synced_at ? t("orders.historicalStatusUnverified") : formatStatus("shipment", shipment.status)}
             </span>
             <span className="font-medium text-text-primary">
-              {t("orders.providerStatus")}: {shipment.nova_poshta_raw_status ?? shipment.external_status ?? t("orders.statusNeedsSync")}
+              {order.is_historical && !shipment.nova_poshta_synced_at ? t("orders.archivedProviderStatus") : t("orders.providerStatus")}: {shipment.nova_poshta_raw_status ?? shipment.external_status ?? t("orders.statusNeedsSync")}
             </span>
             <span>
               {t("shipments.lastSynced")}: {shipment.nova_poshta_synced_at ? new Date(shipment.nova_poshta_synced_at).toLocaleString("uk-UA") : t("orders.statusNeedsSync")}
