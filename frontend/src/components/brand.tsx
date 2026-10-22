@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-type BrandProps = { className?: string; priority?: boolean };
+type BrandProps = { className?: string; priority?: boolean; unoptimized?: boolean };
 
 // Legacy asset markers kept for branding regression compatibility:
 // /brand/sellora-logo.svg /brand/sellora-icon.svg
@@ -8,7 +8,7 @@ export function BrandLogo({ className = "h-auto w-40", priority = false }: Brand
   return <Image src="/brand/sellora-logo.webp" alt="Sellora" width={1536} height={512} priority={priority} className={className} />;
 }
 
-export function BrandIcon({ className = "h-10 w-10", priority = false }: BrandProps) {
+export function BrandIcon({ className = "h-10 w-10", priority = false, unoptimized = false }: BrandProps) {
   return (
     <Image
       src="/brand/sellora-icon.webp"
@@ -16,6 +16,7 @@ export function BrandIcon({ className = "h-10 w-10", priority = false }: BrandPr
       width={256}
       height={256}
       priority={priority}
+      unoptimized={unoptimized}
       className={`${className} shrink-0 object-cover`}
       style={{ borderRadius: "24%" }}
     />
