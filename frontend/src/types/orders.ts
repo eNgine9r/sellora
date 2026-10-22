@@ -40,7 +40,15 @@ export type Order = {
   payment_status: PaymentStatus;
   revenue: string;
   historical_order_value?: string | null;
-  historical_value_source?: "NP_COD_REQUESTED" | "NP_DECLARED_VALUE" | null;
+  historical_value_source?: "NP_COD_REQUESTED" | "NP_DECLARED_VALUE" | "DIRECT_CONFIRMED_TOTAL" | "DIRECT_ESTIMATED_TOTAL" | null;
+  historical_value_evidence?: {
+    analysis_version?: string;
+    status?: "AUTO_CONFIRMED" | "ESTIMATE" | "REVIEW_REQUIRED" | "NO_PRICE_MENTIONS";
+    selected?: { message_id: string; conversation_id: string; amount: number; buyer_acknowledged: boolean } | null;
+    total_price_messages?: number;
+    review_candidates?: Array<{ message_id: string; conversation_id: string; values: string[]; seller: boolean; explicit_total: boolean }>;
+    review_truncated?: number;
+  } | null;
   product_cost: string;
   ad_cost: string;
   shipping_cost: string;

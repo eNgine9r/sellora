@@ -765,6 +765,8 @@ function MessageThread({
   composerEnabled: boolean;
 }) {
   const { t } = useI18n();
+  const searchParams = useSearchParams();
+  const targetMessageId = searchParams.get("message");
   const scrollContainer = useRef<HTMLDivElement>(null);
   const scrollContent = useRef<HTMLDivElement>(null);
   const followLatest = useRef(false);
@@ -787,6 +789,17 @@ function MessageThread({
     followLatest.current = !enteringHandoff;
     element.scrollTo({ top: enteringHandoff ? 0 : element.scrollHeight, behavior: "auto" });
   }, [conversation?.id, handoffKey, hasHandoff, loading, messages.length]);
+
+  useEffect(() => {
+    if (!conversation?.id || loading || !targetMessageId) return;
+    if (!/^[0-9a-fA-F-]{36}$/.test(targetMessageId)) return;
+    const pane = scrollContainer.current;
+    const target = Array.from(pane?.querySelectorAll<HTMLElement>("[data-direct-message-id]") ?? [])
+      .find((element) => element.dataset.directMessageId === targetMessageId);
+    if (!target) return;
+    followLatest.current = false;
+    target.scrollIntoView({ block: "center", behavior: "auto" });
+  }, [conversation?.id, loading, messages.length, targetMessageId]);
 
   useEffect(() => {
     const pane = scrollContainer.current;
@@ -820,7 +833,8 @@ function MessageThread({
         {error ? <ErrorState title={t("direct.messagesError")}  description={t("direct.messagesErrorHint")}  /> : null}
         {!loading && !error && messages.length === 0 ? <EmptyState title={t("direct.noMessages")}  description={t("direct.messagesEmptyHint")}  /> : null}
         {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}>
+          <div key={message.id} data-direct-message-id={message.id}
+            className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"} ${targetMessageId === message.id ? "rounded-xl ring-2 ring-primary/50 ring-offset-2" : ""}`}>
             <div className={`max-w-[82%] break-words rounded-2xl px-4 py-3 text-sm ${message.direction === "OUTBOUND" ? "bg-primary/15 text-text-primary" : "bg-surface-2"}`}>
               {message.delivery_status === "FAILED" ? <p className="mb-1 text-xs font-semibold text-rose-600">{messageStatusLabel(message, t)}</p> : null}
               {!message.text?.trim() && !message.attachments?.length ? (

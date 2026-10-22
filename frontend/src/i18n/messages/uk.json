@@ -751,14 +751,24 @@
     "historicalValueSource": {
       "NP_COD_REQUESTED": "Сума післяплати, заявлена в ТТН",
       "NP_DECLARED_VALUE": "Оголошена страхова вартість посилки (оцінка, не ціна продажу)",
-      "UNKNOWN": "Джерело вартості не встановлено"
+      "UNKNOWN": "Джерело вартості не встановлено",
+      "DIRECT_CONFIRMED_TOTAL": "Підсумок продавця + відповідь покупця + ТТН; арифметика збігається",
+      "DIRECT_ESTIMATED_TOTAL": "Оцінка за підсумком продавця і ТТН (покупець не підтвердив явно)"
     },
     "historicalValueSummaryTitle": "Оцінка вартості історичних відправлень",
     "historicalCodTotal": "Сума заявленої післяплати",
     "historicalDeclaredTotal": "Оголошена вартість без післяплати (оцінка)",
     "historicalUnknownTotal": "Без достовірної оцінки",
     "historicalDocuments": "ТТН",
-    "historicalUnknownHint": "ТТН — вартість ще не встановлено"
+    "historicalUnknownHint": "ТТН — вартість ще не встановлено",
+    "historicalDirectEvidence": "Джерело в Instagram Direct",
+    "historicalReviewRequired": "Ціна у листуванні потребує перевірки",
+    "historicalReviewUnknown": "Однозначної ціни в історії не знайдено",
+    "historicalConfidenceConfirmed": "Підтверджено повідомленнями",
+    "historicalConfidenceEstimated": "Оціночна сума",
+    "historicalEvidenceOpen": "Відкрити повідомлення у Direct",
+    "historicalReviewCandidates": "Кандидатів у переписці",
+    "historicalDirectTotal": "Загальна сума за переписками Direct (оцінка)"
   },
   "products": {
     "title": "Товари",

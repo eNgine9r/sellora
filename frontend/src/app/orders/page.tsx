@@ -302,6 +302,10 @@ export default function OrdersPage() {
     .filter((order) => order.historical_value_source === "NP_DECLARED_VALUE")
     .reduce((sum, order) => sum + Number(order.historical_order_value ?? 0), 0);
   const historicalCodCount = historicalWithValue.filter((order) => order.historical_value_source === "NP_COD_REQUESTED").length;
+  const historicalDirect = historicalWithValue.filter((order) =>
+    order.historical_value_source === "DIRECT_CONFIRMED_TOTAL" || order.historical_value_source === "DIRECT_ESTIMATED_TOTAL"
+  );
+  const historicalDirectTotal = historicalDirect.reduce((sum, order) => sum + Number(order.historical_order_value ?? 0), 0);
   const historicalDeclaredCount = historicalWithValue.filter((order) => order.historical_value_source === "NP_DECLARED_VALUE").length;
   const historicalMissingCount = orders.filter((order) =>
     order.order_number.startsWith("NP-") && order.historical_order_value == null
@@ -326,9 +330,10 @@ export default function OrdersPage() {
       {historicalWithValue.length > 0 ? (
         <section className="rounded-2xl border border-border-subtle bg-surface-1 p-4" aria-label={t("orders.historicalValueSummaryTitle")}>
           <h2 className="text-sm font-black text-text-primary">{t("orders.historicalValueSummaryTitle")}</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="mt-3 grid gap-3 sm:grid-cols-4">
             <div><p className="text-xs text-text-muted">{t("orders.historicalCodTotal")}</p><strong className="text-xl">{formatMoney(historicalCodAmount, currencyCode)}</strong><p className="text-xs text-text-muted">{historicalCodCount} {t("orders.historicalDocuments")}</p></div>
             <div><p className="text-xs text-text-muted">{t("orders.historicalDeclaredTotal")}</p><strong className="text-xl">{formatMoney(historicalDeclaredAmount, currencyCode)}</strong><p className="text-xs text-text-muted">{historicalDeclaredCount} {t("orders.historicalDocuments")}</p></div>
+            <div><p className="text-xs text-text-muted">{t("orders.historicalDirectTotal")}</p><strong className="text-xl">{formatMoney(historicalDirectTotal, currencyCode)}</strong><p className="text-xs text-text-muted">{historicalDirect.length} {t("orders.historicalDocuments")}</p></div>
             <div><p className="text-xs text-text-muted">{t("orders.historicalUnknownTotal")}</p><strong className="text-xl">{historicalMissingCount}</strong><p className="text-xs text-text-muted">{t("orders.historicalUnknownHint")}</p></div>
           </div>
           <p className="mt-3 text-xs text-text-muted">{t("orders.historicalValueWarning")}</p>

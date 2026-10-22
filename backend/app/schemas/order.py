@@ -90,6 +90,7 @@ class OrderResponse(BaseModel):
     revenue: Decimal
     historical_order_value: Decimal | None = None
     historical_value_source: str | None = None
+    historical_value_evidence: dict | None = None
     product_cost: Decimal
     ad_cost: Decimal
     shipping_cost: Decimal

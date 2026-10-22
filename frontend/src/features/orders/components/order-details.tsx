@@ -51,6 +51,38 @@ export function OrderDetails({
             {" · "}{t("orders.historicalValueWarning")}
           </p>
         </> : null}
+        {order.historical_value_evidence ? (
+          <div className="col-span-2 rounded-xl border border-border-subtle bg-surface-1 p-3">
+            <p className="font-semibold">{t("orders.historicalDirectEvidence")}</p>
+            {order.historical_value_evidence.selected ? (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-text-muted">
+                  {t(order.historical_value_evidence.status === "AUTO_CONFIRMED" ?
+                    "orders.historicalConfidenceConfirmed" : "orders.historicalConfidenceEstimated")}
+                </p>
+                <Link className="inline-flex min-h-10 items-center text-sm font-semibold text-primary underline underline-offset-2"
+                  href={`/direct?conversation=${encodeURIComponent(order.historical_value_evidence.selected.conversation_id)}&message=${encodeURIComponent(order.historical_value_evidence.selected.message_id)}`}>
+                  {t("orders.historicalEvidenceOpen")}
+                </Link>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-text-muted">
+                {t(order.historical_value_evidence.status === "REVIEW_REQUIRED" ?
+                  "orders.historicalReviewRequired" : "orders.historicalReviewUnknown")}
+              </p>
+            )}
+            {order.historical_value_evidence.status === "REVIEW_REQUIRED" ?
+              <div className="mt-2 space-y-1 text-xs">
+                <p>{t("orders.historicalReviewCandidates")}: {order.historical_value_evidence.total_price_messages ?? 0}</p>
+                {(order.historical_value_evidence.review_candidates ?? []).slice(0, 3).map((candidate) => (
+                  <Link key={candidate.message_id} className="block text-primary underline underline-offset-2"
+                    href={`/direct?conversation=${encodeURIComponent(candidate.conversation_id)}&message=${encodeURIComponent(candidate.message_id)}`}>
+                    {candidate.values.join(", ")} · {t("orders.historicalEvidenceOpen")}
+                  </Link>
+                ))}
+              </div> : null}
+          </div>
+        ) : null}
         <span>{t("orders.productCost")}</span>
         <strong>{formatMoney(order.product_cost, currencyCode)}</strong>
         <span>{t("orders.adCost")}</span>
