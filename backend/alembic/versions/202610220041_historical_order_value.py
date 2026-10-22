@@ -25,6 +25,6 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_constraint("ck_order_historical_value_nonnegative", "orders", type_="check")
+    op.execute("ALTER TABLE orders DROP CONSTRAINT ck_order_historical_value_nonnegative")
     op.drop_column("orders", "historical_value_source")
     op.drop_column("orders", "historical_order_value")
