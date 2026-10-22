@@ -1,14 +1,87 @@
 "use client";
 
-import { Archive, Pencil } from "lucide-react";
+import { Archive, ChevronRight, Pencil } from "lucide-react";
 import { IconButton } from "@/components/ui/primitives";
 import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
 import { Customer } from "@/types/crm";
 
-export function CustomerTable({ customers, currencyCode = "UAH", selectedCustomerId, onSelect, onEdit, onArchive }: { customers: Customer[]; currencyCode?: string; selectedCustomerId?: string | null; onSelect?: (customer: Customer) => void; onEdit?: (customer: Customer) => void; onArchive?: (customer: Customer) => void }) {
+type Props = {
+  customers: Customer[];
+  currencyCode?: string;
+  selectedCustomerId?: string | null;
+  onSelect?: (customer: Customer) => void;
+  onEdit?: (customer: Customer) => void;
+  onArchive?: (customer: Customer) => void;
+};
+
+export function CustomerTable({ customers, currencyCode = "UAH", selectedCustomerId, onSelect, onEdit, onArchive }: Props) {
   const { t } = useI18n();
-  return <div className="mobile-card-list w-full min-w-0 max-w-full rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-3 shadow-[var(--shadow-card)]"><div className="sellora-scrollbar hidden overflow-x-auto md:block"><table className="w-full min-w-[640px] divide-y divide-border-subtle text-sm"><thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted"><tr><th className="px-3 py-3">{t("tables.name")}</th><th className="px-3 py-3">{t("tables.phone")}</th><th className="px-3 py-3">{t("tables.instagram")}</th><th className="px-3 py-3">{t("tables.orders")}</th><th className="px-3 py-3">{t("tables.spent")}</th><th className="px-3 py-3">{t("tables.lastOrder")}</th><th className="w-[92px] px-3 py-3 text-center">{t("tables.actions")}</th></tr></thead><tbody className="divide-y divide-border-subtle">{customers.map((customer) => <tr key={customer.id} className={`cursor-pointer hover:bg-surface-hover ${selectedCustomerId === customer.id ? "bg-surface-selected" : ""}`} onClick={() => onSelect?.(customer)}><td className="max-w-[170px] truncate px-3 py-3 font-medium text-text-primary" title={customer.name}>{customer.name}</td><td className="max-w-[140px] truncate px-3 py-3 text-text-secondary" title={customer.phone ?? undefined}>{customer.phone ?? "—"}</td><td className="max-w-[150px] truncate px-3 py-3 text-text-secondary" title={customer.instagram_username ?? undefined}>{customer.instagram_username ?? "—"}</td><td className="px-3 py-3 text-text-secondary">{customer.total_orders}</td><td className="whitespace-nowrap px-3 py-3 text-text-secondary">{formatMoney(customer.total_spent, currencyCode)}</td><td className="whitespace-nowrap px-3 py-3 text-text-secondary">{customer.last_order_at ? new Date(customer.last_order_at).toLocaleDateString() : "—"}</td><td className="px-3 py-3"><div className="flex items-center justify-center gap-1" onClick={(event) => event.stopPropagation()}>{onEdit ? <IconButton variant="ghost" title={t("customers.edit")} aria-label={`${t("customers.edit")} ${customer.name}`} onClick={() => onEdit(customer)}><Pencil className="h-4 w-4" /></IconButton> : <span className="text-xs text-text-muted">{t("common.readOnly")}</span>}{onArchive ? <IconButton variant="danger" title={t("customers.archive")} aria-label={`${t("customers.archive")} ${customer.name}`} onClick={() => onArchive(customer)}><Archive className="h-4 w-4" /></IconButton> : null}</div></td></tr>)}{customers.length === 0 ? <tr><td className="px-4 py-8 text-center text-slate-500" colSpan={7}>{t("customers.empty")}</td></tr> : null}</tbody></table></div><div className="grid gap-3 md:hidden">{customers.map((customer) => <article key={customer.id} className="mobile-customer-card min-w-0 rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)]" onClick={() => onSelect?.(customer)}><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-lg font-black text-text-primary">{customer.name}</h3><p className="truncate text-sm text-text-muted">{t("tables.phone")}: {customer.phone ?? "—"}</p><p className="truncate text-sm text-text-muted">{t("tables.instagram")}: {customer.instagram_username ?? "—"}</p></div><span className="rounded-full bg-surface-selected px-3 py-1 text-xs font-black text-primary">{customer.total_orders} {t("tables.orders")}</span></div><div className="mt-3 grid grid-cols-2 gap-2 text-sm text-text-secondary"><span>{t("tables.spent")}: <strong>{formatMoney(customer.total_spent, currencyCode)}</strong></span><span>{t("tables.lastOrder")}: <strong>{customer.last_order_at ? new Date(customer.last_order_at).toLocaleDateString() : "—"}</strong></span></div><div className="mt-4 grid gap-2 sm:grid-cols-2">{onEdit ? <button aria-label={`${t("customers.edit")} ${customer.name}`} className="min-h-11 rounded-xl border border-border-subtle bg-surface-2 px-4 py-3 font-bold" onClick={(event) => { event.stopPropagation(); onEdit(customer); }}>{t("customers.edit")}</button> : null}{onArchive ? <button aria-label={`${t("customers.archive")} ${customer.name}`} className="min-h-11 rounded-xl border border-rose-200 px-4 py-3 font-bold text-rose-700 dark:border-rose-400/40 dark:text-rose-200" onClick={(event) => { event.stopPropagation(); onArchive(customer); }}>{t("customers.archive")}</button> : null}</div></article>)}{customers.length === 0 ? <p className="p-6 text-center text-slate-500">{t("customers.empty")}</p> : null}</div></div>;
+  return (
+    <div className="mobile-card-list min-w-0 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-2 shadow-[var(--shadow-card)] md:p-3">
+      <div className="sellora-scrollbar hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[850px] divide-y divide-border-subtle text-sm">
+          <thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+            <tr>
+              <th className="px-3 py-3">{t("tables.name")}</th>
+              <th className="px-3 py-3">{t("tables.phone")}</th>
+              <th className="px-3 py-3">{t("tables.instagram")}</th>
+              <th className="px-3 py-3">{t("customers.totalOrders")}</th>
+              <th className="px-3 py-3">{t("customers.paidPurchases")}</th>
+              <th className="px-3 py-3">{t("customers.paidSpent")}</th>
+              <th className="px-3 py-3">{t("tables.lastOrder")}</th>
+              <th className="px-3 py-3">{t("tables.actions")}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-subtle">
+            {customers.map((customer) => (
+              <tr key={customer.id} className={`cursor-pointer hover:bg-surface-hover ${selectedCustomerId === customer.id ? "bg-surface-selected" : ""}`} onClick={() => onSelect?.(customer)}>
+                <td className="max-w-[210px] truncate px-3 py-3 font-semibold text-text-primary" title={customer.name}>{customer.name}</td>
+                <td className="whitespace-nowrap px-3 py-3 text-text-secondary">{customer.phone ?? "—"}</td>
+                <td className="max-w-[190px] truncate px-3 py-3 text-text-secondary" title={customer.instagram_username ?? undefined}>{customer.instagram_username ? `@${customer.instagram_username.replace(/^@/, "")}` : "—"}</td>
+                <td className="px-3 py-3 font-semibold">{customer.total_orders}</td>
+                <td className="px-3 py-3">{customer.paid_orders}</td>
+                <td className="whitespace-nowrap px-3 py-3">{formatMoney(customer.total_spent, currencyCode)}</td>
+                <td className="whitespace-nowrap px-3 py-3 text-text-secondary">{customer.last_order_at ? new Date(customer.last_order_at).toLocaleDateString("uk-UA") : "—"}</td>
+                <td className="px-2 py-3">
+                  <div className="flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
+                    {onEdit ? <IconButton variant="ghost" title={t("customers.edit")} aria-label={`${t("customers.edit")} ${customer.name}`} onClick={() => onEdit(customer)}><Pencil className="h-4 w-4" /></IconButton> : null}
+                    {onArchive ? <IconButton variant="danger" title={t("customers.archive")} aria-label={`${t("customers.archive")} ${customer.name}`} onClick={() => onArchive(customer)}><Archive className="h-4 w-4" /></IconButton> : null}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="grid gap-2 md:hidden">
+        {customers.map((customer) => (
+          <button
+            type="button"
+            key={customer.id}
+            onClick={() => onSelect?.(customer)}
+            aria-label={`${customer.name}, ${t("customers.totalOrders")}: ${customer.total_orders}`}
+            className={`mobile-customer-card min-w-0 rounded-2xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${selectedCustomerId === customer.id ? "border-primary bg-primary/5" : "border-border-subtle bg-surface-2"}`}
+          >
+            <div className="flex min-w-0 items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-base font-bold text-text-primary">{customer.name}</h3>
+                <p className="truncate text-xs text-text-muted">{customer.instagram_username ? `@${customer.instagram_username.replace(/^@/, "")}` : (customer.phone ?? t("customers.missingContact"))}</p>
+                {customer.instagram_username && customer.phone ? <p className="mt-0.5 truncate text-xs text-text-secondary">{customer.phone}</p> : null}
+              </div>
+              <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">{t("customers.totalOrders")}: {customer.total_orders}</span>
+              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-text-muted" aria-hidden="true" />
+            </div>
+            <div className="mt-2.5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 border-t border-border-subtle pt-2.5 text-xs">
+              <div><span className="text-text-muted">{t("customers.paidPurchases")}</span><p className="mt-0.5 font-semibold text-text-primary">{customer.paid_orders}</p></div>
+              <div className="min-w-0"><span className="text-text-muted">{t("customers.paidSpent")}</span><p className="mt-0.5 truncate font-semibold text-text-primary">{formatMoney(customer.total_spent, currencyCode)}</p></div>
+            </div>
+            {customer.last_order_at ? <p className="mt-1.5 truncate text-[11px] text-text-muted">{t("customers.lastOrder")}: {new Date(customer.last_order_at).toLocaleDateString("uk-UA")}</p> : null}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // Localization regression compatibility markers: Edit customer; Archive customer; mobile-customer-card.
