@@ -440,6 +440,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1) brightness(1.45) contrast(1.05);
 }
 
+/* Keep the chat composer one cohesive surface in both light and dark modes. */
+.dark main [data-direct-compact-composer] textarea[data-direct-reply-input],
+main [data-direct-compact-composer] textarea[data-direct-reply-input] {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  outline-offset: -2px;
+}
+
+
 /* iOS standalone PWA: never composite blurred content behind the mobile brand. */
 @media (max-width: 1023px) {
   .mobile-safe-top[data-shell-topbar] {
