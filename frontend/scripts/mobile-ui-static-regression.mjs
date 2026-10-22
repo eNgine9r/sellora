@@ -13,7 +13,12 @@ function requireText(relative, expected, label) {
 }
 
 requireText("src/components/app-shell.tsx", "floating-capsule five-primary-links profile-sheet subtle-active-state", "mobile navigation contract");
-requireText("src/components/app-shell.tsx", "bottom-[max(0.75rem,env(safe-area-inset-bottom))]", "bottom navigation safe area");
+requireText("src/components/app-shell.tsx", "bottom-[max(0.5rem,env(safe-area-inset-bottom))]", "bottom navigation safe area");
+requireText("src/components/app-shell.tsx", "grid-rows-[minmax(0,1fr)_auto]", "drawer scroll area and normal-flow footer");
+requireText("src/components/app-shell.tsx", "href=\"/settings\" onClick={() => setMobileMenuOpen(false)}", "quick settings drawer access");
+requireText("src/components/app-sidebar.tsx", "flex min-h-0 min-w-0 flex-1 flex-col", "independently scrollable sidebar");
+requireText("src/components/app-topbar.tsx", "mobile-safe-top sticky top-0", "standalone iOS safe topbar");
+requireText("src/app/globals.css", "env(safe-area-inset-top, 0px) + 0.5rem", "iOS status bar inset");
 requireText("src/components/ui/primitives.tsx", "min-h-11", "minimum touch target");
 requireText("src/components/ui/overlay.tsx", "max-h-[96dvh]", "overlay viewport boundary");
 requireText("src/components/ui/overlay.tsx", "overflow-x-hidden overflow-y-auto overscroll-contain", "overlay internal scrolling");
@@ -36,6 +41,8 @@ requireText("src/app/direct/page.tsx", "sellora-scrollbar min-h-0 flex-1 overflo
 requireText("src/app/direct/page.tsx", "aria-label={t(\"actions.close\")}", "Direct AI drawer localized close action");
 
 const forbidden = [
+  ["src/components/app-shell.tsx", "mobile-sidebar-footer-compact absolute", "footer must not overlap navigation"],
+  ["src/components/app-sidebar.tsx", "pb-44", "sidebar must not use a fixed oversized footer spacer"],
   ["src/components/mobile-more-sheet.tsx", "bg-violet-600", "page-local violet primary button"],
   ["src/components/mobile-more-sheet.tsx", "bg-red-50", "page-local destructive button"],
   ["src/components/ui/overlay.tsx", "aria-label=\"Close\"", "non-localized close label"],
