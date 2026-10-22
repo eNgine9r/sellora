@@ -21,12 +21,12 @@ export function CampaignTable({ campaigns, selectedCampaignId, onSelect, onEdit,
       <div className="sellora-adaptive-table mt-3 min-w-0">
         <table className="w-full table-fixed text-left text-sm">
           <colgroup>
-            <col style={{ width: "27%" }} />
+            <col style={{ width: "26%" }} />
             <col style={{ width: "13%" }} />
             <col style={{ width: "17%" }} />
             <col style={{ width: "16%" }} />
             <col style={{ width: "16%" }} />
-            <col style={{ width: "11%" }} />
+            <col style={{ width: "12%" }} />
           </colgroup>
           <thead className="text-xs uppercase tracking-wide text-text-muted">
             <tr className="border-b border-border-subtle">
