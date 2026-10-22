@@ -43,8 +43,8 @@ assert.match(source.themeToggle, /shrink-0/, "Theme button must remain aligned a
 
 assert.match(source.customerTable, /sellora-scrollbar/, "Customers table must use Sellora scrollbar styling");
 assert.match(source.orderTable, /sellora-scrollbar/, "Orders table must use Sellora scrollbar styling");
-assert.match(source.customerTable, /max-w-\[230px\] flex-wrap/, "Customer actions must wrap within a constrained cell");
-assert.match(source.orderTable, /max-w-\[220px\] flex-wrap/, "Order actions must wrap within a constrained cell");
+assert.match(source.customerTable, /RowActionButtons/, "Customer table uses shared compact actions");
+assert.match(source.orderTable, /RowActionButtons/, "Order table uses shared compact actions");
 assert.match(source.globals, /\.sellora-scrollbar/, "Global app scrollbar utility must exist");
 assert.match(source.globals, /dark \.sellora-scrollbar|dark \.sellora-scrollbar::-webkit-scrollbar-thumb/, "Scrollbar styling must include dark mode variants");
 

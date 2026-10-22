@@ -1,7 +1,6 @@
 "use client";
 
-import { Archive, Pencil } from "lucide-react";
-import { IconButton } from "@/components/ui/primitives";
+import { RowActionButtons } from "@/components/ui/row-action-buttons";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
@@ -15,8 +14,8 @@ function primaryImage(product: Product) {
 export function ProductTable({ products, selectedProductId, onSelect, onEdit, onArchive }: { products: Product[]; selectedProductId?: string; onSelect?: (product: Product) => void; onEdit?: (product: Product) => void; onArchive?: (product: Product) => void }) {
   const { t } = useI18n();
   return (
-    <div className="w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
-      <div className="sellora-scrollbar hidden max-w-full overflow-x-auto lg:block">
+    <div className="sellora-adaptive-list w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
+      <div className="sellora-scrollbar sellora-adaptive-table max-w-full overflow-x-auto">
         <table className="w-full min-w-[760px] divide-y divide-border-subtle text-sm dark:divide-white/10">
           <thead className="bg-surface-2 text-left text-xs font-black uppercase tracking-wide text-text-muted">
             <tr>
@@ -26,7 +25,7 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
               <th className="px-4 py-3">SKU</th>
               <th className="px-4 py-3">{t("tables.status")}</th>
               <th className="px-4 py-3">{t("tables.created")}</th>
-              <th className="w-[92px] px-4 py-3 text-center">{t("tables.actions")}</th>
+              <th className="w-[108px] px-4 py-3 text-center">{t("tables.actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
@@ -40,7 +39,7 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
                   <td className="max-w-[160px] truncate px-4 py-3 text-slate-700 dark:text-slate-200">{product.sku ?? "—"}</td>
                   <td className="px-4 py-3 text-slate-700"><span className={statusBadgeClass(product.is_active ? "success" : "neutral")}>{product.is_active ? t("products.active") : t("products.inactive")}</span></td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{new Date(product.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3"><div className="flex items-center justify-center gap-1" onClick={(event) => event.stopPropagation()}>{onEdit ? <IconButton variant="ghost" title={t("products.edit")} aria-label={`${t("products.edit")} ${product.name}`} onClick={() => onEdit(product)}><Pencil className="h-4 w-4" /></IconButton> : <span className="text-xs text-text-muted">{t("common.readOnly")}</span>}{onArchive ? <IconButton variant="danger" title={t("products.archive")} aria-label={`${t("products.archive")} ${product.name}`} onClick={() => onArchive(product)}><Archive className="h-4 w-4" /></IconButton> : null}</div></td>
+                  <td className="px-4 py-3"><RowActionButtons entityLabel={product.name} editLabel={t("products.edit")} archiveLabel={t("products.archive")} onEdit={onEdit ? () => onEdit(product) : undefined} onArchive={onArchive ? () => onArchive(product) : undefined} /></td>
                 </tr>
               );
             })}
@@ -48,7 +47,7 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
           </tbody>
         </table>
       </div>
-      <div className="grid gap-3 lg:hidden">
+      <div className="sellora-adaptive-cards grid gap-3">
         {products.map((product) => {
           const image = primaryImage(product);
           return (

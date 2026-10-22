@@ -37,8 +37,8 @@ assert(inventoryPage.includes("paginatedInventory") && inventoryPage.includes("i
 assert(productsPage.includes("categoryFilter") && productsPage.includes("productSearchMatches") && inventoryPage.includes("categoryMatches"), "pagination works with category/search markers");
 assert(orderForm.includes("productImage(product)") && orderForm.includes("orders.productOption.noImage") && orderForm.includes("MAX_PRODUCT_SELECTOR_OPTIONS = 30"), "order product selector supports image/placeholder and selector-specific option rendering");
 assert(shipmentsPage.includes("shipments.logisticsLabel") && shipmentsPage.includes("common.searchByTrackingNumber") && shipmentDetails.includes("formatStatus(\"shipment\"") && uk.includes("Логістика Sellora"), "shipments page has localized shipment keys");
-assert(shipmentTable.includes("sellora-scrollbar") && shipmentTable.includes("md:hidden"), "shipments table uses Sellora scrollbar and mobile cards");
+assert(shipmentTable.includes("sellora-adaptive-table") && shipmentTable.includes("sellora-adaptive-cards"), "shipments adapt without horizontal table scrolling");
 assert(en.includes('"pagination"') && uk.includes('"pagination"') && en.includes('"productOption"') && uk.includes('"productOption"'), "new pagination and product option strings use i18n keys");
-assert(productsPage.includes("min-w-0") && inventoryPage.includes("overflow-hidden") && shipmentTable.includes("dark:"), "existing localization/theme/responsive markers remain");
+assert(productsPage.includes("min-w-0") && inventoryPage.includes("overflow-hidden") && shipmentTable.includes("bg-surface-1"), "existing localization/theme/responsive markers remain");
 
 console.log(`Pagination/list UX regression passed (${checks.length} checks).`);

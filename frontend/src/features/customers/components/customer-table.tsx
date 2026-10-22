@@ -1,7 +1,7 @@
 "use client";
 
-import { Archive, ChevronRight, Pencil } from "lucide-react";
-import { IconButton } from "@/components/ui/primitives";
+import { ChevronRight } from "lucide-react";
+import { RowActionButtons } from "@/components/ui/row-action-buttons";
 import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
 import { Customer } from "@/types/crm";
@@ -18,8 +18,8 @@ type Props = {
 export function CustomerTable({ customers, currencyCode = "UAH", selectedCustomerId, onSelect, onEdit, onArchive }: Props) {
   const { t } = useI18n();
   return (
-    <div className="mobile-card-list min-w-0 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-2 shadow-[var(--shadow-card)] md:p-3">
-      <div className="sellora-scrollbar hidden overflow-x-auto md:block">
+    <div className="sellora-adaptive-list sellora-adaptive-wide-list mobile-card-list min-w-0 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-2 shadow-[var(--shadow-card)] md:p-3">
+      <div className="sellora-scrollbar sellora-adaptive-table overflow-x-auto">
         <table className="w-full min-w-[850px] divide-y divide-border-subtle text-sm">
           <thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
             <tr>
@@ -44,17 +44,14 @@ export function CustomerTable({ customers, currencyCode = "UAH", selectedCustome
                 <td className="whitespace-nowrap px-3 py-3">{formatMoney(customer.total_spent, currencyCode)}</td>
                 <td className="whitespace-nowrap px-3 py-3 text-text-secondary">{customer.last_order_at ? new Date(customer.last_order_at).toLocaleDateString("uk-UA") : "—"}</td>
                 <td className="px-2 py-3">
-                  <div className="flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
-                    {onEdit ? <IconButton variant="ghost" title={t("customers.edit")} aria-label={`${t("customers.edit")} ${customer.name}`} onClick={() => onEdit(customer)}><Pencil className="h-4 w-4" /></IconButton> : null}
-                    {onArchive ? <IconButton variant="danger" title={t("customers.archive")} aria-label={`${t("customers.archive")} ${customer.name}`} onClick={() => onArchive(customer)}><Archive className="h-4 w-4" /></IconButton> : null}
-                  </div>
+                  <RowActionButtons entityLabel={customer.name} editLabel={t("customers.edit")} archiveLabel={t("customers.archive")} onEdit={onEdit ? () => onEdit(customer) : undefined} onArchive={onArchive ? () => onArchive(customer) : undefined} />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="grid gap-2 md:hidden">
+      <div className="sellora-adaptive-cards grid gap-2">
         {customers.map((customer) => (
           <button
             type="button"
