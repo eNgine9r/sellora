@@ -33,15 +33,17 @@ export function OrderDetails({
 }) {
   const { t, formatStatus } = useI18n();
   const archivePlaceholder = order.is_historical && order.items.some((item) => item.sku === "NP-ARCHIVE-OTHER");
-  const hasCostContext = !archivePlaceholder && (Number(order.product_cost) > 0 || Number(order.ad_cost) > 0 || Number(order.shipping_cost) > 0 || Number(order.cod_fee) > 0 || Number(order.other_cost) > 0);
+  const historicalValuesMissing = archivePlaceholder && (Number(order.revenue) <= 0 || Number(order.product_cost) <= 0);
+  const hasCostContext = !historicalValuesMissing && (Number(order.product_cost) > 0 || Number(order.ad_cost) > 0 || Number(order.shipping_cost) > 0 || Number(order.cod_fee) > 0 || Number(order.other_cost) > 0);
   return (
     <aside className="grid gap-4">
       <div>
         <h2 className="text-xl font-bold">{order.order_number}</h2>
         <p className="mt-1 text-sm text-text-secondary">{t("orders.orderStatus")}: {formatStatus("order", order.status)}</p>
         <p className="text-sm text-text-secondary">
-          {t("orders.profit")}: {archivePlaceholder ? t("orders.unknownAmount") : formatMoney(order.net_profit, currencyCode)}
+          {t("orders.profit")}: {historicalValuesMissing ? t("orders.unknownAmount") : formatMoney(order.net_profit, currencyCode)}
         </p>
+        {order.is_historical && order.payment_status === "PENDING" && !historicalValuesMissing ? <p className="mt-1 text-xs text-text-muted">{t("orders.historicalUnpaidProfitHint")}</p> : null}
         {!hasCostContext ? (
           <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-100">
             {t("orders.profitNotCalculated")}
