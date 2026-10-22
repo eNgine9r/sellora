@@ -6,6 +6,7 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
 import { FormDialog } from "@/components/form-dialog";
+import { clampPage, paginateItems, PaginationControls, PAGE_SIZE_OPTIONS } from "@/components/pagination-controls";
 import { LeadForm } from "@/features/leads/components/lead-form";
 import { LeadTable } from "@/features/leads/components/lead-table";
 import { ApiError, safeApiErrorMessage } from "@/services/api";
@@ -41,6 +42,8 @@ export default function LeadsPage() {
   const [status, setStatus] = useState<LeadStatus | "">("");
   const [leadSourceId, setLeadSourceId] = useState("");
   const [leadSort, setLeadSort] = useState("newest");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [archivingLead, setArchivingLead] = useState<Lead | null>(null);
@@ -87,10 +90,19 @@ export default function LeadsPage() {
     if (leadSort === "revenueAsc") return leftRevenue - rightRevenue;
     return right.created_at.localeCompare(left.created_at);
   }), [leadsQuery.data, leadSort]);
+  const paginatedLeads = useMemo(() => paginateItems(visibleLeads, page, pageSize), [visibleLeads, page, pageSize]);
   const hasActiveFilters = Boolean(search.trim() || status || leadSourceId);
   const totalLeads = leadsQuery.data?.length ?? 0;
   const newLeads = leadsQuery.data?.filter((lead) => lead.status === "NEW").length ?? 0;
   const inProgressLeads = leadsQuery.data?.filter((lead) => lead.status === "IN_PROGRESS").length ?? 0;
+
+  useEffect(() => {
+    setPage(1);
+  }, [workspaceId, search, status, leadSourceId, leadSort, pageSize]);
+
+  useEffect(() => {
+    setPage((currentPage) => clampPage(currentPage, pageSize, visibleLeads.length));
+  }, [visibleLeads.length, pageSize]);
 
   useEffect(() => {
     setSelectedLead(null);
@@ -148,7 +160,12 @@ export default function LeadsPage() {
               action={<Button onClick={() => setIsCreateOpen(true)}>{t("leads.create")}</Button>}
             />
           ) : null}
-          {!listError && (leadsQuery.data?.length ?? 0) > 0 ? <LeadTable leads={visibleLeads} leadSources={sourcesQuery.data ?? []} selectedLeadId={selectedLead?.id} onSelect={setSelectedLead} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} /> : null}
+          {!listError && visibleLeads.length > 0 ? (
+            <div className="grid min-w-0 gap-4">
+              <LeadTable leads={paginatedLeads} leadSources={sourcesQuery.data ?? []} selectedLeadId={selectedLead?.id} onSelect={setSelectedLead} onEdit={canEdit ? setEditingLead : undefined} onArchive={canEdit ? setArchivingLead : undefined} />
+              <PaginationControls page={page} pageSize={pageSize} totalItems={visibleLeads.length} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size as (typeof PAGE_SIZE_OPTIONS)[number]); setPage(1); }} />
+            </div>
+          ) : null}
         </WorkspaceSplitView>
 
         {isCreateOpen ? (
