@@ -6,6 +6,7 @@ const page = read("frontend/src/app/orders/page.tsx");
 const details = read("frontend/src/features/orders/components/order-details.tsx");
 const service = read("backend/app/services/order_service.py");
 const provider = read("backend/app/services/nova_poshta_service.py");
+const shipmentDetails = read("frontend/src/features/shipments/components/shipment-details.tsx");
 const uk = JSON.parse(read("frontend/src/i18n/messages/uk.json"));
 const en = JSON.parse(read("frontend/src/i18n/messages/en.json"));
 
@@ -21,6 +22,9 @@ const checks = [
   ["historic unknown sale values are not zero", details.includes("archivePlaceholder") && details.includes('t("orders.unknownAmount")')],
   ["historic corrections unlock profit only after cost and price", details.includes("historicalValuesMissing") && details.includes("Number(order.revenue) <= 0") && details.includes("Number(order.product_cost) <= 0")],
   ["pending payment does not imply realized profit", details.includes("historicalUnpaidProfitHint")],
+  ["unsynced historical orders are visibly unverified", details.includes("historicalStatusUnverified") && details.includes("!shipment.nova_poshta_synced_at")],
+  ["unsynced imported shipments are visibly unverified", shipmentDetails.includes("providerUnverified") && shipmentDetails.includes('startsWith("NP-")')],
+  ["shipments show declared value and carrier tariff without revenue inference", shipmentDetails.includes("shipment.declared_value") && shipmentDetails.includes("shipment.shipping_cost") && shipmentDetails.includes("providerValuesWarning")],
   ["historical provider order status audited", provider.includes("NOVA_HISTORICAL_ORDER_STATUS_REVIEW_REQUIRED") && provider.includes("_sync_historical_order_status")],
   ["arrival mapping includes arrived/прибув", provider.includes('"прибув"')],
   ["English and Ukrainian labels exist", ["historicalCorrectionHint", "providerValuesWarning", "unknownAmount", "declaredValue", "carrierTariff"].every((key) => uk.orders[key] && en.orders[key])],
