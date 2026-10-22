@@ -29,13 +29,13 @@ export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () =
   const { t } = useI18n();
 
   return (
-    <aside className="sellora-sidebar flex h-full min-h-0 flex-col border-r border-border-subtle bg-sidebar text-text-primary">
-      {showBrand ? <div className="px-4 py-5 sm:px-5">
-        <Link href="/dashboard" onClick={onNavigate} aria-label={t("navigation.dashboard")} className="block rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 px-3 py-3 shadow-[var(--shadow-card)] transition hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+    <aside className="sellora-sidebar flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-r border-border-subtle bg-sidebar text-text-primary">
+      {showBrand ? <div className="mobile-sidebar-brand shrink-0 px-3 pb-2 pt-3 sm:px-4">
+        <Link href="/dashboard" onClick={onNavigate} aria-label={t("navigation.dashboard")} className="block rounded-2xl border border-border-subtle bg-surface-1 px-2 py-2 shadow-[var(--shadow-card)] transition hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
           <BrandLockup markClassName="h-10 w-10" textClassName="text-text-primary" />
         </Link>
       </div> : null}
-      <nav className="sidebar-scrollbar grid min-w-0 gap-1 overflow-y-auto px-3 pb-44 pt-4 lg:pb-5 lg:pt-5" aria-label={t("navigation.settings")}>
+      <nav className="sidebar-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-3 pb-3 pt-2 lg:py-5" aria-label={t("mobileNavigation.drawer")}>
         {items.map(([href, label, Icon]) => {
           const active = pathname === href || pathname.startsWith(`${href}/`) || (href === "/dashboard" && pathname === "/overview") || (href === "/reports" && pathname === "/analytics");
           return (
@@ -44,7 +44,7 @@ export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () =
               href={href}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
-              className={`group flex min-h-11 min-w-0 items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
+              className={`group flex min-h-11 min-w-0 shrink-0 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
                 active ? "border border-violet-400/30 bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(167,139,250,0.08)]" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
               }`}
             >
