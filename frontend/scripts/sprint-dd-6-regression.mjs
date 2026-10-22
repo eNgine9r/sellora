@@ -24,7 +24,7 @@ check("Advertising campaign details use split view", advertising.includes("<Work
 check("Campaign table has selected state", campaignTable.includes("selectedCampaignId") && campaignTable.includes("bg-surface-selected"));
 check("Advertising paginates below tables", advertising.indexOf("<CampaignPerformanceTable") < advertising.indexOf("<PaginationControls page={performancePage}") && advertising.indexOf("<AdMetricTable") < advertising.indexOf("<PaginationControls page={metricPage}") && advertising.indexOf("<CampaignTable") < advertising.indexOf("<PaginationControls page={campaignPage}"));
 check("Finance adjustment pagination is below rows", finance.indexOf("paginatedAdjustments.map") < finance.indexOf("<PaginationControls page={adjustmentPage}"));
-check("Analytics sales pagination is below sales table", analytics.indexOf("<TableShell><table") < analytics.indexOf("<PaginationControls page={analyticsPage}"));
+check("Analytics sales pagination is below sales table", analytics.indexOf("rows={paginatedSalesRows}") > -1 && analytics.indexOf("rows={paginatedSalesRows}") < analytics.indexOf("<PaginationControls page={analyticsPage}"));
 check("Unavailable values remain distinct", advertising.includes('?? "—"') && analytics.includes("UNAVAILABLE") && finance.includes('value: summary.average_order_value ?'));
 check("Advertising does not claim live Meta sync", !advertising.toLowerCase().includes("live sync") && !advertising.toLowerCase().includes("connected meta"));
 check("Finance displays expense components", finance.includes("summary.cogs") && finance.includes("summary.ad_spend") && finance.includes("summary.shipping_cost") && finance.includes("summary.finance_adjustments_total"));
