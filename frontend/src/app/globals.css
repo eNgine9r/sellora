@@ -439,3 +439,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .dark input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1) brightness(1.45) contrast(1.05);
 }
+
+/* iOS standalone PWA: never composite blurred content behind the mobile brand. */
+@media (max-width: 1023px) {
+  .mobile-safe-top[data-shell-topbar] {
+    background-color: var(--canvas) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    isolation: isolate;
+  }
+
+  .mobile-safe-top .mobile-topbar-compact {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .direct-mobile-thread {
+    height: max(21rem, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 10rem));
+  }
+}
