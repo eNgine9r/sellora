@@ -292,6 +292,20 @@ export default function OrdersPage() {
   const awaitingPayment = orders.filter((order) => order.payment_status === "PENDING" || order.payment_status === "COD").length;
   const readyToShip = orders.filter((order) => order.status === "CONFIRMED").length;
   const problematicOrders = orders.filter((order) => ["RETURNED", "CANCELLED"].includes(order.status)).length;
+  const historicalWithValue = orders.filter((order) =>
+    order.order_number.startsWith("NP-") && order.historical_order_value != null
+  );
+  const historicalCodAmount = historicalWithValue
+    .filter((order) => order.historical_value_source === "NP_COD_REQUESTED")
+    .reduce((sum, order) => sum + Number(order.historical_order_value ?? 0), 0);
+  const historicalDeclaredAmount = historicalWithValue
+    .filter((order) => order.historical_value_source === "NP_DECLARED_VALUE")
+    .reduce((sum, order) => sum + Number(order.historical_order_value ?? 0), 0);
+  const historicalCodCount = historicalWithValue.filter((order) => order.historical_value_source === "NP_COD_REQUESTED").length;
+  const historicalDeclaredCount = historicalWithValue.filter((order) => order.historical_value_source === "NP_DECLARED_VALUE").length;
+  const historicalMissingCount = orders.filter((order) =>
+    order.order_number.startsWith("NP-") && order.historical_order_value == null
+  ).length;
 
   return (
     <WorkspacePage>
@@ -309,6 +323,17 @@ export default function OrdersPage() {
         { label: t("orders.summary.readyToShip"), value: readyToShip },
         { label: t("orders.summary.problematic"), value: problematicOrders },
       ]} />
+      {historicalWithValue.length > 0 ? (
+        <section className="rounded-2xl border border-border-subtle bg-surface-1 p-4" aria-label={t("orders.historicalValueSummaryTitle")}>
+          <h2 className="text-sm font-black text-text-primary">{t("orders.historicalValueSummaryTitle")}</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div><p className="text-xs text-text-muted">{t("orders.historicalCodTotal")}</p><strong className="text-xl">{formatMoney(historicalCodAmount, currencyCode)}</strong><p className="text-xs text-text-muted">{historicalCodCount} {t("orders.historicalDocuments")}</p></div>
+            <div><p className="text-xs text-text-muted">{t("orders.historicalDeclaredTotal")}</p><strong className="text-xl">{formatMoney(historicalDeclaredAmount, currencyCode)}</strong><p className="text-xs text-text-muted">{historicalDeclaredCount} {t("orders.historicalDocuments")}</p></div>
+            <div><p className="text-xs text-text-muted">{t("orders.historicalUnknownTotal")}</p><strong className="text-xl">{historicalMissingCount}</strong><p className="text-xs text-text-muted">{t("orders.historicalUnknownHint")}</p></div>
+          </div>
+          <p className="mt-3 text-xs text-text-muted">{t("orders.historicalValueWarning")}</p>
+        </section>
+      ) : null}
       <FilterBar>
         <SearchInput value={search} onChange={setSearch} placeholder={t("orders.searchPlaceholder")} />
         <select

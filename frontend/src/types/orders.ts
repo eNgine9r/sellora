@@ -39,6 +39,8 @@ export type Order = {
   status: OrderStatus;
   payment_status: PaymentStatus;
   revenue: string;
+  historical_order_value?: string | null;
+  historical_value_source?: "NP_COD_REQUESTED" | "NP_DECLARED_VALUE" | null;
   product_cost: string;
   ad_cost: string;
   shipping_cost: string;

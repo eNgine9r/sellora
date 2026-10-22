@@ -745,7 +745,20 @@
       "awaitingPayment": "Awaiting payment",
       "readyToShip": "Ready to ship",
       "problematic": "Problematic"
-    }
+    },
+    "historicalOrderValue": "Shipping-label amount (estimate)",
+    "historicalValueWarning": "Not confirmed payment, recognized revenue, or profit.",
+    "historicalValueSource": {
+      "NP_COD_REQUESTED": "COD amount requested on shipping label",
+      "NP_DECLARED_VALUE": "Parcel insured/declared value (not a sale price)",
+      "UNKNOWN": "Amount source unknown"
+    },
+    "historicalValueSummaryTitle": "Historical shipment value estimates",
+    "historicalCodTotal": "Requested COD total",
+    "historicalDeclaredTotal": "Insured value without COD (estimate)",
+    "historicalUnknownTotal": "No defensible estimate",
+    "historicalDocuments": "waybills",
+    "historicalUnknownHint": "waybills without an estimated amount"
   },
   "products": {
     "title": "Products",
@@ -2291,9 +2304,18 @@
   },
   "direct": {
     "sendDisabledShort": "Sending disabled",
-    "salesStageShort": {"NONE": "No request", "INTEREST": "Interested", "PRODUCT_QUESTION": "Product question", "PURCHASE_REQUEST": "Wants to buy"},
+    "salesStageShort": {
+      "NONE": "No request",
+      "INTEREST": "Interested",
+      "PRODUCT_QUESTION": "Product question",
+      "PURCHASE_REQUEST": "Wants to buy"
+    },
     "inspectorTitle": "Details",
-    "inspectorTab": {"profile": "Profile", "crm": "Customer", "ai": "AI"},
+    "inspectorTab": {
+      "profile": "Profile",
+      "crm": "Customer",
+      "ai": "AI"
+    },
     "advancedActions": "More actions",
     "inspectorCustomer": "Customer",
     "inspectorInterest": "Interest",
@@ -2312,7 +2334,12 @@
     "historyConfirmTitle": "Confirm Instagram history import",
     "historyConfirmDescription": "Import up to {count} conversations and 10 messages each? This writes actual conversations to Sellora; it will not send messages to customers.",
     "historyConfirmAction": "Start import",
-    "salesField": {"name": "name", "phone": "phone", "city": "city", "delivery_address": "Nova Poshta branch"},
+    "salesField": {
+      "name": "name",
+      "phone": "phone",
+      "city": "city",
+      "delivery_address": "Nova Poshta branch"
+    },
     "kicker": "Shop messages",
     "title": "Direct",
     "description": "Reply to customers and create orders from a conversation.",
@@ -2538,7 +2565,12 @@
     "managerConfirmationRequired": "Manager reviews before creating the order",
     "unconfirmedOrderWarning": "A purchase request is not a confirmed order. Check the product, quantity, and customer before creating one.",
     "inboundProductReview": "Suggestion based on a product title or category, not a confirmed customer choice. Select a variant and verify it.",
-    "commercialStage": {"NONE": "No purchase request identified", "INTEREST": "Product interest", "PRODUCT_QUESTION": "Product or delivery question", "PURCHASE_REQUEST": "Customer requests a purchase"},
+    "commercialStage": {
+      "NONE": "No purchase request identified",
+      "INTEREST": "Product interest",
+      "PRODUCT_QUESTION": "Product or delivery question",
+      "PURCHASE_REQUEST": "Customer requests a purchase"
+    },
     "currentPrice": "Current price",
     "title": "Products from conversation",
     "refresh": "Refresh proposal",

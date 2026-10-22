@@ -745,7 +745,20 @@
       "awaitingPayment": "Очікують оплату",
       "readyToShip": "До відправлення",
       "problematic": "Проблемні"
-    }
+    },
+    "historicalOrderValue": "Сума з ТТН (оцінка)",
+    "historicalValueWarning": "Це не підтверджена оплата, виручка чи прибуток.",
+    "historicalValueSource": {
+      "NP_COD_REQUESTED": "Сума післяплати, заявлена в ТТН",
+      "NP_DECLARED_VALUE": "Оголошена страхова вартість посилки (оцінка, не ціна продажу)",
+      "UNKNOWN": "Джерело вартості не встановлено"
+    },
+    "historicalValueSummaryTitle": "Оцінка вартості історичних відправлень",
+    "historicalCodTotal": "Сума заявленої післяплати",
+    "historicalDeclaredTotal": "Оголошена вартість без післяплати (оцінка)",
+    "historicalUnknownTotal": "Без достовірної оцінки",
+    "historicalDocuments": "ТТН",
+    "historicalUnknownHint": "ТТН — вартість ще не встановлено"
   },
   "products": {
     "title": "Товари",
@@ -2291,9 +2304,18 @@
   },
   "direct": {
     "sendDisabledShort": "Надсилання вимкнено",
-    "salesStageShort": {"NONE": "Без запиту", "INTEREST": "Цікавиться", "PRODUCT_QUESTION": "Питання про товар", "PURCHASE_REQUEST": "Хоче купити"},
+    "salesStageShort": {
+      "NONE": "Без запиту",
+      "INTEREST": "Цікавиться",
+      "PRODUCT_QUESTION": "Питання про товар",
+      "PURCHASE_REQUEST": "Хоче купити"
+    },
     "inspectorTitle": "Деталі",
-    "inspectorTab": {"profile": "Профіль", "crm": "Клієнт", "ai": "AI"},
+    "inspectorTab": {
+      "profile": "Профіль",
+      "crm": "Клієнт",
+      "ai": "AI"
+    },
     "advancedActions": "Додаткові дії",
     "inspectorCustomer": "Клієнт",
     "inspectorInterest": "Зацікавленість",
@@ -2312,7 +2334,12 @@
     "historyConfirmTitle": "Підтвердити імпорт Instagram",
     "historyConfirmDescription": "Імпортувати до {count} діалогів по 10 повідомлень? Ця дія записує реальні переписки в Sellora. Відправлення повідомлень покупцям не виконуватиметься.",
     "historyConfirmAction": "Розпочати імпорт",
-    "salesField": {"name": "ім’я", "phone": "телефон", "city": "місто", "delivery_address": "відділення Нової пошти"},
+    "salesField": {
+      "name": "ім’я",
+      "phone": "телефон",
+      "city": "місто",
+      "delivery_address": "відділення Нової пошти"
+    },
     "kicker": "Повідомлення магазину",
     "title": "Direct",
     "description": "Відповідайте клієнтам і оформлюйте замовлення з діалогу.",
@@ -2538,7 +2565,12 @@
     "managerConfirmationRequired": "Продавець перевіряє перед оформленням",
     "unconfirmedOrderWarning": "Прохання купити — не підтверджене замовлення. Перевірте товар, кількість та покупця перед створенням.",
     "inboundProductReview": "Підказка за назвою або категорією товару, не підтверджений вибір покупця. Оберіть правильний варіант і підтвердьте.",
-    "commercialStage": {"NONE": "Запиту на покупку не визначено", "INTEREST": "Зацікавленість товаром", "PRODUCT_QUESTION": "Питання про товар або доставку", "PURCHASE_REQUEST": "Покупець просить оформити покупку"},
+    "commercialStage": {
+      "NONE": "Запиту на покупку не визначено",
+      "INTEREST": "Зацікавленість товаром",
+      "PRODUCT_QUESTION": "Питання про товар або доставку",
+      "PURCHASE_REQUEST": "Покупець просить оформити покупку"
+    },
     "currentPrice": "Поточна ціна",
     "title": "Товари з діалогу",
     "refresh": "Оновити пропозицію",
