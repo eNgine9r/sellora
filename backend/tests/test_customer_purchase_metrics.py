@@ -17,6 +17,7 @@ def _customer(workspace_id, customer_id):
         id=customer_id, workspace_id=workspace_id,
         name="Customer", phone=None, instagram_username=None,
         city=None, region=None, total_orders=0, total_spent=Decimal("0"),
+        source="INSTAGRAM_DIRECT", lifecycle_status="CUSTOMER", profile_status="INCOMPLETE",
         created_at=created, updated_at=created,
     )
 
