@@ -8,7 +8,7 @@ import { MetricValue } from "./metric-value";
 export function CampaignPerformanceTable({ rows }: { rows: CampaignPerformance[] }) {
   const { t } = useI18n();
   const columns: ReportTableColumn<CampaignPerformance>[] = [
-    { key: "campaign", label: t("advertising.campaign"), emphasis: true, render: (row) =>
+    { key: "campaign", label: t("advertising.campaignComparison"), emphasis: true, render: (row) =>
       <><span className="block">{row.campaign_name}</span><span className="block text-xs font-normal text-text-muted">{row.platform}</span></> },
     { key: "spend", label: t("advertising.spend"), render: (row) => row.spend },
     { key: "revenue", label: t("advertising.revenue"), render: (row) =>
@@ -22,7 +22,7 @@ export function CampaignPerformanceTable({ rows }: { rows: CampaignPerformance[]
   ];
   return (
     <section className="w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm">
-      <h2 className="mb-3 text-lg font-semibold text-text-primary">{t("advertising.performanceTitle")}</h2>
+      <h2 className="mb-3 text-lg font-semibold text-text-primary">{t("advertising.campaigns")}</h2>
       <ResponsiveReportTable rows={rows} columns={columns} rowKey={(row) => row.campaign_id} wide />
     </section>
   );
