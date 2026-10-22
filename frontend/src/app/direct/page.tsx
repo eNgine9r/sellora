@@ -444,6 +444,8 @@ function ParticipantAvatar({ conversation, size = "md" }: { conversation: Direct
   );
 }
 
+const DIRECT_INBOX_BATCH_SIZE = 20;
+
 function ConversationList({
   loading,
   error,
@@ -465,6 +467,11 @@ function ConversationList({
   isLive: boolean;
   liveError: boolean;
 }) {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "unread" | "orders">("all");
+  const [visibleCount, setVisibleCount] = useState(DIRECT_INBOX_BATCH_SIZE);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
   const orderedConversations = useMemo(
     () => [...conversations].sort((left, right) => {
       const orderDifference = Number(orderIntentConversationIds.has(right.id)) - Number(orderIntentConversationIds.has(left.id));
@@ -475,49 +482,112 @@ function ConversationList({
     }),
     [conversations, orderIntentConversationIds],
   );
+  const filteredConversations = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase();
+    return orderedConversations.filter((item) => {
+      if (filter === "unread" && item.unread_count === 0) return false;
+      if (filter === "orders" && !orderIntentConversationIds.has(item.id) && !item.linked_order_id) return false;
+      if (!term) return true;
+      return [item.participant_display_name, item.participant_username, item.participant_scoped_id]
+        .some((value) => value?.toLocaleLowerCase().includes(term));
+    });
+  }, [filter, orderedConversations, orderIntentConversationIds, search]);
+  const shown = filteredConversations.slice(0, visibleCount);
+  const hasMore = shown.length < filteredConversations.length;
+
+  useEffect(() => {
+    if (!hasMore || !loadMoreRef.current || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setVisibleCount((count) => Math.min(count + DIRECT_INBOX_BATCH_SIZE, filteredConversations.length));
+      },
+      { rootMargin: "240px 0px", threshold: 0 },
+    );
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [filteredConversations.length, hasMore, visibleCount]);
 
   if (loading) return <aside className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-3"><LoadingSkeleton /></aside>;
   if (error) return <aside className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-3"><ErrorState title="Не вдалося завантажити Direct" description="Оновіть сторінку або перевірте workspace." /></aside>;
   return (
-    <aside className="min-w-0 rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-3 shadow-[var(--shadow-card)]">
+    <aside className="min-w-0 rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-3 shadow-[var(--shadow-card)]" data-direct-progressive-list>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-black">Діалоги</h2>
+        <h2 className="font-black">Діалоги <span className="text-sm font-medium text-text-muted">({conversations.length})</span></h2>
         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-black ${liveError ? "bg-rose-500/15 text-rose-600" : isLive ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600"}`}>
           {liveError ? <WifiOff className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}
           {liveError ? "Offline" : isLive ? "Live" : "…"}
         </span>
       </div>
-      <input className="mb-3 min-h-11 w-full rounded-2xl border border-border-subtle bg-surface-2 px-3 text-sm" placeholder="Пошук за іменем або username" />
-      <div className="flex flex-wrap gap-2 pb-3 text-xs font-bold text-text-secondary"><span>Open</span><span>Unread</span><span>Instagram</span><span>Тестовий діалог</span></div>
-      {orderedConversations.length === 0 ? <DirectEmptyState instagramStatus={instagramStatus} /> : (
-        <div className="space-y-2">
-          {orderedConversations.map((item) => {
-            const orderIntent = orderIntentConversationIds.has(item.id);
-            return (
-              <button type="button" key={item.id} onClick={() => onSelect(item.id)} className={`w-full rounded-2xl border p-3 text-left transition ${orderIntent ? "border-amber-500/50 bg-amber-500/10" : selectedId === item.id ? "border-primary bg-primary/10" : "border-border-subtle bg-surface-2"}`}>
-                <div className="flex items-start gap-3">
-                  <ParticipantAvatar conversation={item} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="flex items-center gap-1 truncate font-black">{item.participant_display_name ?? "Instagram customer"}{item.participant_is_verified_user ? <BadgeCheck className="h-4 w-4 shrink-0 text-sky-500" /> : null}</h3>
-                        <p className="truncate text-xs text-text-muted">{item.participant_username ? `@${item.participant_username}` : item.participant_scoped_id ?? "—"}</p>
+      <input
+        type="search"
+        aria-label="Пошук діалогів"
+        className="mb-3 min-h-11 w-full rounded-xl border border-border-subtle bg-surface-2 px-3 text-sm"
+        placeholder="Імʼя або Instagram username"
+        value={search}
+        onChange={(event) => { setSearch(event.target.value); setVisibleCount(DIRECT_INBOX_BATCH_SIZE); }}
+      />
+      <div className="mb-3 flex gap-2 overflow-x-auto pb-1" aria-label="Фільтр діалогів">
+        {([
+          ["all", "Усі"],
+          ["unread", "Непрочитані"],
+          ["orders", "Замовлення"],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={filter === key}
+            onClick={() => { setFilter(key); setVisibleCount(DIRECT_INBOX_BATCH_SIZE); }}
+            className={`min-h-9 shrink-0 rounded-full border px-3 text-xs font-bold transition ${filter === key ? "border-primary bg-primary/15 text-primary" : "border-border-subtle bg-surface-2 text-text-secondary"}`}
+          >{label}</button>
+        ))}
+      </div>
+      {filteredConversations.length === 0
+        ? (conversations.length === 0
+          ? <DirectEmptyState instagramStatus={instagramStatus} />
+          : <p className="rounded-xl bg-surface-2 p-4 text-sm text-text-muted">За цим запитом діалогів немає.</p>)
+        : (
+          <div className="space-y-1.5" role="list">
+            {shown.map((item) => {
+              const orderIntent = orderIntentConversationIds.has(item.id);
+              return (
+                <button
+                  role="listitem"
+                  type="button"
+                  key={item.id}
+                  onClick={() => onSelect(item.id)}
+                  aria-current={selectedId === item.id ? "true" : undefined}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${selectedId === item.id ? "border-primary bg-primary/10" : "border-transparent bg-surface-2 hover:border-border-strong"}`}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <ParticipantAvatar conversation={item} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <h3 className="min-w-0 flex-1 truncate text-sm font-bold text-text-primary">{item.participant_display_name ?? item.participant_username ?? "Клієнт Instagram"}</h3>
+                        {item.participant_is_verified_user ? <BadgeCheck className="h-4 w-4 shrink-0 text-sky-500" /> : null}
+                        {item.unread_count > 0 ? <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-black text-white">{item.unread_count}</span> : null}
                       </div>
-                      {item.unread_count ? <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-black text-white">{item.unread_count}</span> : null}
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {orderIntent ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-1 text-xs font-black text-amber-700"><ShoppingBag className="h-3 w-3" />Ймовірне замовлення</span> : null}
-                      {item.linked_order_id ? <span className="rounded-full bg-blue-500/15 px-2 py-1 text-xs font-bold text-blue-700">Замовлення створено</span> : item.linked_customer_id ? <span className="rounded-full bg-cyan-500/15 px-2 py-1 text-xs font-bold text-cyan-700">Потенційний клієнт</span> : null}
-                      <span className="rounded-full bg-violet-500/15 px-2 py-1 text-xs font-bold text-primary">{item.channel === "INSTAGRAM" ? "Instagram" : "Тестовий діалог"}</span>
-                      <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs font-bold text-emerald-600">{item.status}</span>
+                      <p className="mt-0.5 truncate text-xs text-text-muted">{item.participant_username ? `@${item.participant_username}` : item.participant_scoped_id ?? "Instagram Direct"}</p>
+                      {orderIntent || item.linked_order_id || item.linked_customer_id ? (
+                        <p className="mt-1 truncate text-[11px] font-semibold text-primary">
+                          {item.linked_order_id ? "Замовлення оформлено" : orderIntent ? "Ймовірне замовлення" : "Потенційний клієнт"}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+                </button>
+              );
+            })}
+            {hasMore ? (
+              <>
+                <div ref={loadMoreRef} className="h-px" aria-hidden="true" data-direct-load-sentinel />
+                <button type="button" className="min-h-11 w-full rounded-xl border border-border-subtle bg-surface-2 text-sm font-semibold text-primary" onClick={() => setVisibleCount((count) => count + DIRECT_INBOX_BATCH_SIZE)}>
+                  Завантажити ще
+                </button>
+              </>
+            ) : null}
+            <p className="pt-2 text-center text-xs text-text-muted" aria-live="polite">Показано {shown.length} із {filteredConversations.length}</p>
+          </div>
+        )}
     </aside>
   );
 }
