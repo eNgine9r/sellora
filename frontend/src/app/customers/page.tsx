@@ -6,6 +6,7 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
 import { FormDialog } from "@/components/form-dialog";
+import { clampPage, paginateItems, PaginationControls, PAGE_SIZE_OPTIONS } from "@/components/pagination-controls";
 import { CustomerDetails } from "@/features/customers/components/customer-details";
 import { CustomerForm } from "@/features/customers/components/customer-form";
 import { CustomerTable } from "@/features/customers/components/customer-table";
@@ -36,6 +37,8 @@ export default function CustomersPage() {
   const workspaceId = currentWorkspaceId ?? "";
   const [search, setSearch] = useState("");
   const [customerSort, setCustomerSort] = useState("newest");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -130,6 +133,7 @@ export default function CustomersPage() {
     if (customerSort === "nameDesc") return right.name.localeCompare(left.name);
     return right.created_at.localeCompare(left.created_at);
   }), [customersQuery.data, customerSort, search]);
+  const paginatedCustomers = useMemo(() => paginateItems(visibleCustomers, page, pageSize), [visibleCustomers, page, pageSize]);
   const hasActiveFilters = Boolean(search.trim());
   const allCustomers = customersQuery.data?.length ?? 0;
   const customersWithPaidPurchases = customersQuery.data?.filter((item) => item.paid_orders > 0).length ?? 0;
@@ -137,6 +141,14 @@ export default function CustomersPage() {
   const customersWithoutOrders = customersQuery.data?.filter((item) => item.total_orders === 0).length ?? 0;
   const selectedCustomerLive = customersQuery.data?.find((item) => item.id === selectedId) ?? selectedCustomer;
   const customersError = customersQuery.isError ? safeApiErrorMessage(customersQuery.error, t("customers.loadError")) : null;
+
+  useEffect(() => {
+    setPage(1);
+  }, [workspaceId, search, customerSort, pageSize]);
+
+  useEffect(() => {
+    setPage((currentPage) => clampPage(currentPage, pageSize, visibleCustomers.length));
+  }, [visibleCustomers.length, pageSize]);
 
   useEffect(() => {
     setSelectedCustomer(null);
@@ -191,7 +203,12 @@ export default function CustomersPage() {
               action={<Button onClick={() => setIsCreateOpen(true)}>{t("customers.create")}</Button>}
             />
           ) : null}
-          {!customersError && visibleCustomers.length > 0 ? <CustomerTable customers={visibleCustomers} currencyCode={currentWorkspace?.currency_code ?? "UAH"} selectedCustomerId={selectedCustomer?.id} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} /> : null}
+          {!customersError && visibleCustomers.length > 0 ? (
+            <div className="grid min-w-0 gap-4">
+              <CustomerTable customers={paginatedCustomers} currencyCode={currentWorkspace?.currency_code ?? "UAH"} selectedCustomerId={selectedCustomer?.id} onSelect={setSelectedCustomer} onEdit={canEdit ? setEditingCustomer : undefined} onArchive={canEdit ? setArchivingCustomer : undefined} />
+              <PaginationControls page={page} pageSize={pageSize} totalItems={visibleCustomers.length} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size as (typeof PAGE_SIZE_OPTIONS)[number]); setPage(1); }} />
+            </div>
+          ) : null}
         </WorkspaceSplitView>
 
         {isCreateOpen ? (
