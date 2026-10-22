@@ -66,6 +66,26 @@ export async function fetchCustomers(workspaceId: string, search?: string, token
   return apiRequest<Customer[]>(`/customers${query ? `?${query}` : ""}`, { headers: workspaceHeaders(workspaceId, token) });
 }
 
+export type CustomerOrderSummary = {
+  id: string;
+  order_number: string;
+  status: string;
+  payment_status: string;
+  is_historical: boolean;
+  revenue: string;
+  created_at: string;
+  shipment_tracking: string | null;
+  shipment_status: string | null;
+  shipment_city: string | null;
+};
+
+export async function fetchCustomerOrders(workspaceId: string, customerId: string): Promise<CustomerOrderSummary[]> {
+  return apiRequest<CustomerOrderSummary[]>(
+    `/customers/${encodeURIComponent(customerId)}/orders`,
+    { headers: workspaceHeaders(workspaceId) },
+  );
+}
+
 export type CustomerCreatePayload = {
   name: string;
   phone: string | null;
