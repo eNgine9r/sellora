@@ -19,6 +19,8 @@ const checks = [
   ["provider tracking shown in order panel", details.includes("nova_poshta_raw_status") && details.includes("nova_poshta_synced_at")],
   ["carrier tariff and declared value distinct", details.includes("shipment.shipping_cost") && details.includes("shipment.declared_value")],
   ["historic unknown sale values are not zero", details.includes("archivePlaceholder") && details.includes('t("orders.unknownAmount")')],
+  ["historic corrections unlock profit only after cost and price", details.includes("historicalValuesMissing") && details.includes("Number(order.revenue) <= 0") && details.includes("Number(order.product_cost) <= 0")],
+  ["pending payment does not imply realized profit", details.includes("historicalUnpaidProfitHint")],
   ["historical provider order status audited", provider.includes("NOVA_HISTORICAL_ORDER_STATUS_REVIEW_REQUIRED") && provider.includes("_sync_historical_order_status")],
   ["arrival mapping includes arrived/прибув", provider.includes('"прибув"')],
   ["English and Ukrainian labels exist", ["historicalCorrectionHint", "providerValuesWarning", "unknownAmount", "declaredValue", "carrierTariff"].every((key) => uk.orders[key] && en.orders[key])],
