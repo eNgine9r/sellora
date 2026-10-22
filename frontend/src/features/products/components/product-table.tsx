@@ -1,7 +1,6 @@
 "use client";
 
-import { Archive, Pencil } from "lucide-react";
-import { IconButton } from "@/components/ui/primitives";
+import { RowActionButtons } from "@/components/ui/row-action-buttons";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { useI18n } from "@/i18n/provider";
 import { displayCategory } from "@/lib/categories";
@@ -40,7 +39,7 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
                   <td className="max-w-[160px] truncate px-4 py-3 text-slate-700 dark:text-slate-200">{product.sku ?? "—"}</td>
                   <td className="px-4 py-3 text-slate-700"><span className={statusBadgeClass(product.is_active ? "success" : "neutral")}>{product.is_active ? t("products.active") : t("products.inactive")}</span></td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{new Date(product.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3"><div className="flex items-center justify-center gap-1" onClick={(event) => event.stopPropagation()}>{onEdit ? <IconButton variant="ghost" title={t("products.edit")} aria-label={`${t("products.edit")} ${product.name}`} onClick={() => onEdit(product)}><Pencil className="h-4 w-4" /></IconButton> : <span className="text-xs text-text-muted">{t("common.readOnly")}</span>}{onArchive ? <IconButton variant="danger" title={t("products.archive")} aria-label={`${t("products.archive")} ${product.name}`} onClick={() => onArchive(product)}><Archive className="h-4 w-4" /></IconButton> : null}</div></td>
+                  <td className="px-4 py-3"><RowActionButtons entityLabel={product.name} editLabel={t("products.edit")} archiveLabel={t("products.archive")} onEdit={onEdit ? () => onEdit(product) : undefined} onArchive={onArchive ? () => onArchive(product) : undefined} /></td>
                 </tr>
               );
             })}
