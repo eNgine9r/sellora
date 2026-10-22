@@ -14,8 +14,8 @@ function primaryImage(product: Product) {
 export function ProductTable({ products, selectedProductId, onSelect, onEdit, onArchive }: { products: Product[]; selectedProductId?: string; onSelect?: (product: Product) => void; onEdit?: (product: Product) => void; onArchive?: (product: Product) => void }) {
   const { t } = useI18n();
   return (
-    <div className="w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
-      <div className="sellora-scrollbar hidden max-w-full overflow-x-auto lg:block">
+    <div className="sellora-adaptive-list w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
+      <div className="sellora-scrollbar sellora-adaptive-table max-w-full overflow-x-auto">
         <table className="w-full min-w-[760px] divide-y divide-border-subtle text-sm dark:divide-white/10">
           <thead className="bg-surface-2 text-left text-xs font-black uppercase tracking-wide text-text-muted">
             <tr>
@@ -47,7 +47,7 @@ export function ProductTable({ products, selectedProductId, onSelect, onEdit, on
           </tbody>
         </table>
       </div>
-      <div className="grid gap-3 lg:hidden">
+      <div className="sellora-adaptive-cards grid gap-3">
         {products.map((product) => {
           const image = primaryImage(product);
           return (
