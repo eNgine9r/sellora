@@ -1,0 +1,3 @@
+Branch-gate smoke test after deployment policy merged to main.
+This non-main development branch must NOT create an automatic Vercel preview on push.
+No application or backend changes.
