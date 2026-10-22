@@ -551,7 +551,11 @@ function MessageThread({
   prepareResult,
   sendPending,
   noAutoSend,
+  onBack,
+  onOpenAiPanel,
 }: {
+  onBack: () => void;
+  onOpenAiPanel: () => void;
   conversation?: DirectConversation | null;
   automation?: DirectCustomerAutomationState;
   automationLoading: boolean;
@@ -583,9 +587,21 @@ function MessageThread({
 
   if (!conversation) return <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4"><EmptyState title="Оберіть діалог" description="Повідомлення та AI-підказки зʼявляться після вибору розмови." /></section>;
   return (
-    <section className="flex min-h-[520px] min-w-0 flex-col rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)]">
-      <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
-      <CustomerAutomationCard
+    <section className="direct-mobile-thread flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 shadow-[var(--shadow-card)] lg:min-h-[520px]" data-direct-mobile-thread>
+      <header className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-2 py-2 lg:hidden">
+        <button type="button" onClick={onBack} aria-label="Назад до діалогів" className="flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-bold text-primary">
+          <ArrowLeft className="h-5 w-5" /> Назад
+        </button>
+        <ParticipantAvatar conversation={conversation} size="sm" />
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="truncate text-sm font-black text-text-primary">{conversation.participant_display_name ?? "Клієнт Instagram"}</p>
+          <p className="truncate text-xs text-text-muted">{conversation.participant_username ? `@${conversation.participant_username}` : "Instagram Direct"}</p>
+        </div>
+        <button type="button" className="min-h-11 shrink-0 rounded-xl px-2 text-xs font-bold text-primary" onClick={onOpenAiPanel}>AI</button>
+      </header>
+      <div className="hidden lg:block">
+        <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
+        <CustomerAutomationCard
         conversation={conversation}
         automation={automation}
         loading={automationLoading}
@@ -593,8 +609,16 @@ function MessageThread({
         canManage={canManage}
         ensuring={ensuringCustomer}
         onEnsure={onEnsureCustomer}
-      />
-      <div ref={scrollContainer} className="sellora-scrollbar flex-1 space-y-3 overflow-y-auto p-4" data-direct-live-thread>
+        />
+      </div>
+      <details className="shrink-0 border-b border-border-subtle lg:hidden" data-direct-mobile-details>
+        <summary className="cursor-pointer px-4 py-2 text-xs font-bold text-text-secondary">Деталі клієнта та замовлення</summary>
+        <div className="max-h-[35dvh] overflow-y-auto">
+          <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
+          <CustomerAutomationCard conversation={conversation} automation={automation} loading={automationLoading} error={automationError} canManage={canManage} ensuring={ensuringCustomer} onEnsure={onEnsureCustomer} />
+        </div>
+      </details>
+      <div ref={scrollContainer} className="sellora-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto p-3 lg:p-4" data-direct-live-thread>
         {loading ? <LoadingSkeleton /> : null}
         {error ? <ErrorState title="Не вдалося завантажити повідомлення" description="Спробуйте оновити діалог." /> : null}
         {!loading && !error && messages.length === 0 ? <EmptyState title="Повідомлень ще немає" description="Нові Instagram webhooks або імпортована історія зʼявляться тут." /> : null}
@@ -611,9 +635,9 @@ function MessageThread({
           </div>
         ))}
       </div>
-      <footer className="border-t border-border-subtle p-3">
+      <footer className="max-h-[36dvh] shrink-0 overflow-y-auto border-t border-border-subtle p-2.5 lg:max-h-none lg:p-3">
         <div className="mb-2 rounded-2xl border border-dashed border-border-subtle p-3 text-sm text-text-muted">{`Чернетка AI — не відправлено. ${noAutoSend}`}</div>
-        <textarea value={replyText} onChange={(event) => setReplyText(event.target.value)} className="min-h-24 w-full rounded-2xl border border-border-subtle bg-surface-2 p-3 text-sm" placeholder="Відповідь менеджера" />
+        <textarea value={replyText} onChange={(event) => setReplyText(event.target.value)} className="min-h-14 w-full rounded-xl border border-border-subtle bg-surface-2 p-2.5 text-sm lg:min-h-24 lg:rounded-2xl lg:p-3" placeholder="Відповідь менеджера" />
         <div className="mt-2 flex flex-wrap gap-2">
           <Button variant="secondary" onClick={onPrepare} disabled={!replyText}>Перевірити відправлення</Button>
           <Button onClick={onSend} disabled={sendDisabled || !replyText}>{sendPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Підтвердити send</Button>
