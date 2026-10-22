@@ -821,18 +821,25 @@ class NovaPoshtaShipmentService:
             )
         normalized_status = self._normalize_provider_status(status)
         previous_normalized_status = shipment.status
-        shipment.nova_poshta_raw_status = status
-        shipment.external_status = status
-        if normalized_status is not None:
+        if normalized_status is None:
+            # An unknown provider response (including "Номер не знайдено") is
+            # not successful verification. Do not erase earlier proven delivery.
+            if previous_normalized_status in {ShipmentStatus.CREATED.value, ShipmentStatus.DRAFT.value}:
+                shipment.nova_poshta_raw_status = status[:255]
+                shipment.external_status = status[:120]
+                shipment.nova_poshta_synced_at = None
+        else:
+            shipment.nova_poshta_raw_status = status[:255]
+            shipment.external_status = status[:120]
             shipment.status = normalized_status.value
             self._sync_historical_order_status(workspace_id, shipment, normalized_status, actor_user_id)
-        shipment.nova_poshta_synced_at = datetime.now(UTC)
+            shipment.nova_poshta_synced_at = datetime.now(UTC)
         self.audit_logs.create(
             workspace_id=workspace_id,
             user_id=actor_user_id,
             entity_type="Shipment",
             entity_id=shipment.id,
-            action="NOVA_POSHTA_STATUS_SYNCED",
+            action="NOVA_POSHTA_STATUS_SYNCED" if normalized_status is not None else "NOVA_POSHTA_STATUS_UNVERIFIED",
             new_value={
                 "raw_status": status,
                 "normalized_status": normalized_status.value if normalized_status else None,
