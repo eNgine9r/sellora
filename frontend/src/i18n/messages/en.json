@@ -2051,7 +2051,8 @@
   },
   "mobileNavigation": {
     "bottomNav": "Mobile bottom navigation",
-    "drawer": "Mobile navigation menu"
+    "drawer": "Mobile navigation menu",
+    "ordersShort": "Orders"
   },
   "roles": {
     "OWNER": "Owner",

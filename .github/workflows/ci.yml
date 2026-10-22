@@ -229,6 +229,9 @@ jobs:
       - name: Production build
         working-directory: frontend
         run: npm run build
+      - name: Run mobile navigation and safe-area static regression
+        working-directory: frontend
+        run: npm run mobile:audit:static
       - name: Run import-center static regression
         run: node frontend/scripts/import-center-pilot-regression.mjs
       - name: Run orders, inventory and shipments static regression
