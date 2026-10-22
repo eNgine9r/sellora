@@ -236,6 +236,8 @@ jobs:
         run: node frontend/scripts/cookie-session-runtime-contract.mjs
       - name: Run Direct mobile inbox and PWA header regression
         run: node frontend/scripts/direct-mobile-inbox-regression.mjs
+      - name: Run compact Direct chat composer regression
+        run: node frontend/scripts/direct-compact-composer-regression.mjs
       - name: Run import-center static regression
         run: node frontend/scripts/import-center-pilot-regression.mjs
       - name: Run orders, inventory and shipments static regression
