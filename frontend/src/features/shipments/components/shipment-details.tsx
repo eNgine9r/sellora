@@ -30,13 +30,15 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shipment: Shipment; workspaceId: string; onStatusChange: (status: ShipmentStatus) => void }) {
   const { t, formatStatus } = useI18n();
   const hasProviderDocument = Boolean(shipment.nova_poshta_document_ref || shipment.nova_poshta_document_number);
+  const importedArchive = Boolean(shipment.order_number?.startsWith("NP-"));
+  const providerUnverified = importedArchive && !shipment.nova_poshta_synced_at;
   const actions = NEXT_ACTIONS[shipment.status];
   const trackingNumber = shipment.nova_poshta_document_number ?? shipment.tracking_number;
   return (
     <div className="grid min-w-0 gap-5">
       <div className="flex min-w-0 flex-col gap-3 border-b border-slate-100 pb-4 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0"><p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300">{t("shipments.details")}</p><h2 className="mt-2 max-w-full break-words text-2xl font-black leading-tight text-slate-950 dark:text-white">{trackingNumber ?? t("shipments.draftShipment")}</h2></div>
-        <ShipmentStatusBadge status={shipment.status} />
+        {providerUnverified ? <span className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-600">{t("orders.historicalStatusUnverified")}</span> : <ShipmentStatusBadge status={shipment.status} />}
       </div>
 
       <Section title={t("shipments.orderSection")}>
@@ -44,7 +46,7 @@ export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shi
           <DetailRow label={t("shipments.order")} value={shipment.order_number} />
           <DetailRow label={t("orders.changeStatus")} value={shipment.order_status ? formatStatus("order", shipment.order_status as never) : null} />
           <DetailRow label={t("tables.payment")} value={shipment.order_payment_status ? formatStatus("payment", shipment.order_payment_status as never) : null} />
-          <DetailRow label={t("analytics.revenue")} value={shipment.order_total ? formatMoney(shipment.order_total) : null} />
+          <DetailRow label={t("orders.revenue")} value={importedArchive && Number(shipment.order_total) === 0 ? t("orders.unknownAmount") : shipment.order_total ? formatMoney(shipment.order_total) : null} />
         </div>
         <Link className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold dark:border-white/10" href={`/orders?order_id=${shipment.order_id}`}>{t("shipments.openOrder")}</Link>
       </Section>
@@ -58,13 +60,14 @@ export function ShipmentDetails({ shipment, workspaceId, onStatusChange }: { shi
       </Section>
 
       <Section title={t("shipments.trackingSection")}>
-        <div className="grid gap-3 sm:grid-cols-2"><DetailRow label={t("shipments.carrier")} value={shipment.carrier} /><DetailRow label={t("shipments.trackingTtn")} value={trackingNumber} /><DetailRow label={t("novaPoshta.documentRef")} value={shipment.nova_poshta_document_ref ? t("common.yes") : null} /><DetailRow label={t("shipments.externalStatus")} value={shipment.nova_poshta_raw_status ?? shipment.external_status} /><DetailRow label={t("shipments.lastSynced")} value={shipment.nova_poshta_synced_at ? new Date(shipment.nova_poshta_synced_at).toLocaleString() : null} /><DetailRow label={t("shipments.updated")} value={new Date(shipment.updated_at).toLocaleString()} /></div>
+        <div className="grid gap-3 sm:grid-cols-2"><DetailRow label={t("shipments.carrier")} value={shipment.carrier} /><DetailRow label={t("shipments.trackingTtn")} value={trackingNumber} /><DetailRow label={t("novaPoshta.documentRef")} value={shipment.nova_poshta_document_ref ? t("common.yes") : null} /><DetailRow label={t("shipments.externalStatus")} value={shipment.nova_poshta_raw_status ?? shipment.external_status} /><DetailRow label={t("shipments.lastSynced")} value={shipment.nova_poshta_synced_at ? new Date(shipment.nova_poshta_synced_at).toLocaleString() : null} /><DetailRow label={t("shipments.updated")} value={new Date(shipment.updated_at).toLocaleString()} /><DetailRow label={t("orders.declaredValue")} value={shipment.declared_value == null ? t("orders.unknownAmount") : formatMoney(shipment.declared_value)} /><DetailRow label={t("orders.carrierTariff")} value={shipment.shipping_cost == null ? t("orders.unknownAmount") : formatMoney(shipment.shipping_cost)} /><DetailRow label={t("shipments.codAmount")} value={shipment.cod_amount == null ? t("orders.unknownAmount") : formatMoney(shipment.cod_amount)} /></div>
+        {importedArchive ? <p className="text-xs text-text-muted">{t("orders.providerValuesWarning")}</p> : null}
         <div className="grid gap-2 sm:grid-cols-2"><CopyTtnButton trackingNumber={trackingNumber} variant="primary" /></div>
         <TtnDocumentLimitation />
       </Section>
 
       <Section title={t("shipments.statusSection")}>
-        <div className="flex flex-wrap items-center gap-3"><ShipmentStatusBadge status={shipment.status} />{shipment.external_status ? <span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-white/10 dark:text-slate-100">{t("shipments.novaPoshtaStatus")}: {shipment.external_status}</span> : <span className="text-sm text-slate-500 dark:text-slate-400">{t("novaPoshta.statusSyncUnavailableShort")}</span>}</div>
+        <div className="flex flex-wrap items-center gap-3">{providerUnverified ? <span className="rounded-full bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-600">{t("orders.historicalStatusUnverified")}</span> : <ShipmentStatusBadge status={shipment.status} />}{shipment.external_status ? <span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-white/10 dark:text-slate-100">{t("shipments.novaPoshtaStatus")}: {shipment.external_status}</span> : <span className="text-sm text-slate-500 dark:text-slate-400">{t("novaPoshta.statusSyncUnavailableShort")}</span>}</div>
         <div className="grid gap-2 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-white/[0.05] dark:text-slate-300"><span>{t("shipments.shipped")}: {shipment.shipped_at ? new Date(shipment.shipped_at).toLocaleString() : "—"}</span><span>{t("shipments.delivered")}: {shipment.delivered_at ? new Date(shipment.delivered_at).toLocaleString() : "—"}</span><span>{t("shipments.returned")}: {shipment.returned_at ? new Date(shipment.returned_at).toLocaleString() : "—"}</span></div>
       </Section>
 
