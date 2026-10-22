@@ -77,6 +77,7 @@ export type CustomerOrderSummary = {
   shipment_tracking: string | null;
   shipment_status: string | null;
   shipment_city: string | null;
+  products: { name: string; quantity: number }[];
 };
 
 export async function fetchCustomerOrders(workspaceId: string, customerId: string): Promise<CustomerOrderSummary[]> {
