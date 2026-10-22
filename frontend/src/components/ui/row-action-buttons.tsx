@@ -18,12 +18,12 @@ export function RowActionButtons({ entityLabel, editLabel, archiveLabel, onEdit,
   return (
     <div className="flex shrink-0 items-center justify-end gap-1 whitespace-nowrap" onClick={(event) => event.stopPropagation()}>
       {onEdit ? (
-        <IconButton type="button" variant="ghost" title={editLabel} aria-label={`${editLabel} ${entityLabel}`} onClick={onEdit}>
+        <IconButton type="button" className="h-10 w-10 min-h-10 min-w-10 rounded-lg" variant="ghost" title={editLabel} aria-label={`${editLabel} ${entityLabel}`} onClick={onEdit}>
           <Pencil className="h-4 w-4" aria-hidden="true" />
         </IconButton>
       ) : null}
       {onArchive ? (
-        <IconButton type="button" variant="danger" title={archiveLabel} aria-label={`${archiveLabel} ${entityLabel}`} onClick={onArchive}>
+        <IconButton type="button" className="h-10 w-10 min-h-10 min-w-10 rounded-lg" variant="danger" title={archiveLabel} aria-label={`${archiveLabel} ${entityLabel}`} onClick={onArchive}>
           {destructiveIcon === "delete" ? <Trash2 className="h-4 w-4" aria-hidden="true" /> : <Archive className="h-4 w-4" aria-hidden="true" />}
         </IconButton>
       ) : null}
