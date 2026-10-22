@@ -56,12 +56,12 @@ export function InventoryTable({
 
   return (
     <div
-      className="w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm"
+      className="sellora-adaptive-list sellora-adaptive-wide-list w-full min-w-0 max-w-full rounded-2xl border border-border-subtle bg-surface-1 p-3 shadow-sm"
       data-archived-variant-warning={
         inventory.some((item) => !variantById.has(item.product_variant_id)) || undefined
       }
     >
-      <div className="sellora-scrollbar hidden max-w-full overflow-x-auto lg:block">
+      <div className="sellora-scrollbar sellora-adaptive-table max-w-full overflow-x-auto">
         <table className="w-full min-w-[980px] divide-y divide-slate-200 text-sm dark:divide-white/10">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-white/[0.04] dark:text-slate-300">
             <tr>
@@ -170,7 +170,7 @@ export function InventoryTable({
         </table>
       </div>
 
-      <div className="grid gap-3 lg:hidden">
+      <div className="sellora-adaptive-cards grid gap-3">
         {inventory.map((item) => {
           const variant = variantById.get(item.product_variant_id);
           const product = variant ? productById.get(variant.product_id) : undefined;
