@@ -38,6 +38,7 @@ export type Order = {
   customer_instagram_username: string | null;
   status: OrderStatus;
   payment_status: PaymentStatus;
+  is_historical: boolean;
   revenue: string;
   product_cost: string;
   ad_cost: string;

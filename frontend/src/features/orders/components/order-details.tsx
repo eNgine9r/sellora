@@ -19,20 +19,28 @@ export function OrderDetails({
   currencyCode = "UAH",
   shipment,
   onStatusChange,
+  onSyncShipment,
+  syncingShipment = false,
+  shipmentSyncError,
 }: {
   order: Order;
   currencyCode?: string;
   shipment?: Shipment | null;
   onStatusChange: (status: OrderStatus) => void;
+  onSyncShipment?: () => void;
+  syncingShipment?: boolean;
+  shipmentSyncError?: string | null;
 }) {
   const { t, formatStatus } = useI18n();
-  const hasCostContext = Number(order.product_cost) > 0 || Number(order.ad_cost) > 0 || Number(order.shipping_cost) > 0 || Number(order.cod_fee) > 0 || Number(order.other_cost) > 0;
+  const archivePlaceholder = order.is_historical && order.items.some((item) => item.sku === "NP-ARCHIVE-OTHER");
+  const hasCostContext = !archivePlaceholder && (Number(order.product_cost) > 0 || Number(order.ad_cost) > 0 || Number(order.shipping_cost) > 0 || Number(order.cod_fee) > 0 || Number(order.other_cost) > 0);
   return (
     <aside className="grid gap-4">
       <div>
         <h2 className="text-xl font-bold">{order.order_number}</h2>
+        <p className="mt-1 text-sm text-text-secondary">{t("orders.orderStatus")}: {formatStatus("order", order.status)}</p>
         <p className="text-sm text-text-secondary">
-          {t("orders.profit")}: {formatMoney(order.net_profit, currencyCode)}
+          {t("orders.profit")}: {archivePlaceholder ? t("orders.unknownAmount") : formatMoney(order.net_profit, currencyCode)}
         </p>
         {!hasCostContext ? (
           <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-100">
@@ -41,10 +49,10 @@ export function OrderDetails({
         ) : null}
       </div>
       <div className="grid min-w-0 grid-cols-[auto,minmax(0,1fr)] gap-2 text-sm">
-        <span>{t("analytics.revenue")}</span>
-        <strong>{formatMoney(order.revenue, currencyCode)}</strong>
+        <span>{t("orders.revenue")}</span>
+        <strong>{archivePlaceholder && Number(order.revenue) === 0 ? t("orders.unknownAmount") : formatMoney(order.revenue, currencyCode)}</strong>
         <span>{t("orders.productCost")}</span>
-        <strong>{formatMoney(order.product_cost, currencyCode)}</strong>
+        <strong>{archivePlaceholder && Number(order.product_cost) === 0 ? t("orders.unknownAmount") : formatMoney(order.product_cost, currencyCode)}</strong>
         <span>{t("orders.adCost")}</span>
         <strong>{formatMoney(order.ad_cost, currencyCode)}</strong>
         <span>{t("shipments.shipping")}</span>
@@ -95,10 +103,25 @@ export function OrderDetails({
               {shipment.tracking_number ?? t("shipments.draftShipment")}
             </span>
             <span>
-              {t("shipments.carrier")}: {shipment.carrier}
+              {t("shipments.carrier")}: {shipment.carrier === "NOVA_POSHTA" ? t("orders.novaPoshtaName") : shipment.carrier}
             </span>
             <span>
               {t("tables.status")}: {formatStatus("shipment", shipment.status)}
+            </span>
+            <span className="font-medium text-text-primary">
+              {t("orders.providerStatus")}: {shipment.nova_poshta_raw_status ?? shipment.external_status ?? t("orders.statusNeedsSync")}
+            </span>
+            <span>
+              {t("shipments.lastSynced")}: {shipment.nova_poshta_synced_at ? new Date(shipment.nova_poshta_synced_at).toLocaleString("uk-UA") : t("orders.statusNeedsSync")}
+            </span>
+            <span>
+              {t("orders.declaredValue")}: {shipment.declared_value == null ? t("orders.unknownAmount") : formatMoney(shipment.declared_value, currencyCode)}
+            </span>
+            <span>
+              {t("orders.carrierTariff")}: {shipment.shipping_cost == null ? t("orders.unknownAmount") : formatMoney(shipment.shipping_cost, currencyCode)}
+            </span>
+            <span>
+              {t("shipments.codAmount")}: {shipment.cod_amount == null ? t("orders.unknownAmount") : formatMoney(shipment.cod_amount, currencyCode)}
             </span>
             <span>
               {t("shipments.city")}: {shipment.city ?? "—"}
@@ -106,6 +129,10 @@ export function OrderDetails({
             <span>
               {t("shipments.warehouse")}: {shipment.warehouse ?? "—"}
             </span>
+            <p className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-text-muted">{t("orders.providerValuesWarning")}</p>
+            {shipment.notes ? <p className="text-xs text-text-secondary">{shipment.notes}</p> : null}
+            {onSyncShipment ? <button type="button" disabled={syncingShipment} onClick={onSyncShipment} className="min-h-11 rounded-lg border border-primary/30 px-3 py-2 text-sm font-bold text-primary disabled:opacity-50">{syncingShipment ? t("common.loading") : t("shipments.syncStatus")}</button> : null}
+            {shipmentSyncError ? <p className="text-sm text-danger" role="alert">{shipmentSyncError}</p> : null}
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <Link
                 className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2 font-bold text-primary-foreground hover:bg-primary-hover"
@@ -148,11 +175,11 @@ export function OrderDetails({
               </span>
               <span>
                 {t("orders.unitPrice")}:{" "}
-                {formatMoney(item.unit_price, currencyCode)}
+                {archivePlaceholder && Number(item.unit_price) === 0 ? t("orders.unknownAmount") : formatMoney(item.unit_price, currencyCode)}
               </span>
               <span>
                 {t("orders.lineTotal")}:{" "}
-                {formatMoney(item.line_total, currencyCode)}
+                {archivePlaceholder && Number(item.line_total) === 0 ? t("orders.unknownAmount") : formatMoney(item.line_total, currencyCode)}
               </span>
               <span>
                 {t("orders.quantity")}: {item.quantity}

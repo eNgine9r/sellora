@@ -293,7 +293,7 @@ export function OrderForm({
     setFilter(index, { productId: variant?.product_id ?? "" });
     updateItem(index, {
       product_variant_id: variantId,
-      unit_price: variant?.price ? String(variant.price) : "0",
+      unit_price: initialOrder?.is_historical ? "" : (variant?.price ? String(variant.price) : "0"),
       unit_cost: "0",
     });
   }
@@ -324,7 +324,7 @@ export function OrderForm({
   function validate(): string | null {
     if (!initialOrder && !values.customer_id)
       return t("orders.customerRequired");
-    if (!lockedItems && !hasVariants)
+    if (!lockedItems && !hasVariants && !initialOrder?.is_historical)
       return t("products.createProductVariantFirst");
     if (!lockedItems && values.items.length === 0)
       return t("orders.noProductsInCategory");
@@ -335,6 +335,7 @@ export function OrderForm({
         return t("errors.required");
       const stock = inventoryByVariantId.get(item.product_variant_id);
       if (
+        !initialOrder?.is_historical &&
         stock &&
         stock.stock_quantity - stock.reserved_quantity <
           numberValue(item.quantity)
@@ -396,6 +397,9 @@ export function OrderForm({
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
           {t("products.createProductVariantFirst")}
         </p>
+      ) : null}
+      {initialOrder?.is_historical ? (
+        <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-800 dark:text-amber-200">{t("orders.historicalCorrectionHint")}</p>
       ) : null}
       {lockedItems ? (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
@@ -610,6 +614,7 @@ export function OrderForm({
           </button>
         </div>
         {values.items.map((item, index) => {
+          const historicalItem = initialOrder?.is_historical ? initialOrder.items.find((original) => original.product_variant_id === item.product_variant_id) : null;
           const lineTotal =
             numberValue(item.quantity) * numberValue(item.unit_price);
           const filter = itemFilter(index, item);
@@ -742,7 +747,7 @@ export function OrderForm({
                   className="min-h-10 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   value={item.product_variant_id}
                   disabled={
-                    !hasVariants || !canEditItems || variantOptions.length === 0
+                    !canEditItems || (variantOptions.length === 0 && !historicalItem)
                   }
                   onChange={(event) => selectVariant(index, event.target.value)}
                 >
@@ -751,6 +756,9 @@ export function OrderForm({
                       ? t("orders.selectVariant")
                       : t("orders.noVariantsForProduct")}
                   </option>
+                  {historicalItem && !variantOptions.some((variant) => variant.id === historicalItem.product_variant_id) ? (
+                    <option value={historicalItem.product_variant_id}>{historicalItem.product_name} (історична позиція)</option>
+                  ) : null}
                   {variantOptions.map((variant) => (
                     <option key={variant.id} value={variant.id}>
                       {variantLabel(variant)}

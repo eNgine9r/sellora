@@ -22,11 +22,14 @@ from app.models.nova_poshta_operation import (
     NovaPoshtaOperationState,
     NovaPoshtaOperationType,
 )
+from app.models.order import OrderStatus
 from app.models.shipment import ShipmentCarrier, ShipmentStatus
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.integration_repository import IntegrationConnectionRepository, IntegrationCredentialRepository
 from app.repositories.nova_poshta_operation_repository import NovaPoshtaOperationRepository
 from app.repositories.shipment_repository import ShipmentRepository
+from app.schemas.order import OrderStatusUpdate
+from app.services.order_service import OrderService, OrderServiceError
 from app.schemas.integration import (
     NovaPoshtaDirectoryItem,
     NovaPoshtaReadinessResponse,
@@ -822,6 +825,7 @@ class NovaPoshtaShipmentService:
         shipment.external_status = status
         if normalized_status is not None:
             shipment.status = normalized_status.value
+            self._sync_historical_order_status(workspace_id, shipment, normalized_status, actor_user_id)
         shipment.nova_poshta_synced_at = datetime.now(UTC)
         self.audit_logs.create(
             workspace_id=workspace_id,
@@ -852,6 +856,67 @@ class NovaPoshtaShipmentService:
             synced_at=shipment.nova_poshta_synced_at,
         )
 
+
+    def _sync_historical_order_status(
+        self,
+        workspace_id: UUID,
+        shipment,
+        shipment_status: ShipmentStatus,
+        actor_user_id: UUID | None,
+    ) -> None:
+        # Provider tracking confirms transit/delivery, NEVER payment or revenue.
+        # This projection is restricted to historical imports. Live orders keep
+        # their existing explicit status workflow.
+        order = shipment.order
+        if not order or order.workspace_id != workspace_id or not order.is_historical:
+            return
+        current = OrderStatus(order.status)
+        targets = {
+            ShipmentStatus.IN_TRANSIT: OrderStatus.SHIPPED,
+            ShipmentStatus.ARRIVED: OrderStatus.SHIPPED,
+            ShipmentStatus.DELIVERED: OrderStatus.DELIVERED,
+            ShipmentStatus.RETURNED: OrderStatus.RETURNED,
+        }
+        target = targets.get(shipment_status)
+        if target is None or current == target or current in {OrderStatus.CANCELLED, OrderStatus.RETURNED}:
+            return
+        # Do not regress a historical order when the provider reports an older state.
+        if current in {OrderStatus.DELIVERED, OrderStatus.COMPLETED} and target == OrderStatus.SHIPPED:
+            return
+        path = []
+        if current == OrderStatus.NEW:
+            path.append(OrderStatus.CONFIRMED)
+            current = OrderStatus.CONFIRMED
+        if current == OrderStatus.CONFIRMED and target in {OrderStatus.DELIVERED, OrderStatus.RETURNED}:
+            path.append(OrderStatus.SHIPPED)
+            current = OrderStatus.SHIPPED
+        if current == OrderStatus.SHIPPED and target == OrderStatus.RETURNED:
+            path.append(OrderStatus.RETURNED)
+        elif current == OrderStatus.DELIVERED and target == OrderStatus.RETURNED:
+            path.append(OrderStatus.RETURNED)
+        elif target not in path:
+            path.append(target)
+        service = OrderService(self.db)
+        for status in path:
+            if OrderStatus(order.status) == status:
+                continue
+            try:
+                service.change_status(
+                    workspace_id,
+                    order.id,
+                    OrderStatusUpdate(status=status, note="Статус за підтвердженими даними Нової пошти (історія)"),
+                    actor_user_id,
+                    commit=False,
+                )
+            except OrderServiceError as exc:
+                # Preserve provider shipment status, but make the mismatch auditable.
+                self.audit_logs.create(
+                    workspace_id=workspace_id, user_id=actor_user_id,
+                    entity_type="Order", entity_id=order.id,
+                    action="NOVA_HISTORICAL_ORDER_STATUS_REVIEW_REQUIRED",
+                    new_value={"provider_shipment_status": shipment_status.value, "current_order_status": order.status},
+                )
+                break
 
     def _get_shipment_for_update(self, workspace_id: UUID, shipment_id: UUID):
         getter = getattr(self.shipments, "get_for_update", None)
@@ -1236,7 +1301,7 @@ class NovaPoshtaShipmentService:
         delivered_markers = ("delivered", "\u043e\u0442\u0440\u0438\u043c\u0430\u043d\u043e", "\u0434\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u043e", "\u0432\u0440\u0443\u0447\u0435\u043d\u043e")
         returned_markers = ("return", "\u043f\u043e\u0432\u0435\u0440", "\u0432\u0456\u0434\u043c\u043e\u0432\u0430")
         in_transit_markers = ("in transit", "\u0434\u043e\u0440\u043e\u0437", "\u043f\u0440\u044f\u043c\u0443", "\u0432\u0456\u0434\u043f\u0440\u0430\u0432")
-        arrived_markers = ("arrived", "\u043f\u0440\u0438\u0431\u0443\u043b", "\u0432\u0456\u0434\u0434\u0456\u043b\u0435\u043d")
+        arrived_markers = ("arrived", "прибул", "прибув", "відділен", "у поштоматі")
         created_markers = ("created", "\u0441\u0442\u0432\u043e\u0440\u0435\u043d\u043e", "\u043d\u043e\u0432\u0430 \u043d\u0430\u043a\u043b\u0430\u0434\u043d\u0430")
         if any(marker in normalized for marker in delivered_markers):
             return ShipmentStatus.DELIVERED

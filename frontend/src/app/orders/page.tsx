@@ -33,6 +33,7 @@ import {
   updateOrder,
 } from "@/services/orders";
 import { fetchOrderShipment } from "@/services/shipments";
+import { syncNovaPoshtaStatus } from "@/services/integrations";
 import { fetchAdCampaigns } from "@/services/advertising";
 import {
   fetchInventory,
@@ -149,6 +150,18 @@ export default function OrdersPage() {
       setEditingOrder(null);
       setSelectedOrder(order);
       invalidateOrderState();
+    },
+  });
+  const shipmentSyncMutation = useMutation({
+    mutationFn: (shipmentId: string) => syncNovaPoshtaStatus(workspaceId, shipmentId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["order-shipment", workspaceId] }),
+        queryClient.invalidateQueries({ queryKey: ["shipments", workspaceId] }),
+      ]);
+      invalidateOrderState();
+      const refreshed = await fetchOrders(workspaceId);
+      setSelectedOrder((current) => current ? (refreshed.find((order) => order.id === current.id) ?? current) : null);
     },
   });
   const archiveMutation = useMutation({
@@ -299,6 +312,9 @@ export default function OrdersPage() {
               currencyCode={currencyCode}
               shipment={shipmentQuery.data}
               onStatusChange={(nextStatus) => statusMutation.mutate({ orderId: selectedOrder.id, nextStatus })}
+              onSyncShipment={canEdit && shipmentQuery.data?.carrier === "NOVA_POSHTA" && !!shipmentQuery.data?.tracking_number ? () => shipmentSyncMutation.mutate(shipmentQuery.data!.id) : undefined}
+              syncingShipment={shipmentSyncMutation.isPending}
+              shipmentSyncError={shipmentSyncMutation.isError ? safeApiErrorMessage(shipmentSyncMutation.error, t("shipments.statusSyncFailed")) : null}
             />
           </EntitySidePanel>
         ) : null}
@@ -377,7 +393,7 @@ export default function OrdersPage() {
             campaigns={campaignsQuery.data ?? []}
             currencyCode={currencyCode}
             initialOrder={editingOrder}
-            lockedItems={!ITEM_EDIT_STATUSES.includes(editingOrder.status)}
+            lockedItems={!editingOrder.is_historical && !ITEM_EDIT_STATUSES.includes(editingOrder.status)}
             submitLabel={t("actions.save")}
             showProfit={currentWorkspace?.role === "OWNER"}
             onSubmit={(values) => updateMutation.mutate(values as Parameters<typeof updateOrder>[2])}
