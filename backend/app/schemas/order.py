@@ -1,10 +1,31 @@
 from datetime import datetime
+from enum import StrEnum
 from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.order import OrderStatus, PaymentStatus
+
+
+class HistoricalCostSource(StrEnum):
+    SHEET_ROW_MATCH = "SHEET_ROW_MATCH"
+    PRICE_MEDIAN = "PRICE_MEDIAN"
+    PRICE_BAND = "PRICE_BAND"
+    MANUAL = "MANUAL"
+
+
+class HistoricalCostConfidence(StrEnum):
+    MULTI_SIGNAL_MATCH = "MULTI_SIGNAL_MATCH"
+    PRICE_ONLY = "PRICE_ONLY"
+    LOW = "LOW"
+    MANUAL_REVIEW = "MANUAL_REVIEW"
+
+
+class HistoricalEstimatedCostUpsert(BaseModel):
+    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    source: HistoricalCostSource
+    reference: str | None = Field(default=None, max_length=512)
 
 
 class OrderItemCreate(BaseModel):
@@ -88,6 +109,10 @@ class OrderResponse(BaseModel):
     is_historical: bool = False
     revenue: Decimal
     product_cost: Decimal
+    estimated_product_cost: Decimal | None = None
+    estimated_cost_source: HistoricalCostSource | None = None
+    estimated_cost_confidence: HistoricalCostConfidence | None = None
+    estimated_cost_reference: str | None = None
     ad_cost: Decimal
     shipping_cost: Decimal
     cod_fee: Decimal
