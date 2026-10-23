@@ -403,7 +403,8 @@
       "noRecentOrders": "No orders yet",
       "noRecentOrdersDescription": "Create your first order or import historical data to start tracking revenue and fulfillment.",
       "noNotifications": "No urgent notifications",
-      "noActivity": "No recent activity in this period"
+      "noActivity": "No recent activity in this period",
+      "noRecordedFinancials": "Orders exist but no revenue is recorded in this period. Check payments and imports."
     },
     "errors": {
       "loadFailed": "Dashboard data could not be loaded. Refresh the page or retry after checking the current workspace connection."
@@ -441,7 +442,8 @@
       "profitMissing": "Not enough data to calculate profit. Check product costs.",
       "profitRestricted": "Profit is available to owners or analysts.",
       "roasHasData": "ROAS shows ad return for the selected period.",
-      "roasMissing": "Add ad spend to see advertising return."
+      "roasMissing": "Add ad spend to see advertising return.",
+      "revenueNoRecorded": "No recorded order revenue. Check payments and imports."
     },
     "ownerAlerts": {
       "title": "What needs attention",
@@ -466,7 +468,8 @@
       "noPeriodData": {
         "title": "No data in selected period",
         "description": "Create a lead or order to make the dashboard useful."
-      }
+      },
+      "subtitleCompact": "Key actions and store data states."
     },
     "ownerActions": {
       "openInventory": "Open inventory",
@@ -487,7 +490,9 @@
       "deliveryRate": "Delivered from orders: {rate}%",
       "noRate": "Not enough data for a rate.",
       "emptyTitle": "Not enough data for the funnel",
-      "emptyDescription": "Create leads and orders to see conversion."
+      "emptyDescription": "Create leads and orders to see conversion.",
+      "subtitleAccurate": "Event counts for the period. Orders are not necessarily linked to leads.",
+      "orderRatio": "Orders / leads: {rate}% (not conversion)"
     },
     "fulfillment": {
       "title": "Order fulfillment state",
@@ -511,7 +516,12 @@
     },
     "blockError": "Could not load this block.",
     "titleCompact": "Dashboard",
-    "descriptionCompact": "Store performance overview"
+    "descriptionCompact": "Store performance overview",
+    "onboarding": {
+      "title": "Store setup",
+      "expand": "Details",
+      "collapse": "Collapse"
+    }
   },
   "tables": {
     "name": "Name",

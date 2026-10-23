@@ -1,18 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ActivityFeed, DashboardActivity } from "@/features/dashboard/components/activity-feed";
 import { ChartCard } from "@/features/dashboard/components/chart-card";
-import { NotificationsCard, DashboardNotification } from "@/features/dashboard/components/notifications-card";
+import { DashboardMetricCard, DashboardActionList, DashboardFunnel } from "@/features/dashboard/components/dashboard-premium";
 import { QuickActionsCard } from "@/features/dashboard/components/quick-actions-card";
 import { RecentOrdersTable } from "@/features/dashboard/components/recent-orders-table";
 import { TopProductsCard, TopProductView } from "@/features/dashboard/components/top-products-card";
 import { DateRangeSelector } from "@/components/date-range-selector";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
-import { MetricCard, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
+import { WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { DemoWorkspaceActions, DemoWorkspaceNotice, FirstRunChecklist } from "@/components/pilot-readiness";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
@@ -26,7 +25,6 @@ import { fetchLeads } from "@/services/crm";
 import { fetchOnboardingStatus } from "@/services/onboarding";
 import { fetchOrders } from "@/services/orders";
 import { fetchProducts } from "@/services/products";
-import { fetchShipmentSummary } from "@/services/shipments";
 import { TopProduct } from "@/types/analytics";
 import { Lead } from "@/types/crm";
 import { OrderStatus } from "@/types/orders";
@@ -45,28 +43,8 @@ function productImage(product?: { images?: { image_url: string; is_primary: bool
 }
 
 
-function OwnerActionCard({ title, description, href, action, tone = "violet" }: { title: string; description: string; href: string; action: string; tone?: "violet" | "amber" | "rose" | "emerald" }) {
-  const tones = {
-    violet: "border-violet-100 bg-violet-50 text-violet-800 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-100",
-    amber: "border-amber-100 bg-amber-50 text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100",
-    rose: "border-rose-100 bg-rose-50 text-rose-800 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100",
-    emerald: "border-emerald-100 bg-emerald-50 text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100",
-  };
-  return <Link href={href} className={`grid min-w-0 gap-2 rounded-2xl border p-4 text-sm transition hover:-translate-y-0.5 hover:shadow-md ${tones[tone]}`}><strong className="break-words text-base">{title}</strong><span className="break-words font-semibold opacity-85">{description}</span><span className="mt-1 inline-flex min-h-10 items-center font-black underline underline-offset-4">{action}</span></Link>;
-}
-
 function OwnerMetricRow({ label, value, helper }: { label: string; value: string | number; helper?: string }) {
   return <div className="flex min-w-0 items-start justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2 text-sm dark:bg-white/5"><div className="min-w-0"><p className="break-words font-bold text-slate-800 dark:text-slate-100">{label}</p>{helper ? <p className="break-words text-xs font-semibold text-text-muted">{helper}</p> : null}</div><strong className="shrink-0 text-slate-950 dark:text-white">{value}</strong></div>;
-}
-
-function MetricStrip({ label, value, helper, tone = "violet" }: { label: string; value: string | number; helper?: string; tone?: "violet" | "pink" | "orange" | "amber" }) {
-  const tones = {
-    violet: "from-violet-50 to-white text-violet-700 dark:from-violet-500/20 dark:to-violet-400/10 dark:text-violet-100",
-    pink: "from-pink-50 to-white text-pink-700 dark:from-pink-500/20 dark:to-pink-400/10 dark:text-pink-100",
-    orange: "from-orange-50 to-white text-orange-700 dark:from-orange-500/20 dark:to-orange-400/10 dark:text-orange-100",
-    amber: "from-amber-50 to-white text-amber-700 dark:from-amber-500/20 dark:to-amber-400/10 dark:text-amber-100",
-  };
-  return <div className={`min-w-0 overflow-hidden rounded-[20px] border border-slate-100 bg-gradient-to-br ${tones[tone]} p-4 shadow-sm dark:border-white/10 dark:bg-slate-900/100 dark:shadow-none`}><p className="break-words text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">{label}</p><p className="mt-2 truncate text-2xl font-black text-slate-950 dark:text-white">{value}</p>{helper ? <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-300">{helper}</p> : null}</div>;
 }
 
 export default function DashboardPage() {
@@ -94,7 +72,6 @@ export default function DashboardPage() {
   const orders = useQuery({ queryKey: ["dashboard-orders", workspaceId], queryFn: () => fetchOrders(workspaceId, ""), enabled });
   const leads = useQuery({ queryKey: ["dashboard-leads", workspaceId], queryFn: () => fetchLeads(workspaceId, {}), enabled });
   const inventory = useQuery({ queryKey: ["dashboard-inventory", workspaceId], queryFn: () => fetchInventorySummary(workspaceId), enabled });
-  const shipments = useQuery({ queryKey: ["dashboard-shipments", workspaceId], queryFn: () => fetchShipmentSummary(workspaceId), enabled });
   const products = useQuery({ queryKey: ["dashboard-products", workspaceId], queryFn: () => fetchProducts(workspaceId), enabled });
   const onboarding = useQuery({ queryKey: ["onboarding-status", workspaceId], queryFn: () => fetchOnboardingStatus(workspaceId), enabled });
 
@@ -120,20 +97,13 @@ export default function DashboardPage() {
 
 
 
-  const dashboardNotifications: DashboardNotification[] = useMemo(() => [
-    { label: t("dashboard.notificationsItems.lowStock"), value: backendDashboard.data?.inventory.low_stock_count ?? inventory.data?.low_stock_count ?? 0, href: "/inventory" },
-    { label: t("dashboard.notificationsItems.outOfStock"), value: backendDashboard.data?.inventory.out_of_stock_count ?? inventory.data?.out_of_stock_count ?? 0, href: "/inventory" },
-    { label: t("dashboard.notificationsItems.unpaidOrders"), value: currentOrders.filter((order) => order.payment_status !== "PAID").length, href: "/orders" },
-    { label: t("dashboard.notificationsItems.returnedShipments"), value: shipments.data?.returned_this_month ?? 0, href: "/shipments" },
-  ].filter((item) => item.value > 0), [backendDashboard.data?.inventory.low_stock_count, backendDashboard.data?.inventory.out_of_stock_count, currentOrders, inventory.data, shipments.data, t]);
-
   const dashboardActivity: DashboardActivity[] = useMemo(() => [
     ...currentOrders.slice(0, 3).map((order) => ({ label: t("dashboard.activityItems.orderCreated", { number: order.order_number }), date: order.created_at })),
     ...currentLeads.slice(0, 2).map((lead) => ({ label: t("dashboard.activityItems.leadCreated", { name: lead.name }), date: lead.created_at })),
   ].sort((left, right) => right.date.localeCompare(left.date)).slice(0, 5), [currentLeads, currentOrders, t]);
 
-  const isLoading = backendDashboard.isLoading || salesSummary.isLoading || (canSeeProfit && salesTrend.isLoading) || advertising.isLoading || orders.isLoading || leads.isLoading || inventory.isLoading || shipments.isLoading;
-  const hasError = backendDashboard.isError || salesSummary.isError || (canSeeProfit && salesTrend.isError) || advertising.isError || orders.isError || leads.isError || inventory.isError || shipments.isError;
+  const isLoading = backendDashboard.isLoading || salesSummary.isLoading || (canSeeProfit && salesTrend.isLoading) || advertising.isLoading || orders.isLoading || leads.isLoading || inventory.isLoading;
+  const hasError = backendDashboard.isError || salesSummary.isError || (canSeeProfit && salesTrend.isError) || advertising.isError || orders.isError || leads.isError || inventory.isError;
   const currentOrderSummary = summarizeOrders(currentOrders);
   const previousOrderSummary = summarizeOrders(orders.data?.filter((order) => isInDateRange(order.created_at, previousRange)) ?? []);
   const totalRevenue = toFiniteNumber(backendDashboard.data?.sales.revenue ?? currentOrderSummary.revenue);
@@ -161,66 +131,72 @@ export default function DashboardPage() {
     !hasAdvertisingData ? { title: t("dashboard.ownerAlerts.noAds.title"), description: t("dashboard.ownerAlerts.noAds.description"), href: "/advertising", action: t("dashboard.ownerActions.openAdvertising"), tone: "violet" as const } : null,
     ordersCount === 0 && currentLeads.length === 0 ? { title: t("dashboard.ownerAlerts.noPeriodData.title"), description: t("dashboard.ownerAlerts.noPeriodData.description"), href: "/leads", action: t("dashboard.ownerActions.createLead"), tone: "emerald" as const } : null,
   ].filter(Boolean) as { title: string; description: string; href: string; action: string; tone: "violet" | "amber" | "rose" | "emerald" }[];
-  const isFirstRun = !isLoading && !hasError && (onboarding.data?.progress_percent ?? 0) < 100;
+  const isFirstRun = !isLoading && !hasError && onboarding.isSuccess && (onboarding.data?.progress_percent ?? 0) < 100;
 
   return (
     <WorkspacePage>
         <WorkspaceHeader title={t("dashboard.titleCompact")} description={t("dashboard.descriptionCompact")} actions={<DateRangeSelector compact />} />
 
         <DemoWorkspaceNotice workspace={currentWorkspace} />
-        {isFirstRun ? <div className="grid gap-3"><FirstRunChecklist status={onboarding.data} />{currentWorkspace?.role === "OWNER" && !onboarding.data?.is_demo_workspace ? <div><DemoWorkspaceActions /></div> : null}</div> : null}
-        {hasError ? <ErrorState description={t("dashboard.errors.loadFailed")} onRetry={() => { backendDashboard.refetch(); salesSummary.refetch(); if (canSeeProfit) { profitSummary.refetch(); salesTrend.refetch(); topProducts.refetch(); } advertising.refetch(); orders.refetch(); leads.refetch(); inventory.refetch(); shipments.refetch(); }} /> : null}
+        {isFirstRun ? <details className="group rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"><span>{t("dashboard.onboarding.title")} · {onboarding.data?.progress_percent ?? 0}%</span><span className="text-xs text-primary group-open:hidden">{t("dashboard.onboarding.expand")}</span><span className="hidden text-xs text-primary group-open:inline">{t("dashboard.onboarding.collapse")}</span></summary><div className="mt-3 grid gap-3"><FirstRunChecklist status={onboarding.data} />{currentWorkspace?.role === "OWNER" && !onboarding.data?.is_demo_workspace ? <div><DemoWorkspaceActions /></div> : null}</div></details> : null}
+        {hasError ? <ErrorState description={t("dashboard.errors.loadFailed")} onRetry={() => { backendDashboard.refetch(); salesSummary.refetch(); if (canSeeProfit) { profitSummary.refetch(); salesTrend.refetch(); topProducts.refetch(); } advertising.refetch(); orders.refetch(); leads.refetch(); inventory.refetch(); }} /> : null}
         {isLoading ? <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4"><LoadingSkeleton rows={2} title={t("dashboard.loading.dashboard")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.orders")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.shipments")} /><LoadingSkeleton rows={2} title={t("dashboard.loading.ads")} /></div> : null}
-        <section data-dashboard-kpi-row className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard label={t("dashboard.kpis.orders")} value={ordersCount} helper={ordersCount ? t("dashboard.kpiHelpers.ordersHasData", { period: selectedPeriodLabel }) : t("dashboard.kpiHelpers.ordersZero")} trend={formatDeltaPercent(ordersCount, previousBackendDashboard.data?.sales.orders_count ?? previousOrderSummary.ordersCount)} tone="info" />
-          <MetricCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={totalRevenue > 0 ? t("dashboard.kpiHelpers.revenueHasData", { period: selectedPeriodLabel }) : t("dashboard.kpiHelpers.revenueZero")} trend={formatDeltaPercent(totalRevenue, previousRevenue)} tone="success" />
-          <MetricCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? (profitMissing ? "—" : formatMoney(netProfit, currencyCode)) : t("dashboard.restricted")} helper={!canSeeProfit ? t("dashboard.kpiHelpers.profitRestricted") : profitMissing ? t("dashboard.kpiHelpers.profitMissing") : selectedPeriodLabel} trend={canSeeProfit && !profitMissing ? formatDeltaPercent(netProfit, previousProfit) : undefined} tone={profitMissing ? "warning" : "success"} isUnavailable={!canSeeProfit || profitMissing} />
-          <MetricCard label={t("dashboard.kpis.roas")} value={hasAdvertisingData ? roas : "—"} helper={hasAdvertisingData ? t("dashboard.kpiHelpers.roasHasData") : t("dashboard.kpiHelpers.roasMissing")} trend={adSpend > 0 ? formatDeltaPercent(toFiniteNumber(backendDashboard.data?.advertising.roas ?? advertising.data?.roas), toFiniteNumber(previousBackendDashboard.data?.advertising.roas ?? previousAdvertising.data?.roas)) : undefined} tone={hasAdvertisingData ? "info" : "warning"} isUnavailable={!hasAdvertisingData} />
+        {!isLoading && !hasError ? <>
+        <section data-dashboard-kpi-row aria-label={t("dashboard.titleCompact")} className="grid min-w-0 grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+          <DashboardMetricCard label={t("dashboard.kpis.orders")} value={ordersCount} helper={ordersCount ? selectedPeriodLabel : t("dashboard.kpiHelpers.ordersZero")} trend={previousBackendDashboard.data || orders.data ? formatDeltaPercent(ordersCount, previousBackendDashboard.data?.sales.orders_count ?? previousOrderSummary.ordersCount) : undefined} explanation={t("dashboard.tooltips.orders")} />
+          <DashboardMetricCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={totalRevenue > 0 ? selectedPeriodLabel : ordersCount > 0 ? t("dashboard.kpiHelpers.revenueNoRecorded") : t("dashboard.kpiHelpers.revenueZero")} trend={totalRevenue > 0 ? formatDeltaPercent(totalRevenue, previousRevenue) : undefined} explanation={t("dashboard.tooltips.revenue")} />
+          <DashboardMetricCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? (profitMissing ? "—" : formatMoney(netProfit, currencyCode)) : t("dashboard.restricted")} helper={!canSeeProfit ? t("dashboard.kpiHelpers.profitRestricted") : profitMissing ? t("dashboard.kpiHelpers.profitMissing") : selectedPeriodLabel} trend={canSeeProfit && !profitMissing && totalRevenue > 0 ? formatDeltaPercent(netProfit, previousProfit) : undefined} unavailable={!canSeeProfit || profitMissing} emphasized explanation={t("dashboard.tooltips.netProfit")} />
+          <DashboardMetricCard label={t("dashboard.kpis.roas")} value={hasAdvertisingData ? roas : "—"} helper={hasAdvertisingData ? selectedPeriodLabel : t("dashboard.kpiHelpers.roasMissing")} trend={adSpend > 0 ? formatDeltaPercent(toFiniteNumber(backendDashboard.data?.advertising.roas ?? advertising.data?.roas), toFiniteNumber(previousBackendDashboard.data?.advertising.roas ?? previousAdvertising.data?.roas)) : undefined} unavailable={!hasAdvertisingData} explanation={t("dashboard.tooltips.roas")} />
         </section>
 
-        <section data-dashboard-operational-row className="grid min-w-0 gap-4 xl:grid-cols-12">
-          <div className="min-w-0 xl:col-span-4">
-            <ChartCard title={t("dashboard.ownerAlerts.title")} subtitle={t("dashboard.periodHelper", { period: selectedPeriodLabel })}>
-              <div className="grid min-w-0 gap-2">
-                {ownerAlerts.length ? ownerAlerts.slice(0, 4).map((alert) => <OwnerActionCard key={alert.title} {...alert} />) : <p className="rounded-2xl bg-success-surface px-4 py-3 text-sm font-bold text-success-foreground">{t("dashboard.ownerAlerts.allClear")}</p>}
-              </div>
-            </ChartCard>
-          </div>
-          <div className="min-w-0 xl:col-span-8">
-            <ChartCard title={t("dashboard.funnel.title")} subtitle={t("dashboard.funnel.subtitle")}>
-              {currentLeads.length || ordersCount ? <div className="grid min-w-0 gap-3 md:grid-cols-3"><MetricStrip label={t("dashboard.funnel.leads")} value={currentLeads.length} helper={t("dashboard.funnel.leadsHelp")} /><MetricStrip label={t("dashboard.funnel.orders")} value={ordersCount} helper={leadToOrderRate === null ? t("dashboard.funnel.noRate") : t("dashboard.funnel.orderRate", { rate: leadToOrderRate })} tone="pink" /><MetricStrip label={t("dashboard.funnel.delivered")} value={deliveredOrders} helper={deliveryRate === null ? t("dashboard.funnel.noRate") : t("dashboard.funnel.deliveryRate", { rate: deliveryRate })} tone="orange" /></div> : <EmptyState title={t("dashboard.funnel.emptyTitle")} description={t("dashboard.funnel.emptyDescription")} />}
-            </ChartCard>
-          </div>
-        </section>
-
-        <section data-dashboard-analytics-row className="grid min-w-0 gap-4 xl:grid-cols-12">
+        <section data-dashboard-analytics-row className="grid min-w-0 items-start gap-3 xl:grid-cols-12">
           <div className="min-w-0 xl:col-span-8">
             <ChartCard title={t("dashboard.charts.salesProfitTitle")} subtitle={t("dashboard.charts.salesProfitSubtitle")}>
-              {trend.length ? <div className="h-60 sm:h-64"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trend} margin={{ left: -12, right: 8 }}><defs><linearGradient id="selloraRevenue" x1="0" x2="0" y1="0" y2="1"><stop offset="5%" stopColor="#7C3AED" stopOpacity={0.45} /><stop offset="95%" stopColor="#7C3AED" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 12 }} /><YAxis tick={{ fontSize: 12 }} /><Tooltip formatter={(value) => formatMoney(Number(value), currencyCode)} /><Area type="monotone" dataKey="revenueNumber" name={t("dashboard.kpis.revenue")} stroke="#7C3AED" fill="url(#selloraRevenue)" strokeWidth={3} /><Area type="monotone" dataKey="profitNumber" name={t("dashboard.kpis.netProfit")} stroke="#EC4899" fill="transparent" strokeWidth={3} /></AreaChart></ResponsiveContainer></div> : <EmptyState title={t("dashboard.emptyStates.noSalesTrend")} description={t("dashboard.emptyStates.noSalesTrendDescription")} />}
+              {!canSeeProfit ? <EmptyState title={t("dashboard.restricted")} description={t("dashboard.kpiHelpers.profitRestricted")} /> : trend.some((item) => item.revenueNumber !== 0 || item.profitNumber !== 0) ? <div className="h-64 sm:h-72"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trend} margin={{ top: 8, left: -12, right: 8, bottom: 2 }}><defs><linearGradient id="selloraRevenue" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="var(--primary-hover)" stopOpacity={0.3} /><stop offset="95%" stopColor="var(--primary-hover)" stopOpacity={0} /></linearGradient></defs><CartesianGrid stroke="var(--border-subtle)" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--text-secondary)" }} tickLine={false} axisLine={false} minTickGap={28} /><YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} tickLine={false} axisLine={false} width={45} /><Tooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-default)", borderRadius: 12, color: "var(--text-primary)" }} formatter={(value) => formatMoney(Number(value), currencyCode)} /><Area type="monotone" dataKey="revenueNumber" name={t("dashboard.kpis.revenue")} stroke="var(--primary-hover)" fill="url(#selloraRevenue)" strokeWidth={2.5} activeDot={{ r: 5 }} /><Area type="monotone" dataKey="profitNumber" name={t("dashboard.kpis.netProfit")} stroke="var(--success)" fill="transparent" strokeWidth={2.5} activeDot={{ r: 5 }} /></AreaChart></ResponsiveContainer></div> : <EmptyState title={t("dashboard.emptyStates.noSalesTrend")} description={ordersCount ? t("dashboard.emptyStates.noRecordedFinancials") : t("dashboard.emptyStates.noSalesTrendDescription")} />}
+              {canSeeProfit ? <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-text-secondary"><span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2 w-2 rounded-full bg-violet-500" />{t("dashboard.kpis.revenue")}</span>{canSeeProfit ? <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2 w-2 rounded-full bg-emerald-500" />{t("dashboard.kpis.netProfit")}</span> : null}</div> : null}
+            </ChartCard>
+          </div>
+          <div className="min-w-0 xl:col-span-4">
+            <ChartCard title={t("dashboard.ownerAlerts.title")} subtitle={t("dashboard.ownerAlerts.subtitleCompact")}>
+              <DashboardActionList items={ownerAlerts} emptyText={t("dashboard.ownerAlerts.allClear")} />
+            </ChartCard>
+          </div>
+        </section>
+
+        <section data-dashboard-operational-row className="grid min-w-0 items-start gap-3 xl:grid-cols-12">
+          <div className="min-w-0 xl:col-span-8">
+            <ChartCard title={t("dashboard.funnel.title")} subtitle={t("dashboard.funnel.subtitleAccurate")}>
+              {currentLeads.length || ordersCount ? <DashboardFunnel stages={[
+                { label: t("dashboard.funnel.leads"), value: currentLeads.length, helper: t("dashboard.funnel.leadsHelp"), color: "bg-violet-500" },
+                { label: t("dashboard.funnel.orders"), value: ordersCount, helper: leadToOrderRate === null ? t("dashboard.funnel.noRate") : t("dashboard.funnel.orderRatio", { rate: leadToOrderRate }), color: "bg-fuchsia-500" },
+                { label: t("dashboard.funnel.delivered"), value: deliveredOrders, helper: deliveryRate === null ? t("dashboard.funnel.noRate") : t("dashboard.funnel.deliveryRate", { rate: deliveryRate }), color: "bg-emerald-500" },
+              ]} /> : <EmptyState title={t("dashboard.funnel.emptyTitle")} description={t("dashboard.funnel.emptyDescription")} />}
             </ChartCard>
           </div>
           <div className="min-w-0 xl:col-span-4">
             <ChartCard title={t("dashboard.charts.orderFunnelTitle")} subtitle={t("dashboard.charts.orderFunnelSubtitle")}>
-              {orderStatusData.length ? <div className="grid gap-3"><div className="h-44"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={orderStatusData} dataKey="value" nameKey="label" innerRadius={42} outerRadius={70} paddingAngle={4}>{orderStatusData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div><div className="grid gap-2">{orderStatusData.map((status) => <div key={status.name} className="flex items-center justify-between gap-3 rounded-2xl bg-surface-2 px-3 py-2 text-sm"><span>{status.label}</span><strong>{status.value} · {status.percent}%</strong></div>)}</div></div> : <EmptyState title={t("dashboard.emptyStates.noOrdersInPeriod")} description={t("dashboard.emptyStates.noOrdersInPeriodDescription")} />}
+              {orderStatusData.length ? <div className="grid gap-2"><div className="h-40"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={orderStatusData} dataKey="value" nameKey="label" innerRadius={48} outerRadius={69} paddingAngle={3}>{orderStatusData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie><Tooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-default)", borderRadius: 12, color: "var(--text-primary)" }} /></PieChart></ResponsiveContainer></div><div className="grid gap-1">{orderStatusData.map((status) => <div key={status.name} className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-xs text-text-secondary"><span className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: status.color }} />{status.label}</span><strong className="font-semibold tabular-nums text-text-primary">{status.value} · {status.percent}%</strong></div>)}</div></div> : <EmptyState title={t("dashboard.emptyStates.noOrdersInPeriod")} description={t("dashboard.emptyStates.noOrdersInPeriodDescription")} />}
             </ChartCard>
           </div>
         </section>
+        </> : null}
 
+        {!isLoading && !hasError ? <>
         <section data-dashboard-business-row className="grid min-w-0 gap-4 lg:grid-cols-2">
           <ChartCard title={t("dashboard.advertising.ownerTitle")} subtitle={t("dashboard.advertising.ownerSubtitle")}>{hasAdvertisingData ? <div className="grid min-w-0 gap-2 sm:grid-cols-2"><OwnerMetricRow label={t("dashboard.advertising.spend")} value={formatMoney(adSpend, currencyCode)} helper={t("dashboard.abbreviations.roas")} /><OwnerMetricRow label={t("dashboard.advertising.orders")} value={backendDashboard.data?.advertising.orders ?? advertising.data?.total_orders ?? 0} /><OwnerMetricRow label={t("dashboard.advertising.cpa")} value={backendDashboard.data?.advertising.cpa ? formatMoney(backendDashboard.data.advertising.cpa, currencyCode) : advertising.data?.average_cpa ? formatMoney(advertising.data.average_cpa, currencyCode) : "—"} helper={t("dashboard.abbreviations.cpa")} /><OwnerMetricRow label={t("dashboard.kpis.roas")} value={roas} /></div> : <EmptyState title={t("dashboard.advertising.emptyTitle")} description={t("dashboard.advertising.emptyDescription")} />}</ChartCard>
           <ChartCard title={t("dashboard.inventoryAlerts.ownerTitle")} subtitle={t("dashboard.inventoryAlerts.ownerSubtitle")}>{hasProductsData ? <div className="grid min-w-0 gap-2 sm:grid-cols-3"><OwnerMetricRow label={t("dashboard.inventoryAlerts.lowStock")} value={lowStockCount} helper={lowStockCount ? t("dashboard.inventoryAlerts.lowStockHelp", { count: lowStockCount }) : t("dashboard.inventoryAlerts.healthy")} /><OwnerMetricRow label={t("dashboard.inventoryAlerts.outOfStock")} value={outOfStockCount} /><OwnerMetricRow label={t("dashboard.inventoryAlerts.stockUnits")} value={inventory.data?.total_stock_units ?? 0} /></div> : <EmptyState title={t("dashboard.inventoryAlerts.emptyTitle")} description={t("dashboard.inventoryAlerts.emptyDescription")} />}</ChartCard>
         </section>
 
         <section data-dashboard-operational-lists className="grid min-w-0 gap-4 xl:grid-cols-12">
-          <div className="min-w-0 xl:col-span-6"><RecentOrdersTable orders={(orders.data ?? []).slice(0, 8)} currencyCode={currencyCode} showProfit={canSeeProfit} /></div>
-          <div className="min-w-0 xl:col-span-3"><NotificationsCard items={dashboardNotifications} /></div>
-          <div className="min-w-0 xl:col-span-3"><ActivityFeed events={dashboardActivity} /></div>
+          <div className="min-w-0 xl:col-span-8"><RecentOrdersTable orders={(orders.data ?? []).slice(0, 8)} currencyCode={currencyCode} showProfit={canSeeProfit} /></div>
+          <div className="min-w-0 xl:col-span-4"><ActivityFeed events={dashboardActivity} /></div>
         </section>
 
         <section className="grid min-w-0 gap-4 xl:grid-cols-[1fr_0.8fr]">
           <TopProductsCard products={topProductViews} currencyCode={currencyCode} showProfit={canSeeProfit} />
           <QuickActionsCard />
         </section>
+        </> : null}
 
       </WorkspacePage>
   );
