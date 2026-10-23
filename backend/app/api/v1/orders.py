@@ -9,7 +9,7 @@ from app.dependencies.rbac import get_workspace_id, require_min_role
 from app.models.order import OrderStatus
 from app.models.role import RoleName
 from app.models.user import User
-from app.schemas.order import OrderCreate, OrderDashboardResponse, OrderResponse, OrderStatusUpdate, OrderUpdate
+from app.schemas.order import HistoricalEstimatedCostUpsert, OrderCreate, OrderDashboardResponse, OrderResponse, OrderStatusUpdate, OrderUpdate
 from app.schemas.shipment import ShipmentCreate, ShipmentResponse
 from app.services.order_service import OrderService, OrderServiceError
 from app.services.shipment_service import ShipmentService, ShipmentServiceError
@@ -57,6 +57,39 @@ def get_order(order_id: UUID, workspace_id: UUID = Depends(get_workspace_id), db
 def update_order(order_id: UUID, payload: OrderUpdate, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.MANAGER)), db: Session = Depends(get_db)) -> OrderResponse:
     try:
         order = OrderService(db).update(workspace_id, order_id, payload, current_user.id)
+    except OrderServiceError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    return order
+
+
+@router.put("/{order_id}/estimated-cost", response_model=OrderResponse)
+def set_estimated_cost(
+    order_id: UUID,
+    payload: HistoricalEstimatedCostUpsert,
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+) -> OrderResponse:
+    try:
+        order = OrderService(db).set_historical_cost_estimate(workspace_id, order_id, payload, current_user.id)
+    except OrderServiceError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    return order
+
+
+@router.delete("/{order_id}/estimated-cost", response_model=OrderResponse)
+def clear_estimated_cost(
+    order_id: UUID,
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+) -> OrderResponse:
+    try:
+        order = OrderService(db).clear_historical_cost_estimate(workspace_id, order_id, current_user.id)
     except OrderServiceError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     if order is None:

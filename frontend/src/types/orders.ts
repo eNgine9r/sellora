@@ -1,5 +1,13 @@
 export type OrderStatus = "NEW" | "CONFIRMED" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "RETURNED" | "CANCELLED";
 export type PaymentStatus = "PENDING" | "PAID" | "COD" | "REFUNDED";
+export type HistoricalCostSource = "SHEET_ROW_MATCH" | "PRICE_MEDIAN" | "PRICE_BAND" | "MANUAL";
+export type HistoricalCostConfidence = "MULTI_SIGNAL_MATCH" | "PRICE_ONLY" | "LOW" | "MANUAL_REVIEW";
+
+export type HistoricalEstimatedCostPayload = {
+  amount: number;
+  source: HistoricalCostSource;
+  reference: string | null;
+};
 
 export type OrderItem = {
   id: string;
@@ -41,6 +49,10 @@ export type Order = {
   is_historical: boolean;
   revenue: string;
   product_cost: string;
+  estimated_product_cost: string | null;
+  estimated_cost_source: HistoricalCostSource | null;
+  estimated_cost_confidence: HistoricalCostConfidence | null;
+  estimated_cost_reference: string | null;
   ad_cost: string;
   shipping_cost: string;
   cod_fee: string;

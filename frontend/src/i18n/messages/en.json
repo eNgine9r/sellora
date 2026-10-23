@@ -685,6 +685,35 @@
     "unlinkedHistoryNotice": "Historical sales without a verified customer link are not included here."
   },
   "orders": {
+    "historicalEstimate": {
+        "title": "Estimated historical product cost",
+        "notConfirmed": "Unverified",
+        "help": "Only for imported orders without confirmed product costs. Purchase price + inbound shipping from China, excluding advertising.",
+        "amount": "Estimated product cost",
+        "source": "Estimation method",
+        "confidence": "Confidence",
+        "reference": "Source link / row reference",
+        "referencePlaceholder": "For example: Google Sheets, row 4175",
+        "empty": "No estimate has been recorded.",
+        "save": "Save estimate",
+        "clear": "Clear estimate",
+        "validationAmount": "Enter a positive monetary amount with no more than two decimal places.",
+        "validationReference": "A source reference is required for matched rows.",
+        "saveError": "Failed to save the estimate.",
+        "exclusion": "This estimate does not affect confirmed COGS, payments, stock, or reported profit.",
+        "sources": {
+            "SHEET_ROW_MATCH": "Matched Google Sheets row",
+            "PRICE_MEDIAN": "Median for matching price",
+            "PRICE_BAND": "Price-band estimate",
+            "MANUAL": "Manual estimate"
+        },
+        "confidences": {
+            "MULTI_SIGNAL_MATCH": "Multi-signal match (not yet verified)",
+            "PRICE_ONLY": "Price-based only",
+            "LOW": "Low",
+            "MANUAL_REVIEW": "Manual, review required"
+        }
+    },
     "title": "Orders",
     "subtitle": "Create orders and track payment, profit, and delivery statuses.",
     "create": "Create order",
