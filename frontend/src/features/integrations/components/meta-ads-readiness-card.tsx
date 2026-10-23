@@ -23,6 +23,7 @@ function MetaAdsCard({ workspaceId, actorId, owner, authenticated, compact }: { 
   const [message, setMessage] = useState<string | null>(null);
   const [accountId, setAccountId] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [syncReview, setSyncReview] = useState(false);
   const [from, setFrom] = useState(new Date().toISOString().slice(0, 10));
   const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
   const status = useQuery({ queryKey: ["meta-ads-status", workspaceId], queryFn: () => fetchMetaAdsStatus(workspaceId), enabled: authenticated && Boolean(workspaceId), retry: false });
@@ -78,17 +79,26 @@ function MetaAdsCard({ workspaceId, actorId, owner, authenticated, compact }: { 
           {accounts.isSuccess && !accounts.data.accounts.length ? <p>{t("adsLive.noAccounts")}</p> : null}
           {accounts.data ? <>
             <p className="text-sm">{t("adsLive.currencyHelp", { currency: accounts.data.workspace_currency })}</p>
-            <label className="grid min-w-0 gap-2 text-sm font-semibold"><span>{t("adsLive.accountTitle")}</span><select className={input} value={accountId} disabled={pending} onChange={event => setAccountId(event.target.value)}><option value="">{t("adsLive.chooseAccount")}</option>{accounts.data.accounts.map(account => <option key={account.external_account_id} value={account.external_account_id} disabled={!account.selectable}>{account.name} · {account.currency} · {account.timezone}{!account.selectable ? " — " + t("adsLive.currencyMismatch") : ""}</option>)}</select></label>
-            <button className={button} disabled={pending || !accounts.data.accounts.some(account => account.external_account_id === accountId && account.selectable)} onClick={() => { void action(() => selectMetaAdsAccount(workspaceId, accountId), "adsLive.accountSaved"); }}>{t("adsLive.selectAccount")}</button>
+            <label className="grid min-w-0 gap-2 text-sm font-semibold"><span>{t("adsLive.accountTitle")}</span><select className={input} value={accountId} disabled={pending} onChange={event => { setAccountId(event.target.value); setSyncReview(false); }}><option value="">{t("adsLive.chooseAccount")}</option>{accounts.data.accounts.map(account => <option key={account.external_account_id} value={account.external_account_id} disabled={!account.selectable}>{account.name} · {account.currency} · {account.timezone}{!account.selectable ? " — " + t("adsLive.currencyMismatch") : ""}</option>)}</select></label>
+            <button className={button} disabled={pending || !accounts.data.accounts.some(account => account.external_account_id === accountId && account.selectable)} onClick={() => { setSyncReview(false); void action(() => selectMetaAdsAccount(workspaceId, accountId), "adsLive.accountSaved"); }}>{t("adsLive.selectAccount")}</button>
           </> : null}
           {!compact ? <>
             <p className="text-sm">{t("adsLive.rangeHelp", { timezone: data.timezone ?? "—" })}</p>
             <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-              <label className="grid min-w-0 gap-2"><span>{t("adsLive.from")}</span><input className={input} type="date" value={from} disabled={pending} onChange={event => setFrom(event.target.value)} /></label>
-              <label className="grid min-w-0 gap-2"><span>{t("adsLive.to")}</span><input className={input} type="date" value={to} disabled={pending} onChange={event => setTo(event.target.value)} /></label>
+              <label className="grid min-w-0 gap-2"><span>{t("adsLive.from")}</span><input className={input} type="date" value={from} disabled={pending} onChange={event => { setFrom(event.target.value); setSyncReview(false); }} /></label>
+              <label className="grid min-w-0 gap-2"><span>{t("adsLive.to")}</span><input className={input} type="date" value={to} disabled={pending} onChange={event => { setTo(event.target.value); setSyncReview(false); }} /></label>
             </div>
             {!datesValid ? <p role="alert">{t("adsLive.errors.invalid_date_range")}</p> : null}
-            <button className={button} disabled={pending || !data.can_sync || !datesValid} onClick={() => { void action(() => syncMetaAds(workspaceId, from, to), "adsLive.syncSuccess"); }}>{t(pending ? "common.loading" : "adsLive.sync")}</button>
+            {!syncReview ? <button className={button} disabled={pending || !data.can_sync || !datesValid} onClick={() => setSyncReview(true)}>{t("adsLive.reviewSync")}</button> : <div className="grid gap-3 rounded-xl border border-indigo-300 bg-indigo-50 p-4 text-sm text-slate-900 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-white" data-meta-ads-sync-review>
+              <h4 className="font-bold">{t("adsLive.syncReviewTitle")}</h4>
+              <p>{data.account_name ?? t("adsLive.chooseAccount")} · {data.currency ?? "—"} · {data.timezone ?? "—"}</p>
+              <p>{from} — {to}</p>
+              <p className="text-slate-600 dark:text-slate-300">{t("adsLive.syncReviewNotice")}</p>
+              <div className="flex flex-wrap gap-2">
+                <button className={button + " bg-indigo-600 text-white"} disabled={pending || !data.can_sync || !datesValid} onClick={() => { setSyncReview(false); void action(() => syncMetaAds(workspaceId, from, to), "adsLive.syncSuccess"); }}>{t(pending ? "common.loading" : "adsLive.confirmSync")}</button>
+                <button className={button} disabled={pending} onClick={() => setSyncReview(false)}>{t("actions.cancel")}</button>
+              </div>
+            </div>}
             {!data.sync_enabled ? <p>{t("adsLive.errors.sync_disabled")}</p> : null}
           </> : null}
           <p className="text-sm">{t("adsLive.lastSync")}: {data.last_synced_at ? new Date(data.last_synced_at).toLocaleString() : t("adsLive.never")}</p>

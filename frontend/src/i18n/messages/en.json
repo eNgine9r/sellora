@@ -2400,6 +2400,10 @@
     "deleteMetric": "Delete metric",
     "readOnly": "Read-only",
     "reach": "Reach",
-    "roi": "ROI"
+    "roi": "ROI",
+    "reviewSync": "Review before syncing",
+    "syncReviewTitle": "Confirm advertising metrics import",
+    "syncReviewNotice": "Check the ad account and date range. This confirms the parameters; it is not a row-by-row database change preview. If manual or CSV data conflict, the server rejects the entire import. Orders, revenue and profit are unchanged.",
+    "confirmSync": "Confirm metrics import"
   }
 }
