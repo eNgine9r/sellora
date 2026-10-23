@@ -46,7 +46,7 @@ export function InstagramMessagingIntegrationCard({ workspaceId }: { workspaceId
   const primaryClass = "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-60";
 
   return (
-    <section className="relative grid w-full min-w-0 max-w-full content-start gap-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#15172A] sm:p-6" data-instagram-integration-summary>
+    <section className="relative grid w-full min-w-0 max-w-full overflow-hidden content-start gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#15172A] sm:p-6" data-instagram-integration-summary>
       <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#f58529,#dd2a7b,#8134af,#515bd4)]" aria-hidden="true" />
       <div className="flex min-w-0 items-start gap-3">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-500/15 dark:text-fuchsia-300">
