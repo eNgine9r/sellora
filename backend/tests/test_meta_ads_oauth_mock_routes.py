@@ -164,7 +164,7 @@ def test_disconnect_returns_safe_non_persistent_result() -> None:
 
 def test_route_source_has_no_db_writes_live_http_or_real_meta_domains() -> None:
     route_source = Path("app/api/v1/meta_ads_mock.py").read_text()
-    package_source = "\n".join(path.read_text() for path in Path("app/integrations/meta_ads").glob("*.py"))
+    package_source = "\n".join((Path("app/integrations/meta_ads") / name).read_text() for name in ("oauth_mock.py", "oauth_state.py", "fake_client.py", "read_only_client.py", "audit_stub.py"))
 
     assert ".commit(" not in route_source
     assert ".flush(" not in route_source

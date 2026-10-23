@@ -301,7 +301,12 @@
     "headerExploreCta": "Explore features"
   },
   "dashboard": {
-    "codReconciliation": {"title": "COD reconciliation", "received": "COD receipts (registers)", "pending": "Unverified historical amounts", "unverified": "Unverified, all-time archive"},
+    "codReconciliation": {
+      "title": "COD reconciliation",
+      "received": "COD receipts (registers)",
+      "pending": "Unverified historical amounts",
+      "unverified": "Unverified, all-time archive"
+    },
     "eyebrow": "Sellora Dashboard",
     "title": "CRM for Instagram stores",
     "subtitle": "Leads, customers, orders, inventory, shipments, advertising, finance, and analytics in one modern SaaS interface.",
@@ -687,33 +692,33 @@
   },
   "orders": {
     "historicalEstimate": {
-        "title": "Estimated historical product cost",
-        "notConfirmed": "Unverified",
-        "help": "Only for imported orders without confirmed product costs. Purchase price + inbound shipping from China, excluding advertising.",
-        "amount": "Estimated product cost",
-        "source": "Estimation method",
-        "confidence": "Confidence",
-        "reference": "Source link / row reference",
-        "referencePlaceholder": "For example: Google Sheets, row 4175",
-        "empty": "No estimate has been recorded.",
-        "save": "Save estimate",
-        "clear": "Clear estimate",
-        "validationAmount": "Enter a positive monetary amount with no more than two decimal places.",
-        "validationReference": "A source reference is required for matched rows.",
-        "saveError": "Failed to save the estimate.",
-        "exclusion": "This estimate does not affect confirmed COGS, payments, stock, or reported profit.",
-        "sources": {
-            "SHEET_ROW_MATCH": "Matched Google Sheets row",
-            "PRICE_MEDIAN": "Median for matching price",
-            "PRICE_BAND": "Price-band estimate",
-            "MANUAL": "Manual estimate"
-        },
-        "confidences": {
-            "MULTI_SIGNAL_MATCH": "Multi-signal match (not yet verified)",
-            "PRICE_ONLY": "Price-based only",
-            "LOW": "Low",
-            "MANUAL_REVIEW": "Manual, review required"
-        }
+      "title": "Estimated historical product cost",
+      "notConfirmed": "Unverified",
+      "help": "Only for imported orders without confirmed product costs. Purchase price + inbound shipping from China, excluding advertising.",
+      "amount": "Estimated product cost",
+      "source": "Estimation method",
+      "confidence": "Confidence",
+      "reference": "Source link / row reference",
+      "referencePlaceholder": "For example: Google Sheets, row 4175",
+      "empty": "No estimate has been recorded.",
+      "save": "Save estimate",
+      "clear": "Clear estimate",
+      "validationAmount": "Enter a positive monetary amount with no more than two decimal places.",
+      "validationReference": "A source reference is required for matched rows.",
+      "saveError": "Failed to save the estimate.",
+      "exclusion": "This estimate does not affect confirmed COGS, payments, stock, or reported profit.",
+      "sources": {
+        "SHEET_ROW_MATCH": "Matched Google Sheets row",
+        "PRICE_MEDIAN": "Median for matching price",
+        "PRICE_BAND": "Price-band estimate",
+        "MANUAL": "Manual estimate"
+      },
+      "confidences": {
+        "MULTI_SIGNAL_MATCH": "Multi-signal match (not yet verified)",
+        "PRICE_ONLY": "Price-based only",
+        "LOW": "Low",
+        "MANUAL_REVIEW": "Manual, review required"
+      }
     },
     "title": "Orders",
     "subtitle": "Create orders and track payment, profit, and delivery statuses.",
@@ -1090,7 +1095,7 @@
     "source": "Source",
     "manualSource": "Manual/import",
     "metaReadySource": "Meta-ready mapping",
-    "mappingHint": "External campaign/adset/ad IDs will appear in details after safe Meta Ads sync is added.",
+    "mappingHint": "Imported campaigns and daily metrics retain their Meta Ads identifiers.",
     "importMetricsFirst": "Import advertising metrics first to see ROAS, CPA, and CPL.",
     "roasExplanation": "ROAS shows how much revenue 1 UAH of ad spend brings.",
     "cpaExplanation": "CPA shows the average cost of one advertising-driven order.",
@@ -1121,10 +1126,10 @@
     "cplShortExplanation": "Average cost of one lead.",
     "conversionRateShortExplanation": "What share of leads became orders.",
     "costPerMessageShortExplanation": "Average cost of one message.",
-    "manualImportInsightSource": "Insights use only manual or CSV-imported advertising metrics.",
-    "metaFutureWorkInsight": "Meta Ads API sync remains future work, not an active integration.",
+    "manualImportInsightSource": "Insights use daily advertising metrics, including Meta Ads imports.",
+    "metaFutureWorkInsight": "Revenue and order metrics require CRM entries or attribution.",
     "noMisleadingInsight": "When spend or enough events are missing, Sellora shows a safe status instead of a scaling recommendation.",
-    "stagingBlockedInsight": "Advertising import is not marked pilot-ready while manual staging QA remains blocked.",
+    "stagingBlockedInsight": "Evaluate campaigns after checking spend and CRM data completeness.",
     "noCampaignInsights": "There is not enough advertising data to compare campaigns yet.",
     "decisionProblemLeadsNoOrders": "Leads exist, but there are no orders — check Direct follow-up or the offer.",
     "decisionWatchWeakConversion": "Leads and orders exist, but conversion is below the expected level.",
@@ -1139,7 +1144,7 @@
     "manualAttributionManual": "Attribution is manual.",
     "manualAttributionLinkedOnly": "Sellora counts only orders where an advertising campaign was selected manually.",
     "manualAttributionUnattributedValid": "Orders without a campaign remain valid and are not treated as errors.",
-    "manualAttributionMetaFuture": "Meta Ads API attribution is future work and is not active now.",
+    "manualAttributionMetaFuture": "Meta Ads import does not create sales attribution automatically.",
     "readinessEyebrow": "Pilot readiness gate",
     "readinessTitle": "Advertising module status",
     "readinessDescription": "This block helps the owner and QA team see what works now and what still needs final runtime/staging validation. It does not mean production-ready status.",
@@ -1155,7 +1160,17 @@
     "readinessPendingPostgresMigration": "PostgreSQL runtime validation for the attribution migration",
     "readinessPendingBrowserMobileQa": "browser/mobile QA for leads, orders, and advertising",
     "readinessMetaFuture": "future stage, not active now",
-    "safeZeroDenominator": "Shown as unavailable when spend is missing or zero."
+    "safeZeroDenominator": "Shown as unavailable when spend is missing or zero.",
+    "fxEvidence": "Original: {amount} {currency}; NBU rate: {rate} on {date}.",
+    "connectedSubtitle": "Track advertising spend and results from Meta Ads, manual entries and CSV.",
+    "mixedSource": "Meta Ads and manual/CSV data",
+    "availableSources": "The owner can connect Meta Ads in integration settings. Manual entry and CSV import are also available.",
+    "deliveryOnlySync": "Meta Ads updates spend, impressions, clicks and conversations started. Orders, revenue and profit remain CRM data.",
+    "crmAttributionNotice": "Link orders to campaigns in CRM to evaluate sales. Missing attribution does not mean no sales.",
+    "campaignMetricsSource": "Daily metrics",
+    "metaOwnerSettings": "Owner connection and manual import are available in integration settings.",
+    "addMoreMetrics": "Add advertising data",
+    "importAlternative": "Update Meta Ads in integration settings or upload CSV."
   },
   "analytics": {
     "title": "Analytics",
@@ -2431,7 +2446,8 @@
       "NETWORK_ERROR": "Meta is unavailable. Try later.",
       "MALFORMED_RESPONSE": "Meta returned an unexpected response. Try later.",
       "UNKNOWN_ERROR": "Could not retrieve Meta data. Try later.",
-      "provider_metric_read_only": "Meta Ads controls delivery fields and date. Refresh metrics and edit local CRM fields only."
+      "provider_metric_read_only": "Meta Ads controls delivery fields and date. Refresh metrics and edit local CRM fields only.",
+      "exchange_rate_unavailable": "NBU rates are unavailable for some dates. No advertising spend was imported. Try again later."
     },
     "impressions": "Impressions",
     "clicks": "Clicks",
@@ -2459,7 +2475,8 @@
       "whyUnavailable": "Why can't I connect?",
       "connectionSettings": "Manage connection",
       "changeAccount": "Change ad account"
-    }
+    },
+    "dailyNbuConversion": "USD spend is converted to UAH using the official NBU rate for each advertising day. The original amount, rate and date are retained."
   },
   "integrationHub": {
     "pageDescription": "Connect and manage services without extra complexity.",

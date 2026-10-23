@@ -30,6 +30,7 @@ export function MetaAdsReadinessCard({ compact = false }: { compact?: boolean })
     <MetaAdsCard
       key={(auth.currentWorkspaceId ?? "") + ":" + (auth.currentUser?.id ?? "")}
       workspaceId={auth.currentWorkspaceId ?? ""}
+      workspaceCurrency={auth.currentWorkspace?.currency_code ?? "UAH"}
       actorId={auth.currentUser?.id ?? ""}
       owner={auth.currentWorkspace?.role === "OWNER"}
       authenticated={auth.status === "authenticated"}
@@ -39,9 +40,9 @@ export function MetaAdsReadinessCard({ compact = false }: { compact?: boolean })
 }
 
 function MetaAdsCard({
-  workspaceId, actorId, owner, authenticated, compact,
+  workspaceId, workspaceCurrency, actorId, owner, authenticated, compact,
 }: {
-  workspaceId: string; actorId: string; owner: boolean; authenticated: boolean; compact: boolean;
+  workspaceId: string; workspaceCurrency: string; actorId: string; owner: boolean; authenticated: boolean; compact: boolean;
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
@@ -166,6 +167,7 @@ function MetaAdsCard({
                 ))}
               </select>
             </label>
+            {selected?.currency === "USD" && workspaceCurrency === "UAH" ? <p className={subdued}>{t("adsLive.dailyNbuConversion")}</p> : null}
             <button
               type="button"
               className={primary}
@@ -238,6 +240,8 @@ function MetaAdsCard({
               </p>
             </div>
           ) : null}
+
+          {connected && data.currency === "USD" && workspaceCurrency === "UAH" ? <p className={subdued}>{t("adsLive.dailyNbuConversion")}</p> : null}
 
           {needsAccount && owner ? (
             <div className="grid gap-3 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 dark:border-indigo-400/15 dark:bg-indigo-400/5">

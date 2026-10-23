@@ -78,7 +78,9 @@ class MetaAdsStagingValidationService:
             return self._not_ready("sync_must_remain_disabled", "Meta Ads staging validation is not available yet.", checks)
         checks.append(self._check("production_sync_disabled", True, None, "Meta Ads production sync is disabled."))
 
-        client = self.client or FakeMetaAdsReadOnlyClient()
+        if self.client is None:
+            return self._not_ready("use_live_accounts", "Use live Meta Ads account selection and manual sync.", checks)
+        client = self.client
         mode = "fake" if isinstance(client, FakeMetaAdsReadOnlyClient) else "live_read_only"
         try:
             accounts = client.list_ad_accounts()

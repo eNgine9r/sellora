@@ -67,3 +67,9 @@ def health() -> dict[str, object]:
         "meta_webhook_processing_enabled": settings.meta_instagram_webhook_processing_enabled,
         "meta_webhook_worker_running": bool(getattr(app.state, "instagram_webhook_worker_running", False)),
     }
+
+
+# Redact OAuth credentials before access logs are emitted.
+from app.middleware.meta_ads_oauth_redaction import MetaAdsOAuthQueryRedactionMiddleware
+app.add_middleware(MetaAdsOAuthQueryRedactionMiddleware,
+                   callback_path=f"{settings.api_v1_prefix}/integrations/meta-ads/oauth/callback")
