@@ -22,8 +22,11 @@ def _create_token(subject: str, token_type: str, expires_delta: timedelta, extra
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def create_access_token(user_id: UUID) -> str:
-    return _create_token(str(user_id), "access", timedelta(minutes=settings.jwt_expire_minutes))
+def create_access_token(user_id: UUID, session_id: UUID | None = None) -> str:
+    # New cookie-session JWTs are bound to their revocable server session.
+    # Existing legacy tokens have no sid and remain valid during migration.
+    extra = {"sid": str(session_id)} if session_id is not None else None
+    return _create_token(str(user_id), "access", timedelta(minutes=settings.jwt_expire_minutes), extra)
 
 
 def create_refresh_token(user_id: UUID) -> str:
