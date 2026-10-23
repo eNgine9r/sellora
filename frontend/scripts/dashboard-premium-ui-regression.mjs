@@ -10,6 +10,8 @@ const en = JSON.parse(read("frontend/src/i18n/messages/en.json"));
 assert(page.includes("data-dashboard-kpi-row") && page.includes("DashboardMetricCard"), "KPI overview remains visible");
 assert(page.indexOf("data-dashboard-analytics-row") < page.indexOf("data-dashboard-operational-row"), "sales chart receives priority");
 assert(page.includes("DashboardActionList") && premium.includes("href={item.href}"), "alerts have functional destinations");
+assert(premium.includes('text-[clamp(1.125rem,4.6vw,2rem)]') && !premium.includes('min-w-0 truncate text-[clamp'), "mobile KPI numbers are not cut off");
+assert(premium.includes('<ul className="grid gap-1">') && !premium.includes('role="listitem"'), "action links remain accessible links within a semantic list");
 assert(page.includes("DashboardFunnel") && premium.includes("stage.value / maxValue"), "funnel scales real event counts");
 assert(page.includes("funnel.orderRatio") && !page.includes("funnel.orderRate"), "unlinked lead/order counts are not called conversion");
 assert(page.includes("!canSeeProfit ? <EmptyState"), "role-restricted chart does not imply empty sales");
