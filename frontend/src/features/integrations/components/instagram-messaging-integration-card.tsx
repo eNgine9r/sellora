@@ -83,11 +83,11 @@ export function InstagramMessagingIntegrationCard({ workspaceId }: { workspaceId
         </Link>
       ) : null}
       {connectMutation.isError ? <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{t("integrationHub.connectError")}</p> : null}
-      <div className="border-t border-slate-100 pt-3 dark:border-white/10">
+      {(actions || showConnect) ? <div className="border-t border-slate-100 pt-3 dark:border-white/10">
         <Link href="/settings/integrations/instagram" className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-300">
           <Settings2 className="size-4" aria-hidden="true" />{t("integrationHub.manageConnection")}
         </Link>
-      </div>
+      </div> : null}
     </section>
   );
 }
