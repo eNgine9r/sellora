@@ -1,14 +1,14 @@
 """Add advisory historical COGS estimate fields isolated from confirmed finance.
 
-Revision ID: 202607220037
-Revises: 202607220036
+Revision ID: 202610230043
+Revises: 202610220042
 """
 
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = "202607220037"
-down_revision: str | None = "202607220036"
+revision: str = "202610230043"
+down_revision: str | None = "202610220042"
 branch_labels = None
 depends_on = None
 

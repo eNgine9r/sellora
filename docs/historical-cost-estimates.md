@@ -10,7 +10,7 @@ The external reconciliation report has 607 archived TТН records and 22 unique 
 
 ## Storage, service and API
 
-Alembic revision 202607220037 adds nullable fields to orders:
+Alembic revision 202610230043 adds nullable fields to orders:
 
 - **estimated_product_cost**: strictly positive Decimal(12,2), or null.
 - **estimated_cost_source**: SHEET_ROW_MATCH, PRICE_MEDIAN, PRICE_BAND, or MANUAL.
