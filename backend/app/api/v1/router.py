@@ -13,6 +13,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.customers import router as customers_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.finance import router as finance_router
+from app.api.v1.cod_reconciliation import router as cod_reconciliation_router
 from app.api.v1.lead_sources import router as lead_sources_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.meta_ads import router as meta_ads_router
@@ -46,6 +47,7 @@ api_router.include_router(leads_router)
 api_router.include_router(customers_router)
 api_router.include_router(feedback_router)
 api_router.include_router(finance_router)
+api_router.include_router(cod_reconciliation_router)
 api_router.include_router(products_router)
 api_router.include_router(import_center_router)
 api_router.include_router(instagram_router)

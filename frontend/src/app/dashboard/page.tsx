@@ -25,6 +25,7 @@ import { fetchLeads } from "@/services/crm";
 import { fetchOnboardingStatus } from "@/services/onboarding";
 import { fetchOrders } from "@/services/orders";
 import { fetchProducts } from "@/services/products";
+import { fetchCodLedger } from "@/services/cod-reconciliation";
 import { TopProduct } from "@/types/analytics";
 import { Lead } from "@/types/crm";
 import { OrderStatus } from "@/types/orders";
@@ -60,6 +61,7 @@ export default function DashboardPage() {
   const previousFrom = previousRange.date_from || undefined;
   const previousTo = previousRange.date_to || undefined;
 
+  const codLedger = useQuery({ queryKey: ["cod-reconciliation", workspaceId, dateFrom, dateTo], queryFn: () => fetchCodLedger(dateFrom, dateTo), enabled });
   const backendDashboard = useQuery({ queryKey: ["dashboard-backend-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchDashboardSummary(workspaceId, undefined, dateFrom, dateTo), enabled });
   const previousBackendDashboard = useQuery({ queryKey: ["dashboard-backend-summary-previous", workspaceId, previousFrom, previousTo], queryFn: () => fetchDashboardSummary(workspaceId, undefined, previousFrom, previousTo), enabled: enabled && Boolean(previousFrom && previousTo) });
   const salesSummary = useQuery({ queryKey: ["dashboard-sales-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchSalesSummary(workspaceId, undefined, dateFrom, dateTo), enabled });
@@ -149,6 +151,18 @@ export default function DashboardPage() {
           <DashboardMetricCard label={t("dashboard.kpis.roas")} value={hasAdvertisingData ? roas : "—"} helper={hasAdvertisingData ? selectedPeriodLabel : t("dashboard.kpiHelpers.roasMissing")} trend={adSpend > 0 ? formatDeltaPercent(toFiniteNumber(backendDashboard.data?.advertising.roas ?? advertising.data?.roas), toFiniteNumber(previousBackendDashboard.data?.advertising.roas ?? previousAdvertising.data?.roas)) : undefined} unavailable={!hasAdvertisingData} explanation={t("dashboard.tooltips.roas")} />
         </section>
 
+        {codLedger.data ? <section className="grid gap-2 sm:grid-cols-2" aria-label={t("dashboard.codReconciliation.title")} data-dashboard-cod-payments="true">
+          <div className="min-w-0 rounded-xl border border-border-subtle bg-surface-1 p-3">
+            <p className="text-xs font-medium text-text-secondary">{t("dashboard.codReconciliation.received")}</p>
+            <p className="mt-1 text-lg font-bold">{formatMoney(codLedger.data.matched_receipts, currencyCode)}</p>
+            <p className="text-xs text-text-muted">{selectedPeriodLabel} · {codLedger.data.matched_count}</p>
+          </div>
+          <div className="min-w-0 rounded-xl border border-border-subtle bg-surface-1 p-3">
+            <p className="text-xs font-medium text-text-secondary">{t("dashboard.codReconciliation.pending")}</p>
+            <p className="mt-1 text-lg font-bold">{formatMoney(codLedger.data.pending_historical_amount, currencyCode)}</p>
+            <p className="text-xs text-text-muted">{t("dashboard.codReconciliation.unverified")} · {codLedger.data.historical_amount_unverified_count}</p>
+          </div>
+        </section> : null}
         <section data-dashboard-analytics-row className="grid min-w-0 items-start gap-3 xl:grid-cols-12">
           <div className="min-w-0 xl:col-span-8">
             <ChartCard title={t("dashboard.charts.salesProfitTitle")} subtitle={t("dashboard.charts.salesProfitSubtitle")}>
