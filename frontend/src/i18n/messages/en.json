@@ -438,12 +438,12 @@
       "ordersHasData": "Orders for period: {period}.",
       "ordersZero": "No orders in the selected period yet.",
       "revenueHasData": "Revenue for period: {period}.",
-      "revenueZero": "Revenue appears after paid or completed orders.",
+      "revenueZero": "No revenue for the selected period. Choose All time to review past sales.",
       "profitMissing": "Not enough data to calculate profit. Check product costs.",
       "profitRestricted": "Profit is available to owners or analysts.",
       "roasHasData": "ROAS shows ad return for the selected period.",
       "roasMissing": "Add ad spend to see advertising return.",
-      "revenueNoRecorded": "No recorded order revenue. Check payments and imports."
+      "revenueNoRecorded": "No recorded revenue for the selected period. Choose All time to review historical sales."
     },
     "ownerAlerts": {
       "title": "What needs attention",
