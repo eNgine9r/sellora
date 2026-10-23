@@ -17,6 +17,7 @@ from app.models.product import Product
 from app.models.product_variant import ProductVariant
 from app.models.import_job import ImportJob, ImportJobStatus
 from app.models.finance_adjustment import FinanceAdjustment, FinanceAdjustmentCategory, FinanceAdjustmentSource, FinanceAdjustmentType
+from app.models.cod_payment_evidence import CodPaymentEvidence, CodEvidenceSource, CodEvidenceStatus
 from app.models.integration_connection import IntegrationConnection, IntegrationProvider, IntegrationStatus
 from app.models.integration_credential import IntegrationCredential
 from app.models.import_job_log import ImportJobLog, ImportJobLogStatus

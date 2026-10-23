@@ -301,6 +301,7 @@
     "headerExploreCta": "Explore features"
   },
   "dashboard": {
+    "codReconciliation": {"title": "COD reconciliation", "received": "COD receipts (registers)", "pending": "Unverified historical amounts", "unverified": "Unverified, all-time archive"},
     "eyebrow": "Sellora Dashboard",
     "title": "CRM for Instagram stores",
     "subtitle": "Leads, customers, orders, inventory, shipments, advertising, finance, and analytics in one modern SaaS interface.",
