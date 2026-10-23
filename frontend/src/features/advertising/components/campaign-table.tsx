@@ -58,7 +58,7 @@ export function CampaignTable({ campaigns, selectedCampaignId, onSelect, onEdit,
                 <td className="px-1 py-2"><RowActionButtons entityLabel={campaign.name} editLabel={t("advertising.editCampaign")} archiveLabel={t("actions.archive")} onEdit={onEdit ? () => onEdit(campaign) : undefined} onArchive={onArchive ? () => onArchive(campaign) : undefined} /></td>
               </tr>
             ))}
-            {campaigns.length === 0 ? <tr><td className="p-6 text-center text-text-muted" colSpan={6}>{t("advertising.emptyCampaigns")} {t("advertising.manualImportFirst")}</td></tr> : null}
+            {campaigns.length === 0 ? <tr><td className="p-6 text-center text-text-muted" colSpan={6}>{t("advertising.emptyCampaigns")}</td></tr> : null}
           </tbody>
         </table>
       </div>
