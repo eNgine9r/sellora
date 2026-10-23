@@ -2404,6 +2404,21 @@
     "reviewSync": "Review before syncing",
     "syncReviewTitle": "Confirm advertising metrics import",
     "syncReviewNotice": "Check the ad account and date range. This confirms the parameters; it is not a row-by-row database change preview. If manual or CSV data conflict, the server rejects the entire import. Orders, revenue and profit are unchanged.",
-    "confirmSync": "Confirm metrics import"
+    "confirmSync": "Confirm metrics import",
+    "simple": {
+      "description": "Ad spend and results, all in one place.",
+      "chooseTitle": "Choose your ad account",
+      "chooseHelp": "Select the account Sellora will read advertising data from.",
+      "notReady": "Connection is not configured yet. You can still track ads manually.",
+      "openAdvertising": "Open advertising",
+      "updateMetrics": "Update ad metrics",
+      "periodTitle": "Choose a date range",
+      "timezoneHelp": "Account timezone: {timezone} · up to 91 days.",
+      "syncPending": "Advertising sync is currently unavailable.",
+      "safety": "No changes to campaigns, budgets or your manual data.",
+      "whyUnavailable": "Why can't I connect?",
+      "connectionSettings": "Manage connection",
+      "changeAccount": "Change ad account"
+    }
   }
 }
