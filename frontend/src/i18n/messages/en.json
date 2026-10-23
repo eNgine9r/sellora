@@ -2420,5 +2420,27 @@
       "connectionSettings": "Manage connection",
       "changeAccount": "Change ad account"
     }
+  },
+  "integrationHub": {
+    "pageDescription": "Connect and manage services without extra complexity.",
+    "instagramDescription": "Talk to customers directly from Sellora.",
+    "instagramConnectHint": "Connect Instagram to see your messages.",
+    "instagramRepairHint": "Review your Instagram connection or notifications.",
+    "needsAttention": "Needs attention",
+    "openDirect": "Open Direct",
+    "fixConnection": "Fix connection",
+    "manageConnection": "Settings",
+    "connectError": "Could not start the connection. Please try again.",
+    "novaDescription": "Shipping labels and deliveries in one place.",
+    "ready": "Ready",
+    "needsSetup": "Setup needed",
+    "notConnected": "Not connected",
+    "novaReadyHint": "Shipment labels can be created.",
+    "novaSetupHint": "Complete setup to start creating shipping labels.",
+    "novaConnectHint": "Connect delivery for your orders.",
+    "statusUnavailable": "Could not check connection status.",
+    "openShipments": "Open shipments",
+    "completeSetup": "Finish setup",
+    "connectNova": "Set up delivery"
   }
 }
