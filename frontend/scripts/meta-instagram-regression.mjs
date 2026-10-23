@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 const root = existsSync("frontend/src") ? "frontend/" : "";
 const read = (path) => readFileSync(`${root}${path}`, "utf8");
 const settingsPage = read("src/app/settings/integrations/instagram/page.tsx");
+const novaPoshtaSettingsPage = read("src/app/settings/integrations/nova-poshta/page.tsx");
+const novaPoshtaOverview = read("src/features/integrations/components/nova-poshta-overview-card.tsx");
 const hubPage = read("src/app/settings/integrations/page.tsx");
 const settingsOverview = read("src/app/settings/page.tsx");
 const instagramCard = read("src/features/integrations/components/instagram-messaging-integration-card.tsx");
@@ -14,15 +16,17 @@ const uk = read("src/i18n/messages/uk.json");
 const checks = [
   ["Instagram settings route exists", settingsPage.includes("InstagramIntegrationPage") && settingsPage.includes("startInstagramConnect")],
   ["Instagram frontend uses backend API only", service.includes("/integrations/instagram/status") && !service.includes("META_APP_SECRET") && !service.includes("access_token")],
-  ["Integration Hub includes dedicated Instagram Direct card", hubPage.includes("InstagramMessagingIntegrationCard") && instagramCard.includes("instagramSettings.hub.title")],
-  ["Instagram Direct is separate from Meta Ads", hubPage.lastIndexOf("<InstagramMessagingIntegrationCard") < hubPage.lastIndexOf("<NovaPoshtaSettingsCard") && hubPage.lastIndexOf("<MetaAdsReadinessCard") > hubPage.lastIndexOf("<NovaPoshtaSettingsCard")],
+  ["Integration Hub includes dedicated Instagram Direct card", hubPage.includes("InstagramMessagingIntegrationCard") && instagramCard.includes("Instagram Direct")],
+  ["Instagram Direct is separate from Meta Ads", hubPage.lastIndexOf("<InstagramMessagingIntegrationCard") < hubPage.lastIndexOf("<NovaPoshtaOverviewCard") && hubPage.lastIndexOf("<MetaAdsReadinessCard") > hubPage.lastIndexOf("<NovaPoshtaOverviewCard")],
   ["Instagram status query is workspace scoped", instagramCard.includes('["instagram-connection-status", workspaceId]') && settingsPage.includes('["instagram-connection-status", workspaceId]') && settingsOverview.includes('["instagram-connection-status", workspaceId]')],
-  ["Instagram card exposes safe owner actions", instagramCard.includes("startInstagramConnect") && instagramCard.includes("validateInstagramConnection") && instagramCard.includes("disconnectInstagram") && instagramCard.includes("subscribeInstagramWebhooks") && instagramCard.includes("window.confirm")],
+  ["Instagram card exposes safe owner actions", instagramCard.includes("startInstagramConnect") && settingsPage.includes("validateInstagramConnection") && settingsPage.includes("disconnectInstagram") && settingsPage.includes("subscribeInstagramWebhooks") && settingsPage.includes("window.confirm")],
   ["Instagram card routes to settings and Direct", instagramCard.includes('href="/settings/integrations/instagram"') && instagramCard.includes('href="/direct"')],
+  ["Nova Poshta full controls moved behind dedicated route", novaPoshtaSettingsPage.includes("NovaPoshtaSettingsCard") && novaPoshtaSettingsPage.includes("updateNovaPoshtaWritePermission") && hubPage.includes("NovaPoshtaOverviewCard") && !hubPage.includes("NovaPoshtaSettingsCard")],
+  ["Nova Poshta overview keeps credential fields out of hub", novaPoshtaOverview.includes('href="/settings/integrations/nova-poshta"') && !novaPoshtaOverview.includes("masked_api_key}</")],
   ["Callback clears code/state from browser history", callbackPage.includes("window.history.replaceState") && !callbackPage.includes('params.get("code")') && !callbackPage.includes('params.get("state")')],
   ["Callback uses safe localized statuses", callbackPage.includes("safeStatuses") && callbackPage.includes("profile_failed") && callbackPage.includes("instagramSettings.callback.status")],
   ["Ukrainian localization includes Instagram card, webhook and callback copy", uk.includes("Отримуйте повідомлення Instagram") && uk.includes("Не вдалося перевірити профіль Instagram") && uk.includes("Активувати webhook") && uk.includes("Webhook неактивний")],
-  ["Webhook status contract is surfaced without secrets", service.includes("/integrations/instagram/webhooks/subscribe") && service.includes("/integrations/instagram/webhooks/status") && instagramCard.includes("webhook_active") && instagramCard.includes("confirmed_webhook_fields") && !instagramCard.includes("access_token")],
+  ["Webhook status contract is surfaced without secrets", service.includes("/integrations/instagram/webhooks/subscribe") && service.includes("/integrations/instagram/webhooks/status") && instagramCard.includes("webhook_active") && settingsPage.includes("confirmed_webhook_fields") && !instagramCard.includes("access_token")],
   ["Direct reply prepare/send services exist", directService.includes("reply/prepare") && directService.includes("reply/send") && directService.includes("Idempotency-Key")],
   ["Participant profile refresh uses backend endpoint only", directService.includes("participant-profile/refresh") && !directService.includes("graph.instagram.com")],
   ["Participant profile contract includes safe Meta fields", directTypes.includes("participant_profile_picture_url") && directTypes.includes("participant_follower_count") && directTypes.includes("participant_is_verified_user") && directTypes.includes("participant_is_user_follow_business")],

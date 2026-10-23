@@ -2420,5 +2420,27 @@
       "connectionSettings": "Керування підключенням",
       "changeAccount": "Змінити рекламний кабінет"
     }
+  },
+  "integrationHub": {
+    "pageDescription": "Підключайте сервіси та керуйте ними без зайвих налаштувань.",
+    "instagramDescription": "Спілкування з покупцями просто в Sellora.",
+    "instagramConnectHint": "Підключіть свій Instagram, щоб бачити повідомлення.",
+    "instagramRepairHint": "Перевірте доступ або сповіщення з Instagram.",
+    "needsAttention": "Потребує уваги",
+    "openDirect": "Відкрити Direct",
+    "fixConnection": "Виправити підключення",
+    "manageConnection": "Налаштування",
+    "connectError": "Не вдалося почати підключення. Спробуйте ще раз.",
+    "novaDescription": "ТТН та відправлення в одному місці.",
+    "ready": "Готово до роботи",
+    "needsSetup": "Потрібне налаштування",
+    "notConnected": "Не підключено",
+    "novaReadyHint": "Створення ТТН доступне.",
+    "novaSetupHint": "Завершіть налаштування, щоб створювати ТТН.",
+    "novaConnectHint": "Підключіть доставку для своїх замовлень.",
+    "statusUnavailable": "Не вдалося перевірити підключення.",
+    "openShipments": "Відкрити відправлення",
+    "completeSetup": "Завершити налаштування",
+    "connectNova": "Налаштувати доставку"
   }
 }
