@@ -84,6 +84,19 @@ class ProfitCalculationService:
 
     @classmethod
     def order_net_profit(cls, order: ProfitOrder) -> Decimal:
+        # Historical parcels may be marked received and paid by the shop owner
+        # using the carrier's declared value as sales revenue. When landed COGS
+        # is unknown this is NOT gross/net profit. Never let a routine order
+        # edit turn the entire sale amount into reported profit.
+        evidence = getattr(order, "historical_value_evidence", None)
+        attestation = evidence.get("owner_attestation") if isinstance(evidence, dict) else None
+        if (
+            getattr(order, "is_historical", False)
+            and isinstance(attestation, dict)
+            and attestation.get("profit_cost_status") == "UNKNOWN"
+            and cls.money(order.product_cost) == MONEY_ZERO
+        ):
+            return MONEY_ZERO
         return cls.components(order).net_profit
 
     @classmethod
