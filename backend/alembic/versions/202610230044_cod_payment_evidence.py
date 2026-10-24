@@ -45,11 +45,11 @@ def upgrade() -> None:
     op.execute("REVOKE ALL PRIVILEGES ON TABLE public.cod_payment_evidence FROM PUBLIC")
     for role_name in ("anon", "authenticated"):
         op.execute(f"""
-            DO $ BEGIN
+            DO $roles$ BEGIN
                 IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{role_name}') THEN
                     REVOKE ALL PRIVILEGES ON TABLE public.cod_payment_evidence FROM "{role_name}";
                 END IF;
-            END $
+            END $roles$
         """)
 
 
