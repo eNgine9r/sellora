@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 import logging
 import os
@@ -105,6 +106,17 @@ async def process_customer_data_extraction_job() -> str | None:
             raise
 
 
+def _run_async_db_job_in_worker_thread(job: Callable[[], Awaitable[str | None]]) -> str | None:
+    """Run async provider I/O and synchronous SQLAlchemy work off the API event loop.
+
+    These jobs use a synchronous SessionLocal around awaited Meta/AI requests.
+    Executing the whole coroutine in its own worker-thread event loop avoids
+    blocking the FastAPI event loop if a synchronous DB operation stalls.
+    Keep the session creation, use, and close on the same worker thread.
+    """
+    return asyncio.run(job())
+
+
 async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
     interval = webhook_poll_seconds()
     extraction_interval = customer_extraction_poll_seconds()
@@ -127,7 +139,9 @@ async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
             logger.exception("Instagram webhook worker batch failed")
 
         try:
-            history_status = await process_history_sync_job()
+            history_status = await asyncio.to_thread(
+                _run_async_db_job_in_worker_thread, process_history_sync_job
+            )
             if history_status:
                 logger.info(
                     "Instagram history sync job processed",
@@ -142,7 +156,9 @@ async def run_instagram_webhook_worker(stop_event: asyncio.Event) -> None:
         if monotonic_now >= next_extraction_at:
             next_extraction_at = monotonic_now + extraction_interval
             try:
-                extraction_status = await process_customer_data_extraction_job()
+                extraction_status = await asyncio.to_thread(
+                    _run_async_db_job_in_worker_thread, process_customer_data_extraction_job
+                )
                 if extraction_status:
                     logger.info(
                         "Direct customer data extraction processed",
