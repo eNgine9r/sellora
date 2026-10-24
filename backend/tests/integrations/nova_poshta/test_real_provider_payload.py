@@ -1,10 +1,15 @@
 from types import SimpleNamespace
+from uuid import uuid4
 
 from app.services.nova_poshta_provider_service import NovaPoshtaProviderShipmentService
 
 
 def test_real_provider_payload_contains_required_new_recipient_fields() -> None:
     shipment = SimpleNamespace(
+        workspace_id=uuid4(),
+        nova_poshta_city_ref="city-ref",
+        nova_poshta_warehouse_ref="warehouse-ref",
+        cod_amount=None,
         declared_value=100,
         city="Луцьк",
         warehouse="Відділення №1",
@@ -20,6 +25,12 @@ def test_real_provider_payload_contains_required_new_recipient_fields() -> None:
     }
 
     service = NovaPoshtaProviderShipmentService.__new__(NovaPoshtaProviderShipmentService)
+    service.settings = SimpleNamespace(
+        _require_connection=lambda ws: (None, "synthetic-key"),
+        client_factory=lambda key: SimpleNamespace(
+            resolve_recipient_warehouse=lambda city, warehouse: ("Луцьк", "Відділення №1")
+        ),
+    )
     payload = service._document_payload(shipment, settings)
 
     assert payload["NewAddress"] == "1"

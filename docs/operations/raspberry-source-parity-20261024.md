@@ -63,3 +63,16 @@ Poshta messages until release gates are passed. CI green is insufficient
 without live-image lineage and data-integrity evidence.
 
 Tracked follow-ups: #264 (source parity) and #326 (TTN history reconciliation).
+
+## Disposable migration canary result (2026-10-24)
+
+- Synthetic PostgreSQL **17-alpine** on an internal-only Docker network,
+  with no host ports, no live database credentials and no production volumes.
+- Upgraded the complete repository migration chain to revision
+  `202610230045`, then applied PR #327 migration to
+  `202610240046 (head)`: **PASS**.
+- Confirmed `direct_order_shipment_links` has 12 columns, RLS enabled,
+  and the workspace/conversation/shipment uniqueness constraint.
+- The disposable database and Docker network were removed on exit.
+- This is a schema-only canary; it does **not** substitute for a populated
+  production-like backup restore and authenticated end-to-end test.

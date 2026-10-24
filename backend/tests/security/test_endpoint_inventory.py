@@ -5,7 +5,7 @@ from fastapi.routing import APIRoute
 from app.main import app
 
 
-PUBLIC_ENDPOINTS = {"/health", "/api/v1/auth/login", "/api/v1/auth/refresh",
+PUBLIC_ENDPOINTS = {"/health", "/health/live", "/health/ready", "/api/v1/auth/login", "/api/v1/auth/refresh",
     "/api/v1/auth/session/login", "/api/v1/auth/session/refresh", "/api/v1/auth/session/logout"}
 PUBLIC_METHOD_ENDPOINTS = {("GET", "/api/v1/integrations/meta-ads/oauth/callback")}
 AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/me", "/api/v1/workspaces", "/api/v1/workspaces/demo",
@@ -60,14 +60,14 @@ OWNER_ONLY_ENDPOINTS = {
     ("POST", "/api/v1/integrations/instagram/webhooks/unsubscribe"),
 }
 EXPECTED_PRIMARY_COUNTS = {
-    "PUBLIC": 7,
+    "PUBLIC": 9,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 203,
+    "WORKSPACE_SCOPED": 210,
     "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 231
-EXPECTED_MUTATION_ROUTES = 133
+EXPECTED_TOTAL_ROUTES = 240
+EXPECTED_MUTATION_ROUTES = 135
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
