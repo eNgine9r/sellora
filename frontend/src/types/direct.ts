@@ -50,6 +50,30 @@ export type DirectMessage = {
   reaction_updated_at?: string | null;
 };
 
+export type DirectOrderEvidence = {
+  conversation_id: string;
+  verified_orders: Array<{
+    order_id: string;
+    order_number: string;
+    order_status: string;
+    payment_status: string;
+    is_historical: boolean;
+    shipment_id: string;
+    shipment_status: string;
+    tracking_masked: string;
+    source_message_id: string;
+    evidence_type: "EXACT_SHIPMENT_TTN";
+    confirmed_in_crm: boolean;
+  }>;
+  needs_review: Array<{
+    tracking_masked: string;
+    source_message_id: string;
+    reason: "SHIPMENT_NOT_IN_CRM" | "MULTIPLE_SHIPMENT_MATCHES" | "CUSTOMER_MISMATCH";
+  }>;
+  has_multiple_orders: boolean;
+  scan_truncated: boolean;
+};
+
 export type DirectLiveEvent = {
   message_id: string;
   conversation_id: string;

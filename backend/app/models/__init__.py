@@ -1,3 +1,4 @@
+from app.models.direct_order_shipment_link import DirectOrderShipmentLink
 from app.models.meta_instagram import *
 from app.models.ai_direct import *
 from app.models.instagram_participant_profile import *
