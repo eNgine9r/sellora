@@ -30,7 +30,7 @@ Migration `202610240046` adds `direct_order_shipment_links`:
 
 - `GET /api/v1/direct/conversations/{id}/order-evidence`: `ANALYST+`, masked read-only verified and review candidates; explicitly reports truncated scans.
 - `POST /api/v1/direct/conversations/{id}/order-evidence/confirm`: `MANAGER+`; the client must provide an exact set of order IDs freshly derived from evidence; one scoped transactional action creates/restores links and sanitized audit entries, or returns `409`.
-- The Direct thread displays each proven shipment and existing order, with a distinct warning for unmatched/ambiguous TTNs. Confirmation requires an explicit user action and a second confirmation prompt. Existing-order evidence suppresses the duplicate-order creation shortcut.
+- The Direct thread displays each proven shipment and existing order, with a distinct warning for unmatched/ambiguous TTNs. Confirmation requires an explicit user action and a second confirmation prompt. When prior orders are proven, a deliberate additional purchase remains possible and is explicitly labelled **Create a new order** rather than mistaken for the original sale.
 - Neither endpoint sends an Instagram message, calls Nova Poshta, or triggers a financial or inventory side effect.
 
 ## Controlled historical backfill
@@ -53,9 +53,19 @@ python -m scripts.direct_ttn_backfill \
 
 This is an **operator runbook, not permission to run on live data**. Do not execute a bulk mutation until source/runtime parity (#264), migration canary, RBAC and tenant tests, approval and backup are verified. A mismatching candidate count or truncated evidence aborts the write transaction.
 
+## Reproducible disposable PostgreSQL canary (tested)
+
+Run migrations 001→046 on a **fresh isolated PostgreSQL 16** container with no access to production. Then, inside an isolated backend container with the disposable `DATABASE_URL` and workspace-only synthetic data, run:
+
+```sh
+SELLORA_TTN_DISPOSABLE_CANARY=YES python scripts/verify_direct_ttn_postgres_canary.py
+```
+
+The script refuses to run without the explicit opt-in, checks revision 046 and refuses any database that already contains a workspace. The isolated execution verified exact TTN matching, two orders in one Direct conversation, idempotent retries, cross-tenant denial, source-message provenance, persisted audit entries and single-order legacy compatibility. The disposable database was deleted after verification. It **must never be pointed at the live Raspberry database**.
+
 ## Release gate
 
-As of 24 October 2026, live Raspberry includes event-loop monitoring, media cache and background-worker fixes absent from GitHub `main`. Deploying this branch as a full backend image **could regress live security/operations**. First reconcile live modules (#264, #266) and test immutable ARM64 image with current PostgreSQL revision 045→046, all migrations, and liveness/readiness checks. Frontend release must be coordinated with backend release to avoid temporary API errors.
+As of 24 October 2026, a SHA-256 manifest comparison found **58 Python-file differences** between the live Raspberry backend and this PR branch (including 14 live-only modules and four expected new feature modules). Live Raspberry includes event-loop monitoring, media cache, Nova Poshta services and background-worker fixes absent from GitHub `main`. Deploying this branch as a full backend image **could regress live security/operations**. First reconcile live modules (#264, #266) and test immutable ARM64 image with current PostgreSQL revision 045→046, all migrations, and liveness/readiness checks. Frontend release must be coordinated with backend release to avoid temporary API errors.
 
 ## Acceptance
 
