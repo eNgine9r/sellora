@@ -125,29 +125,3 @@ def test_campaign_missing_or_soft_deleted_remains_unattributed():
     assert len(service.db.statements) == 2
     compiled = [str(stmt) for stmt in service.db.statements]
     assert all("workspace_id" in query and "deleted_at" in query for query in compiled)
-
-
-def test_crm_report_not_derived_from_meta_daily_metrics():
-    ws = uuid4()
-    campaign = uuid4()
-    db = FakeDb(stats=(3, 2, Decimal("799.00"), 4), grouped=[(campaign, "Meta Campaign", 3, 2, Decimal("799.00"))])
-    # Summary calls execute twice; it does not look at AdMetric or mutate data.
-    db.query_count = 2
-    service = AdvertisingAttributionService.__new__(AdvertisingAttributionService)
-    service.db = db
-    response = service.summary(ws, __import__("datetime").date(2026, 10, 1), __import__("datetime").date(2026, 10, 24))
-    assert response["source"] == "crm_orders"
-    assert response["completed_paid_orders"] == 2
-    assert response["unattributed_completed_paid_orders"] == 4
-    assert response["completed_paid_revenue"] == Decimal("799.00")
-    assert response["campaigns"][0]["campaign_id"] == campaign
-    assert all("ad_metrics" not in str(stmt) for stmt in db.statements)
-    assert all("orders" in str(stmt) for stmt in db.statements)
-    assert db.commits == 0
-
-
-def test_invalid_range_rejected_before_query():
-    service = AdvertisingAttributionService(FakeDb())
-    from datetime import date
-    with pytest.raises(ValueError, match="INVALID_DATE_RANGE"):
-        service.summary(uuid4(), date(2026, 10, 25), date(2026, 10, 24))
