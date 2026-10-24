@@ -1,56 +1,76 @@
-# Sellora cinematic homepage — final design QA
+# Sellora scroll journey and login — design QA
 
-Date: 2026-10-24. Scope: public `/`, UA/EN, selected first visual direction.
+Date: 2026-10-24. Scope: public homepage and login, Ukrainian and English.
 
-## Visual truth and browser evidence
+## Accepted direction and evidence
 
-- Selected image: [reference](docs/qa/homepage/reference.webp).
-- Browser-rendered implementation: [desktop hero](docs/qa/homepage/desktop.webp), [workflow](docs/qa/homepage/workflow.webp), [mobile](docs/qa/homepage/mobile.webp).
-- Desktop CSS viewport and screenshot: 1363 × 936, density 1.
-- Source: 973 × 1616 pixels. For comparison it was scaled proportionally to 1363 px width and its first 936 px compared alongside the actual hero. The workflow source region was compared separately alongside the actual workflow capture. No browser chrome in either source or desktop capture.
-- Actual responsive iframe viewports: 360/390/768 CSS px wide, 850 px high. With desktop scrollbars the measured content widths were 345/375/753 px. DOM scrollWidth equalled clientWidth at all three widths. This tests real CSS layout in Chromium, not a physical iPhone or Safari emulation.
-- Full-view comparison: `/workspace/scratch/sellora-final-comparison.jpg`; focused workflow comparison: `/workspace/scratch/sellora-final-story-comparison.jpg`. Both were opened together with source and implementation in the same comparison input.
-- Rejected evidence: a full-page capture omitted an offscreen composited hero. Accepted viewport captures above visibly contain the artwork.
+The selected dark cinematic direction is retained in typography, violet/coral accents and depth. The user's subsequent correction explicitly replaces the Instagram-centered raster hero and manual demo with scroll-driven CRM storytelling, and extends the same visual language to login. This revision is checked against that revised scope rather than claiming pixel fidelity to the earlier static concept.
 
-## Comparison history and fixes
+Browser viewport: Chromium, 1363 × 936 CSS px. Accepted viewport evidence:
 
-1. First pass was blocked: flat headline/CTA colors, underspecified story panel, no mobile runtime check and Ukrainian illustration in English mode.
-2. Fixed: restored violet/coral palette, generated matching shipment art, added actual editable customer/product/payment/shipping context in the demo panel and localized illustration. Added scroll-linked perspective, pointer response, animation cleanup and an explicit motion toggle.
-3. Contrast review found a 4.25:1 legacy hover color; corrected hover to retain the accessible base gradient without brightness filtering.
-4. Visual comparison found the story heading wrapping to three lines instead of the intended two and a smaller hero display scale. Fixed display sizing, explicit localized two-line story heading and primary CTA dimensions. Recaptured the rebuilt page and compared again; the earlier wrapping issue is gone on desktop. Mobile uses its own readable wrapping.
+- [CRM overview](docs/qa/homepage/desktop.webp)
+- [Order foreground](docs/qa/homepage/workflow.webp)
+- [Financial foreground](docs/qa/homepage/finance.webp)
+- [Login](docs/qa/homepage/login.webp)
+- [Mobile homepage](docs/qa/homepage/mobile.webp)
+- [Mobile login](docs/qa/homepage/login-mobile.webp)
 
-## Required fidelity surfaces
+All captures were opened and inspected. Mobile evidence uses real CSS iframe viewports in Chromium; it is not physical-device or Safari testing.
 
-- Typography: existing project sans-serif retained, strong display hierarchy and short headline; final story heading follows the reference's two-line desktop structure. No clipped text in inspected viewports.
-- Spacing/layout: centered hero, asymmetric story, restrained sections and responsive stacking. Core shared header/footer are intentionally retained for existing navigation, menu, language and legal behavior.
-- Colors/tokens: white CTA text measured at 6.60:1 / 6.00:1 / 5.50:1 against the three gradient stops, including the corrected hover gradient. The display violet measures 4.06:1 against the canvas (large-text threshold 3:1). Muted context text measures 7.82:1. Landing-only dark tokens; violet/coral display text and darker CTA gradient preserve white-label legibility. No global private-app theme changes.
-- Images: generated assets match the selected ribbon/plinth art direction. Hero UA WebP 151206 B, EN 126032 B, supporting shipment image 56326 B. Full background not replaced with CSS drawings; real library icons used for UI controls. The hero is a raster composition with animated CSS perspective, not WebGL geometry.
-- Copy/content: all editable text uses existing UA/EN dictionaries. Illustrative text switches to a dedicated English asset. Demo data is explicitly labeled, no real shop/customer information is used. Meta imports are described as manual and pilot-scoped; absent costs never produce fabricated profit.
+## Motion verification
 
-## Interactions and accessibility checked
+The animation uses independent DOM UI layers, native sticky positioning, perspective and interpolated camera poses. Native scroll controls timeline progress; it is not a tilt applied to a flattened image. No additional animation dependency or scroll interception was introduced.
 
-- Demo anchor reaches workflow; all four tabs and next-step buttons work.
-- ArrowRight and End change the selected tab and its panel through keyboard navigation.
-- Mobile menu opens; workflow link closes menu and navigates to the section.
-- UA/EN selection changes headline and hero image source.
-- Motion toggle sets `data-motion=off`, clears transform variables and removes animation. Scroll events change perspective when enabled. Narrow layouts suppress transforms.
-- `prefers-reduced-motion` CSS and dynamic preference listener are implemented and reviewed; the OS preference itself was not forced in this browser. Explicit user-toggle fallback was exercised.
-- FAQ opens with the profit explanation. Existing `/login` and three legal URLs remain correctly linked.
-- Browser error logs inspected: only extension-origin metadata errors; no application-origin errors observed.
+Observed desktop progression using PageDown: overview → enquiry at scrollY 1402 → order at 2221 → shipping at 3040 → finances at 3859. PageUp returns from finances to shipping. The sticky scene top stays at 76 px until its natural release at the end. The order transform near its chapter was translate3d(0.094px, 9.941px, 149.882px), scale 1.1198; the finance transform reaches translate3d(0px, 10px, 150px), scale 1.12. Background layers move independently and recede.
 
-## Engineering validation
+The initial runtime check exposed an existing body overflow rule that made sticky descendants follow a non-scrolling ancestor. Fixed with an html/body overflow correction scoped through the landing component; private application layout is unaffected. Reproduced before and after: sticky top changed from −742.9 px to 76 px at scrollY 1402.
 
-- Next.js production build passed after the final visual changes (34 generated routes).
-- Full ESLint and TypeScript passed for the implementation; final build also linted/typechecked the subsequent typography-only update.
-- Mobile static regression passed (31 routes).
-- Vercel deployment-budget regression passed; main and dedicated QA remain the only auto-deploy branches.
-- `git diff --check` passed.
-- PR CI must pass on the exact published head before merging. Deployment verification is a separate post-merge step.
+An overview finance card initially overlapped the scene caption. Its overview pose was corrected. Final observed bottom is 735.8 px, above the caption at 759.3 px. The focused finance chapter remains large and readable.
 
-## Intentional adaptations / remaining P3
+- Chapter buttons navigate the native scroll timeline; navigation to capabilities leaves the scene normally.
+- Capability sections reveal on entering the viewport; content remains visible without enhancement.
+- Mobile and short viewports use normal document flow and entering cards rather than a long pinned sequence.
+- Explicit Reduce motion / Enable animation toggle tested: aria-pressed and data-animated change, transforms clear, the static grid remains readable.
+- OS prefers-reduced-motion listener and CSS reviewed. The OS setting was not forced through this browser.
+- Animation work is scheduled once per scroll frame, suspended outside the section and when the document is hidden; listeners and observers are cleaned up.
 
-The source is a concept, not a literal product screenshot. Existing shared brand/navigation are retained. The workflow is an interactive, synthetic sale summary rather than a nonfunctional copy of the entire CRM screenshot. Additional capabilities, integration caveats and FAQ below the supplied frame are part of the requested content refresh. These are intentional functional adaptations.
+## Responsive and login checks
 
-Physical-device Safari QA and measured Core Web Vitals remain useful follow-up checks; neither is claimed here. No auth/provider backend behavior was tested or changed.
+Actual iframe viewports: 360, 390, 768 and 1024 px wide × 850 px high. Measured document widths / scroll widths: 345/345, 375/375, 753/753, 1009/1009 (desktop scrollbars account for the difference). No horizontal overflow. The 1024 px view enables the full scene; 768 px and narrower use the compact sequence.
+
+- Login: desktop split composition, readable card, mobile form, correct email/password autocomplete and input types.
+- Empty submission shows a localized inline error and focuses the invalid field without an authentication request.
+- Password visibility toggle changes type and aria-pressed.
+- Switching UA/EN translates headings, preview content and an already-visible validation error.
+- Mobile menu opens with aria-modal=true and closes with Escape.
+- Legal links and existing login/dashboard route behavior retained.
+- Browser error logs: extension-origin metadata errors only in inspected entries, no observed application-origin runtime errors.
+
+Successful authenticated login, invalid account/network API responses, physical iPhone/Safari and measured Core Web Vitals were not exercised. Existing auth service, session storage, API contracts and backend are unchanged; the auth boundary regression passes.
+
+## Content and accessibility
+
+Sellora is presented as a CRM for customers, orders, inventory, delivery and finances. Instagram appears only in the integration listing, with a pilot label. Future platforms are explicitly planned, not claimed as available. Footer, metadata and manifest use the broader CRM positioning.
+
+All preview data is synthetic and labeled as a demonstration. The example profit is 679 − 300 − 80 − 20 = 279 UAH, with all sample costs known. Product copy explains that unknown cost is not zero. No uploaded shop/customer data is used.
+
+UA/EN strings use the existing dictionaries. Existing shared branding and public navigation are retained. Controls have names, focus outlines, selected/current states and text status labels. Motion control and OS preference have a readable fallback.
+
+## Engineering checks
+
+- Full ESLint: passed.
+- TypeScript: passed.
+- Production build: passed, all 34 routes generated.
+- All 14 frontend static scripts called by frontend-production CI: passed locally.
+- Mobile static audit: passed, 31 routes.
+- Auth/API boundary: passed, 11 checks.
+- Deployment budget gate: passed; auto-deployment remains limited to main and the dedicated QA branch.
+- git diff --check: passed.
+
+Exact published-head CI and post-deployment browser smoke are release gates, recorded in the PR/deployment rather than preclaimed here.
+
+## Remaining P3 follow-up
+
+Physical Safari testing and measured performance profiling on a low-end phone are useful follow-up checks. No outstanding P0/P1/P2 issues in the exercised public flows.
 
 final result: passed

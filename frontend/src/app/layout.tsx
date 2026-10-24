@@ -9,7 +9,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Sellora CRM",
-  description: "CRM/ERP для лідів, замовлень, складу, реклами, доставок і прибутку Instagram-магазину.",
+  description: "CRM для клієнтів, замовлень, товарів, складу, доставки та фінансів вашої команди.",
   applicationName: "Sellora",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Sellora", statusBarStyle: "black" },
