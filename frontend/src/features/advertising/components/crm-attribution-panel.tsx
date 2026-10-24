@@ -21,6 +21,12 @@ export function CrmAttributionPanel({
     retry: false,
   });
 
+  const linkedActiveOrders = report.data
+    ? Math.max(0, report.data.totals.active_orders - report.data.unattributed.active_orders) : 0;
+  const linkedPaidFulfilledRevenue = report.data
+    ? report.data.campaigns.reduce((sum, campaign) => sum + Number(campaign.paid_fulfilled_revenue ?? 0), 0) : 0;
+  const linkedPaidFulfilledOrders = report.data
+    ? report.data.campaigns.reduce((sum, campaign) => sum + campaign.paid_fulfilled_orders, 0) : 0;
   return (
     <section className="grid min-w-0 gap-4 rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm sm:p-5"
       data-advertising-crm-attribution aria-label={t("adsDashboard.crmAttributionTitle")}>
