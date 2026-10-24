@@ -20,12 +20,15 @@ from app.schemas.advertising import (
     CampaignPerformanceResponse,
     CrmAttributionResponse,
 )
-from app.services.advertising_service import AdCampaignService, AdMetricService, AdvertisingAnalyticsService, AdvertisingServiceError
+from app.services.advertising_service import AdCampaignService, AdMetricService, AdvertisingAnalyticsService, AdvertisingServiceError, ProviderMetricReadOnlyError
 
 router = APIRouter(prefix="/advertising", tags=["Advertising"])
 
 
 def _bad_request(exc: AdvertisingServiceError) -> HTTPException:
+    if isinstance(exc, ProviderMetricReadOnlyError):
+        return HTTPException(status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "provider_metric_read_only", "message": str(exc), "fields": exc.fields})
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
@@ -120,7 +123,6 @@ def campaign_performance(start_date: date | None = None, end_date: date | None =
 @router.get("/trend", response_model=list[AdvertisingTrendPoint])
 def advertising_trend(start_date: date | None = None, end_date: date | None = None, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.ANALYST)), db: Session = Depends(get_db)) -> list[AdvertisingTrendPoint]:
     return AdvertisingAnalyticsService(db).trend(workspace_id, start_date, end_date, _include_sensitive(current_user, workspace_id))
-
 
 
 @router.get("/crm-attribution", response_model=CrmAttributionResponse)

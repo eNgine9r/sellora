@@ -45,6 +45,12 @@ class NovaPoshtaDocumentResult:
     status: str | None = None
 
 
+@dataclass(frozen=True)
+class NovaPoshtaTrackingResult:
+    status: str
+    code: str | None = None
+
+
 class NovaPoshtaClient:
     def __init__(self, api_key: str, base_url: str | None = None, timeout_seconds: int = 10) -> None:
         self.api_key = api_key
@@ -158,8 +164,54 @@ class NovaPoshtaClient:
             if item.get("Ref")
         ]
 
+    def search_senders(self, query: str = "", limit: int = 20, page: int = 1) -> list[NovaPoshtaCity]:
+        body = self._call("Counterparty", "getCounterparties", {
+            "CounterpartyProperty": "Sender", "Page": str(page),
+            "Limit": str(limit), "FindByString": query,
+        })
+        return [NovaPoshtaCity(ref=str(item["Ref"]), description=str(item.get("Description") or item.get("FullName") or ""))
+                for item in body.get("data", [])[:limit] if item.get("Ref")]
+
+    def search_sender_contacts(self, sender_ref: str, limit: int = 50) -> list[NovaPoshtaCity]:
+        body = self._call("Counterparty", "getCounterpartyContactPersons", {"Ref": sender_ref, "Page": "1"})
+        return [NovaPoshtaCity(ref=str(item["Ref"]), description=str(item.get("Description") or " ".join(str(item.get(key) or "") for key in ("LastName", "FirstName", "MiddleName")).strip()))
+                for item in body.get("data", [])[:limit] if item.get("Ref")]
+
+    def resolve_recipient_warehouse(self, city_ref: str, warehouse_ref: str) -> tuple[str, str]:
+        """Get canonical NewAddress values from the provider's trusted Ref directory."""
+        if not city_ref or not warehouse_ref:
+            raise NovaPoshtaClientError(
+                "Recipient city and warehouse references are required",
+                code="NOVA_POSHTA_RECIPIENT_REFS_REQUIRED",
+            )
+        cities = self._call("Address", "getCities", {"Ref": city_ref}).get("data", [])
+        matches = [
+            item for item in cities
+            if item.get("Ref") == city_ref and item.get("Description")
+        ]
+        if len(matches) != 1:
+            raise NovaPoshtaClientError(
+                "Recipient city not found in Nova Poshta directory",
+                code="NOVA_POSHTA_RECIPIENT_CITY_INVALID",
+            )
+        warehouses = self._call(
+            "Address",
+            "getWarehouses",
+            {"CityRef": city_ref, "Ref": warehouse_ref},
+        ).get("data", [])
+        matches_wh = [
+            item for item in warehouses
+            if item.get("Ref") == warehouse_ref and item.get("Number")
+        ]
+        if len(matches_wh) != 1:
+            raise NovaPoshtaClientError(
+                "Recipient warehouse not found in selected city",
+                code="NOVA_POSHTA_RECIPIENT_WAREHOUSE_INVALID",
+            )
+        return str(matches[0]["Description"]).strip(), str(matches_wh[0]["Number"]).strip()
+
     def counterparty_exists(self, counterparty_ref: str) -> bool:
-        body = self._call("Counterparty", "getCounterparties", {"Ref": counterparty_ref})
+        body = self._call("Counterparty", "getCounterparties", {"Ref": counterparty_ref, "CounterpartyProperty": "Sender", "Page": "1"})
         return any(str(item.get("Ref") or "") == counterparty_ref for item in body.get("data", []))
 
     def contact_belongs_to_counterparty(self, counterparty_ref: str, contact_ref: str) -> bool:
@@ -243,11 +295,26 @@ class NovaPoshtaClient:
             )
         return matches[0] if matches else None
 
-    def get_document_status(self, tracking_number: str) -> str | None:
+    def get_document_tracking(self, tracking_number: str) -> NovaPoshtaTrackingResult | None:
         body = self._call(
             "TrackingDocument",
             "getStatusDocuments",
             {"Documents": [{"DocumentNumber": tracking_number}]},
         )
-        item = body.get("data", [{}])[0] if body.get("data") else {}
-        return str(item.get("Status") or item.get("StatusCode") or "") or None
+        items = body.get("data") or []
+        if not items or not isinstance(items[0], dict):
+            return None
+        item = items[0]
+        provider_number = str(item.get("Number") or item.get("DocumentNumber") or "")
+        if provider_number and provider_number != tracking_number:
+            raise NovaPoshtaClientError(
+                "Nova Poshta returned a different tracking number",
+                code="NOVA_POSHTA_TRACKING_NUMBER_MISMATCH",
+            )
+        status = str(item.get("Status") or "").strip()
+        code = str(item.get("StatusCode") or "").strip() or None
+        return NovaPoshtaTrackingResult(status=status, code=code) if status or code else None
+
+    def get_document_status(self, tracking_number: str) -> str | None:
+        result = self.get_document_tracking(tracking_number)
+        return result.status or result.code if result else None

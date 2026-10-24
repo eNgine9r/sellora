@@ -17,7 +17,11 @@ class InstagramConnectionRepository:
                 InstagramConnection.workspace_id == workspace_id,
                 InstagramConnection.deleted_at.is_(None),
             )
-            .order_by(InstagramConnection.created_at.desc(), InstagramConnection.id.desc())
+            .order_by(
+                InstagramConnection.updated_at.desc(),
+                InstagramConnection.created_at.desc(),
+                InstagramConnection.id.desc(),
+            )
             .limit(1)
         ).scalar_one_or_none()
 
@@ -44,6 +48,15 @@ class InstagramConnectionRepository:
         if len(rows) != 1:
             return None
         return rows[0]
+
+    def get_by_workspace_account(self, workspace_id: UUID, instagram_account_id: str) -> InstagramConnection | None:
+        return self.db.execute(
+            select(InstagramConnection).where(
+                InstagramConnection.workspace_id == workspace_id,
+                InstagramConnection.instagram_account_id == instagram_account_id,
+                InstagramConnection.deleted_at.is_(None),
+            ).limit(1)
+        ).scalar_one_or_none()
 
     def get_connected_in_other_workspace(self, instagram_account_id: str, workspace_id: UUID) -> InstagramConnection | None:
         return self.db.execute(

@@ -13,6 +13,7 @@ from app.utils.phone import PhoneNormalizationError, normalize_ua_phone
 class OrderFulfillmentCreate(BaseModel):
     idempotency_key: str = Field(min_length=8, max_length=100)
     customer_id: UUID | None = None
+    source_direct_conversation_id: UUID | None = None
     customer_name: str | None = Field(default=None, max_length=255)
     customer_phone: str | None = Field(default=None, max_length=50)
     instagram_username: str | None = Field(default=None, max_length=120)

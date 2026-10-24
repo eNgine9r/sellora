@@ -13,6 +13,7 @@ from app.models.customer_address import DeliveryProvider
 from app.models.order import OrderStatus, PaymentStatus
 from app.models.order_fulfillment import OrderFulfillment, OrderFulfillmentOperationType, OrderFulfillmentResultCode, OrderFulfillmentState
 from app.models.shipment import ShipmentCarrier, ShipmentStatus
+from app.repositories.ai_direct_repository import DirectConversationRepository
 from app.repositories.inventory_repository import InventoryRepository
 from app.repositories.order_fulfillment_repository import OrderFulfillmentRepository
 from app.schemas.crm_completion import CustomerAddressCreate, CustomerAddressUpdate
@@ -269,6 +270,15 @@ class OrderFulfillmentService:
         return hashlib.sha256(encoded).hexdigest()
 
     def create(self, workspace_id: UUID, payload: OrderFulfillmentCreate, actor_user_id: UUID | None) -> OrderFulfillmentResponse:
+        # Check Direct ownership before creating any records or TTN.
+        if payload.source_direct_conversation_id is not None:
+            if payload.customer_id is None:
+                raise OrderFulfillmentValidationError("DIRECT_LINKED_CUSTOMER_REQUIRED")
+            conversation = DirectConversationRepository(self.db).get(
+                workspace_id, payload.source_direct_conversation_id,
+            )
+            if conversation is None or conversation.linked_customer_id != payload.customer_id:
+                raise OrderFulfillmentValidationError("DIRECT_CUSTOMER_CONVERSATION_MISMATCH")
         fingerprint = self._fingerprint(payload)
         operation, replay = self._prepare_operation(workspace_id, payload.idempotency_key, fingerprint, actor_user_id)
         completed_result = (

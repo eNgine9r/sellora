@@ -5,6 +5,7 @@ import hashlib
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.integrations.meta_instagram.media import normalize_attachments
 from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
 from app.integrations.meta_instagram.repositories.inbox_sync_repository import InstagramMessageStateRepository
 from app.integrations.meta_instagram.repositories.message_operation_repository import MetaMessageOperationRepository
@@ -24,6 +25,8 @@ from app.models.meta_instagram import (
 )
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
 from app.services.direct_customer_automation_service import DirectCustomerAutomationService
+from app.services.direct_lead_service import DirectLeadService
+from app.ai.services.direct_order_intent_service import detect_direct_order_intent
 
 
 MEDIA_TYPES = {
@@ -36,13 +39,14 @@ MEDIA_TYPES = {
 
 
 class InstagramInboundMessageService:
-    def __init__(self, db: Session, profile_service=None, customer_automation_service=None) -> None:
+    def __init__(self, db: Session, profile_service=None, customer_automation_service=None, lead_service=None) -> None:
         self.db = db
         self.conversations = DirectConversationRepository(db)
         self.messages = DirectMessageRepository(db)
         self.message_states = InstagramMessageStateRepository(db)
         self.profile_service = profile_service or InstagramParticipantProfileService(db)
         self.customer_automation = customer_automation_service or DirectCustomerAutomationService(db)
+        self.lead_service = lead_service or DirectLeadService(db)
 
     def process_event(self, event: MetaWebhookEvent) -> int:
         connection = (
@@ -50,7 +54,11 @@ class InstagramInboundMessageService:
             if event.workspace_id
             else None
         )
-        if not connection or connection.status != InstagramConnectionStatus.CONNECTED.value:
+        if (
+            not connection
+            or connection.status != InstagramConnectionStatus.CONNECTED.value
+            or (event.instagram_connection_id and event.instagram_connection_id != connection.id)
+        ):
             event.status = MetaWebhookEventStatus.IGNORED.value
             event.safe_error_code = "META_CONNECTION_NOT_READY"
             event.processed_at = datetime.now(UTC)
@@ -58,15 +66,20 @@ class InstagramInboundMessageService:
 
         created = 0
         for entry in event.payload.get("entry", []) or []:
+            # A signed batch can contain multiple business account IDs. Never
+            # place another account's message in the selected tenant.
+            account_id = str(entry.get("id") or "")
+            if not account_id or account_id != connection.instagram_account_id:
+                continue
             for item in entry.get("messaging", []) or []:
-                created += self._process_item(event, connection, item)
+                created += self._process_item(event, connection, item, account_id)
 
         event.status = MetaWebhookEventStatus.PROCESSED.value
         event.processed_at = datetime.now(UTC)
         connection.last_webhook_at = datetime.now(UTC)
         return created
 
-    def _process_item(self, event: MetaWebhookEvent, connection, item: dict[str, Any]) -> int:
+    def _process_item(self, event: MetaWebhookEvent, connection, item: dict[str, Any], account_id: str | None = None) -> int:
         if item.get("read"):
             self._process_seen(event, item)
             return 0
@@ -81,11 +94,11 @@ class InstagramInboundMessageService:
         sender_id = str((item.get("sender") or {}).get("id") or "")
         message = item.get("message") or {}
         postback = item.get("postback") or {}
-        is_echo = bool(message.get("is_echo")) or bool(
-            sender_id
-            and recipient_id
-            and sender_id == str(event.payload.get("entry", [{}])[0].get("id", ""))
-        )
+        own_id = account_id or str(getattr(connection, "instagram_account_id", "") or "")
+        if not own_id or (sender_id != own_id and recipient_id != own_id):
+            return 0
+        # Never trust a foreign sender merely because it flagged is_echo.
+        is_echo = sender_id == own_id
         participant_id = recipient_id if is_echo else sender_id
         if not participant_id:
             return 0
@@ -163,7 +176,9 @@ class InstagramInboundMessageService:
             conversation.human_agent_window_expires_at = provider_created_at + timedelta(days=7)
             connection.last_message_received_at = provider_created_at
             self._enrich_profile_safe(event.workspace_id, conversation)
-            self._ensure_customer_safe(event.workspace_id, conversation, text)
+            if message_type == DirectMessageType.TEXT.value:
+                self._ensure_lead_safe(event.workspace_id, conversation, text, provider_created_at)
+                self._ensure_customer_safe(event.workspace_id, conversation, text)
         return 1
 
     def _process_seen(self, event: MetaWebhookEvent, item: dict[str, Any]) -> None:
@@ -229,15 +244,31 @@ class InstagramInboundMessageService:
         except Exception:
             conversation.provider_sync_status = "PROFILE_FAILED_SAFE"
 
+    def _ensure_lead_safe(self, workspace_id, conversation, text: str | None, received_at: datetime) -> None:
+        if not detect_direct_order_intent(text).detected:
+            return
+        try:
+            # An automation error must not roll back or lose the verified
+            # incoming provider message.
+            with self.db.begin_nested():
+                self.lead_service.ensure_from_inbound_order_intent(
+                    workspace_id, conversation.id, text, received_at,
+                )
+        except Exception:
+            conversation.provider_sync_status = "LEAD_AUTOMATION_FAILED_SAFE"
+
     def _ensure_customer_safe(self, workspace_id, conversation, text: str | None) -> None:
         try:
-            state = self.customer_automation.ensure_from_inbound_order_intent(
-                workspace_id,
-                conversation.id,
-                text,
-            )
-            if state and state.customer:
-                conversation.provider_sync_status = "CUSTOMER_PROSPECT_READY"
+            # A failed customer association must not poison the surrounding
+            # transaction and roll back the verified inbound message.
+            with self.db.begin_nested():
+                state = self.customer_automation.ensure_from_inbound_order_intent(
+                    workspace_id,
+                    conversation.id,
+                    text,
+                )
+                if state and state.customer:
+                    conversation.provider_sync_status = "CUSTOMER_PROSPECT_READY"
         except Exception:
             conversation.provider_sync_status = "CUSTOMER_AUTOMATION_FAILED_SAFE"
 
@@ -283,8 +314,12 @@ class InstagramInboundMessageService:
                 str(postback.get("title") or postback.get("payload") or "Instagram postback"),
                 DirectMessageType.SYSTEM_EVENT.value,
             )
+        attachments = normalize_attachments(message)
         if message.get("text"):
             return "TEXT", str(message.get("text")), DirectMessageType.TEXT.value
+        if attachments:
+            kind = attachments[0]["type"]
+            return kind.upper(), f"[{kind} Instagram attachment]", DirectMessageType.SYSTEM_EVENT.value
         for key, label in MEDIA_TYPES.items():
             if message.get(key):
                 return (
@@ -297,7 +332,11 @@ class InstagramInboundMessageService:
     def _metadata(self, message: dict[str, Any], postback: dict[str, Any]) -> dict[str, Any]:
         if postback:
             return {"postback_payload_present": bool(postback.get("payload"))}
-        return {key: True for key in MEDIA_TYPES if message.get(key)}
+        metadata = {key: True for key in MEDIA_TYPES if message.get(key)}
+        attachments = normalize_attachments(message)
+        if attachments:
+            metadata["attachments"] = attachments
+        return metadata
 
     def _hash_item(self, item: dict[str, Any]) -> str:
         return hashlib.sha256(repr(sorted(item.items())).encode()).hexdigest()

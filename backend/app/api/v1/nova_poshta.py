@@ -120,3 +120,32 @@ def search_warehouses(
         return NovaPoshtaDirectoryService(db).search_warehouses(workspace_id, city_ref, q, limit)
     except NovaPoshtaServiceError as exc:
         raise _bad_request(exc)
+
+
+@router.get("/senders", response_model=list[NovaPoshtaDirectoryItem])
+def search_senders(
+    q: str = Query(default="", max_length=100),
+    limit: int = Query(default=20, ge=1, le=50),
+    page: int = Query(default=1, ge=1, le=100),
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.OWNER)),
+    db: Session = Depends(get_db),
+) -> list[NovaPoshtaDirectoryItem]:
+    try:
+        return NovaPoshtaDirectoryService(db).search_senders(workspace_id, q, limit, page)
+    except NovaPoshtaServiceError as exc:
+        raise _bad_request(exc)
+
+
+@router.get("/sender-contacts", response_model=list[NovaPoshtaDirectoryItem])
+def search_sender_contacts(
+    sender_ref: str = Query(min_length=1, max_length=100),
+    limit: int = Query(default=50, ge=1, le=100),
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.OWNER)),
+    db: Session = Depends(get_db),
+) -> list[NovaPoshtaDirectoryItem]:
+    try:
+        return NovaPoshtaDirectoryService(db).search_sender_contacts(workspace_id, sender_ref, limit)
+    except NovaPoshtaServiceError as exc:
+        raise _bad_request(exc)

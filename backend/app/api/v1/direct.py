@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from pydantic import BaseModel, Field
+
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
@@ -8,7 +10,12 @@ from app.ai.services.direct_conversation_service import DirectConversationServic
 from app.ai.services.direct_intelligence_service import DirectIntelligenceService
 from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_min_role, require_roles
+from app.integrations.meta_instagram.media import public_attachments
+from app.integrations.meta_instagram.services.share_link_service import InstagramPostLinkError, InstagramPostLinkService
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
+from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
+from app.models.meta_instagram import InstagramConnectionStatus
+from app.models.ai_direct import DirectChannel
 from app.integrations.meta_instagram.repositories.participant_profile_repository import InstagramParticipantProfileRepository
 from app.integrations.meta_instagram.schemas import (
     MessageOperationResponse,
@@ -27,6 +34,9 @@ from app.repositories.ai_direct_repository import (
     DirectConversationRepository,
     DirectMessageRepository,
 )
+from app.schemas.direct_order_proposal import DirectOrderProposal
+from app.services.direct_order_proposal_service import DirectOrderProposalService, ProposalConversationNotFound
+from app.services.direct_lead_service import DirectLeadError, DirectLeadService
 from app.schemas.ai_direct import (
     AIAnalysisResponse,
     AISuggestionResponse,
@@ -62,6 +72,46 @@ def conversation_response(conversation, profile=None) -> DirectConversationRespo
     return DirectConversationResponse(**data)
 
 
+def _visible_for_connected_instagram(conversations, active_instagram):
+    if not active_instagram or active_instagram.status != InstagramConnectionStatus.CONNECTED.value:
+        return conversations
+    # Keep history in storage but show only the linked live-account inbox.
+    # Non-Instagram channels are unaffected.
+    return [
+        conversation for conversation in conversations
+        if conversation.channel != DirectChannel.INSTAGRAM.value
+        or conversation.instagram_connection_id == active_instagram.id
+    ]
+
+
+
+
+class InstagramPostLinkRequest(BaseModel):
+    permalink: str = Field(min_length=20, max_length=1024)
+
+
+@router.put("/messages/{message_id}/instagram-post", response_model=DirectMessageResponse)
+def link_missing_instagram_post(
+    message_id: UUID,
+    payload: InstagramPostLinkRequest,
+    workspace_id: UUID = Depends(get_workspace_id),
+    user: User = Depends(require_roles(RoleName.OWNER, RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    """Manager-confirmed post reference for history where Meta returned no share link."""
+    try:
+        message = InstagramPostLinkService(db).link(
+            workspace_id, message_id, user.id, payload.permalink
+        )
+    except InstagramPostLinkError as exc:
+        raise HTTPException(exc.status_code, exc.code) from exc
+    db.commit()
+    db.refresh(message)
+    return DirectMessageResponse.model_validate(message).model_copy(
+        update={"attachments": public_attachments(message.attachment_metadata)}
+    )
+
+
 @router.get("/conversations", response_model=list[DirectConversationResponse])
 def list_conversations(
     workspace_id: UUID = Depends(get_workspace_id),
@@ -69,6 +119,8 @@ def list_conversations(
     db: Session = Depends(get_db),
 ):
     conversations = DirectConversationRepository(db).list(workspace_id)
+    active_instagram = InstagramConnectionRepository(db).get_active(workspace_id)
+    conversations = _visible_for_connected_instagram(conversations, active_instagram)
     profiles = InstagramParticipantProfileRepository(db).list_for_conversations(
         workspace_id,
         [conversation.id for conversation in conversations],
@@ -119,6 +171,27 @@ def get_conversation(
     return conversation_response(conversation, profile)
 
 
+@router.post("/conversations/{conversation_id}/lead/ensure", response_model=DirectConversationResponse)
+def ensure_direct_lead(
+    conversation_id: UUID,
+    workspace_id: UUID = Depends(get_workspace_id),
+    user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        DirectLeadService(db).ensure_manually(workspace_id, conversation_id, user.id)
+        db.commit()
+        conversation = DirectConversationRepository(db).get(workspace_id, conversation_id)
+        return conversation_response(conversation)
+    except DirectLeadError as exc:
+        db.rollback()
+        code = str(exc)
+        raise HTTPException(
+            404 if code == "DIRECT_CONVERSATION_NOT_FOUND" else 409,
+            code,
+        ) from exc
+
+
 @router.post(
     "/conversations/{conversation_id}/participant-profile/refresh",
     response_model=DirectConversationResponse,
@@ -157,7 +230,12 @@ def list_messages(
     _: User = Depends(require_min_role(RoleName.ANALYST)),
     db: Session = Depends(get_db),
 ):
-    return DirectMessageRepository(db).list_for_conversation(workspace_id, conversation_id)
+    return [
+        DirectMessageResponse.model_validate(message).model_copy(
+            update={"attachments": public_attachments(message.attachment_metadata)}
+        )
+        for message in DirectMessageRepository(db).list_for_conversation(workspace_id, conversation_id)
+    ]
 
 
 @router.post(
@@ -202,6 +280,19 @@ async def analyze(
     db.commit()
     db.refresh(analysis)
     return analysis
+
+
+@router.get("/conversations/{conversation_id}/order-proposal", response_model=DirectOrderProposal)
+def order_proposal(
+    conversation_id: UUID,
+    workspace_id: UUID = Depends(get_workspace_id),
+    _: User = Depends(require_min_role(RoleName.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return DirectOrderProposalService(db).get(workspace_id, conversation_id)
+    except ProposalConversationNotFound as exc:
+        raise HTTPException(404, "Direct conversation not found") from exc
 
 
 @router.get(
