@@ -2552,5 +2552,105 @@
     "metaConnection": "Meta Ads connection and sync",
     "loadError": "Some advertising data could not be loaded. Try refreshing.",
     "retry": "Refresh"
+  },
+  "cinematicLanding": {
+    "eyebrow": "CRM for Instagram shops",
+    "headline": "From “I want to order”",
+    "accent": "to profit.",
+    "subtitle": "Direct, orders, shipping and finances. One space for your shop.",
+    "demo": "Explore the demo",
+    "pilot": "Pilot access",
+    "demoLabel": "Demo data · interactive walkthrough",
+    "heroAlt": "Dimensional Sellora composition with a customer message, order and brand ribbon",
+    "storyTitle": "One sale. All the context together.",
+    "storyIntro": "Follow an order from the first message to the financial result.",
+    "stages": [
+      {
+        "title": "Conversation",
+        "body": "Review messages and conversation history. Keep customer details alongside the conversation.",
+        "label": "New enquiry",
+        "value": "Hi! I would like to order earrings.",
+        "detail": "A manager checks the customer details.",
+        "action": "Continue to order"
+      },
+      {
+        "title": "Order",
+        "body": "Add products and variants, check stock, customer information and payment.",
+        "label": "Preparing an order",
+        "value": "Earrings · 1 item · UAH 679",
+        "detail": "Demo: product selected. Payment is not confirmed.",
+        "action": "Continue to shipping"
+      },
+      {
+        "title": "Shipping",
+        "body": "Prepare shipments, create tracking numbers after configuring Nova Poshta and check delivery status.",
+        "label": "Preparing shipment",
+        "value": "Nova Poshta · Kyiv",
+        "detail": "Demo: verify the recipient and branch before creating a shipment.",
+        "action": "View the result"
+      },
+      {
+        "title": "Result",
+        "body": "Separate revenue, costs and profit. See what is missing when product cost is unknown.",
+        "label": "Financial context",
+        "value": "Product cost needs information",
+        "detail": "Profit requires confirmed revenue and costs.",
+        "action": "Start again"
+      }
+    ],
+    "capTitle": "As your shop grows, keep the whole picture.",
+    "capIntro": "Less switching between tools. More attention to customers.",
+    "capabilities": [
+      {
+        "title": "Customer history",
+        "body": "Contacts, notes, purchases and linked shipments in one profile."
+      },
+      {
+        "title": "Products and inventory",
+        "body": "Catalog, variants, SKUs, stock and reservations for daily work."
+      },
+      {
+        "title": "Advertising in context",
+        "body": "Meta Ads spend, conversation starts, cost per message, trends and campaign comparisons."
+      },
+      {
+        "title": "Finances without guessing",
+        "body": "Revenue, costs and COD reconciliation using NovaPay or bank CSV registers."
+      }
+    ],
+    "intTitle": "Your working tools, closer together.",
+    "intIntro": "Integration availability depends on your shop configuration and permissions.",
+    "integrations": [
+      {
+        "title": "Instagram Direct",
+        "body": "Conversations, customer information and order preparation. Pilot access after connection."
+      },
+      {
+        "title": "Nova Poshta",
+        "body": "Shipment information, tracking numbers and status checks after sender configuration."
+      },
+      {
+        "title": "Meta Ads",
+        "body": "Pilot import of ad metrics for a selected period. Manual refresh and USD to UAH conversion at daily NBU rates."
+      }
+    ],
+    "sourceNote": "Sales in advertising reports depend on recorded metrics. Automatic CRM order attribution is still in development.",
+    "faqTitle": "A few things before you start.",
+    "faqs": [
+      {
+        "q": "Is everything automatic?",
+        "a": "Some actions require a manager to start and verify them. Meta Ads imports are manual; shipment creation requires configured integration."
+      },
+      {
+        "q": "How is profit calculated?",
+        "a": "Product cost and relevant expenses are deducted from confirmed revenue. Unknown product cost is not treated as zero."
+      },
+      {
+        "q": "Can I use my phone?",
+        "a": "Sellora has a responsive interface for desktop and mobile work."
+      }
+    ],
+    "finalTitle": "More attention to customers. More clarity in sales.",
+    "finalBody": "Explore the walkthrough or sign in to your workspace."
   }
 }
