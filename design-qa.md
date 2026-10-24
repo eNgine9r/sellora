@@ -1,24 +1,55 @@
-# Cinematic homepage — implementation review
+# Sellora cinematic homepage — final design QA
 
-Source visual truth: ../generated_images/exec-0d22ae95-4364-4050-824d-c976745067a8.png (first displayed selected concept).
-Implementation screenshot: /workspace/scratch/sellora-new-homepage.jpg.
-Comparison evidence: /workspace/scratch/sellora-comparison.jpg, source normalized to implementation width and top viewport crop, side by side.
-Viewport: 1363 × 936 CSS px. State: public Ukrainian desktop, dark landing surface.
+Date: 2026-10-24. Scope: public `/`, UA/EN, selected first visual direction.
 
-## Findings
-- Typography and hierarchy: centered two-line headline, core copy and clear demo CTA implemented. Existing shared header kept for navigation accessibility.
-- Spacing: hero composition follows selected target; source artwork regenerated independently for the hero and optimized to 151206-byte WebP.
-- Colors: initial flat title/CTA differed from target (P2); gradient corrected in CSS after comparison. Post-fix visual capture still required.
-- Image quality: sharp generated 3D art with synthetic demo data; it is a raster scene with scroll-linked perspective, not WebGL geometry.
-- Copy: editable UA/EN copy added in existing dictionaries. Fixed Ukrainian text remains inside the illustrative raster asset; English asset localization remains a follow-up.
-- Story: accessible keyboard tabs and next-step buttons work. The lower story panel is simpler than the source product workspace, requiring a further visual fidelity pass.
+## Visual truth and browser evidence
 
-## Browser checks
-Demo link and next step tested; final result tab shows unknown cost rather than fabricated profit. Browser logs inspected: errors came from the browser extension, not the application. Real mobile viewport and reduced-motion runtime were not tested. CSS includes responsive layout and reduced-motion rules; static mobile regression passed.
+- Selected image: [reference](docs/qa/homepage/reference.webp).
+- Browser-rendered implementation: [desktop hero](docs/qa/homepage/desktop.webp), [workflow](docs/qa/homepage/workflow.webp), [mobile](docs/qa/homepage/mobile.webp).
+- Desktop CSS viewport and screenshot: 1363 × 936, density 1.
+- Source: 973 × 1616 pixels. For comparison it was scaled proportionally to 1363 px width and its first 936 px compared alongside the actual hero. The workflow source region was compared separately alongside the actual workflow capture. No browser chrome in either source or desktop capture.
+- Actual responsive iframe viewports: 360/390/768 CSS px wide, 850 px high. With desktop scrollbars the measured content widths were 345/375/753 px. DOM scrollWidth equalled clientWidth at all three widths. This tests real CSS layout in Chromium, not a physical iPhone or Safari emulation.
+- Full-view comparison: `/workspace/scratch/sellora-final-comparison.jpg`; focused workflow comparison: `/workspace/scratch/sellora-final-story-comparison.jpg`. Both were opened together with source and implementation in the same comparison input.
+- Rejected evidence: a full-page capture omitted an offscreen composited hero. Accepted viewport captures above visibly contain the artwork.
 
-## Validation
-TypeScript and targeted ESLint passed. Production build passed before the color refinement; subsequent rebuild initiated. Static mobile regression passed (31 routes). No backend, auth or provider changes. No staging deployment.
+## Comparison history and fixes
 
-final result: blocked
+1. First pass was blocked: flat headline/CTA colors, underspecified story panel, no mobile runtime check and Ukrainian illustration in English mode.
+2. Fixed: restored violet/coral palette, generated matching shipment art, added actual editable customer/product/payment/shipping context in the demo panel and localized illustration. Added scroll-linked perspective, pointer response, animation cleanup and an explicit motion toggle.
+3. Visual comparison found the story heading wrapping to three lines instead of the intended two and a smaller hero display scale. Fixed display sizing, explicit localized two-line story heading and primary CTA dimensions. Recaptured the rebuilt page and compared again; the earlier wrapping issue is gone on desktop. Mobile uses its own readable wrapping.
 
-Blockers: post-color visual comparison, richer story fidelity, real mobile runtime verification and illustrative text localization. This branch is a reviewable first implementation, not a release-ready staging update.
+## Required fidelity surfaces
+
+- Typography: existing project sans-serif retained, strong display hierarchy and short headline; final story heading follows the reference's two-line desktop structure. No clipped text in inspected viewports.
+- Spacing/layout: centered hero, asymmetric story, restrained sections and responsive stacking. Core shared header/footer are intentionally retained for existing navigation, menu, language and legal behavior.
+- Colors/tokens: landing-only dark tokens; violet/coral display text and darker CTA gradient preserve white-label legibility. No global private-app theme changes.
+- Images: generated assets match the selected ribbon/plinth art direction. Hero UA WebP 151206 B, EN 126032 B, supporting shipment image 56326 B. Full background not replaced with CSS drawings; real library icons used for UI controls. The hero is a raster composition with animated CSS perspective, not WebGL geometry.
+- Copy/content: all editable text uses existing UA/EN dictionaries. Illustrative text switches to a dedicated English asset. Demo data is explicitly labeled, no real shop/customer information is used. Meta imports are described as manual and pilot-scoped; absent costs never produce fabricated profit.
+
+## Interactions and accessibility checked
+
+- Demo anchor reaches workflow; all four tabs and next-step buttons work.
+- ArrowRight and End change the selected tab and its panel through keyboard navigation.
+- Mobile menu opens; workflow link closes menu and navigates to the section.
+- UA/EN selection changes headline and hero image source.
+- Motion toggle sets `data-motion=off`, clears transform variables and removes animation. Scroll events change perspective when enabled. Narrow layouts suppress transforms.
+- `prefers-reduced-motion` CSS and dynamic preference listener are implemented and reviewed; the OS preference itself was not forced in this browser. Explicit user-toggle fallback was exercised.
+- FAQ opens with the profit explanation. Existing `/login` and three legal URLs remain correctly linked.
+- Browser error logs inspected: only extension-origin metadata errors; no application-origin errors observed.
+
+## Engineering validation
+
+- Next.js production build passed after the final visual changes (34 generated routes).
+- Full ESLint and TypeScript passed for the implementation; final build also linted/typechecked the subsequent typography-only update.
+- Mobile static regression passed (31 routes).
+- Vercel deployment-budget regression passed; main and dedicated QA remain the only auto-deploy branches.
+- `git diff --check` passed.
+- PR CI must pass on the exact published head before merging. Deployment verification is a separate post-merge step.
+
+## Intentional adaptations / remaining P3
+
+The source is a concept, not a literal product screenshot. Existing shared brand/navigation are retained. The workflow is an interactive, synthetic sale summary rather than a nonfunctional copy of the entire CRM screenshot. Additional capabilities, integration caveats and FAQ below the supplied frame are part of the requested content refresh. These are intentional functional adaptations.
+
+Physical-device Safari QA and measured Core Web Vitals remain useful follow-up checks; neither is claimed here. No auth/provider backend behavior was tested or changed.
+
+final result: passed

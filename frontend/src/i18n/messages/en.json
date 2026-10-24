@@ -2651,6 +2651,25 @@
       }
     ],
     "finalTitle": "More attention to customers. More clarity in sales.",
-    "finalBody": "Explore the walkthrough or sign in to your workspace."
+    "finalBody": "Explore the walkthrough or sign in to your workspace.",
+    "motionLabel": "Reduce motion",
+    "customerLabel": "Customer",
+    "customerValue": "Demo customer",
+    "productLabel": "Product",
+    "productValue": "Leia earrings · 1 item",
+    "paymentLabel": "Payment",
+    "paymentValue": "Awaiting confirmation",
+    "shippingLabel": "Shipping",
+    "shippingValue": "Nova Poshta · Kyiv",
+    "demoOrder": "Demo order",
+    "amountLabel": "Product total",
+    "amountValue": "UAH 679",
+    "costLabel": "Product cost",
+    "costValue": "Needs information",
+    "contextLabel": "Context for this sale",
+    "heroCaption": "Product illustration · sample data",
+    "shipmentAlt": "Parcel on a dark platform in Sellora brand lighting",
+    "storyLead": "One sale.",
+    "storyRest": "All the context together."
   }
 }
