@@ -62,12 +62,12 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 7,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 203,
+    "WORKSPACE_SCOPED": 205,
     "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 231
-EXPECTED_MUTATION_ROUTES = 133
+EXPECTED_TOTAL_ROUTES = 233
+EXPECTED_MUTATION_ROUTES = 134
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -88,6 +88,28 @@ EXPECTED_DIRECT_CUSTOMER_EXTRACTION_ROUTES = {
     ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-data-extraction/extract"),
     ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-data-extraction/apply"),
 }
+
+EXPECTED_DIRECT_ORDER_EVIDENCE_ROUTES = {
+    ("GET", "/api/v1/direct/conversations/{conversation_id}/order-evidence"),
+    ("POST", "/api/v1/direct/conversations/{conversation_id}/order-evidence/confirm"),
+}
+
+
+def test_direct_ttn_evidence_routes_are_explicitly_workspace_scoped() -> None:
+    actual_routes = {
+        (method, path)
+        for path, route in _api_routes()
+        for method in route.methods
+    }
+    assert EXPECTED_DIRECT_ORDER_EVIDENCE_ROUTES.issubset(actual_routes)
+    assert all(
+        _primary_scope(path) == "WORKSPACE_SCOPED"
+        for _method, path in EXPECTED_DIRECT_ORDER_EVIDENCE_ROUTES
+    )
+    assert not any(
+        path in PUBLIC_ENDPOINTS or path in AUTHENTICATED_GLOBAL_ENDPOINTS
+        for _method, path in EXPECTED_DIRECT_ORDER_EVIDENCE_ROUTES
+    )
 
 
 def _flatten_routes(routes, prefix: str = "") -> list[tuple[str, APIRoute]]:
