@@ -1,7 +1,7 @@
 {
-  "name": "Sellora — CRM для Instagram-магазинів",
+  "name": "Sellora — CRM для керування продажами",
   "short_name": "Sellora",
-  "description": "CRM/ERP для лідів, замовлень, складу, реклами, доставок і прибутку Instagram-магазину.",
+  "description": "Клієнти, замовлення, товари, склад, доставка та фінанси в одному робочому просторі.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",

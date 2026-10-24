@@ -118,7 +118,7 @@
     "password": "Password",
     "login": "Log in",
     "loading": "Signing in…",
-    "helper": "Enter your account details to access the store.",
+    "helper": "Sign in to your team’s workspace.",
     "error": "Invalid email or password. Check the details and try again.",
     "sessionExpired": "Session expired. Please log in again.",
     "networkError": "Could not connect to the server. Try again a bit later.",
@@ -126,9 +126,9 @@
     "backHome": "Back to site",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "contextTitle": "All store work in one workspace",
-    "contextDescription": "Sellora brings sales, customers, products, shipments, ads, and finance into one protected workspace for your team.",
-    "trustStatement": "Access is protected by an account, and each store’s data is kept separately.",
+    "contextTitle": "Every sale.\nOne workspace.",
+    "contextDescription": "Customers, orders and results — pick up right where you left off.",
+    "trustStatement": "Account-based workspace access. Your team’s data is kept separate from other workspaces.",
     "indicators": [
       {
         "label": "operations workspace",
@@ -142,7 +142,12 @@
         "label": "English interface",
         "value": "EN"
       }
-    ]
+    ],
+    "workspaceLabel": "Your workspace",
+    "formNote": "Use the email and password for your account.",
+    "secureLabel": "Access your CRM",
+    "previewLabel": "Customer → order → result",
+    "validationError": "Enter a valid email address and your password."
   },
   "landing": {
     "nav": {
@@ -296,8 +301,8 @@
     "finalCtaEyebrow": "Ready for clarity",
     "ctaTitle": "Start from your real Sellora workspace",
     "ctaSubtitle": "If you already have workspace access, log in and keep managing sales without spreadsheets.",
-    "footer": "© 2026 Sellora. CRM/ERP for Instagram stores.",
-    "footerDescription": "Sellora helps Instagram stores manage leads, customers, orders, stock, shipments, advertising, and finance in one workspace.",
+    "footer": "© 2026 Sellora. CRM for managing sales.",
+    "footerDescription": "Sellora connects customers, orders, products, inventory, shipping, advertising and finances in one workspace.",
     "headerExploreCta": "Explore features"
   },
   "dashboard": {
@@ -2671,5 +2676,163 @@
     "shipmentAlt": "Parcel on a dark platform in Sellora brand lighting",
     "storyLead": "One sale.",
     "storyRest": "All the context together."
+  },
+  "scrollLanding": {
+    "eyebrow": "CRM for managing sales",
+    "headline": "One workspace.",
+    "accent": "Every step of a sale.",
+    "subtitle": "Customers, orders, products, inventory, shipping and finances — one CRM for your team.",
+    "explore": "Explore Sellora",
+    "pilot": "Pilot access",
+    "reduceMotion": "Reduce motion",
+    "enableMotion": "Enable animation",
+    "scrollHint": "Scroll to bring the story to life",
+    "journeyLabel": "A sale in Sellora",
+    "journeyEyebrow": "From first contact to the result",
+    "demoNote": "An illustration of CRM capabilities. All data in this story is for demonstration.",
+    "sceneCaption": "One sale · the full context",
+    "chapters": [
+      {
+        "title": "Your CRM",
+        "heading": "Your work comes together.",
+        "body": "Customer, product, order and result stay connected. Scroll to follow one sale from start to finish."
+      },
+      {
+        "title": "Enquiry",
+        "heading": "Every contact has a next step.",
+        "body": "Keep enquiries, contact details and customer history together. Manage sales wherever a customer finds you."
+      },
+      {
+        "title": "Order",
+        "heading": "From interest to an order.",
+        "body": "Products, variants, stock and payment in context. Your team checks the details and moves the sale forward."
+      },
+      {
+        "title": "Shipping",
+        "heading": "The next step stays in sight.",
+        "body": "Prepare shipments, check recipient details and delivery status. Carrier integration requires configuration."
+      },
+      {
+        "title": "Finances",
+        "heading": "The sale ends. Context stays.",
+        "body": "See revenue, product cost and expenses separately. Profit is meaningful when all required data is confirmed."
+      }
+    ],
+    "preview": {
+      "label": "Illustrative Sellora CRM workspace",
+      "request": "Enquiry",
+      "customer": "Demo customer",
+      "newCustomer": "History and contacts",
+      "new": "New",
+      "message": "Hello! I would like to order the sweatshirt. Is size M available?",
+      "customerContext": "Customer context follows the sale",
+      "order": "Order #1042",
+      "product": "Essential sweatshirt",
+      "variant": "Black · M · 1 item",
+      "revenueValue": "UAH 679",
+      "stock": "Inventory",
+      "reserved": "1 item reserved",
+      "payment": "Demo payment",
+      "paid": "Confirmed",
+      "orderContext": "Customer and product linked to the order",
+      "shipment": "Shipping",
+      "delivery": "Delivered to the customer",
+      "deliveryNote": "Example shipment statuses",
+      "deliverySteps": [
+        "Prepared",
+        "Shipped",
+        "Delivered"
+      ],
+      "shipmentContext": "Demonstration · no actual shipment is created",
+      "finance": "Financial result",
+      "revenue": "Revenue",
+      "costs": [
+        {
+          "label": "Product cost",
+          "value": "−UAH 300"
+        },
+        {
+          "label": "Shipping and fees",
+          "value": "−UAH 80"
+        },
+        {
+          "label": "Other expenses",
+          "value": "−UAH 20"
+        }
+      ],
+      "profit": "Demo profit",
+      "profitValue": "UAH 279",
+      "financeContext": "Revenue and all expenses are known in this example"
+    },
+    "capTitle": "More capabilities. Fewer disconnected tools.",
+    "capIntro": "From everyday tasks to a clearer view of your business.",
+    "capabilities": [
+      {
+        "title": "Customers and enquiries",
+        "body": "Contacts, notes, purchases and linked orders. Keep context for the first conversation and the next."
+      },
+      {
+        "title": "Order management",
+        "body": "Products, variants, payment and status history. A clear next step for your team."
+      },
+      {
+        "title": "Catalog and inventory",
+        "body": "SKUs, stock, reservations and inventory movements. Check availability before confirming a sale."
+      },
+      {
+        "title": "Shipping",
+        "body": "Recipient details, shipments, tracking numbers and statuses. Nova Poshta tools after carrier setup."
+      },
+      {
+        "title": "Finances and COD",
+        "body": "Revenue, product cost, expenses and cash-on-delivery reconciliation from NovaPay or bank CSV registers."
+      },
+      {
+        "title": "Reporting and advertising",
+        "body": "Sales and advertising trends. Periods, expenses and comparisons to support daily decisions."
+      }
+    ],
+    "intTitle": "Your CRM is the center. Channels can evolve.",
+    "intIntro": "Connect available tools to a shared workflow. Additional platforms will be added over time.",
+    "integrations": [
+      {
+        "title": "Nova Poshta",
+        "status": "After configuration",
+        "body": "Prepare shipments, create tracking numbers and check statuses with a configured sender."
+      },
+      {
+        "title": "Instagram Direct · Meta Ads",
+        "status": "Pilot integrations",
+        "body": "Pilot conversations and manual advertising metric imports by period. Availability depends on connection and permissions."
+      },
+      {
+        "title": "More platforms",
+        "status": "Planned",
+        "body": "We plan to expand channels and integrations. Future connections are not yet available features."
+      }
+    ],
+    "integrationNote": "Meta Ads metrics are imported manually; USD is converted using the daily NBU exchange rate. Automatic attribution of CRM orders is still evolving.",
+    "faqEyebrow": "Before you start",
+    "faqTitle": "A few things to know.",
+    "faqs": [
+      {
+        "q": "Why use Sellora as a team?",
+        "a": "Manage enquiries, customers, orders, inventory and finances in a shared workspace. Sales channels can change while your history stays in the CRM."
+      },
+      {
+        "q": "Does everything happen automatically?",
+        "a": "Some actions are started and reviewed by your team. Advertising metric imports are manual, and tracking number creation requires a configured integration."
+      },
+      {
+        "q": "How is profit calculated?",
+        "a": "Product cost and relevant expenses are deducted from confirmed revenue. Unknown product cost is not treated as zero."
+      },
+      {
+        "q": "Can I use it on my phone?",
+        "a": "Sellora has a responsive interface. The homepage uses a shorter animation flow on small screens and offers reduced motion."
+      }
+    ],
+    "finalTitle": "Your team. Your sales. One workspace.",
+    "finalBody": "Return to your customers, orders and results in Sellora."
   }
 }
