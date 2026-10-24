@@ -21,6 +21,12 @@ export function CrmAttributionPanel({
     retry: false,
   });
 
+  const linkedActiveOrders = report.data
+    ? Math.max(0, report.data.totals.active_orders - report.data.unattributed.active_orders) : 0;
+  const linkedPaidFulfilledRevenue = report.data
+    ? report.data.campaigns.reduce((sum, campaign) => sum + Number(campaign.paid_fulfilled_revenue ?? 0), 0) : 0;
+  const linkedPaidFulfilledOrders = report.data
+    ? report.data.campaigns.reduce((sum, campaign) => sum + campaign.paid_fulfilled_orders, 0) : 0;
   return (
     <section className="grid min-w-0 gap-4 rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm sm:p-5"
       data-advertising-crm-attribution aria-label={t("adsDashboard.crmAttributionTitle")}>
@@ -41,17 +47,17 @@ export function CrmAttributionPanel({
           <div className="grid min-w-0 gap-3 sm:grid-cols-3">
             <div className="rounded-xl bg-surface-2 p-4">
               <p className="text-xs text-text-secondary">{t("adsDashboard.crmLinkedOrders")}</p>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-text-primary">{report.data.linked_orders.toLocaleString()}</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-text-primary">{linkedActiveOrders.toLocaleString()}</p>
               <p className="mt-1 text-xs text-text-muted">{t("adsDashboard.crmLinkedCaption")}</p>
             </div>
             <div className="rounded-xl bg-surface-2 p-4">
               <p className="text-xs text-text-secondary">{t("adsDashboard.crmPaidCompletedRevenue")}</p>
-              <p className="mt-2 truncate text-2xl font-bold tabular-nums text-text-primary">{formatMoney(report.data.completed_paid_revenue, currencyCode)}</p>
-              <p className="mt-1 text-xs text-text-muted">{report.data.completed_paid_orders} {t("adsDashboard.crmPaidOrders")}</p>
+              <p className="mt-2 truncate text-2xl font-bold tabular-nums text-text-primary">{formatMoney(linkedPaidFulfilledRevenue, currencyCode)}</p>
+              <p className="mt-1 text-xs text-text-muted">{linkedPaidFulfilledOrders} {t("adsDashboard.crmPaidOrders")}</p>
             </div>
             <div className="rounded-xl bg-surface-2 p-4">
               <div className="flex items-center gap-2 text-xs text-text-secondary"><Link2Off className="size-4" aria-hidden="true" />{t("adsDashboard.crmUnattributed")}</div>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-text-primary">{report.data.unattributed_completed_paid_orders.toLocaleString()}</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-text-primary">{report.data.unattributed.paid_fulfilled_orders.toLocaleString()}</p>
               <p className="mt-1 text-xs text-text-muted">{t("adsDashboard.crmUnattributedCaption")}</p>
             </div>
           </div>
@@ -61,7 +67,7 @@ export function CrmAttributionPanel({
               {report.data.campaigns.map(row => (
                 <div key={row.campaign_id} className="flex min-w-0 items-center justify-between gap-3 border-t border-border-subtle py-2 text-sm">
                   <span className="min-w-0 truncate text-text-primary" title={row.campaign_name}>{row.campaign_name}</span>
-                  <span className="shrink-0 tabular-nums text-text-secondary">{row.linked_orders} {t("adsDashboard.crmOrdersShort")}</span>
+                  <span className="shrink-0 tabular-nums text-text-secondary">{row.active_orders} {t("adsDashboard.crmOrdersShort")}</span>
                 </div>
               ))}
             </div>
