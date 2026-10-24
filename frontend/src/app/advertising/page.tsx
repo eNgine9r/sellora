@@ -106,7 +106,7 @@ export default function AdvertisingPage() {
   useEffect(() => { setSelectedCampaign(null); }, [workspaceId]);
   function selectPeriod(preset: PeriodPreset) {
     setPeriodPreset(preset);
-    if (preset === "all") { setStartDate(""); setEndDate(""); }
+    if (preset === "all") { setStartDate("2000-01-01"); setEndDate(localIsoDate(new Date())); }
     else if (preset !== "custom") {
       const [start, end] = periodDates(Number(preset));
       setStartDate(start);
