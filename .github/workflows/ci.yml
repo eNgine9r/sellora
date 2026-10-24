@@ -190,10 +190,12 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Run Sprint 8F foundation migration gate
         run: python scripts/sprint_8f_migration_gate.py
-      - name: Run canonical migration downgrade and re-upgrade gate
+      - name: Verify reversible Meta FX migration without dropping live sessions
         run: |
+          # Revision 202610200038 intentionally prohibits destructive auth-session rollback.
+          # Exercise only the newest, additive FX migration in disposable PostgreSQL.
           alembic upgrade head
-          alembic downgrade 202607180028
+          alembic downgrade 202610230044
           alembic upgrade head
           alembic current
       - name: Run PostgreSQL concurrency and consolidation tests
