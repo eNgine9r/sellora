@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "project": "Sellora",
+  "profile": "CLOUD_SAAS",
+  "sprint": {
+    "id": "PROCESS-ADOPTION-1",
+    "title": "Development operating standard adoption and state reconciliation",
+    "goal": "Make repository-backed state, scoped Work Packages and resumable execution the default development workflow.",
+    "status": "in_progress",
+    "started_at": "2026-07-31"
+  },
+  "execution_policy": {
+    "autonomous": true,
+    "continue_after_task": true,
+    "continue_after_soft_failure": true,
+    "skip_blocked_tasks": true,
+    "stop_on_hard_blocker": true,
+    "max_parallel_implementation_tasks": 1
+  },
+  "tasks": [
+    {
+      "id": "SELLORA-232",
+      "issue": 232,
+      "title": "Adopt AI Development Operating Standard and autonomous Sprint workflow",
+      "status": "in_progress",
+      "priority": 1,
+      "depends_on": [],
+      "scope": [
+        "PROJECT_PROFILE.yaml",
+        "docs/AI_DEVELOPMENT_OPERATING_STANDARD.md",
+        ".project/**",
+        "scripts/ai-*.ps1",
+        "docs/templates/**",
+        "backend/AGENTS.md",
+        "frontend/AGENTS.md"
+      ],
+      "verification": [
+        "PowerShell parser check for added scripts",
+        "JSON parse check for .project/ACTIVE_SPRINT.json",
+        "documentation review"
+      ]
+    },
+    {
+      "id": "SELLORA-233",
+      "issue": 233,
+      "title": "Reconcile code, documentation, active roadmap and runtime state",
+      "status": "ready",
+      "priority": 2,
+      "depends_on": [
+        "SELLORA-232"
+      ],
+      "scope": [
+        ".project/**",
+        "docs/**",
+        "GitHub Issues and Pull Requests",
+        "staging evidence"
+      ],
+      "verification": [
+        "repository and GitHub cross-check",
+        "staging evidence where available",
+        "documentation-only diff"
+      ]
+    }
+  ]
+}

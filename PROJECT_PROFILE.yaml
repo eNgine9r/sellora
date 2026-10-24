@@ -1,0 +1,66 @@
+schema_version: 1
+project_name: Sellora
+repository: eNgine9r/sellora
+profile: CLOUD_SAAS
+
+product:
+  category: CRM_ERP_SAAS
+  primary_market: Ukraine
+  primary_language: uk
+  secondary_language: en
+
+roles:
+  product_owner: user
+  technical_lead: ChatGPT
+  implementation_agent: Codex
+  source_of_truth: GitHub_and_repository
+
+development:
+  internet_allowed: true
+  github_required: true
+  codex_optional: true
+  local_development_supported: true
+
+runtime:
+  internet_required: true
+  cloud_services_allowed: true
+  paid_services_allowed: true
+  paid_service_rule: require_cost_and_migration_assessment
+  offline_core_required: false
+
+deployment:
+  model: cloud
+  frontend_target: Vercel
+  backend_target: Render
+  database_target: Supabase_PostgreSQL
+  environments:
+    - local
+    - staging
+    - production
+  release_method: pull_request_ci_then_controlled_deploy
+
+data:
+  location: managed_PostgreSQL
+  workspace_isolation_required: true
+  backup_required: true
+  restore_test_required: true
+  secrets_in_repository: forbidden
+
+quality:
+  branch_to_pr_required: true
+  direct_main_push: forbidden
+  targeted_tests_first: true
+  full_ci_before_merge: true
+  staging_verification_required: true
+  current_state_update_required: true
+  checkpoint_required_per_work_package: true
+
+risk:
+  hard_blockers:
+    - destructive_production_migration
+    - production_data_deletion
+    - secret_exposure
+    - billing_or_dns_change
+    - missing_mandatory_credentials
+    - unresolved_product_architecture_choice
+    - exhausted_agent_usage_limit
