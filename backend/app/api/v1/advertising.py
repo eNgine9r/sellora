@@ -18,7 +18,9 @@ from app.schemas.advertising import (
     AdvertisingSummaryResponse,
     AdvertisingTrendPoint,
     CampaignPerformanceResponse,
+    CrmAttributionSummaryResponse,
 )
+from app.services.advertising_attribution_service import AdvertisingAttributionService
 from app.services.advertising_service import AdCampaignService, AdMetricService, AdvertisingAnalyticsService, AdvertisingServiceError
 
 router = APIRouter(prefix="/advertising", tags=["Advertising"])
@@ -119,3 +121,22 @@ def campaign_performance(start_date: date | None = None, end_date: date | None =
 @router.get("/trend", response_model=list[AdvertisingTrendPoint])
 def advertising_trend(start_date: date | None = None, end_date: date | None = None, workspace_id: UUID = Depends(get_workspace_id), current_user: User = Depends(require_min_role(RoleName.ANALYST)), db: Session = Depends(get_db)) -> list[AdvertisingTrendPoint]:
     return AdvertisingAnalyticsService(db).trend(workspace_id, start_date, end_date, _include_sensitive(current_user, workspace_id))
+
+
+
+@router.get("/crm-attribution", response_model=CrmAttributionSummaryResponse)
+def crm_attribution(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    limit: int = Query(default=8, ge=1, le=25),
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.ANALYST)),
+    db: Session = Depends(get_db),
+) -> CrmAttributionSummaryResponse:
+    """Read CRM attribution independently of provider daily AdMetric totals."""
+    try:
+        return CrmAttributionSummaryResponse.model_validate(
+            AdvertisingAttributionService(db).summary(workspace_id, start_date, end_date, limit=limit)
+        )
+    except (ValueError, OverflowError) as exc:
+        raise HTTPException(status_code=400, detail="INVALID_DATE_RANGE") from exc

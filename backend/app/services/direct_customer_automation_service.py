@@ -21,6 +21,7 @@ from app.schemas.direct_customer_automation import (
     DirectCustomerAutomationState,
     DirectCustomerCompleteRequest,
 )
+from app.services.advertising_attribution_service import AdvertisingAttributionService
 from app.services.business_utils import snapshot
 from app.services.crm_completion_service import CustomerCrmService
 
@@ -37,6 +38,7 @@ class DirectCustomerAutomationService:
         self.customers = CustomerRepository(db)
         self.customer_crm = CustomerCrmService(db)
         self.audit_logs = AuditLogRepository(db)
+        self.ad_attribution = AdvertisingAttributionService(db)
 
     def state(self, workspace_id: UUID, conversation_id: UUID) -> DirectCustomerAutomationState:
         conversation = self._conversation(workspace_id, conversation_id)
@@ -159,6 +161,11 @@ class DirectCustomerAutomationService:
             city_ref=payload.nova_poshta_city_ref,
             warehouse_ref=payload.nova_poshta_warehouse_ref,
             actor_user_id=actor_user_id,
+        )
+        # Deterministic only: the conversation must explicitly link a lead with a
+        # valid campaign. Never override a campaign chosen on an order.
+        self.ad_attribution.inherit_verified_direct_lead(
+            workspace_id, conversation, customer.id, conversation.linked_order_id, actor_user_id,
         )
         self.audit_logs.create(
             workspace_id=workspace_id,

@@ -153,3 +153,22 @@ class AdvertisingTrendPoint(BaseModel):
     leads: int
     cpa: Decimal | None = None
     roas: Decimal | None = None
+
+
+
+class CrmAttributionCampaignResponse(BaseModel):
+    campaign_id: UUID
+    campaign_name: str
+    linked_orders: int
+    completed_paid_orders: int
+    completed_paid_revenue: Decimal
+
+
+class CrmAttributionSummaryResponse(BaseModel):
+    source: str = "crm_orders"
+    date_basis: str = "order_created_at_utc"
+    linked_orders: int
+    completed_paid_orders: int
+    completed_paid_revenue: Decimal
+    unattributed_completed_paid_orders: int
+    campaigns: list[CrmAttributionCampaignResponse]

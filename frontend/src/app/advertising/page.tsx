@@ -12,6 +12,7 @@ import { AdMetricTable } from "@/features/advertising/components/ad-metric-table
 import { AdvertisingDateRangeFilter } from "@/features/advertising/components/advertising-date-range-filter";
 import { AdvertisingTrendChart } from "@/features/advertising/components/advertising-trend-chart";
 import { AdvertisingDashboardOverview } from "@/features/advertising/components/advertising-dashboard-overview";
+import { CrmAttributionPanel } from "@/features/advertising/components/crm-attribution-panel";
 import { CampaignForm } from "@/features/advertising/components/campaign-form";
 import { CampaignPerformanceTable } from "@/features/advertising/components/campaign-performance-table";
 import { CampaignTable } from "@/features/advertising/components/campaign-table";
@@ -85,6 +86,7 @@ export default function AdvertisingPage() {
     queryClient.invalidateQueries({ queryKey: ["ad-summary", workspaceId] });
     queryClient.invalidateQueries({ queryKey: ["ad-performance", workspaceId] });
     queryClient.invalidateQueries({ queryKey: ["ad-trend", workspaceId] });
+    queryClient.invalidateQueries({ queryKey: ["ad-crm-attribution", workspaceId] });
   };
   const createCampaignMutation = useMutation({ mutationFn: (payload: AdCampaignCreate) => createAdCampaign(workspaceId, undefined, payload), onSuccess: () => { setIsCampaignCreateOpen(false); invalidateAds(); } });
   const createMetricMutation = useMutation({ mutationFn: (payload: AdMetricCreate) => createAdMetric(workspaceId, undefined, payload), onSuccess: () => { setIsMetricCreateOpen(false); invalidateAds(); } });
@@ -172,6 +174,13 @@ export default function AdvertisingPage() {
             onClick={() => setActiveTab(tab)}>{t("adsDashboard.tab_" + tab)}</button>
         ))}
       </nav>
+
+      {activeTab === "overview" ? (
+        <CrmAttributionPanel
+          workspaceId={workspaceId} startDate={startDate} endDate={endDate}
+          currencyCode={currencyCode} enabled={enabled}
+        />
+      ) : null}
 
       {activeTab === "overview" ? (
         <section className="grid min-w-0 gap-3 rounded-2xl border border-border-subtle bg-surface-1 p-4 shadow-sm sm:p-5" data-advertising-next-actions>
