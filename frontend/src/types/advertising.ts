@@ -5,3 +5,15 @@ export type CampaignPerformance = { campaign_id: string; campaign_name: string; 
 export type AdvertisingTrendPoint = { date: string; spend: string; revenue: string; net_profit?: string | null; orders: number; leads: number; cpa?: string | null; roas?: string | null };
 export type AdCampaignCreate = { name: string; platform: string; status: string; objective: string; budget_type: string; daily_budget: number | null; total_budget: number | null; start_date: string | null; end_date: string | null; notes: string | null };
 export type AdMetricCreate = { campaign_id: string; metric_date: string; spend: number; impressions: number; reach: number; clicks: number; messages: number; leads: number; orders: number; revenue: number; net_profit: number };
+
+export type CrmAttributionCampaign = {
+  campaign_id: string; campaign_name: string;
+  linked_orders: number; completed_paid_orders: number;
+  completed_paid_revenue: string;
+};
+export type CrmAttributionSummary = {
+  source: "crm_orders"; date_basis: "order_created_at_utc";
+  linked_orders: number; completed_paid_orders: number; completed_paid_revenue: string;
+  unattributed_completed_paid_orders: number;
+  campaigns: CrmAttributionCampaign[];
+};

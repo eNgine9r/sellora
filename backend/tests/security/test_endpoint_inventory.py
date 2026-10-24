@@ -62,11 +62,11 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 7,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 202,
+    "WORKSPACE_SCOPED": 203,
     "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 230
+EXPECTED_TOTAL_ROUTES = 231
 EXPECTED_MUTATION_ROUTES = 133
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
@@ -207,3 +207,12 @@ def test_meta_oauth_redirect_is_public_but_code_exchange_is_owner_scoped():
     assert _primary_scope(path, "GET") == "PUBLIC"
     assert _primary_scope(path, "POST") == "FEATURE_GATED"
     assert ("POST", path) in OWNER_ONLY_ENDPOINTS
+
+
+def test_crm_attribution_report_is_read_only_and_workspace_scoped() -> None:
+    path = "/api/v1/advertising/crm-attribution"
+    matching = [route for route_path, route in _api_routes() if route_path == path]
+    assert len(matching) == 1
+    assert matching[0].methods == {"GET"}
+    assert _primary_scope(path) == "WORKSPACE_SCOPED"
+    assert path not in PUBLIC_ENDPOINTS and path not in AUTHENTICATED_GLOBAL_ENDPOINTS

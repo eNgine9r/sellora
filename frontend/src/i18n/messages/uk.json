@@ -2556,7 +2556,21 @@
     "manageDataHint": "Створення ручних кампаній, CSV-імпорт та історичні метрики.",
     "metaConnection": "Підключення та синхронізація Meta Ads",
     "loadError": "Не вдалося завантажити частину рекламних даних. Спробуйте оновити.",
-    "retry": "Оновити"
+    "retry": "Оновити",
+    "crmAttributionTitle": "Продажі, пов’язані з рекламою",
+    "crmAttributionSubtitle": "Окремі дані із замовлень CRM за датою їх створення (UTC).",
+    "crmAttributionSource": "Джерело: CRM",
+    "crmLinkedOrders": "Замовлення з кампанією",
+    "crmLinkedCaption": "Крім скасованих, повернених і відшкодованих",
+    "crmPaidCompletedRevenue": "Дохід завершених та оплачених",
+    "crmPaidOrders": "завершених оплачених замовлень",
+    "crmUnattributed": "Без кампанії",
+    "crmUnattributedCaption": "Завершені та оплачені без прив’язки",
+    "crmLinkedCampaigns": "Кампанії у замовленнях CRM",
+    "crmOrdersShort": "зам.",
+    "crmEmpty": "У замовлень за цей період ще немає підтверджених зв’язків із кампаніями.",
+    "crmTruthNotice": "Цей блок читає саме замовлення CRM, а не цифри Meta Ads. Кампанія переноситься з ліда лише за явного зв’язку з Direct. Неуспішні та повернені замовлення не враховуються як оплачений дохід.",
+    "crmAttributionError": "Не вдалося завантажити дані замовлень CRM."
   },
   "cinematicLanding": {
     "eyebrow": "CRM для Instagram-магазинів",

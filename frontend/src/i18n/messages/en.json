@@ -2556,7 +2556,21 @@
     "manageDataHint": "Manual campaigns, CSV imports and historical metrics.",
     "metaConnection": "Meta Ads connection and sync",
     "loadError": "Some advertising data could not be loaded. Try refreshing.",
-    "retry": "Refresh"
+    "retry": "Refresh",
+    "crmAttributionTitle": "Sales linked to advertising",
+    "crmAttributionSubtitle": "Separate CRM order data grouped by UTC order creation date.",
+    "crmAttributionSource": "Source: CRM",
+    "crmLinkedOrders": "Orders with campaigns",
+    "crmLinkedCaption": "Excludes cancelled, returned and refunded",
+    "crmPaidCompletedRevenue": "Completed and paid revenue",
+    "crmPaidOrders": "completed and paid orders",
+    "crmUnattributed": "Without a campaign",
+    "crmUnattributedCaption": "Completed paid orders lacking attribution",
+    "crmLinkedCampaigns": "Campaigns recorded in CRM orders",
+    "crmOrdersShort": "orders",
+    "crmEmpty": "No confirmed campaign links for orders in this period yet.",
+    "crmTruthNotice": "This panel reads CRM orders, not Meta ad metrics. Campaign is inherited from a lead only when explicitly linked to Direct. Unpaid and returned orders are excluded from paid revenue.",
+    "crmAttributionError": "Could not load CRM order attribution."
   },
   "cinematicLanding": {
     "eyebrow": "CRM for Instagram shops",
