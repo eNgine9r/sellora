@@ -16,13 +16,14 @@ Date: 2026-10-24. Scope: public `/`, UA/EN, selected first visual direction.
 
 1. First pass was blocked: flat headline/CTA colors, underspecified story panel, no mobile runtime check and Ukrainian illustration in English mode.
 2. Fixed: restored violet/coral palette, generated matching shipment art, added actual editable customer/product/payment/shipping context in the demo panel and localized illustration. Added scroll-linked perspective, pointer response, animation cleanup and an explicit motion toggle.
-3. Visual comparison found the story heading wrapping to three lines instead of the intended two and a smaller hero display scale. Fixed display sizing, explicit localized two-line story heading and primary CTA dimensions. Recaptured the rebuilt page and compared again; the earlier wrapping issue is gone on desktop. Mobile uses its own readable wrapping.
+3. Contrast review found a 4.25:1 legacy hover color; corrected hover to retain the accessible base gradient without brightness filtering.
+4. Visual comparison found the story heading wrapping to three lines instead of the intended two and a smaller hero display scale. Fixed display sizing, explicit localized two-line story heading and primary CTA dimensions. Recaptured the rebuilt page and compared again; the earlier wrapping issue is gone on desktop. Mobile uses its own readable wrapping.
 
 ## Required fidelity surfaces
 
 - Typography: existing project sans-serif retained, strong display hierarchy and short headline; final story heading follows the reference's two-line desktop structure. No clipped text in inspected viewports.
 - Spacing/layout: centered hero, asymmetric story, restrained sections and responsive stacking. Core shared header/footer are intentionally retained for existing navigation, menu, language and legal behavior.
-- Colors/tokens: landing-only dark tokens; violet/coral display text and darker CTA gradient preserve white-label legibility. No global private-app theme changes.
+- Colors/tokens: white CTA text measured at 6.60:1 / 6.00:1 / 5.50:1 against the three gradient stops, including the corrected hover gradient. The display violet measures 4.06:1 against the canvas (large-text threshold 3:1). Muted context text measures 7.82:1. Landing-only dark tokens; violet/coral display text and darker CTA gradient preserve white-label legibility. No global private-app theme changes.
 - Images: generated assets match the selected ribbon/plinth art direction. Hero UA WebP 151206 B, EN 126032 B, supporting shipment image 56326 B. Full background not replaced with CSS drawings; real library icons used for UI controls. The hero is a raster composition with animated CSS perspective, not WebGL geometry.
 - Copy/content: all editable text uses existing UA/EN dictionaries. Illustrative text switches to a dedicated English asset. Demo data is explicitly labeled, no real shop/customer information is used. Meta imports are described as manual and pilot-scoped; absent costs never produce fabricated profit.
 

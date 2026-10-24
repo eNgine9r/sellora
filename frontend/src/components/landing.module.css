@@ -637,3 +637,8 @@
 .hero .primary { font-size: 15px; padding: 18px 32px; }
 @media (max-width: 800px) { .hero h1 { font-size: clamp(36px, 7.5vw, 58px); } }
 @media (max-width: 420px) { .hero h1 { font-size: 36px; } }
+/* Keep white CTA labels above 4.5:1 in hover state as well. */
+.primary:hover {
+  background: linear-gradient(105deg, #8621d4, #b12785 64%, #b84120);
+  filter: none;
+}
