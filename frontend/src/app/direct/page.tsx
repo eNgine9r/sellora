@@ -26,13 +26,16 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { useDirectLive } from "@/components/direct-live-provider";
+import { DirectOrderEvidenceCard } from "@/components/direct-order-evidence-card";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 import { fetchAISuggestions } from "@/services/ai";
 import {
   ensureDirectCustomer,
+  confirmDirectOrderEvidence,
   fetchDirectConversations,
+  fetchDirectOrderEvidence,
   fetchDirectCustomerAutomation,
   fetchDirectMessages,
   fetchInstagramHistorySync,
@@ -47,6 +50,7 @@ import { fetchInstagramStatus } from "@/services/meta-instagram";
 import { AISuggestion } from "@/types/ai";
 import {
   DirectConversation,
+  DirectOrderEvidence,
   DirectCustomerAutomationState,
   DirectMessage,
   InstagramHistorySync,
@@ -112,6 +116,23 @@ function DirectPageContent() {
     enabled: Boolean(selectedConversation?.id),
     refetchInterval: 2000,
     refetchIntervalInBackground: true,
+  });
+  const orderEvidenceQuery = useQuery({
+    queryKey: ["direct-order-evidence", workspaceId, selectedConversation?.id],
+    queryFn: () => fetchDirectOrderEvidence(selectedConversation!.id),
+    enabled: Boolean(workspaceId && selectedConversation?.id),
+    staleTime: 60_000,
+  });
+  const confirmOrderEvidenceMutation = useMutation({
+    mutationFn: () => confirmDirectOrderEvidence(
+      selectedConversation!.id,
+      Array.from(new Set((orderEvidenceQuery.data?.verified_orders ?? []).map((item) => item.order_id))),
+    ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["direct-order-evidence", workspaceId, selectedConversation?.id] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-customer-automation", workspaceId, selectedConversation?.id] });
+    },
   });
   const suggestionsQuery = useQuery({
     queryKey: ["ai-suggestions", workspaceId, selectedConversation?.id],
@@ -337,6 +358,16 @@ function DirectPageContent() {
           onOpenAiPanel={() => setAiPanelOpen(true)}
           conversation={selectedConversation}
           automation={automationQuery.data}
+          orderEvidence={orderEvidenceQuery.data}
+          orderEvidenceLoading={orderEvidenceQuery.isLoading}
+          orderEvidenceError={orderEvidenceQuery.isError}
+          orderEvidenceConfirming={confirmOrderEvidenceMutation.isPending}
+          orderEvidenceConfirmError={confirmOrderEvidenceMutation.isError}
+          onConfirmOrderEvidence={() => {
+            const count = orderEvidenceQuery.data?.verified_orders.length ?? 0;
+            if (!count || !window.confirm(`Зберегти точні зв’язки з ${count} відправленнями? Замовлення, ціни, оплата й товари не зміняться.`)) return;
+            confirmOrderEvidenceMutation.mutate();
+          }}
           automationLoading={automationQuery.isLoading}
           automationError={automationQuery.isError || ensureCustomerMutation.isError}
           canManage={canManage}
@@ -631,6 +662,12 @@ type PrepareResult = { ready: boolean; blockers: string[]; warnings: string[]; m
 function MessageThread({
   conversation,
   automation,
+  orderEvidence,
+  orderEvidenceLoading,
+  orderEvidenceError,
+  orderEvidenceConfirming,
+  orderEvidenceConfirmError,
+  onConfirmOrderEvidence,
   automationLoading,
   automationError,
   canManage,
@@ -659,6 +696,12 @@ function MessageThread({
   onOpenAiPanel: () => void;
   conversation?: DirectConversation | null;
   automation?: DirectCustomerAutomationState;
+  orderEvidence?: DirectOrderEvidence;
+  orderEvidenceLoading: boolean;
+  orderEvidenceError: boolean;
+  orderEvidenceConfirming: boolean;
+  orderEvidenceConfirmError: boolean;
+  onConfirmOrderEvidence: () => void;
   automationLoading: boolean;
   automationError: boolean;
   canManage: boolean;
@@ -716,18 +759,22 @@ function MessageThread({
         <CustomerAutomationCard
         conversation={conversation}
         automation={automation}
+        existingOrdersCount={orderEvidence?.verified_orders.length ?? 0}
+        evidenceReady={!orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated}
         loading={automationLoading}
         error={automationError}
         canManage={canManage}
         ensuring={ensuringCustomer}
         onEnsure={onEnsureCustomer}
         />
+        <DirectOrderEvidenceCard evidence={orderEvidence} loading={orderEvidenceLoading} error={orderEvidenceError} canManage={canManage} confirming={orderEvidenceConfirming} confirmError={orderEvidenceConfirmError} onConfirm={onConfirmOrderEvidence} />
       </div>
       <details className="shrink-0 border-b border-border-subtle lg:hidden" data-direct-mobile-details>
         <summary className="cursor-pointer px-4 py-2 text-xs font-bold text-text-secondary">Деталі клієнта та замовлення</summary>
         <div className="max-h-[35dvh] overflow-y-auto">
           <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
-          <CustomerAutomationCard conversation={conversation} automation={automation} loading={automationLoading} error={automationError} canManage={canManage} ensuring={ensuringCustomer} onEnsure={onEnsureCustomer} />
+          <CustomerAutomationCard conversation={conversation} automation={automation} existingOrdersCount={orderEvidence?.verified_orders.length ?? 0} evidenceReady={!orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated} loading={automationLoading} error={automationError} canManage={canManage} ensuring={ensuringCustomer} onEnsure={onEnsureCustomer} />
+          <DirectOrderEvidenceCard evidence={orderEvidence} loading={orderEvidenceLoading} error={orderEvidenceError} canManage={canManage} confirming={orderEvidenceConfirming} confirmError={orderEvidenceConfirmError} onConfirm={onConfirmOrderEvidence} />
         </div>
       </details>
       <div ref={scrollContainer} className="sellora-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto p-3 lg:p-4" data-direct-live-thread>
@@ -805,6 +852,8 @@ function MessageThread({
 function CustomerAutomationCard({
   conversation,
   automation,
+  existingOrdersCount,
+  evidenceReady,
   loading,
   error,
   canManage,
@@ -813,6 +862,8 @@ function CustomerAutomationCard({
 }: {
   conversation: DirectConversation;
   automation?: DirectCustomerAutomationState;
+  existingOrdersCount: number;
+  evidenceReady: boolean;
   loading: boolean;
   error: boolean;
   canManage: boolean;
@@ -856,13 +907,13 @@ function CustomerAutomationCard({
               Створити prospect
             </Button>
           ) : null}
-          {customer && !automation?.linked_order_id && canManage ? (
+          {customer && evidenceReady && canManage ? (
             <Link
               className="inline-flex min-h-10 items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-black text-primary-foreground"
               href={`/orders?create=1&customer_id=${encodeURIComponent(customer.id)}&direct_conversation_id=${encodeURIComponent(conversation.id)}`}
             >
               <ShoppingBag className="h-4 w-4" />
-              Оформити замовлення
+              {existingOrdersCount > 0 || automation?.linked_order_id ? "Створити нове замовлення" : "Оформити замовлення"}
             </Link>
           ) : null}
           {automation?.linked_order_id ? (

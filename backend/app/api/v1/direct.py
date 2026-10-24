@@ -21,6 +21,12 @@ from app.integrations.meta_instagram.services.outbound_message_service import In
 from app.integrations.meta_instagram.services.participant_profile_service import InstagramParticipantProfileService
 from app.integrations.meta_instagram.services.reconciliation_service import InstagramReconciliationService
 from app.models.role import RoleName
+from app.schemas.direct_ttn_evidence import (
+    DirectOrderEvidenceResponse,
+    ConfirmDirectOrderEvidenceRequest,
+    ConfirmDirectOrderEvidenceResponse,
+)
+from app.services.direct_ttn_evidence_service import DirectTtnEvidenceService
 from app.models.user import User
 from app.repositories.ai_direct_repository import (
     AIRepository,
@@ -117,6 +123,58 @@ def get_conversation(
         conversation_id,
     )
     return conversation_response(conversation, profile)
+
+
+@router.get(
+    "/conversations/{conversation_id}/order-evidence",
+    response_model=DirectOrderEvidenceResponse,
+)
+def get_direct_order_evidence(
+    conversation_id: UUID,
+    workspace_id: UUID = Depends(get_workspace_id),
+    _: User = Depends(require_min_role(RoleName.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """Read-only exact-TTN reconciliation. Does not create or modify an order."""
+    preview = DirectTtnEvidenceService(db).preview(workspace_id, conversation_id)
+    if preview is None:
+        raise HTTPException(404, "DIRECT_CONVERSATION_NOT_FOUND")
+    return DirectOrderEvidenceResponse.model_validate(preview)
+
+@router.post(
+    "/conversations/{conversation_id}/order-evidence/confirm",
+    response_model=ConfirmDirectOrderEvidenceResponse,
+)
+def confirm_direct_order_evidence(
+    conversation_id: UUID,
+    payload: ConfirmDirectOrderEvidenceRequest,
+    workspace_id: UUID = Depends(get_workspace_id),
+    user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    """Explicit manager-reviewed, idempotent links; no order/shipment creation."""
+    try:
+        result = DirectTtnEvidenceService(db).confirm(
+            workspace_id,
+            conversation_id,
+            set(payload.expected_order_ids),
+            user.id,
+        )
+        db.commit()
+        return ConfirmDirectOrderEvidenceResponse.model_validate(result)
+    except ValueError as exc:
+        db.rollback()
+        code = str(exc)
+        raise HTTPException(
+            404 if code == "DIRECT_CONVERSATION_NOT_FOUND" else 409,
+            code if code in {
+                "DIRECT_CONVERSATION_NOT_FOUND",
+                "DIRECT_ORDER_EVIDENCE_INCOMPLETE",
+                "DIRECT_ORDER_EVIDENCE_CHANGED",
+                "DIRECT_PRIMARY_ORDER_CONFLICT",
+                "DIRECT_ORDER_SHIPMENT_CONFLICT",
+            } else "DIRECT_ORDER_EVIDENCE_RECONCILIATION_FAILED",
+        ) from exc
 
 
 @router.post(
