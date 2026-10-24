@@ -222,7 +222,8 @@ async def test_existing_messages_link_provider_thread_and_count_visible_dialog()
     assert sync.messages_existing == 1
     assert conversation.external_thread_id == "thread-1"
     assert conversation.external_conversation_id == "thread-1"
-    assert conversation.provider_sync_status == "HISTORY_SYNCED"
+    # Provider thread identity was confirmed, but existing message is not reimported.
+    assert conversation.provider_sync_status == "HISTORY_CHECKED"
     assert len(conversations.rows) == 0
 
 

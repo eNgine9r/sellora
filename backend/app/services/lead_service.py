@@ -11,6 +11,7 @@ from app.repositories.advertising_repository import AdCampaignRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.lead_repository import LeadRepository
+from app.repositories.ai_direct_repository import DirectConversationRepository
 from app.repositories.lead_source_repository import LeadSourceRepository
 from app.schemas.lead import LeadAssignRequest, LeadCreate, LeadMarkLostRequest, LeadUpdate
 from app.services.business_utils import snapshot
@@ -24,6 +25,7 @@ class LeadService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.leads = LeadRepository(db)
+        self.conversations = DirectConversationRepository(db)
         self.lead_sources = LeadSourceRepository(db)
         self.customers = CustomerRepository(db)
         self.audit_logs = AuditLogRepository(db)
@@ -120,20 +122,33 @@ class LeadService:
         return lead
 
     def convert_lead_to_customer(self, workspace_id: UUID, lead_id: UUID, actor_user_id: UUID | None) -> Customer | None:
-        lead = self.get(workspace_id, lead_id)
+        conversation = self.conversations.get_by_linked_lead(workspace_id, lead_id)
+        if conversation:
+            if conversation.instagram_connection_id and conversation.participant_scoped_id:
+                self.conversations.lock_instagram_participant(
+                    workspace_id, conversation.instagram_connection_id, conversation.participant_scoped_id,
+                )
+            conversation = self.conversations.get_for_update(workspace_id, conversation.id)
+        lead = self.leads.get_for_update(workspace_id, lead_id)
         if lead is None:
             return None
         if lead.status == LeadStatus.CONVERTED.value:
             raise LeadServiceError("Lead is already converted")
         old_value = snapshot(lead)
-        customer = self.customers.create(
-            Customer(
-                workspace_id=workspace_id,
-                name=lead.name,
-                phone=lead.phone,
-                instagram_username=lead.instagram_username,
+        created_from_manual_lead = conversation is None
+        if conversation:
+            from app.services.direct_customer_automation_service import DirectCustomerAutomationService
+            state = DirectCustomerAutomationService(self.db).ensure_candidate(
+                workspace_id, conversation.id, actor_user_id, commit=False,
             )
-        )
+            customer = self.customers.get(workspace_id, state.customer.id)
+            if customer is None:
+                raise LeadServiceError("Direct customer is unavailable")
+        else:
+            customer = self.customers.create(Customer(
+                workspace_id=workspace_id, name=lead.name, phone=lead.phone,
+                instagram_username=lead.instagram_username,
+            ))
         lead.status = LeadStatus.CONVERTED.value
         self.audit_logs.create(
             workspace_id=workspace_id,
@@ -144,14 +159,15 @@ class LeadService:
             old_value=old_value,
             new_value={"lead": snapshot(lead), "customer": snapshot(customer)},
         )
-        self.audit_logs.create(
-            workspace_id=workspace_id,
-            user_id=actor_user_id,
-            entity_type="Customer",
-            entity_id=customer.id,
-            action="CREATE_FROM_LEAD",
-            new_value=snapshot(customer),
-        )
+        if created_from_manual_lead:
+            self.audit_logs.create(
+                workspace_id=workspace_id,
+                user_id=actor_user_id,
+                entity_type="Customer",
+                entity_id=customer.id,
+                action="CREATE_FROM_LEAD",
+                new_value=snapshot(customer),
+            )
         self.db.commit()
         self.db.refresh(customer)
         return customer

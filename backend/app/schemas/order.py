@@ -51,6 +51,7 @@ class OrderCreate(BaseModel):
 
 class OrderUpdate(BaseModel):
     customer_id: UUID | None = None
+    campaign_id: UUID | None = Field(default=None, description="Omit to preserve campaign attribution; null clears it. A supplied campaign must be visible in the order workspace.")
     payment_status: PaymentStatus | None = None
     ad_cost: Decimal | None = Field(default=None, ge=0)
     shipping_cost: Decimal | None = Field(default=None, ge=0)
@@ -108,6 +109,9 @@ class OrderResponse(BaseModel):
     payment_status: PaymentStatus
     is_historical: bool = False
     revenue: Decimal
+    historical_order_value: Decimal | None = None
+    historical_value_source: str | None = None
+    historical_value_evidence: dict | None = None
     product_cost: Decimal
     estimated_product_cost: Decimal | None = None
     estimated_cost_source: HistoricalCostSource | None = None

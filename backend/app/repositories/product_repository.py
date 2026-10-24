@@ -55,6 +55,23 @@ class ProductVariantRepository:
             stmt = stmt.where(ProductVariant.product_id == product_id)
         return list(self.db.execute(stmt.order_by(ProductVariant.created_at.desc())).scalars())
 
+    def proposal_catalog(self, workspace_id: UUID, limit: int = 501) -> list[tuple[ProductVariant, Product]]:
+        # The service treats the sentinel row as an incomplete catalog, never a
+        # unique match. Both sides are explicitly tenant/active/soft-delete scoped.
+        stmt = (
+            select(ProductVariant, Product)
+            .join(Product, Product.id == ProductVariant.product_id)
+            .where(
+                ProductVariant.workspace_id == workspace_id,
+                Product.workspace_id == workspace_id,
+                ProductVariant.deleted_at.is_(None), Product.deleted_at.is_(None),
+                ProductVariant.is_active.is_(True), Product.is_active.is_(True),
+            )
+            .order_by(ProductVariant.id)
+            .limit(max(1, min(limit, 501)))
+        )
+        return [(variant, product) for variant, product in self.db.execute(stmt).all()]
+
     def get(self, workspace_id: UUID, variant_id: UUID) -> ProductVariant | None:
         stmt = select(ProductVariant).where(ProductVariant.workspace_id == workspace_id, ProductVariant.id == variant_id, ProductVariant.deleted_at.is_(None)).options(selectinload(ProductVariant.inventory))
         return self.db.execute(stmt).scalar_one_or_none()

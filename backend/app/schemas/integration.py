@@ -1,18 +1,27 @@
 from datetime import datetime
 from uuid import UUID
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.integration_connection import IntegrationStatus
 
 
 class NovaPoshtaSettingsRequest(BaseModel):
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def preserve_blank_key(cls, value):
+        return None if isinstance(value, str) and not value.strip() else value
+
     api_key: str | None = Field(default=None, min_length=8, max_length=255)
     sender_city_ref: str | None = None
     sender_warehouse_ref: str | None = None
     sender_counterparty_ref: str | None = None
     sender_contact_ref: str | None = None
     sender_phone: str | None = None
+    cod_payment_mode: Literal["MONEY_RETURN", "PAYMENT_CONTROL"] = "MONEY_RETURN"
+    cargo_description: str | None = Field(default=None, max_length=60)
+    cargo_description_mode: Literal["STATIC", "AUTO_ACCESSORIES"] = "STATIC"
 
 
 class NovaPoshtaWritePermissionRequest(BaseModel):
@@ -31,6 +40,9 @@ class NovaPoshtaSettingsResponse(BaseModel):
     sender_counterparty_ref: str | None = None
     sender_contact_ref: str | None = None
     sender_phone: str | None = None
+    cod_payment_mode: Literal["MONEY_RETURN", "PAYMENT_CONTROL"] = "MONEY_RETURN"
+    cargo_description: str | None = None
+    cargo_description_mode: Literal["STATIC", "AUTO_ACCESSORIES"] = "STATIC"
     environment_capability: bool = False
     workspace_permission: bool = False
     provider_writes_enabled: bool = False

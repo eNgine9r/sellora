@@ -85,6 +85,7 @@ async def instagram_oauth_callback(state: str = Query(...), code: str = Query(..
             "META_ACCOUNT_TYPE_UNVERIFIED": "account_type_unverified",
             "META_PERMISSION_MISSING": "permission_missing",
             "META_PERMISSION_VALIDATION_FAILED": "permission_failed",
+            "META_ACCOUNT_SWITCH_REQUIRES_DISCONNECT": "switch_requires_disconnect",
             "META_OAUTH_STATE_ALREADY_USED": "invalid_state",
             "META_OAUTH_STATE_EXPIRED": "invalid_state",
             "META_OAUTH_STATE_INVALID": "invalid_state",
@@ -137,7 +138,11 @@ async def receive_webhook(request: Request, x_hub_signature_256: str | None = He
     service = InstagramWebhookService(db)
     body = await request.body()
     try:
-        service.validate_signature(body, x_hub_signature_256); payload = service.parse_body(body); event = service.persist_verified_event(body, payload); db.commit(); return {"accepted": True, "event_id": str(event.id), "status": event.status}
+        service.validate_signature(body, x_hub_signature_256)
+        payload = service.parse_body(body)
+        events = service.persist_verified_events(body, payload)
+        db.commit()
+        return {"accepted": True, "event_id": str(events[0].id), "status": events[0].status}
     except MetaInstagramError as exc: db.rollback(); _raise(exc)
 
 @router.delete("/data")

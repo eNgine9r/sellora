@@ -116,3 +116,12 @@ class ShipmentSummaryResponse(BaseModel):
     arrived_count: int
     delivered_today: int
     returned_this_month: int
+
+
+class ShipmentTrackingEvent(BaseModel):
+    """Privacy-safe delivery timeline entry (no payloads/customer data)."""
+    at: datetime
+    event: str
+    status: str | None = None
+    previous_status: str | None = None
+    provider_status_code: str | None = None

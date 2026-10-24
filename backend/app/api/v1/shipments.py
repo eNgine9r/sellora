@@ -9,7 +9,7 @@ from app.models.role import RoleName
 from app.models.shipment import ShipmentStatus
 from app.models.user import User
 from app.schemas.integration import NovaPoshtaStatusResponse, NovaPoshtaTtnResponse
-from app.schemas.shipment import ShipmentCreate, ShipmentResponse, ShipmentSummaryResponse, ShipmentUpdate
+from app.schemas.shipment import ShipmentCreate, ShipmentResponse, ShipmentSummaryResponse, ShipmentUpdate, ShipmentTrackingEvent
 from app.services.nova_poshta_provider_service import NovaPoshtaProviderShipmentService
 from app.services.nova_poshta_service import NovaPoshtaServiceError
 from app.services.shipment_service import ShipmentService, ShipmentServiceError
@@ -45,6 +45,14 @@ def get_shipment(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_i
     if shipment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shipment not found")
     return shipment
+
+
+@router.get("/{shipment_id}/status-history", response_model=list[ShipmentTrackingEvent], dependencies=[Depends(require_min_role(RoleName.ANALYST))])
+def shipment_status_history(shipment_id: UUID, workspace_id: UUID = Depends(get_workspace_id), db: Session = Depends(get_db)) -> list[ShipmentTrackingEvent]:
+    result = ShipmentService(db).tracking_history(workspace_id, shipment_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shipment not found")
+    return result
 
 
 @router.put("/{shipment_id}", response_model=ShipmentResponse)
