@@ -40,7 +40,17 @@ def upgrade() -> None:
     op.create_index("ix_cod_payment_evidence_order_id", "cod_payment_evidence", ["order_id"])
     op.create_index("ix_cod_payment_evidence_paid_at", "cod_payment_evidence", ["workspace_id", "paid_at"])
     op.execute("ALTER TABLE public.cod_payment_evidence ENABLE ROW LEVEL SECURITY")
-    op.execute("REVOKE ALL ON TABLE public.cod_payment_evidence FROM anon, authenticated")
+    # PostgreSQL CI does not have Supabase's optional anon/authenticated roles.
+    # Preserve the strict grant policy where those roles exist.
+    op.execute("REVOKE ALL PRIVILEGES ON TABLE public.cod_payment_evidence FROM PUBLIC")
+    for role_name in ("anon", "authenticated"):
+        op.execute(f"""
+            DO $roles$ BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{role_name}') THEN
+                    REVOKE ALL PRIVILEGES ON TABLE public.cod_payment_evidence FROM "{role_name}";
+                END IF;
+            END $roles$
+        """)
 
 
 def downgrade() -> None:

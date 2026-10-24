@@ -43,3 +43,6 @@ class MetaAdConnection(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixi
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     last_error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    generation: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    last_sync_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

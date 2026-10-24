@@ -25,8 +25,8 @@ class FakeHttpClient:
         self.error = error
         self.calls = []
 
-    def get(self, url, *, params, timeout=None):
-        self.calls.append({"url": url, "params": params, "timeout": timeout})
+    def request(self, method, url, *, params, data, headers, timeout=None, follow_redirects=False):
+        self.calls.append({"url": url, "params": params, "headers": headers, "timeout": timeout})
         if self.error:
             raise self.error
         return self.response
@@ -35,7 +35,7 @@ class FakeHttpClient:
 def _client(response=None, error=None):
     return LiveMetaAdsReadOnlyClient(
         access_token="synthetic-token-for-tests-only",
-        api_version="v20.0",
+        api_version="v26.0",
         http_client=FakeHttpClient(response=response, error=error),
     )
 
@@ -97,29 +97,30 @@ def test_live_client_maps_successful_preview_dtos_without_returning_token() -> N
             200,
             {
                 "data": [
-                    {"id": "fake_live_act_001", "name": "Synthetic account", "currency": "UAH", "timezone_name": "Europe/Kyiv"}
+                    {"id": "act_001", "name": "Synthetic account", "currency": "UAH", "timezone_name": "Europe/Kyiv"}
                 ]
             },
         )
     )
-    client = LiveMetaAdsReadOnlyClient(access_token="synthetic-token-for-tests-only", api_version="v20.0", http_client=http_client)
+    client = LiveMetaAdsReadOnlyClient(access_token="synthetic-token-for-tests-only", api_version="v26.0", http_client=http_client)
 
     accounts = client.list_ad_accounts()
 
-    assert accounts[0].external_account_id == "fake_live_act_001"
+    assert accounts[0].external_account_id == "act_001"
     assert "synthetic-token-for-tests-only" not in str(accounts[0])
-    assert http_client.calls[0]["params"]["access_token"] == "synthetic-token-for-tests-only"
+    assert "access_token" not in http_client.calls[0]["params"]
+    assert http_client.calls[0]["headers"]["Authorization"] == "Bearer synthetic-token-for-tests-only"
 
 
 def test_live_client_maps_insights_preview_without_writes() -> None:
     client = _client(
         FakeResponse(
             200,
-            {"data": [{"campaign_id": "fake_campaign_001", "date_start": "2026-07-03", "spend": "12.34", "impressions": "100", "clicks": "5"}]},
+            {"data": [{"campaign_id": "12345", "date_start": "2026-07-03", "spend": "12.34", "account_currency": "UAH", "impressions": "100", "clicks": "5"}]},
         )
     )
 
-    rows = client.get_campaign_insights_preview("fake_act_001", date(2026, 7, 3), date(2026, 7, 3))
+    rows = client.get_campaign_insights_preview("act_001", date(2026, 7, 3), date(2026, 7, 3))
 
-    assert rows[0].external_campaign_id == "fake_campaign_001"
+    assert rows[0].external_campaign_id == "12345"
     assert not hasattr(client, "persist_ad_metrics")

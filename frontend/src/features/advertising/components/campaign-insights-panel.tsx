@@ -45,7 +45,7 @@ export function CampaignInsightsPanel({ rows, campaigns, currencyCode }: { rows:
 
   const comparisonColumns: ReportTableColumn<EnrichedCampaignPerformance>[] = [
     { key: "campaign", label: t("advertising.campaignComparison"), emphasis: true, render: (campaign) =>
-      <><span className="block">{campaign.campaign_name}</span><span className="block text-xs font-normal text-text-muted">{t("advertising.manualSource")}</span></> },
+      <><span className="block">{campaign.campaign_name}</span><span className="block text-xs font-normal text-text-muted">{t("advertising.campaignMetricsSource")}</span></> },
     { key: "spend", label: t("advertising.spend"), render: (campaign) => campaign.decision.status === "NO_DATA" ? DASH : formatMoney(campaign.spendValue, currencyCode) },
     { key: "revenue", label: t("advertising.revenue"), render: (campaign) =>
       <><span className="block">{campaign.decision.status === "NO_DATA" ? DASH : formatMoney(campaign.revenueValue, currencyCode)}</span><span className="block text-xs text-text-muted">{t("finance.netProfit")}: {campaign.netProfitValue == null ? DASH : formatMoney(campaign.netProfitValue, currencyCode)}</span></> },

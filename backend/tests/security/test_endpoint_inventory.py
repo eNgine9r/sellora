@@ -5,8 +5,11 @@ from fastapi.routing import APIRoute
 from app.main import app
 
 
-PUBLIC_ENDPOINTS = {"/health", "/api/v1/auth/login", "/api/v1/auth/refresh"}
-AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/me", "/api/v1/workspaces", "/api/v1/workspaces/demo"}
+PUBLIC_ENDPOINTS = {"/health", "/api/v1/auth/login", "/api/v1/auth/refresh",
+    "/api/v1/auth/session/login", "/api/v1/auth/session/refresh", "/api/v1/auth/session/logout"}
+PUBLIC_METHOD_ENDPOINTS = {("GET", "/api/v1/integrations/meta-ads/oauth/callback")}
+AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/me", "/api/v1/workspaces", "/api/v1/workspaces/demo",
+    "/api/v1/auth/session/upgrade", "/api/v1/auth/session/logout-all"}
 FEATURE_GATED_PREFIXES = ("/api/v1/integrations/meta-ads",)
 WORKSPACE_PREFIXES = (
     "/api/v1/leads",
@@ -34,6 +37,12 @@ WORKSPACE_PREFIXES = (
     "/api/v1/direct",
 )
 OWNER_ONLY_ENDPOINTS = {
+    ("POST", "/api/v1/integrations/meta-ads/oauth/start"),
+    ("POST", "/api/v1/integrations/meta-ads/oauth/callback"),
+    ("POST", "/api/v1/integrations/meta-ads/disconnect"),
+    ("GET", "/api/v1/integrations/meta-ads/accounts"),
+    ("POST", "/api/v1/integrations/meta-ads/account"),
+    ("POST", "/api/v1/integrations/meta-ads/sync"),
     ("POST", "/api/v1/workspace-users"),
     ("PUT", "/api/v1/workspace-users/{user_id}/role"),
     ("PATCH", "/api/v1/workspace-users/{user_id}/deactivate"),
@@ -51,14 +60,14 @@ OWNER_ONLY_ENDPOINTS = {
     ("POST", "/api/v1/integrations/instagram/webhooks/unsubscribe"),
 }
 EXPECTED_PRIMARY_COUNTS = {
-    "PUBLIC": 3,
-    "AUTHENTICATED_GLOBAL": 4,
-    "WORKSPACE_SCOPED": 197,
-    "FEATURE_GATED": 12,
+    "PUBLIC": 7,
+    "AUTHENTICATED_GLOBAL": 6,
+    "WORKSPACE_SCOPED": 202,
+    "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 216
-EXPECTED_MUTATION_ROUTES = 122
+EXPECTED_TOTAL_ROUTES = 230
+EXPECTED_MUTATION_ROUTES = 133
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -97,8 +106,8 @@ def _api_routes() -> list[tuple[str, APIRoute]]:
     return _flatten_routes(app.routes)
 
 
-def _primary_scope(path: str) -> str:
-    if path in PUBLIC_ENDPOINTS:
+def _primary_scope(path: str, method: str | None = None) -> str:
+    if path in PUBLIC_ENDPOINTS or (method, path) in PUBLIC_METHOD_ENDPOINTS:
         return "PUBLIC"
     if path in AUTHENTICATED_GLOBAL_ENDPOINTS:
         return "AUTHENTICATED_GLOBAL"
@@ -111,7 +120,7 @@ def _primary_scope(path: str) -> str:
 
 def test_endpoint_inventory_primary_classifications_are_exactly_reconciled() -> None:
     routes = _api_routes()
-    primary_counts = Counter(_primary_scope(path) for path, _route in routes)
+    primary_counts = Counter(_primary_scope(path, next(iter(route.methods))) for path, route in routes)
     classified_total = sum(primary_counts.values())
 
     assert len(routes) == EXPECTED_TOTAL_ROUTES
@@ -140,12 +149,12 @@ def test_customer_order_history_is_workspace_scoped_and_not_public() -> None:
 
 
 def test_global_endpoint_whitelist_is_explicit_and_small() -> None:
-    global_paths = {path for path, _route in _api_routes() if _primary_scope(path) in {"PUBLIC", "AUTHENTICATED_GLOBAL"}}
+    global_paths = {path for path, route in _api_routes() if _primary_scope(path, next(iter(route.methods))) in {"PUBLIC", "AUTHENTICATED_GLOBAL"}}
 
     assert PUBLIC_ENDPOINTS.issubset(global_paths)
     assert AUTHENTICATED_GLOBAL_ENDPOINTS.issubset(global_paths)
     assert "/api/v1/workspaces/current" not in global_paths
-    assert len(global_paths) == len(PUBLIC_ENDPOINTS | AUTHENTICATED_GLOBAL_ENDPOINTS)
+    assert global_paths == PUBLIC_ENDPOINTS | AUTHENTICATED_GLOBAL_ENDPOINTS | {path for _, path in PUBLIC_METHOD_ENDPOINTS}
 
 
 def test_canonical_fulfillment_routes_are_explicit_and_workspace_scoped() -> None:
@@ -191,3 +200,10 @@ def test_direct_customer_extraction_routes_are_explicit_and_workspace_scoped() -
         _primary_scope(path) == "WORKSPACE_SCOPED"
         for _method, path in EXPECTED_DIRECT_CUSTOMER_EXTRACTION_ROUTES
     )
+
+
+def test_meta_oauth_redirect_is_public_but_code_exchange_is_owner_scoped():
+    path = "/api/v1/integrations/meta-ads/oauth/callback"
+    assert _primary_scope(path, "GET") == "PUBLIC"
+    assert _primary_scope(path, "POST") == "FEATURE_GATED"
+    assert ("POST", path) in OWNER_ONLY_ENDPOINTS

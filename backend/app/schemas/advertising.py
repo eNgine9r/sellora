@@ -77,11 +77,19 @@ class AdMetricUpdate(BaseModel):
 
 
 class AdMetricResponse(BaseModel):
+    source_type: str | None = None
+    provider_controlled_fields: list[str] = Field(default_factory=list)
     id: UUID
     workspace_id: UUID
     campaign_id: UUID
     metric_date: date
     spend: Decimal
+    original_spend: Decimal | None = None
+    original_currency: str | None = None
+    spend_currency: str | None = None
+    exchange_rate: Decimal | None = None
+    exchange_rate_date: date | None = None
+    exchange_rate_source: str | None = None
     impressions: int
     reach: int
     clicks: int

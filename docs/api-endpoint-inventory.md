@@ -28,3 +28,18 @@
 - `DELETE /api/v1/integrations/instagram/data`
 - `POST /api/v1/direct/conversations/{conversation_id}/reply/prepare`
 - `POST /api/v1/direct/conversations/{conversation_id}/reply/send`
+
+## Meta Ads live read-only connection
+
+- OWNER: POST /api/v1/integrations/meta-ads/oauth/start
+- OWNER: POST /api/v1/integrations/meta-ads/oauth/callback (state/code exchange)
+- Public, feature-gated: GET /api/v1/integrations/meta-ads/oauth/callback (redirect only)
+- OWNER: GET /api/v1/integrations/meta-ads/accounts
+- OWNER: POST /api/v1/integrations/meta-ads/account
+- OWNER: POST /api/v1/integrations/meta-ads/sync
+- OWNER: POST /api/v1/integrations/meta-ads/disconnect
+- Workspace-scoped status and synthetic discovery/preview retain existing gates.
+
+The OAuth GET redirect does not exchange or disclose a token. The authenticated OWNER POST consumes durable, workspace/user-scoped state once. Daily USD/UAH conversion uses the existing manual sync endpoint; it adds no public endpoints.
+
+Inventory reconciled to 230 routes and 133 mutation routes: 7 public routes, 6 authenticated global routes, 202 workspace routes and 15 feature-gated routes. The session login/refresh/logout endpoints are public authentication mechanisms with existing origin/session controls; upgrade and logout-all require authentication. Public classification is method-sensitive for Meta OAuth callback.
