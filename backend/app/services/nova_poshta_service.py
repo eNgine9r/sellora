@@ -8,6 +8,10 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
+from app.models.order import OrderStatus
+from app.schemas.order import OrderStatusUpdate
+from app.services.order_service import OrderService, OrderServiceError
+from app.services.nova_poshta_tracking import normalize_tracking_status, should_apply_tracking_status
 
 from app.core.config import get_settings
 from app.integrations.nova_poshta_client import (
@@ -22,14 +26,11 @@ from app.models.nova_poshta_operation import (
     NovaPoshtaOperationState,
     NovaPoshtaOperationType,
 )
-from app.models.order import OrderStatus
 from app.models.shipment import ShipmentCarrier, ShipmentStatus
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.integration_repository import IntegrationConnectionRepository, IntegrationCredentialRepository
 from app.repositories.nova_poshta_operation_repository import NovaPoshtaOperationRepository
 from app.repositories.shipment_repository import ShipmentRepository
-from app.schemas.order import OrderStatusUpdate
-from app.services.order_service import OrderService, OrderServiceError
 from app.schemas.integration import (
     NovaPoshtaDirectoryItem,
     NovaPoshtaReadinessResponse,
@@ -88,8 +89,9 @@ class NovaPoshtaSettingsService:
         *,
         api_key_rotated: bool,
         sender_settings_changed: bool,
+        payment_mode_changed: bool = False,
     ) -> None:
-        if not api_key_rotated and not sender_settings_changed:
+        if not api_key_rotated and not sender_settings_changed and not payment_mode_changed:
             return
         connection.provider_connection_verified_at = None
         connection.provider_writes_allowed = False
@@ -103,6 +105,7 @@ class NovaPoshtaSettingsService:
                 "provider": IntegrationProvider.NOVA_POSHTA.value,
                 "api_key_rotated": api_key_rotated,
                 "sender_settings_changed": sender_settings_changed,
+                "payment_mode_changed": payment_mode_changed,
                 "provider_writes_disabled": True,
             },
         )
@@ -177,15 +180,26 @@ class NovaPoshtaSettingsService:
         now = datetime.now(UTC)
         existing_settings = dict(connection.settings or {}) if connection else {}
         updates = payload.model_dump(exclude={"api_key"}, exclude_unset=True)
-        material_updates = {key: value for key, value in updates.items() if value is not None}
-        if "sender_phone" in material_updates:
+        # Omitted fields preserve settings; explicit null clears a selected value.
+        if "cargo_description" in updates and updates["cargo_description"] is not None:
+            updates["cargo_description"] = updates["cargo_description"].strip() or None
+        material_updates = updates
+        if material_updates.get("sender_phone") is not None:
             try:
                 material_updates["sender_phone"] = normalize_ua_phone(material_updates["sender_phone"])
             except PhoneNormalizationError as exc:
                 raise NovaPoshtaServiceError("INVALID_UA_PHONE") from exc
-        api_key_rotated = payload.api_key is not None
+        api_key_rotated = bool(payload.api_key)
         sender_settings_changed = self._material_sender_settings_changed(existing_settings, material_updates)
+        payment_mode_changed = (
+            "cod_payment_mode" in material_updates
+            and material_updates["cod_payment_mode"] != existing_settings.get("cod_payment_mode", "MONEY_RETURN")
+        )
         settings = {**existing_settings, **material_updates}
+        if material_updates.get("sender_counterparty_ref") != existing_settings.get("sender_counterparty_ref") and "sender_counterparty_ref" in material_updates:
+            settings["sender_contact_ref"] = material_updates.get("sender_contact_ref")
+        if material_updates.get("sender_city_ref") != existing_settings.get("sender_city_ref") and "sender_city_ref" in material_updates:
+            settings["sender_warehouse_ref"] = material_updates.get("sender_warehouse_ref")
         if connection is None:
             connection = self.connections.create(
                 IntegrationConnection(
@@ -216,8 +230,18 @@ class NovaPoshtaSettingsService:
                 credential.encrypted_access_token = encrypted
         elif credential is None:
             raise NovaPoshtaServiceError("Nova Poshta API key is required for the first connection")
-        self._invalidate_verification(connection, actor_user_id, api_key_rotated=api_key_rotated, sender_settings_changed=sender_settings_changed)
-        audit_action = "NOVA_POSHTA_CONNECTED" if payload.api_key else "NOVA_POSHTA_SENDER_SETTINGS_UPDATED"
+        self._invalidate_verification(
+            connection,
+            actor_user_id,
+            api_key_rotated=api_key_rotated,
+            sender_settings_changed=sender_settings_changed,
+            payment_mode_changed=payment_mode_changed,
+        )
+        audit_action = (
+            "NOVA_POSHTA_CONNECTED" if payload.api_key
+            else "NOVA_POSHTA_PAYMENT_SETTINGS_UPDATED" if payment_mode_changed
+            else "NOVA_POSHTA_SENDER_SETTINGS_UPDATED"
+        )
         self.audit_logs.create(
             workspace_id=workspace_id,
             user_id=actor_user_id,
@@ -247,8 +271,10 @@ class NovaPoshtaSettingsService:
                 return "NOVA_POSHTA_SENDER_COUNTERPARTY_INVALID"
             if not client.contact_belongs_to_counterparty(settings["sender_counterparty_ref"], settings["sender_contact_ref"]):
                 return "NOVA_POSHTA_SENDER_CONTACT_INVALID"
-            if not client.sender_address_belongs_to_sender(settings["sender_counterparty_ref"], settings["sender_warehouse_ref"]):
-                return "NOVA_POSHTA_SENDER_ADDRESS_INVALID"
+            # This integration dispatches WarehouseWarehouse documents: SenderAddress
+            # is a directory warehouse Ref, not a counterparty street-address Ref.
+            # Sender/contact account membership is checked above; the warehouse
+            # must independently belong to the selected dispatch city below.
             if not client.warehouse_belongs_to_city(settings["sender_city_ref"], settings["sender_warehouse_ref"]):
                 return "NOVA_POSHTA_SENDER_CITY_MISMATCH"
         except NovaPoshtaClientError:
@@ -376,6 +402,27 @@ class NovaPoshtaSettingsService:
 class NovaPoshtaDirectoryService:
     def __init__(self, db: Session, client_factory=None) -> None:
         self.settings = NovaPoshtaSettingsService(db, client_factory)
+
+    def search_senders(self, workspace_id: UUID, query: str = "", limit: int = 20, page: int = 1) -> list[NovaPoshtaDirectoryItem]:
+        _connection, api_key = self.settings._require_connection(workspace_id)
+        try:
+            items = self.settings.client_factory(api_key).search_senders(query, limit, page)
+            return [NovaPoshtaDirectoryItem(ref=item.ref, description=item.description) for item in items[:limit]]
+        except Exception as exc:
+            raise NovaPoshtaServiceError("NOVA_POSHTA_SENDER_LOOKUP_UNAVAILABLE") from exc
+
+    def search_sender_contacts(self, workspace_id: UUID, sender_ref: str, limit: int = 50) -> list[NovaPoshtaDirectoryItem]:
+        _connection, api_key = self.settings._require_connection(workspace_id)
+        client = self.settings.client_factory(api_key)
+        try:
+            if not client.counterparty_exists(sender_ref):
+                raise NovaPoshtaServiceError("NOVA_POSHTA_SENDER_COUNTERPARTY_INVALID")
+            items = client.search_sender_contacts(sender_ref, limit)
+            return [NovaPoshtaDirectoryItem(ref=item.ref, description=item.description) for item in items[:limit]]
+        except NovaPoshtaServiceError:
+            raise
+        except Exception as exc:
+            raise NovaPoshtaServiceError("NOVA_POSHTA_SENDER_LOOKUP_UNAVAILABLE") from exc
 
     def search_cities(
         self,
@@ -530,7 +577,10 @@ class NovaPoshtaShipmentService:
         shipment.nova_poshta_last_error_code = None
         self.db.commit()
 
-        payload = {**base_payload, "Description": operation.provider_marker}
+        # The human-readable cargo Description must never be replaced by our UUID.
+        # Keep the stable reconciliation marker in the provider's separate metadata
+        # field; older documents still reconcile by Description.
+        payload = {**base_payload, "AdditionalInformation": operation.provider_marker}
         client = self.settings.client_factory(api_key)
         try:
             result = client.create_internet_document(payload)
@@ -763,6 +813,52 @@ class NovaPoshtaShipmentService:
             operation_state=operation.state,
         )
 
+    def _update_order_for_tracking(
+        self,
+        workspace_id: UUID,
+        shipment,
+        status: ShipmentStatus,
+        actor_user_id: UUID | None,
+    ) -> None:
+        """Apply legitimate order/inventory transitions; never mark COD paid."""
+        if not isinstance(self.db, Session):
+            return  # Compatibility with injected fake DBs in isolated unit tests.
+        orders = OrderService(self.db)
+        order = orders.get(workspace_id, shipment.order_id)
+        if order is None:
+            raise NovaPoshtaServiceError("Shipment order is not available")
+        current = OrderStatus(order.status)
+        if current in (OrderStatus.CANCELLED, OrderStatus.RETURNED):
+            return
+        if status in (ShipmentStatus.IN_TRANSIT, ShipmentStatus.ARRIVED, ShipmentStatus.DELIVERED):
+            steps: list[OrderStatus] = []
+            if current == OrderStatus.NEW:
+                steps.append(OrderStatus.CONFIRMED)
+                current = OrderStatus.CONFIRMED
+            if current == OrderStatus.CONFIRMED:
+                steps.append(OrderStatus.SHIPPED)
+                current = OrderStatus.SHIPPED
+            if status == ShipmentStatus.DELIVERED and current == OrderStatus.SHIPPED:
+                steps.append(OrderStatus.DELIVERED)
+            for step in steps:
+                orders.change_status(
+                    workspace_id,
+                    order.id,
+                    OrderStatusUpdate(status=step, note="Статус доставки підтверджено Новою Поштою"),
+                    actor_user_id,
+                    commit=False,
+                )
+        elif status == ShipmentStatus.RETURNED and current in (
+            OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.COMPLETED
+        ):
+            orders.change_status(
+                workspace_id,
+                order.id,
+                OrderStatusUpdate(status=OrderStatus.RETURNED, note="Повернення підтверджено перевізником"),
+                actor_user_id,
+                commit=False,
+            )
+
     def sync_status(
         self,
         workspace_id: UUID,
@@ -770,14 +866,23 @@ class NovaPoshtaShipmentService:
         actor_user_id: UUID | None,
     ) -> NovaPoshtaStatusResponse:
         _connection, api_key = self.settings._require_connection(workspace_id)
-        shipment = self.shipments.get(workspace_id, shipment_id)
+        shipment = self._get_shipment_for_update(workspace_id, shipment_id)
         if shipment is None:
             raise NovaPoshtaServiceError("Shipment not found")
+        if shipment.carrier != ShipmentCarrier.NOVA_POSHTA.value:
+            raise NovaPoshtaServiceError("Shipment does not use Nova Poshta")
         tracking_number = shipment.nova_poshta_document_number or shipment.tracking_number
         if not tracking_number:
             raise NovaPoshtaServiceError("Shipment does not have a Nova Poshta tracking number")
         try:
-            status = self.settings.client_factory(api_key).get_document_status(tracking_number)
+            client = self.settings.client_factory(api_key)
+            if callable(getattr(client, "get_document_tracking", None)):
+                tracking = client.get_document_tracking(tracking_number)
+                raw = tracking.status or tracking.code if tracking else None
+                code = tracking.code if tracking else None
+            else:
+                raw = client.get_document_status(tracking_number)
+                code = None
         except Exception:
             self.audit_logs.create(
                 workspace_id=workspace_id,
@@ -785,10 +890,7 @@ class NovaPoshtaShipmentService:
                 entity_type="Shipment",
                 entity_id=shipment.id,
                 action="NOVA_POSHTA_ERROR",
-                new_value={
-                    "provider": IntegrationProvider.NOVA_POSHTA.value,
-                    "safe_error": "STATUS_SYNC_FAILED",
-                },
+                new_value={"provider": IntegrationProvider.NOVA_POSHTA.value, "safe_error": "STATUS_SYNC_FAILED"},
             )
             self.db.commit()
             return NovaPoshtaStatusResponse(
@@ -800,7 +902,7 @@ class NovaPoshtaShipmentService:
                 normalized_status=shipment.status,
                 synced_at=shipment.nova_poshta_synced_at,
             )
-        if not status:
+        if not raw:
             self.audit_logs.create(
                 workspace_id=workspace_id,
                 user_id=actor_user_id,
@@ -819,32 +921,47 @@ class NovaPoshtaShipmentService:
                 normalized_status=shipment.status,
                 synced_at=shipment.nova_poshta_synced_at,
             )
-        normalized_status = self._normalize_provider_status(status)
-        previous_normalized_status = shipment.status
-        if normalized_status is None:
-            # An unknown provider response (including "Номер не знайдено") is
-            # not successful verification. Do not erase earlier proven delivery.
-            if previous_normalized_status in {ShipmentStatus.CREATED.value, ShipmentStatus.DRAFT.value}:
-                shipment.nova_poshta_raw_status = status[:255]
-                shipment.external_status = status[:120]
+
+        normalized = normalize_tracking_status(code, raw)
+        previous = ShipmentStatus(shipment.status)
+        changed = should_apply_tracking_status(previous, normalized)
+        if normalized is None:
+            # Missing tracking is not proof of a verified delivery state.
+            # Keep previously validated archive evidence intact.
+            if previous in (ShipmentStatus.DRAFT, ShipmentStatus.CREATED):
+                shipment.nova_poshta_raw_status = raw[:255]
+                shipment.external_status = raw[:120]
                 shipment.nova_poshta_synced_at = None
         else:
-            shipment.nova_poshta_raw_status = status[:255]
-            shipment.external_status = status[:120]
-            shipment.status = normalized_status.value
-            self._sync_historical_order_status(workspace_id, shipment, normalized_status, actor_user_id)
+            shipment.nova_poshta_raw_status = raw[:255]
+            shipment.external_status = raw[:120]
             shipment.nova_poshta_synced_at = datetime.now(UTC)
+        if changed and normalized is not None:
+            shipment.status = normalized.value
+            # Current clock time is not a historical date of delivery.
+            historical = bool(shipment.order and shipment.order.is_historical)
+            if not historical:
+                now = datetime.now(UTC)
+                if normalized in (ShipmentStatus.IN_TRANSIT, ShipmentStatus.ARRIVED, ShipmentStatus.DELIVERED) and shipment.shipped_at is None:
+                    shipment.shipped_at = now
+                if normalized == ShipmentStatus.DELIVERED and shipment.delivered_at is None:
+                    shipment.delivered_at = now
+                if normalized == ShipmentStatus.RETURNED and shipment.returned_at is None:
+                    shipment.returned_at = now
+            self._update_order_for_tracking(workspace_id, shipment, normalized, actor_user_id)
         self.audit_logs.create(
             workspace_id=workspace_id,
             user_id=actor_user_id,
             entity_type="Shipment",
             entity_id=shipment.id,
-            action="NOVA_POSHTA_STATUS_SYNCED" if normalized_status is not None else "NOVA_POSHTA_STATUS_UNVERIFIED",
+            action="NOVA_POSHTA_STATUS_SYNCED" if normalized is not None else "NOVA_POSHTA_STATUS_UNVERIFIED",
             new_value={
-                "raw_status": status,
-                "normalized_status": normalized_status.value if normalized_status else None,
-                "previous_normalized_status": previous_normalized_status,
-                "manual_review_required": normalized_status is None,
+                "provider_status_code": code,
+                "normalized_status": shipment.status,
+                "previous_normalized_status": previous.value,
+                "changed": changed,
+                "manual_review_required": normalized is None,
+                "payment_unchanged": True,
             },
         )
         self.db.commit()
@@ -852,78 +969,16 @@ class NovaPoshtaShipmentService:
             success=True,
             message=(
                 "Nova Poshta status synced."
-                if normalized_status is not None
+                if normalized is not None
                 else "Nova Poshta returned an unknown status. Previous normalized status was preserved."
             ),
             tracking_number=tracking_number,
-            status=status,
-            raw_status=status,
+            status=raw,
+            raw_status=raw,
             normalized_status=shipment.status,
-            manual_review_required=normalized_status is None,
+            manual_review_required=normalized is None,
             synced_at=shipment.nova_poshta_synced_at,
         )
-
-
-    def _sync_historical_order_status(
-        self,
-        workspace_id: UUID,
-        shipment,
-        shipment_status: ShipmentStatus,
-        actor_user_id: UUID | None,
-    ) -> None:
-        # Provider tracking confirms transit/delivery, NEVER payment or revenue.
-        # This projection is restricted to historical imports. Live orders keep
-        # their existing explicit status workflow.
-        order = shipment.order
-        if not order or order.workspace_id != workspace_id or not order.is_historical:
-            return
-        current = OrderStatus(order.status)
-        targets = {
-            ShipmentStatus.IN_TRANSIT: OrderStatus.SHIPPED,
-            ShipmentStatus.ARRIVED: OrderStatus.SHIPPED,
-            ShipmentStatus.DELIVERED: OrderStatus.DELIVERED,
-            ShipmentStatus.RETURNED: OrderStatus.RETURNED,
-        }
-        target = targets.get(shipment_status)
-        if target is None or current == target or current in {OrderStatus.CANCELLED, OrderStatus.RETURNED}:
-            return
-        # Do not regress a historical order when the provider reports an older state.
-        if current in {OrderStatus.DELIVERED, OrderStatus.COMPLETED} and target == OrderStatus.SHIPPED:
-            return
-        path = []
-        if current == OrderStatus.NEW:
-            path.append(OrderStatus.CONFIRMED)
-            current = OrderStatus.CONFIRMED
-        if current == OrderStatus.CONFIRMED and target in {OrderStatus.DELIVERED, OrderStatus.RETURNED}:
-            path.append(OrderStatus.SHIPPED)
-            current = OrderStatus.SHIPPED
-        if current == OrderStatus.SHIPPED and target == OrderStatus.RETURNED:
-            path.append(OrderStatus.RETURNED)
-        elif current == OrderStatus.DELIVERED and target == OrderStatus.RETURNED:
-            path.append(OrderStatus.RETURNED)
-        elif target not in path:
-            path.append(target)
-        service = OrderService(self.db)
-        for status in path:
-            if OrderStatus(order.status) == status:
-                continue
-            try:
-                service.change_status(
-                    workspace_id,
-                    order.id,
-                    OrderStatusUpdate(status=status, note="Статус за підтвердженими даними Нової пошти (історія)"),
-                    actor_user_id,
-                    commit=False,
-                )
-            except OrderServiceError as exc:
-                # Preserve provider shipment status, but make the mismatch auditable.
-                self.audit_logs.create(
-                    workspace_id=workspace_id, user_id=actor_user_id,
-                    entity_type="Order", entity_id=order.id,
-                    action="NOVA_HISTORICAL_ORDER_STATUS_REVIEW_REQUIRED",
-                    new_value={"provider_shipment_status": shipment_status.value, "current_order_status": order.status},
-                )
-                break
 
     def _get_shipment_for_update(self, workspace_id: UUID, shipment_id: UUID):
         getter = getattr(self.shipments, "get_for_update", None)
@@ -1308,7 +1363,7 @@ class NovaPoshtaShipmentService:
         delivered_markers = ("delivered", "\u043e\u0442\u0440\u0438\u043c\u0430\u043d\u043e", "\u0434\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u043e", "\u0432\u0440\u0443\u0447\u0435\u043d\u043e")
         returned_markers = ("return", "\u043f\u043e\u0432\u0435\u0440", "\u0432\u0456\u0434\u043c\u043e\u0432\u0430")
         in_transit_markers = ("in transit", "\u0434\u043e\u0440\u043e\u0437", "\u043f\u0440\u044f\u043c\u0443", "\u0432\u0456\u0434\u043f\u0440\u0430\u0432")
-        arrived_markers = ("arrived", "прибул", "прибув", "відділен", "у поштоматі")
+        arrived_markers = ("arrived", "\u043f\u0440\u0438\u0431\u0443\u043b", "\u0432\u0456\u0434\u0434\u0456\u043b\u0435\u043d")
         created_markers = ("created", "\u0441\u0442\u0432\u043e\u0440\u0435\u043d\u043e", "\u043d\u043e\u0432\u0430 \u043d\u0430\u043a\u043b\u0430\u0434\u043d\u0430")
         if any(marker in normalized for marker in delivered_markers):
             return ShipmentStatus.DELIVERED

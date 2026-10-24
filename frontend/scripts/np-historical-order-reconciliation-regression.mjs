@@ -6,6 +6,7 @@ const page = read("frontend/src/app/orders/page.tsx");
 const details = read("frontend/src/features/orders/components/order-details.tsx");
 const service = read("backend/app/services/order_service.py");
 const provider = read("backend/app/services/nova_poshta_service.py");
+const tracking = read("backend/app/services/nova_poshta_tracking.py");
 const shipmentDetails = read("frontend/src/features/shipments/components/shipment-details.tsx");
 const uk = JSON.parse(read("frontend/src/i18n/messages/uk.json"));
 const en = JSON.parse(read("frontend/src/i18n/messages/en.json"));
@@ -25,8 +26,8 @@ const checks = [
   ["unsynced historical orders are visibly unverified", details.includes("historicalStatusUnverified") && details.includes("!shipment.nova_poshta_synced_at")],
   ["unsynced imported shipments are visibly unverified", shipmentDetails.includes("providerUnverified") && shipmentDetails.includes('startsWith("NP-")')],
   ["shipments show declared value and carrier tariff without revenue inference", shipmentDetails.includes("shipment.declared_value") && shipmentDetails.includes("shipment.shipping_cost") && shipmentDetails.includes("providerValuesWarning")],
-  ["historical provider order status audited", provider.includes("NOVA_HISTORICAL_ORDER_STATUS_REVIEW_REQUIRED") && provider.includes("_sync_historical_order_status")],
-  ["arrival mapping includes arrived/прибув", provider.includes('"прибув"')],
+  ["carrier order status uses audited transitions without inferred payment", provider.includes("_update_order_for_tracking") && provider.includes("orders.change_status(") && provider.includes("never mark COD paid")],
+  ["arrival mapping includes arrived/прибуло", tracking.includes('"7": ShipmentStatus.ARRIVED') && tracking.includes('"arrived"') && tracking.includes('"прибуло у відділення"')],
   ["English and Ukrainian labels exist", ["historicalCorrectionHint", "providerValuesWarning", "unknownAmount", "declaredValue", "carrierTariff"].every((key) => uk.orders[key] && en.orders[key])],
 ];
 const failures = checks.filter(([, ok]) => !ok);

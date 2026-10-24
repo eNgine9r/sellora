@@ -25,7 +25,7 @@ const checks = [
   ["ambiguous response blocks blind retry", /RECONCILIATION_REQUIRED/.test(service) && /blind_retry_blocked=True/.test(service)],
   ["provider reconciliation exists", /find_internet_document/.test(client + service) && /reconcile_ttn/.test(service)],
   ["reconcile API is workspace scoped and manager protected", /reconcile-ttn/.test(api) && /require_min_role\(RoleName\.MANAGER\)/.test(api)],
-  ["unknown status preserves normalized state", /previous_normalized_status/.test(service) && /manual_review_required=normalized_status is None/.test(service)],
+  ["unknown status preserves normalized state", /previous_normalized_status/.test(service) && /"manual_review_required"\s*:\s*normalized is None/.test(service)],
   ["frontend synchronous submit lock", /createInFlight\.current/.test(button) && /onSettled/.test(button)],
   ["manual reconciliation UI exists", /data-nova-poshta-manual-reconciliation/.test(button) && /reconcileNovaPoshtaTtn/.test(button)],
   ["provider refs are not primary raw UI labels", /shipment\.nova_poshta_city_ref \? t\("common\.yes"\)/.test(panel)],

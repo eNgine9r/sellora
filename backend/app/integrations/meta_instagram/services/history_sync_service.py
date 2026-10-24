@@ -28,6 +28,8 @@ from app.models.ai_direct import (
 from app.models.instagram_inbox_sync import InstagramHistorySync, InstagramHistorySyncStatus
 from app.models.meta_instagram import InstagramConnectionStatus
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
+from app.services.direct_lead_service import DirectLeadService
+from app.ai.services.direct_order_intent_service import detect_direct_order_intent
 
 
 ACTIVE_SYNC_STATUSES = {
@@ -45,6 +47,7 @@ class InstagramHistorySyncService:
         self.conversations = DirectConversationRepository(db)
         self.messages = DirectMessageRepository(db)
         self.profile_service = InstagramParticipantProfileService(db)
+        self.lead_service = DirectLeadService(db)
         self.client_factory = client_factory
 
     def request_sync(
@@ -53,7 +56,7 @@ class InstagramHistorySyncService:
         user_id: UUID,
         *,
         conversation_limit: int = 100,
-        messages_per_conversation: int = 20,
+        messages_per_conversation: int = 200,
     ) -> InstagramHistorySync:
         connection = self.connections.get_active(workspace_id)
         if (
@@ -82,8 +85,8 @@ class InstagramHistorySyncService:
         sync.requested_by = user_id
         sync.status = InstagramHistorySyncStatus.PENDING.value
         sync.conversation_cursor = None
-        sync.conversation_limit = max(1, min(conversation_limit, 500))
-        sync.messages_per_conversation = max(1, min(messages_per_conversation, 20))
+        sync.conversation_limit = max(1, min(conversation_limit, 2000))
+        sync.messages_per_conversation = max(1, min(messages_per_conversation, 200))
         sync.conversation_pages_processed = 0
         sync.conversations_discovered = 0
         sync.conversations_synced = 0
@@ -179,125 +182,153 @@ class InstagramHistorySyncService:
         client: MetaInstagramHistoryClient,
         summary: MetaConversationSummary,
     ) -> None:
-        page = await client.list_messages(
-            summary.id,
-            limit=sync.messages_per_conversation,
-        )
-        sync.messages_discovered += len(page.messages)
         conversation: DirectConversation | None = self.conversations.get_by_external_thread(
             sync.workspace_id,
             connection.id,
             summary.id,
         )
 
-        for message_summary in reversed(page.messages):
-            existing = self.messages.get_by_provider_message(
-                sync.workspace_id,
-                "INSTAGRAM",
-                message_summary.id,
+        cursor = None
+        seen_cursors: set[str] = set()
+        checked = 0
+        while checked < sync.messages_per_conversation:
+            page = await client.list_messages(
+                summary.id, after=cursor,
+                limit=min(20, sync.messages_per_conversation - checked),
             )
-            if existing:
-                sync.messages_existing += 1
-                if conversation is None:
-                    conversation = self.conversations.get(sync.workspace_id, existing.conversation_id)
-                continue
-            try:
-                details = await client.get_message(message_summary.id)
-            except MetaInstagramError as exc:
-                if exc.code == "META_HISTORY_MESSAGE_UNAVAILABLE":
+            if not page.messages:
+                break
+            checked += len(page.messages)
+            sync.messages_discovered += len(page.messages)
+            for message_summary in reversed(page.messages):
+                existing = self.messages.get_by_provider_message(
+                    sync.workspace_id,
+                    "INSTAGRAM",
+                    message_summary.id,
+                )
+                if existing:
+                    sync.messages_existing += 1
+                    if conversation is None:
+                        conversation = self.conversations.get(sync.workspace_id, existing.conversation_id)
+                    continue
+                try:
+                    details = await client.get_message(message_summary.id)
+                except MetaInstagramError as exc:
+                    if exc.code == "META_HISTORY_MESSAGE_UNAVAILABLE":
+                        sync.messages_unavailable += 1
+                        continue
+                    raise
+
+                direction, participant_id, participant_username = self._identity(
+                    connection.instagram_account_id,
+                    details,
+                )
+                if not participant_id:
                     sync.messages_unavailable += 1
                     continue
-                raise
+                if conversation is None:
+                    conversation = self.conversations.get_by_instagram_participant(
+                        sync.workspace_id,
+                        connection.id,
+                        participant_id,
+                    )
+                if conversation is None:
+                    conversation = self.conversations.create(
+                        DirectConversation(
+                            workspace_id=sync.workspace_id,
+                            channel=DirectChannel.INSTAGRAM.value,
+                            instagram_connection_id=connection.id,
+                            external_conversation_id=summary.id,
+                            external_thread_id=summary.id,
+                            participant_external_id=participant_id,
+                            participant_scoped_id=participant_id,
+                            participant_username=participant_username,
+                            participant_display_name=participant_username or "Instagram customer",
+                            unread_count=0,
+                            provider_sync_status="HISTORY_SYNCING",
+                        )
+                    )
+                else:
+                    conversation.external_conversation_id = summary.id
+                    conversation.external_thread_id = summary.id
+                    conversation.participant_scoped_id = conversation.participant_scoped_id or participant_id
+                    conversation.participant_external_id = conversation.participant_external_id or participant_id
+                    if participant_username and not conversation.participant_username:
+                        conversation.participant_username = participant_username
+                        if conversation.participant_display_name in {None, "Instagram customer"}:
+                            conversation.participant_display_name = participant_username
 
-            direction, participant_id, participant_username = self._identity(
-                connection.instagram_account_id,
-                details,
-            )
-            if not participant_id:
-                sync.messages_unavailable += 1
-                continue
-            if conversation is None:
-                conversation = self.conversations.get_by_instagram_participant(
-                    sync.workspace_id,
-                    connection.id,
-                    participant_id,
-                )
-            if conversation is None:
-                conversation = self.conversations.create(
-                    DirectConversation(
+                created_at = self._parse_time(details.created_time or message_summary.created_time)
+                text = details.message
+                message_type = DirectMessageType.TEXT.value
+                payload_type = "TEXT"
+                if details.is_unsupported or text is None:
+                    payload_type = details.attachments[0]["type"].upper() if details.attachments else "UNSUPPORTED"
+                    message_type = DirectMessageType.SYSTEM_EVENT.value
+                    text = "[Unsupported historical Instagram message]"
+                metadata = {
+                    "history_imported": True,
+                    "is_unsupported": details.is_unsupported,
+                }
+                if details.reply_to_mid:
+                    metadata["reply_to_mid"] = details.reply_to_mid
+                if details.attachments:
+                    metadata["attachments"] = details.attachments
+                self.messages.create(
+                    DirectMessage(
                         workspace_id=sync.workspace_id,
-                        channel=DirectChannel.INSTAGRAM.value,
-                        instagram_connection_id=connection.id,
-                        external_conversation_id=summary.id,
-                        external_thread_id=summary.id,
-                        participant_external_id=participant_id,
-                        participant_scoped_id=participant_id,
-                        participant_username=participant_username,
-                        participant_display_name=participant_username or "Instagram customer",
-                        unread_count=0,
-                        provider_sync_status="HISTORY_SYNCING",
+                        conversation_id=conversation.id,
+                        external_message_id=details.id,
+                        direction=direction,
+                        sender_type=(
+                            DirectMessageSenderType.MANAGER.value
+                            if direction == DirectMessageDirection.OUTBOUND.value
+                            else DirectMessageSenderType.CUSTOMER.value
+                        ),
+                        message_type=message_type,
+                        text=text,
+                        safe_text_hash=hashlib.sha256((text or details.id).encode()).hexdigest(),
+                        received_at=created_at,
+                        sent_at=created_at if direction == DirectMessageDirection.OUTBOUND.value else None,
+                        processing_status="RECEIVED",
+                        is_synthetic=False,
+                        provider="INSTAGRAM",
+                        provider_message_id=details.id,
+                        delivery_status=(
+                            "PROVIDER_ACCEPTED"
+                            if direction == DirectMessageDirection.OUTBOUND.value
+                            else "RECEIVED"
+                        ),
+                        message_payload_type=payload_type,
+                        attachment_metadata=metadata,
+                        provider_created_at=created_at,
                     )
                 )
-            else:
-                conversation.external_conversation_id = summary.id
-                conversation.external_thread_id = summary.id
-                conversation.participant_scoped_id = conversation.participant_scoped_id or participant_id
-                conversation.participant_external_id = conversation.participant_external_id or participant_id
-                if participant_username and not conversation.participant_username:
-                    conversation.participant_username = participant_username
-                    if conversation.participant_display_name in {None, "Instagram customer"}:
-                        conversation.participant_display_name = participant_username
-
-            created_at = self._parse_time(details.created_time or message_summary.created_time)
-            text = details.message
-            message_type = DirectMessageType.TEXT.value
-            payload_type = "TEXT"
-            if details.is_unsupported or text is None:
-                payload_type = "UNSUPPORTED"
-                message_type = DirectMessageType.SYSTEM_EVENT.value
-                text = "[Unsupported historical Instagram message]"
-            metadata = {
-                "history_imported": True,
-                "is_unsupported": details.is_unsupported,
-            }
-            if details.reply_to_mid:
-                metadata["reply_to_mid"] = details.reply_to_mid
-            self.messages.create(
-                DirectMessage(
-                    workspace_id=sync.workspace_id,
-                    conversation_id=conversation.id,
-                    external_message_id=details.id,
-                    direction=direction,
-                    sender_type=(
-                        DirectMessageSenderType.MANAGER.value
-                        if direction == DirectMessageDirection.OUTBOUND.value
-                        else DirectMessageSenderType.CUSTOMER.value
-                    ),
-                    message_type=message_type,
-                    text=text,
-                    safe_text_hash=hashlib.sha256((text or details.id).encode()).hexdigest(),
-                    received_at=created_at,
-                    sent_at=created_at if direction == DirectMessageDirection.OUTBOUND.value else None,
-                    processing_status="RECEIVED",
-                    is_synthetic=False,
-                    provider="INSTAGRAM",
-                    provider_message_id=details.id,
-                    delivery_status=(
-                        "PROVIDER_ACCEPTED"
-                        if direction == DirectMessageDirection.OUTBOUND.value
-                        else "RECEIVED"
-                    ),
-                    message_payload_type=payload_type,
-                    attachment_metadata=metadata,
-                    provider_created_at=created_at,
-                )
-            )
-            sync.messages_imported += 1
-            self._advance_conversation(conversation, direction, created_at)
+                sync.messages_imported += 1
+                self._advance_conversation(conversation, direction, created_at)
+                self._ensure_lead_safe(sync, conversation, direction, message_type, text, created_at)
+            if not page.after_cursor or page.after_cursor in seen_cursors:
+                break
+            seen_cursors.add(page.after_cursor)
+            cursor = page.after_cursor
 
         if conversation:
-            conversation.provider_sync_status = "HISTORY_SYNCED"
+            conversation.provider_sync_status = "HISTORY_CHECKED"
             self._enrich_profile_safe(sync.workspace_id, conversation)
+
+    def _ensure_lead_safe(self, sync, conversation, direction, message_type, text, created_at) -> None:
+        if (direction != DirectMessageDirection.INBOUND.value
+                or message_type != DirectMessageType.TEXT.value
+                or not detect_direct_order_intent(text).detected):
+            return
+        try:
+            with self.db.begin_nested():
+                self.lead_service.ensure_from_inbound_order_intent(
+                    sync.workspace_id, conversation.id, text, created_at,
+                )
+        except Exception:
+            sync.error_count += 1
+            sync.last_error_code = "DIRECT_LEAD_FAILED_SAFE"
 
     def _identity(
         self,

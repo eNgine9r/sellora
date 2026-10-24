@@ -5,7 +5,7 @@ from fastapi.routing import APIRoute
 from app.main import app
 
 
-PUBLIC_ENDPOINTS = {"/health", "/api/v1/auth/login", "/api/v1/auth/refresh",
+PUBLIC_ENDPOINTS = {"/health", "/health/live", "/health/ready", "/api/v1/auth/login", "/api/v1/auth/refresh",
     "/api/v1/auth/session/login", "/api/v1/auth/session/refresh", "/api/v1/auth/session/logout"}
 PUBLIC_METHOD_ENDPOINTS = {("GET", "/api/v1/integrations/meta-ads/oauth/callback")}
 AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/me", "/api/v1/workspaces", "/api/v1/workspaces/demo",
@@ -60,14 +60,14 @@ OWNER_ONLY_ENDPOINTS = {
     ("POST", "/api/v1/integrations/instagram/webhooks/unsubscribe"),
 }
 EXPECTED_PRIMARY_COUNTS = {
-    "PUBLIC": 7,
+    "PUBLIC": 9,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 203,
+    "WORKSPACE_SCOPED": 212,
     "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 231
-EXPECTED_MUTATION_ROUTES = 133
+EXPECTED_TOTAL_ROUTES = 242
+EXPECTED_MUTATION_ROUTES = 136
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -83,6 +83,11 @@ EXPECTED_DIRECT_CUSTOMER_AUTOMATION_ROUTES = {
     ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/complete"),
     ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/finalize-order"),
 }
+EXPECTED_DIRECT_ORDER_EVIDENCE_ROUTES = {
+    ("GET", "/api/v1/direct/conversations/{conversation_id}/order-evidence"),
+    ("POST", "/api/v1/direct/conversations/{conversation_id}/order-evidence/confirm"),
+}
+
 EXPECTED_DIRECT_CUSTOMER_EXTRACTION_ROUTES = {
     ("GET", "/api/v1/direct/conversations/{conversation_id}/customer-data-extraction"),
     ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-data-extraction/extract"),
@@ -216,3 +221,25 @@ def test_crm_attribution_report_is_read_only_and_workspace_scoped() -> None:
     assert matching[0].methods == {"GET"}
     assert _primary_scope(path) == "WORKSPACE_SCOPED"
     assert path not in PUBLIC_ENDPOINTS and path not in AUTHENTICATED_GLOBAL_ENDPOINTS
+
+
+
+def test_direct_order_evidence_routes_are_explicitly_tenant_scoped() -> None:
+    routes = _api_routes()
+    matches = {
+        (method, path): route
+        for path, route in routes
+        for method in route.methods
+        if (method, path) in EXPECTED_DIRECT_ORDER_EVIDENCE_ROUTES
+    }
+    assert set(matches) == EXPECTED_DIRECT_ORDER_EVIDENCE_ROUTES
+    for (_method, path), route in matches.items():
+        assert _primary_scope(path) == "WORKSPACE_SCOPED"
+        assert path not in PUBLIC_ENDPOINTS
+        assert path not in AUTHENTICATED_GLOBAL_ENDPOINTS
+
+    # This is deliberately an ANALYST+ read and MANAGER+ write flow.
+    read_path = "/api/v1/direct/conversations/{conversation_id}/order-evidence"
+    confirm_path = read_path + "/confirm"
+    assert matches[("GET", read_path)].name == "get_direct_order_evidence"
+    assert matches[("POST", confirm_path)].name == "confirm_direct_order_evidence"

@@ -39,7 +39,11 @@ def test_soft_delete_mixin_adds_nullable_delete_metadata() -> None:
 def test_psycopg_engine_disables_prepared_statements() -> None:
     from app.database.session import engine_connect_args
 
-    assert engine_connect_args("postgresql+psycopg://user:pass@host:5432/db") == {"prepare_threshold": None}
+    args = engine_connect_args("postgresql+psycopg://user:pass@host:5432/db")
+    assert args["prepare_threshold"] is None
+    assert args["connect_timeout"] == 10
+    assert args["keepalives"] == 1
+    assert "statement_timeout=15000" in args["options"]
 
 
 def test_non_psycopg_engine_has_no_psycopg_connect_args() -> None:
