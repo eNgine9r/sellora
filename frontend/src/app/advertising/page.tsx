@@ -31,7 +31,7 @@ const STATUS_OPTIONS = [["ACTIVE", "Активна"], ["PAUSED", "Призупи
 const OBJECTIVE_OPTIONS = [["MESSAGES", "Повідомлення"], ["SALES", "Продажі"], ["TRAFFIC", "Трафік"], ["AWARENESS", "Впізнаваність"], ["FOLLOWERS", "Підписники"], ["OTHER", "Інше"]].map(([value, label]) => ({ value, label }));
 const BUDGET_OPTIONS = [["DAILY", "Денний"], ["LIFETIME", "На весь період"], ["MANUAL", "Ручний"]].map(([value, label]) => ({ value, label }));
 
-const CRM_ATTRIBUTION_ENABLED = process.env.NEXT_PUBLIC_AD_CRM_ATTRIBUTION_ENABLED === "true";
+const CRM_ATTRIBUTION_ENABLED = process.env.NEXT_PUBLIC_AD_CRM_ATTRIBUTION_ENABLED !== "false";
 
 type PeriodPreset = "7" | "30" | "90" | "all" | "custom";
 type AdvertisingTab = "overview" | "campaigns" | "data";
