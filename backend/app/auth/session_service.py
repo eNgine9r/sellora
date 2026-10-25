@@ -71,7 +71,7 @@ class SessionAuthenticationService:
         issued = self._mint(user_id, session_id, expires_at)
         self.db.execute(
             text(
-                "INSERT INTO auth_sessions "
+                "INSERT INTO public.auth_sessions "
                 "(id,user_id,refresh_hash,created_at,last_used_at,expires_at,rotation_count) "
                 "VALUES (:sid,:uid,:digest,:now,:now,:expires,0)"
             ),
@@ -93,7 +93,7 @@ class SessionAuthenticationService:
         # FOR UPDATE makes token consumption atomic, even with multiple workers.
         row = self.db.execute(
             text(
-                "SELECT user_id,refresh_hash,previous_refresh_hash,rotated_at,expires_at,revoked_at FROM auth_sessions "
+                "SELECT user_id,refresh_hash,previous_refresh_hash,rotated_at,expires_at,revoked_at FROM public.auth_sessions "
                 "WHERE id=:sid FOR UPDATE"
             ),
             {"sid": session_id},
@@ -121,7 +121,7 @@ class SessionAuthenticationService:
             # Replay outside the short concurrency window revokes only
             # this session, never other sessions or Instagram credentials.
             self.db.execute(
-                text("UPDATE auth_sessions SET revoked_at=:now WHERE id=:sid"),
+                text("UPDATE public.auth_sessions SET revoked_at=:now WHERE id=:sid"),
                 {"sid": session_id, "now": now},
             )
             self.db.commit()
@@ -129,7 +129,7 @@ class SessionAuthenticationService:
         user = UserRepository(self.db).get_by_id(row["user_id"])
         if user is None or not user.is_active:
             self.db.execute(
-                text("UPDATE auth_sessions SET revoked_at=:now WHERE id=:sid"),
+                text("UPDATE public.auth_sessions SET revoked_at=:now WHERE id=:sid"),
                 {"sid": session_id, "now": now},
             )
             self.db.commit()
@@ -137,7 +137,7 @@ class SessionAuthenticationService:
         issued = self._mint(row["user_id"], session_id, row["expires_at"])
         self.db.execute(
             text(
-                "UPDATE auth_sessions SET previous_refresh_hash=refresh_hash,rotated_at=:now, "
+                "UPDATE public.auth_sessions SET previous_refresh_hash=refresh_hash,rotated_at=:now, "
                 "refresh_hash=:digest,last_used_at=:now,rotation_count=rotation_count+1 "
                 "WHERE id=:sid"
             ),
@@ -154,7 +154,7 @@ class SessionAuthenticationService:
         now = datetime.now(UTC)
         self.db.execute(
             text(
-                "UPDATE auth_sessions SET revoked_at=:now WHERE id=:sid "
+                "UPDATE public.auth_sessions SET revoked_at=:now WHERE id=:sid "
                 "AND revoked_at IS NULL AND refresh_hash=:digest"
             ),
             {"now": now, "sid": session_id, "digest": self._hash(cookie)},
@@ -163,7 +163,7 @@ class SessionAuthenticationService:
 
     def revoke_all(self, user_id: UUID) -> None:
         self.db.execute(
-            text("UPDATE auth_sessions SET revoked_at=:now WHERE user_id=:uid AND revoked_at IS NULL"),
+            text("UPDATE public.auth_sessions SET revoked_at=:now WHERE user_id=:uid AND revoked_at IS NULL"),
             {"now": datetime.now(UTC), "uid": user_id},
         )
         self.db.commit()

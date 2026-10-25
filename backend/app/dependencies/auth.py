@@ -34,7 +34,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
         active = db.execute(
             text(
-                "SELECT 1 FROM auth_sessions WHERE id=:sid AND user_id=:uid "
+                "SELECT 1 FROM public.auth_sessions WHERE id=:sid AND user_id=:uid "
                 "AND revoked_at IS NULL AND expires_at > now()"
             ),
             {"sid": session_id, "uid": user_id},

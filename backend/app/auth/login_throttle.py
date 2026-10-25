@@ -50,7 +50,7 @@ class LoginThrottle:
         now = datetime.now(UTC)
         row = self.db.execute(
             text(
-                "SELECT failure_count, reset_at FROM auth_login_attempts "
+                "SELECT failure_count, reset_at FROM public.auth_login_attempts "
                 "WHERE identity_hash=:key"
             ),
             {"key": self._key(email)},
@@ -66,7 +66,7 @@ class LoginThrottle:
         self.db.execute(
             text(
                 """
-                INSERT INTO auth_login_attempts (identity_hash, failure_count, reset_at)
+                INSERT INTO public.auth_login_attempts (identity_hash, failure_count, reset_at)
                 VALUES (:key, 1, :expiry)
                 ON CONFLICT (identity_hash) DO UPDATE SET
                     failure_count = CASE
@@ -87,7 +87,7 @@ class LoginThrottle:
         if not self.settings.login_rate_limit_enabled:
             return
         self.db.execute(
-            text("DELETE FROM auth_login_attempts WHERE identity_hash=:key"),
+            text("DELETE FROM public.auth_login_attempts WHERE identity_hash=:key"),
             {"key": self._key(email)},
         )
         self.db.commit()
