@@ -19,8 +19,6 @@ export default function LoginPage() {
   const router = useRouter();
   const { status, login, error: authError } = useAuth();
   const { t } = useI18n();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,9 +29,21 @@ export default function LoginPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isSubmitting) return;
-    if (!event.currentTarget.checkValidity()) {
+    // The browser can accept typing before React hydration. Controlled inputs
+    // could then display valid DOM values while stale React state submits "".
+    // Read the submitted DOM form itself; leave credential fields uncontrolled
+    // so hydration does not clobber early typing or password-manager autofill.
+    const form = event.currentTarget;
+    if (!form.checkValidity()) {
       setError("auth.validationError");
-      event.currentTarget.querySelector<HTMLInputElement>("input:invalid")?.focus();
+      form.querySelector<HTMLInputElement>("input:invalid")?.focus();
+      return;
+    }
+    const data = new FormData(form);
+    const email = String(data.get("email") ?? "").trim();
+    const password = String(data.get("password") ?? "");
+    if (!email || !password) {
+      setError("auth.validationError");
       return;
     }
     setIsSubmitting(true);
@@ -73,11 +83,11 @@ export default function LoginPage() {
           <p className={styles.helper}>{t("auth.helper")}</p>
           <form className={styles.form} onSubmit={submit} noValidate aria-busy={isSubmitting}>
             <FormField label={t("auth.email")}>
-              <Input required name="email" type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} value={email} onChange={event => setEmail(event.target.value)} aria-describedby={visibleError ? errorId : undefined} aria-invalid={Boolean(visibleError)} />
+              <Input required name="email" type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} aria-describedby={visibleError ? errorId : undefined} aria-invalid={Boolean(visibleError)} />
             </FormField>
             <FormField label={t("auth.password")}>
               <div className={styles.passwordField}>
-                <Input required aria-label={t("auth.password")} name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} aria-describedby={visibleError ? errorId : undefined} aria-invalid={Boolean(visibleError)} />
+                <Input required aria-label={t("auth.password")} name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" aria-describedby={visibleError ? errorId : undefined} aria-invalid={Boolean(visibleError)} />
                 <button type="button" className={styles.showPassword} aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={18} aria-hidden="true"/> : <Eye size={18} aria-hidden="true"/>}</button>
               </div>
             </FormField>

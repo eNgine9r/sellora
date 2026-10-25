@@ -8,13 +8,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.customer import Customer
+from app.models.audit_log import AuditLog
+from sqlalchemy import select
 from app.models.order import OrderStatus
 from app.models.shipment import Shipment, ShipmentStatus
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.order_repository import OrderRepository
 from app.repositories.shipment_repository import ShipmentRepository
 from app.schemas.order import OrderStatusUpdate
-from app.schemas.shipment import ShipmentCreate, ShipmentResponse, ShipmentSummaryResponse, ShipmentUpdate
+from app.schemas.shipment import ShipmentCreate, ShipmentResponse, ShipmentSummaryResponse, ShipmentUpdate, ShipmentTrackingEvent
 from app.services.business_utils import snapshot
 from app.services.order_service import OrderService, OrderServiceError
 
@@ -162,6 +164,49 @@ class ShipmentService:
         self.db.commit()
         self.db.refresh(shipment)
         return self._response(self.shipments.get(workspace_id, shipment.id) or shipment)
+
+    def tracking_history(self, workspace_id: UUID, shipment_id: UUID) -> list[ShipmentTrackingEvent] | None:
+        """Read-only, tenant-scoped timeline of documented status transitions."""
+        if self.shipments.get(workspace_id, shipment_id) is None:
+            return None
+        stmt = (
+            select(AuditLog)
+            .where(
+                AuditLog.workspace_id == workspace_id,
+                AuditLog.entity_type == "Shipment",
+                AuditLog.entity_id == str(shipment_id),
+                AuditLog.action.in_(
+                    ("NOVA_POSHTA_STATUS_SYNCED", "SHIPMENT_STATUS_CHANGE", "NOVA_POSHTA_TTN_CREATED")
+                ),
+            )
+            .order_by(AuditLog.created_at.desc())
+            .limit(50)
+        )
+        rows = self.db.scalars(stmt).all()
+        events = []
+        for row in rows:
+            data = row.new_value or {}
+            if row.action == "NOVA_POSHTA_STATUS_SYNCED" and not data.get("changed", False):
+                continue
+            status = data.get("normalized_status") if row.action == "NOVA_POSHTA_STATUS_SYNCED" else data.get("status")
+            previous = data.get("previous_normalized_status") if row.action == "NOVA_POSHTA_STATUS_SYNCED" else None
+            if row.action == "NOVA_POSHTA_TTN_CREATED":
+                status = "CREATED"
+            if not isinstance(status, str) or status not in {value.value for value in ShipmentStatus}:
+                continue
+            code = data.get("provider_status_code")
+            if code is not None and (not isinstance(code, str) or len(code) > 8):
+                code = None
+            events.append(ShipmentTrackingEvent(
+                at=row.created_at,
+                event=row.action,
+                status=status,
+                previous_status=previous if isinstance(previous, str) else None,
+                provider_status_code=code,
+            ))
+            if len(events) >= 20:
+                break
+        return events
 
     def summary(self, workspace_id: UUID) -> ShipmentSummaryResponse:
         in_transit, arrived, delivered_today, returned_this_month = self.shipments.summary_counts(workspace_id)

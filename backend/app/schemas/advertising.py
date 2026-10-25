@@ -156,7 +156,6 @@ class AdvertisingTrendPoint(BaseModel):
     roas: Decimal | None = None
 
 
-
 class CrmAttributionTotals(BaseModel):
     """Created-order cohort, current lifecycle/payment state, not cash accounting.
 

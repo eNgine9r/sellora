@@ -42,7 +42,7 @@ class AdMetricRepository:
         return list(self.db.execute(stmt).scalars())
 
     def get(self, workspace_id: UUID, metric_id: UUID) -> AdMetric | None:
-        stmt = self._base(workspace_id).where(AdMetric.id == metric_id)
+        stmt = self._base(workspace_id).where(AdMetric.id == metric_id).with_for_update().execution_options(populate_existing=True)
         return self.db.execute(stmt).scalar_one_or_none()
 
     def find_by_campaign_date(self, workspace_id: UUID, campaign_id: UUID, metric_date: date) -> AdMetric | None:

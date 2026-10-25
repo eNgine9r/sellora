@@ -3,6 +3,8 @@
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+
+from sqlalchemy.orm import Session
 from uuid import uuid4
 
 import pytest
@@ -88,41 +90,54 @@ def test_provider_arrival_projects_historical_order_without_changing_payment(mon
         status=OrderStatus.CONFIRMED.value, payment_status="PENDING",
         revenue=Decimal("0.00"),
     )
-    shipment = SimpleNamespace(order=order)
+    shipment = SimpleNamespace(order_id=order.id)
     service = NovaPoshtaShipmentService.__new__(NovaPoshtaShipmentService)
-    service.db = MagicMock()
-    service.audit_logs = MagicMock()
+    service.db = MagicMock(spec=Session)
     calls = []
 
     class FakeOrderService:
         def __init__(self, db):
             pass
 
+        def get(self, ws, order_id):
+            assert ws == workspace_id and order_id == order.id
+            return order
+
         def change_status(self, ws, order_id, payload, actor, commit):
             calls.append((ws, payload.status, commit))
             order.status = payload.status.value
 
     monkeypatch.setattr("app.services.nova_poshta_service.OrderService", FakeOrderService)
-    service._sync_historical_order_status(workspace_id, shipment, ShipmentStatus.ARRIVED, None)
+    service._update_order_for_tracking(workspace_id, shipment, ShipmentStatus.ARRIVED, None)
 
     assert calls == [(workspace_id, OrderStatus.SHIPPED, False)]
     assert order.payment_status == "PENDING"
     assert order.revenue == Decimal("0.00")
 
 
-def test_live_order_is_not_auto_projected_from_tracking(monkeypatch):
+def test_cancelled_live_order_is_not_resurrected_by_tracking(monkeypatch):
     workspace_id = uuid4()
     order = SimpleNamespace(
         id=uuid4(), workspace_id=workspace_id,
-        is_historical=False, status=OrderStatus.CONFIRMED.value,
+        is_historical=False, status=OrderStatus.CANCELLED.value,
     )
     service = NovaPoshtaShipmentService.__new__(NovaPoshtaShipmentService)
-    service.db = MagicMock()
-    service.audit_logs = MagicMock()
-    constructor = MagicMock()
-    monkeypatch.setattr("app.services.nova_poshta_service.OrderService", constructor)
-    service._sync_historical_order_status(
-        workspace_id, SimpleNamespace(order=order),
+    service.db = MagicMock(spec=Session)
+    mocked_change = MagicMock()
+
+    class FakeOrderService:
+        def __init__(self, db):
+            pass
+
+        def get(self, ws, order_id):
+            assert ws == workspace_id and order_id == order.id
+            return order
+
+        change_status = mocked_change
+
+    monkeypatch.setattr("app.services.nova_poshta_service.OrderService", FakeOrderService)
+    service._update_order_for_tracking(
+        workspace_id, SimpleNamespace(order_id=order.id),
         ShipmentStatus.DELIVERED, None,
     )
-    constructor.assert_not_called()
+    mocked_change.assert_not_called()

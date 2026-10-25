@@ -44,6 +44,10 @@ class FakeLeadRepository:
             return lead
         return None
 
+    def get_for_update(self, workspace_id, lead_id):
+        # The fake models an exclusive, scoped read for the conversion path.
+        return self.get(workspace_id, lead_id)
+
     def create(self, lead: Lead) -> Lead:
         lead.id = lead.id or uuid4()
         self.leads[lead.id] = lead
@@ -79,6 +83,7 @@ def _lead_service(leads: list[Lead] | None = None) -> LeadService:
     service = LeadService.__new__(LeadService)
     service.db = FakeDb()
     service.leads = FakeLeadRepository(leads)
+    service.conversations = SimpleNamespace(get_by_linked_lead=lambda *_: None)
     service.lead_sources = FakeLeadSources()
     service.customers = FakeCustomerRepository()
     service.audit_logs = FakeAuditLogs()
