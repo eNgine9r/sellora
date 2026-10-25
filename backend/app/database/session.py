@@ -2,7 +2,7 @@ from collections.abc import Generator
 from typing import Any
 import time
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
@@ -30,6 +30,25 @@ def engine_connect_args(database_url: str) -> dict[str, Any]:
     return args
 
 
+def set_transaction_schema(connection: Any) -> None:
+    """Resolve public application tables for each PostgreSQL transaction.
+
+    A transaction pooler may assign a different server connection each time.
+    A connection- or role-wide search_path is not reliable under transaction
+    pooling; SET LOCAL ends automatically on COMMIT or ROLLBACK. pg_catalog is
+    searched first to avoid untrusted function shadowing.
+    """
+    connection.exec_driver_sql(
+        "SET LOCAL search_path TO pg_catalog, public, extensions"
+    )
+
+
+def install_postgres_transaction_schema(target_engine: Any) -> None:
+    """Install once on the app's PostgreSQL engine, not on SQLite test engines."""
+    if target_engine.dialect.name == "postgresql":
+        event.listen(target_engine, "begin", set_transaction_schema)
+
+
 settings = get_settings()
 # Never interpolate customer message text, phone numbers or token-like bind values
 # into SQLAlchemy exception/log messages. Keep SQL statement metadata.
@@ -41,6 +60,11 @@ engine = create_engine(
     **({"pool_size": 5, "max_overflow": 5, "pool_timeout": 5, "pool_recycle": 300}
        if settings.database_url.startswith("postgresql") else {}),
 )
+# Applied to all transactions, including direct SQLAlchemy Connection usage.
+# No persistent ALTER ROLE/ALTER DATABASE, no cross-tenant global state.
+install_postgres_transaction_schema(engine)
+
+
 class InstrumentedSession(Session):
     def execute(self, *args, **kwargs):
         started = time.monotonic()
