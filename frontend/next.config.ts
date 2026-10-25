@@ -5,7 +5,16 @@ const API_PATH = "/api/v1";
 function apiUpstream(): string | null {
   // Retain the current deployment setting while allowing a server-only setting
   // for new installations. The browser always receives the same-origin path.
+  // Disposable QA preview only. This branch must never be merged to main.
+  // Override branch env to protect the live Raspberry API from QA requests.
+  if (process.env.VERCEL_ENV === "production") {
+    throw new Error("QA-only staging branch cannot deploy to production");
+  }
+  const qaPreviewUpstream = process.env.VERCEL_ENV === "preview"
+    ? "https://btc-radar.tail7f9b04.ts.net/sellora-qa-20261025/api/v1"
+    : null;
   const configured = (
+    qaPreviewUpstream ??
     process.env.SELLORA_API_UPSTREAM_URL ??
     process.env.NEXT_PUBLIC_API_BASE_URL ??
     ""
@@ -29,7 +38,12 @@ const upstream = apiUpstream();
 
 const upstreamConfig: NextConfig = upstream
   ? {
-      env: { NEXT_PUBLIC_API_BASE_URL: API_PATH },
+      env: {
+        NEXT_PUBLIC_API_BASE_URL: API_PATH,
+        ...(process.env.VERCEL_ENV === "preview"
+          ? { NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED: "true" }
+          : {}),
+      },
       async rewrites() {
         return [
           {
