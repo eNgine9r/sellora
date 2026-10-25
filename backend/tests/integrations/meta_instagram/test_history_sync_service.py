@@ -207,3 +207,56 @@ async def test_history_sync_rate_limit_uses_bounded_retry(monkeypatch):
     assert sync.rate_limit_count == 1
     assert sync.last_error_code == "META_HISTORY_RATE_LIMITED"
     assert sync.next_retry_at > datetime.now(UTC)
+
+
+class InlineHistoryClient(FakeHistoryClient):
+    def __init__(self, *, attachment=False):
+        super().__init__()
+        self.detail_requests = 0
+        self.attachment = attachment
+
+    async def list_messages(self, conversation_id, after=None, limit=20):
+        details = await super().get_message("mid-inline")
+        if self.attachment:
+            from dataclasses import replace
+            details = replace(details, message=None, attachments=[{
+                "type": "image", "url": "https://example.com/synthetic-history.jpg",
+            }])
+        return MetaMessagePage(messages=[MetaMessageSummary(
+            id="mid-inline", created_time=details.created_time, details=details,
+        )])
+
+    async def get_message(self, message_id):
+        self.detail_requests += 1
+        raise MetaInstagramError(
+            "META_HISTORY_ACCESS_DENIED", "Standalone historical message is unavailable.", 400,
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("attachment", [False, True])
+async def test_history_sync_uses_inline_details_when_standalone_lookup_is_denied(monkeypatch, attachment):
+    client = InlineHistoryClient(attachment=attachment)
+    workspace_id, sync, conversations, messages, service = make_service(monkeypatch, client)
+
+    await service.process_next()
+
+    assert sync.status == "COMPLETED"
+    assert sync.error_count == 0
+    assert sync.messages_imported == 1
+    assert client.detail_requests == 0
+    assert len(conversations.rows) == 1
+    assert messages.rows[0].workspace_id == workspace_id
+    assert messages.rows[0].provider_message_id == "mid-inline"
+    assert not messages.rows[0].is_synthetic
+    if attachment:
+        assert messages.rows[0].attachment_metadata["attachments"][0]["type"] == "image"
+    else:
+        assert messages.rows[0].text == "Скільки коштує?"
+
+    sync.status = "PENDING"
+    sync.conversations_discovered = 0
+    await service.process_next()
+    assert len(messages.rows) == 1
+    assert sync.messages_existing == 1
+    assert client.detail_requests == 0

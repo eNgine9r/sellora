@@ -212,7 +212,9 @@ class InstagramHistorySyncService:
                         conversation = self.conversations.get(sync.workspace_id, existing.conversation_id)
                     continue
                 try:
-                    details = await client.get_message(message_summary.id)
+                    # The conversation edge can return accessible historical
+                    # content even when a standalone lookup of its ID is denied.
+                    details = message_summary.details or await client.get_message(message_summary.id)
                 except MetaInstagramError as exc:
                     if exc.code == "META_HISTORY_MESSAGE_UNAVAILABLE":
                         sync.messages_unavailable += 1
