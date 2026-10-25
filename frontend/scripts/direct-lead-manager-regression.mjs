@@ -13,7 +13,7 @@ assert.match(page, /linked \? "Лід прив’язано" : "Без ліда"
 assert.match(page, /disabled=\{ensuring\}/);
 assert.match(page, /data-direct-lead-error/);
 assert.match(page, /href="\/leads"/);
-assert.match(page, /onEnsureLead=\{\(\) => selectedConversation && ensureLeadMutation.mutate\(selectedConversation.id\)\}/);
+assert.match(page, /onEnsureLead=\{\(\) => \{\s*const conversationId = safeSelectedConversationId\(\);\s*if \(conversationId\) ensureLeadMutation.mutate\(conversationId\);/);
 const instances = (page.match(/<DirectLeadCard conversation=\{conversation\}/g) ?? []).length;
 assert.equal(instances, 2, "Direct lead card must be available on desktop and mobile");
 assert.match(page, /Клієнт, замовлення й відправлення не створюються автоматично/);
