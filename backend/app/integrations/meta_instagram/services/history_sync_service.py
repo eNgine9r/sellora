@@ -136,6 +136,12 @@ class InstagramHistorySyncService:
             return sync
 
         client = self._client(decrypt_instagram_token(connection.access_token_ciphertext))
+        # The provider cursor advances only after an entire page. On a temporary
+        # failure replay that page; already saved messages remain deduplicated.
+        page_progress = {name: getattr(sync, name) for name in (
+            "conversation_cursor", "conversation_pages_processed", "conversations_discovered",
+            "conversations_synced",
+        )}
         try:
             page = await client.list_conversations(
                 connection.instagram_account_id,
@@ -151,8 +157,7 @@ class InstagramHistorySyncService:
                     sync.conversations_synced += 1
                 except MetaInstagramError as exc:
                     if exc.code in {"META_HISTORY_RATE_LIMITED", "META_HISTORY_PROVIDER_UNAVAILABLE"}:
-                        self._schedule_retry(sync, exc)
-                        return sync
+                        raise
                     sync.error_count += 1
                     sync.last_error_code = exc.code
                     sync.last_error_message = exc.message[:300]
@@ -170,6 +175,8 @@ class InstagramHistorySyncService:
             return sync
         except MetaInstagramError as exc:
             if exc.code in {"META_HISTORY_RATE_LIMITED", "META_HISTORY_PROVIDER_UNAVAILABLE"}:
+                for name, value in page_progress.items():
+                    setattr(sync, name, value)
                 self._schedule_retry(sync, exc)
             else:
                 self._fail_safe(sync, exc.code, exc.message)
@@ -395,10 +402,11 @@ class InstagramHistorySyncService:
 
     def _schedule_retry(self, sync: InstagramHistorySync, exc: MetaInstagramError) -> None:
         sync.status = InstagramHistorySyncStatus.RETRY_PENDING.value
-        sync.error_count += 1
+        # Retried provider throttling is not a permanently failed conversation.
         if exc.code == "META_HISTORY_RATE_LIMITED":
             sync.rate_limit_count += 1
-        delay_minutes = min(60, 2 ** min(sync.attempt_count, 5))
+        retries = sync.rate_limit_count if exc.code == "META_HISTORY_RATE_LIMITED" else sync.attempt_count
+        delay_minutes = min(60, 2 ** min(retries, 5))
         sync.next_retry_at = datetime.now(UTC) + timedelta(minutes=delay_minutes)
         sync.last_error_code = exc.code
         sync.last_error_message = exc.message[:300]
