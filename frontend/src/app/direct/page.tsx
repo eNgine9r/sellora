@@ -73,6 +73,9 @@ function DirectPageContent() {
   const queryClient = useQueryClient();
   const { isLive, isError: liveError, orderIntentConversationIds } = useDirectLive();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Synchronously track a newly requested dialog before React has rendered
+  // its details. Mutations must never run against a stale previous thread.
+  const selectionTargetRef = useRef<string | null>(null);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
   const profileRefreshAttempted = useRef(new Set<string>());
@@ -279,7 +282,15 @@ function DirectPageContent() {
     }
   }, [historyStatus, queryClient, selectedConversation?.id, workspaceId]);
 
+  const safeSelectedConversationId = () => {
+    const conversationId = selectedConversation?.id;
+    if (!conversationId) return null;
+    if (selectionTargetRef.current && selectionTargetRef.current !== conversationId) return null;
+    return conversationId;
+  };
+
   const handleSelectConversation = (conversationId: string) => {
+    selectionTargetRef.current = conversationId;
     if (isMobile) {
       listScrollPosition.current = window.scrollY;
       window.scrollTo(0, 0);
@@ -288,6 +299,7 @@ function DirectPageContent() {
     router.push(`/direct?conversation=${encodeURIComponent(conversationId)}`, { scroll: false });
   };
   const handleBackToInbox = () => {
+    selectionTargetRef.current = null;
     setSelectedId(null);
     setAiPanelOpen(false);
     router.replace("/direct", { scroll: false });
@@ -373,6 +385,7 @@ function DirectPageContent() {
           orderEvidenceConfirming={confirmOrderEvidenceMutation.isPending}
           orderEvidenceConfirmError={confirmOrderEvidenceMutation.isError}
           onConfirmOrderEvidence={() => {
+            if (!safeSelectedConversationId()) return;
             const count = orderEvidenceQuery.data?.verified_orders.length ?? 0;
             if (!count || !window.confirm(`Зберегти точні зв’язки з ${count} відправленнями? Замовлення, ціни, оплата й товари не зміняться.`)) return;
             confirmOrderEvidenceMutation.mutate();
@@ -381,10 +394,16 @@ function DirectPageContent() {
           automationError={automationQuery.isError || ensureCustomerMutation.isError}
           canManage={canManage}
           ensuringCustomer={ensureCustomerMutation.isPending}
-          onEnsureCustomer={() => selectedConversation && ensureCustomerMutation.mutate(selectedConversation.id)}
+          onEnsureCustomer={() => {
+            const conversationId = safeSelectedConversationId();
+            if (conversationId) ensureCustomerMutation.mutate(conversationId);
+          }}
           ensuringLead={ensureLeadMutation.isPending}
           leadError={ensureLeadMutation.isError}
-          onEnsureLead={() => selectedConversation && ensureLeadMutation.mutate(selectedConversation.id)}
+          onEnsureLead={() => {
+            const conversationId = safeSelectedConversationId();
+            if (conversationId) ensureLeadMutation.mutate(conversationId);
+          }}
           loading={messagesQuery.isLoading}
           error={messagesQuery.isError}
           messages={messagesQuery.data ?? []}
