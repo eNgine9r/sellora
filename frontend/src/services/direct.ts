@@ -13,6 +13,9 @@ import {
 } from "@/types/direct";
 
 export function fetchDirectConversations() { return apiRequest<DirectConversation[]>("/direct/conversations"); }
+export function ensureDirectLead(conversationId: string) {
+  return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/lead/ensure`, { method: "POST" });
+}
 export function fetchDirectOrderEvidence(conversationId: string) { return apiRequest<DirectOrderEvidence>(`/direct/conversations/${conversationId}/order-evidence`); }
 export function confirmDirectOrderEvidence(conversationId: string, expectedOrderIds: string[]) {
   return apiRequest<{ confirmed_order_count: number; created_links: number; existing_links: number; primary_order_linked: boolean }>(
