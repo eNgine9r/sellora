@@ -94,3 +94,29 @@ async def test_history_client_maps_rate_limit_to_safe_error(monkeypatch):
     with pytest.raises(MetaInstagramError) as exc:
         await MetaInstagramHistoryClient("https://graph.example", "v99.0", "token").list_conversations("ig-business")
     assert exc.value.code == "META_HISTORY_RATE_LIMITED"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("after", [None, "synthetic-cursor"])
+@pytest.mark.parametrize("omit_media", [False, True])
+async def test_inline_completeness_tracks_media_field_fallback(monkeypatch, after, omit_media):
+    client = MetaInstagramHistoryClient("https://graph.example", "v99.0", "synthetic")
+    calls = []
+
+    async def get(path, *, params):
+        calls.append(params["fields"])
+        if omit_media and "attachments" in params["fields"]:
+            request = httpx.Request("GET", "https://graph.example/synthetic")
+            response = httpx.Response(400, request=request, json={"error": {
+                "code": 100, "message": "Unknown field attachments",
+            }})
+            cause = httpx.HTTPStatusError("field", request=request, response=response)
+            raise MetaInstagramError("META_HISTORY_ACCESS_DENIED", "Synthetic field error.", 400) from cause
+        edge = {"data": [{"id": "mid-inline", "from": {"id": "synthetic-customer"}, "message": ""}]}
+        return edge if after else {"messages": edge}
+
+    monkeypatch.setattr(client, "_get", get)
+    page = await client.list_messages("synthetic-thread", after=after)
+    assert page.messages[0].details is not None
+    assert page.messages[0].details_complete is (not omit_media)
+    assert len(calls) == (2 if omit_media else 1)

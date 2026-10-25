@@ -211,15 +211,25 @@ class InstagramHistorySyncService:
                     if conversation is None:
                         conversation = self.conversations.get(sync.workspace_id, existing.conversation_id)
                     continue
+                details = message_summary.details
                 try:
-                    # The conversation edge can return accessible historical
-                    # content even when a standalone lookup of its ID is denied.
-                    details = message_summary.details or await client.get_message(message_summary.id)
+                    # Reduced-field responses may omit photos: hydrate them before
+                    # deduplication makes the import durable. Full inline payloads
+                    # need no potentially unavailable standalone lookup.
+                    if details is None or not message_summary.details_complete:
+                        details = await client.get_message(message_summary.id)
                 except MetaInstagramError as exc:
-                    if exc.code == "META_HISTORY_MESSAGE_UNAVAILABLE":
+                    if (details is not None
+                            and (details.message or details.attachments or details.is_unsupported)
+                            and exc.code in {"META_HISTORY_ACCESS_DENIED", "META_HISTORY_MESSAGE_UNAVAILABLE"}):
+                        # Retain accessible content, but never record an empty
+                        # reduced payload as a successfully imported media message.
+                        pass
+                    elif exc.code == "META_HISTORY_MESSAGE_UNAVAILABLE":
                         sync.messages_unavailable += 1
                         continue
-                    raise
+                    else:
+                        raise
 
                 direction, participant_id, participant_username = self._identity(
                     connection.instagram_account_id,

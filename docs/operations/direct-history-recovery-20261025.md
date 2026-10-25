@@ -13,19 +13,28 @@ conversation edge. InstagramHistorySyncService discarded these details and
 always fetched the message again by ID. If that standalone lookup was rejected,
 an otherwise accessible historical message caused a PARTIAL conversation.
 
-Use the inline details when present; retain the existing standalone lookup when
-Meta only returns a summary. No API contracts, permissions, tenant filtering,
+Use complete inline details when present. Track whether the client had to omit
+media fields; hydrate reduced payloads before persisting. If a permanent lookup
+refusal occurs, retain available text/media. Do not persist empty reduced
+payloads as successful imports, and preserve bounded retries for transient errors.
+Retain the existing standalone lookup when Meta only returns a summary. No API contracts, permissions, tenant filtering,
 message identifiers, unread counts, delivery logic or schema changes.
 
 ## Verification
 - Existing history service/client baseline: 6 passed.
 - New text and attachment regressions: both failed with PARTIAL before the fix.
 - Instagram integration suite after fix: 62 passed.
-- Complete isolated/offline backend suite: 642 passed, 19 PostgreSQL-only skips.
+- Complete isolated/offline backend suite: 650 passed, 19 PostgreSQL-only skips.
 - Regression verifies no standalone lookup for rich inline data, attachment
   preservation, workspace association and repeat-import deduplication.
-- Live read-only provider diagnosis and controlled rerun are tracked in the
-  private operation checkpoint; do not infer historical causation from rerun success.
+- Reduced-response/media regressions also failed before their fix. Coverage
+  includes media-field fallback on initial and cursor pages, hydration, accessible
+  text after a denied lookup, empty-payload refusal and transient retry.
+- Live read-only diagnosis checked the current first 100 conversations with no
+  provider errors. Their ordering can change with new activity; this does not
+  establish the exact historical cause of the four saved errors.
+- Controlled rerun is tracked in the private operation checkpoint; do not infer
+  historical causation from rerun success.
 
 ## Release
 Deploy only after required CI and candidate health checks. Retain the previous
