@@ -49,6 +49,10 @@ def install_postgres_transaction_schema(target_engine: Any) -> None:
         event.listen(target_engine, "begin", set_transaction_schema)
 
 
+DB_POOL_SIZE = 5
+DB_POOL_MAX_OVERFLOW = 5
+DB_POOL_WAIT_SECONDS = 5
+
 settings = get_settings()
 # Never interpolate customer message text, phone numbers or token-like bind values
 # into SQLAlchemy exception/log messages. Keep SQL statement metadata.
@@ -57,7 +61,7 @@ engine = create_engine(
     pool_pre_ping=True,
     hide_parameters=True,
     connect_args=engine_connect_args(settings.database_url),
-    **({"pool_size": 5, "max_overflow": 5, "pool_timeout": 5, "pool_recycle": 300}
+    **({"pool_size": DB_POOL_SIZE, "max_overflow": DB_POOL_MAX_OVERFLOW, "pool_timeout": DB_POOL_WAIT_SECONDS, "pool_recycle": 300}
        if settings.database_url.startswith("postgresql") else {}),
 )
 # Applied to all transactions, including direct SQLAlchemy Connection usage.

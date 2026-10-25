@@ -532,6 +532,17 @@ class OrderFulfillmentService:
         operation.address_id = address_id
         operation.order_id = order.id
         operation.shipment_id = shipment.id
+        if payload.source_direct_conversation_id is not None:
+            # Persist provenance with the order/shipment transaction, so a UI
+            # refresh or interrupted second request cannot lose the Direct link.
+            from app.services.direct_customer_automation_service import DirectCustomerAutomationService
+            DirectCustomerAutomationService(self.db).link_fulfillment_result(
+                workspace_id, payload.source_direct_conversation_id, customer, order.id,
+                recipient_name=payload.recipient_name,
+                recipient_phone=payload.recipient_phone,
+                city=payload.city,
+                actor_user_id=actor_user_id,
+            )
         return customer.id, address_id
 
     def _complete(self, workspace_id: UUID, operation: OrderFulfillment, result_code: OrderFulfillmentResultCode, *, message: str, error_code: str | None = None, retry_available: bool = False, replay: bool = False) -> OrderFulfillmentResponse:

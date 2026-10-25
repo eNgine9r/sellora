@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.models.shipment import ShipmentCarrier
 from app.models.order import PaymentStatus
 from app.models.order_fulfillment import OrderFulfillmentResultCode
 from app.schemas.order import OrderItemCreate, OrderResponse
@@ -80,7 +81,7 @@ class FulfillmentRecipient(BaseModel):
 
 
 class FulfillmentDelivery(BaseModel):
-    provider: str = Field(default="NOVA_POSHTA", min_length=1, max_length=40)
+    provider: ShipmentCarrier = ShipmentCarrier.NOVA_POSHTA
     city_ref: str = Field(min_length=1, max_length=120)
     city_description: str = Field(min_length=1, max_length=255)
     warehouse_ref: str = Field(min_length=1, max_length=120)

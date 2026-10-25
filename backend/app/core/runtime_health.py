@@ -1,4 +1,6 @@
 """Bounded, content-free process and background-worker telemetry."""
+from collections.abc import Callable
+
 import asyncio
 import time
 from threading import Lock
@@ -31,11 +33,57 @@ def worker_snapshot() -> dict[str, object]:
     }
 
 
-async def monitor_event_loop() -> None:
+class RuntimePressureMonitor:
+    """Sample pressure independently of probe traffic; never acquire a DB slot.
+
+    Short bursts reset immediately. Ten seconds of saturation or loop lag are
+    degraded. A stopped sampler is visible after five seconds.
+    """
+    def __init__(self) -> None:
+        self._since: dict[str, float] = {}
+        self._sampled_at: float | None = None
+
+    def observe(
+        self, lag_seconds: float, *, checked_out: int | None = None,
+        capacity: int | None = None, now: float | None = None,
+    ) -> None:
+        now = time.monotonic() if now is None else now
+        self._sampled_at = now
+        signals = {
+            "event_loop_lag": lag_seconds >= 1.0,
+            "db_pool_saturated": bool(capacity and capacity > 0 and checked_out is not None and checked_out >= capacity),
+        }
+        for name, active in signals.items():
+            if active:
+                # A single long scheduling pause already represents sustained lag.
+                onset = now - lag_seconds if name == "event_loop_lag" else now
+                self._since.setdefault(name, onset)
+            else:
+                self._since.pop(name, None)
+
+    def snapshot(self, *, now: float | None = None) -> dict[str, object]:
+        now = time.monotonic() if now is None else now
+        reasons = [name for name, since in self._since.items() if now - since >= 10.0]
+        sample_age = None if self._sampled_at is None else max(0.0, now - self._sampled_at)
+        if sample_age is not None and sample_age > 5.0:
+            reasons.append("runtime_monitor_stale")
+        return {"reasons": reasons, "sample_age_seconds": None if sample_age is None else round(sample_age, 3)}
+
+
+runtime_pressure = RuntimePressureMonitor()
+
+
+async def monitor_event_loop(pool_snapshot: Callable[[], dict[str, int | None]] | None = None) -> None:
+    # This process-local sampler doesn't query PostgreSQL or depend on AnyIO's
+    # request thread pool, so saturation cannot consume the health-check budget.
+    runtime_pressure.observe(0.0)
     while True:
         started = time.monotonic()
         await asyncio.sleep(1)
-        LOOP_STATE["lag_seconds"] = round(max(0.0, time.monotonic() - started - 1), 3)
+        lag = max(0.0, time.monotonic() - started - 1)
+        LOOP_STATE["lag_seconds"] = round(lag, 3)
+        pool = pool_snapshot() if pool_snapshot is not None else {}
+        runtime_pressure.observe(lag, checked_out=pool.get("checked_out"), capacity=pool.get("capacity"))
 
 
 _DB_LOCK = Lock()

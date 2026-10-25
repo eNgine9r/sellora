@@ -10,8 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
-from app.core.runtime_health import LOOP_STATE, monitor_event_loop, worker_snapshot, db_snapshot
-from app.database.session import engine
+from app.core.runtime_health import LOOP_STATE, monitor_event_loop, worker_snapshot, db_snapshot, runtime_pressure
+from app.database.session import engine, DB_POOL_SIZE, DB_POOL_MAX_OVERFLOW, DB_POOL_WAIT_SECONDS
 from app.integrations.meta_instagram.runtime_worker import run_instagram_webhook_worker, webhook_worker_enabled
 
 settings = get_settings()
@@ -23,7 +23,7 @@ RUNTIME_COMMIT = os.getenv("RENDER_GIT_COMMIT", "local")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     stop_event = asyncio.Event()
-    monitor_task = asyncio.create_task(monitor_event_loop(), name="event-loop-monitor")
+    monitor_task = asyncio.create_task(monitor_event_loop(pool_snapshot), name="event-loop-monitor")
     worker_task: asyncio.Task[None] | None = None
     if settings.meta_instagram_webhook_processing_enabled and webhook_worker_enabled():
         worker_task = asyncio.create_task(run_instagram_webhook_worker(stop_event), name="instagram-webhook-worker")
@@ -110,18 +110,34 @@ async def liveness() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def pool_snapshot() -> dict[str, int | None]:
+    """Read local pool counters without checking out or pinging a connection."""
+    checked_out = getattr(engine.pool, "checkedout", None)
+    postgres = engine.dialect.name == "postgresql"
+    return {
+        "checked_out": checked_out() if checked_out else None,
+        "capacity": DB_POOL_SIZE + DB_POOL_MAX_OVERFLOW if postgres else None,
+        "pool_wait_limit_seconds": DB_POOL_WAIT_SECONDS if postgres else None,
+    }
+
+
 @app.get("/health/ready", tags=["Health"])
 async def readiness(response: Response) -> dict[str, object]:
     task = getattr(app.state, "instagram_webhook_worker_task", None)
     required = settings.meta_instagram_webhook_processing_enabled and webhook_worker_enabled()
     state = worker_snapshot()
-    ready = not required or bool(task and not task.done() and not state["stalled"])
+    pressure = runtime_pressure.snapshot()
+    reasons = list(pressure["reasons"])
+    if required:
+        if not task or task.done():
+            reasons.append("webhook_worker_unavailable")
+        elif state["stalled"]:
+            reasons.append("webhook_worker_stalled")
+    ready = not reasons
     response.status_code = 200 if ready else 503
-    checked_out = getattr(engine.pool, "checkedout", None)
-    return {"status": "ok" if ready else "degraded",
+    return {"status": "ok" if ready else "degraded", "degraded_reasons": reasons,
             "worker": state, "event_loop_lag_seconds": LOOP_STATE["lag_seconds"],
-            "db": db_snapshot() | {"checked_out": checked_out() if checked_out else None,
-                                   "pool_wait_limit_seconds": 5},
+            "runtime_monitor": pressure, "db": db_snapshot() | pool_snapshot(),
             "http": getattr(app.state, "last_http", {})}
 
 
