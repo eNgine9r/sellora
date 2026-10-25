@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from uuid import UUID
 import hashlib
 
 from app.integrations.meta_instagram.exceptions import MetaInstagramError
-from app.integrations.meta_instagram.history_client import MetaConversationSummary, MetaInstagramHistoryClient, MetaMessageDetails
+from app.integrations.meta_instagram.history_client import MetaConversationSummary, MetaInstagramHistoryClient
 from app.integrations.meta_instagram.services.history_sync_service import InstagramHistorySyncService
 from app.models.ai_direct import (
     DirectChannel,
@@ -15,8 +13,7 @@ from app.models.ai_direct import (
     DirectMessageSenderType,
     DirectMessageType,
 )
-from app.models.instagram_inbox_sync import InstagramHistorySync, InstagramHistorySyncStatus
-from app.models.meta_instagram import InstagramConnectionStatus
+from app.models.instagram_inbox_sync import InstagramHistorySync
 
 
 class InstagramHistorySyncVisibilityService(InstagramHistorySyncService):
@@ -28,89 +25,8 @@ class InstagramHistorySyncVisibilityService(InstagramHistorySyncService):
     dialogs.
     """
 
-    async def process_next(self) -> InstagramHistorySync | None:
-        sync = self.syncs.next_pending_for_update()
-        if not sync:
-            return None
-        connection = self.connections.get_active(sync.workspace_id)
-        if (
-            not connection
-            or connection.id != sync.instagram_connection_id
-            or connection.status != InstagramConnectionStatus.CONNECTED.value
-            or not connection.instagram_account_id
-            or not connection.access_token_ciphertext
-        ):
-            self._fail_safe(
-                sync,
-                "META_CONNECTION_NOT_READY",
-                "Instagram connection is not ready for history sync.",
-            )
-            return sync
-
-        now = datetime.now(UTC)
-        sync.status = InstagramHistorySyncStatus.RUNNING.value
-        sync.started_at = sync.started_at or now
-        sync.attempt_count = (sync.attempt_count or 0) + 1
-        sync.next_retry_at = None
-        sync.last_error_code = None
-        sync.last_error_message = None
-
-        remaining = sync.conversation_limit - sync.conversations_discovered
-        if remaining <= 0:
-            self._complete(sync)
-            return sync
-
-        client = self._client(self._decrypt(connection.access_token_ciphertext))
-        try:
-            page = await client.list_conversations(
-                connection.instagram_account_id,
-                after=sync.conversation_cursor,
-                limit=min(10, remaining),
-            )
-            summaries = page.conversations[:remaining]
-            sync.conversation_pages_processed += 1
-            sync.conversations_discovered += len(summaries)
-            for summary in summaries:
-                try:
-                    materialized = await self._sync_conversation(
-                        sync,
-                        connection,
-                        client,
-                        summary,
-                    )
-                    if materialized:
-                        sync.conversations_synced += 1
-                except MetaInstagramError as exc:
-                    if exc.code in {
-                        "META_HISTORY_RATE_LIMITED",
-                        "META_HISTORY_PROVIDER_UNAVAILABLE",
-                    }:
-                        self._schedule_retry(sync, exc)
-                        return sync
-                    sync.error_count += 1
-                    sync.last_error_code = exc.code
-                    sync.last_error_message = exc.message[:300]
-                except Exception as exc:
-                    sync.error_count += 1
-                    sync.last_error_code = "META_HISTORY_CONVERSATION_FAILED"
-                    sync.last_error_message = exc.__class__.__name__
-
-            reached_limit = sync.conversations_discovered >= sync.conversation_limit
-            sync.conversation_cursor = None if reached_limit else page.after_cursor
-            if reached_limit or not page.after_cursor:
-                self._complete(sync)
-            else:
-                sync.status = InstagramHistorySyncStatus.PENDING.value
-            return sync
-        except MetaInstagramError as exc:
-            if exc.code in {
-                "META_HISTORY_RATE_LIMITED",
-                "META_HISTORY_PROVIDER_UNAVAILABLE",
-            }:
-                self._schedule_retry(sync, exc)
-            else:
-                self._fail_safe(sync, exc.code, exc.message)
-            return sync
+    def _counts_as_synced(self, materialized: object) -> bool:
+        return bool(materialized)
 
     async def _sync_conversation(
         self,
@@ -157,18 +73,7 @@ class InstagramHistorySyncVisibilityService(InstagramHistorySyncService):
                     continue
 
                 try:
-                    inline = message_summary.details
-                    # Sender and recipient are needed to attach a historical
-                    # message to the correct customer; do not guess identities.
-                    can_use_inline = bool(
-                        inline
-                        and inline.from_id
-                        and (
-                            inline.from_id != connection.instagram_account_id
-                            or inline.to
-                        )
-                    )
-                    details = inline if can_use_inline else await client.get_message(message_summary.id)
+                    details = await self._message_details(client, message_summary, connection.instagram_account_id)
                 except MetaInstagramError as exc:
                     if exc.code == "META_HISTORY_MESSAGE_UNAVAILABLE":
                         sync.messages_unavailable += 1

@@ -24,12 +24,19 @@ claim their exact historical cause is proven.
   a successful retry can finish COMPLETED.
 - Back off by throttle occurrences, not the count of successful pages. The first
   limit waits two minutes; subsequent limits increase the delay up to 32 minutes.
+- The production worker uses InstagramHistorySyncVisibilityService. Its duplicated
+  process_next implementation is removed in favor of the shared checkpoint loop;
+  its visible-dialog accounting remains in a small counting hook. The inline
+  identity/media hydration helper is also shared with the base service.
+- The same replay, media and error regressions run against both the base service
+  and the actual class imported by runtime_worker. Six production-path regressions
+  reproduced the override defect before consolidation.
 - Existing workspace isolation, RBAC, credentials, schema and outbound flags are
   unchanged. No repeated manual resync is needed while RETRY_PENDING is active.
 
 ## Tests
 New HTTP-code and interrupted-last-page regressions failed before the fix.
-Full isolated backend validation: 657 passed, 19 PostgreSQL-dependent skips.
+Full isolated backend validation: 665 passed, 19 PostgreSQL-dependent skips.
 Tests cover text/int provider code 4 on 400/403, genuine authorization errors,
 page replay at the conversation limit, durable-message deduplication, recovery
 completion, preservation of unrelated permanent errors, and the first retry

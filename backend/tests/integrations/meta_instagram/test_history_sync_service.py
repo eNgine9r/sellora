@@ -13,6 +13,7 @@ from app.integrations.meta_instagram.history_client import (
     MetaMessageSummary,
 )
 from app.integrations.meta_instagram.services.history_sync_service import InstagramHistorySyncService
+from app.integrations.meta_instagram.runtime_worker import InstagramHistorySyncService as WorkerHistorySyncService
 
 
 class FakeDB:
@@ -132,7 +133,7 @@ def make_sync(workspace_id, connection_id):
     )
 
 
-def make_service(monkeypatch, client):
+def make_service(monkeypatch, client, service_type=InstagramHistorySyncService):
     workspace_id = uuid4()
     connection_id = uuid4()
     connection = SimpleNamespace(
@@ -149,7 +150,8 @@ def make_service(monkeypatch, client):
         "app.integrations.meta_instagram.services.history_sync_service.decrypt_instagram_token",
         lambda value: "plain-token",
     )
-    service = InstagramHistorySyncService(FakeDB(), client_factory=lambda token: client)
+    service = service_type(FakeDB(), client_factory=lambda token: client)
+    service._decrypt = lambda value: "plain-token"
     service.connections = FakeConnectionRepo(connection)
     service.syncs = FakeSyncRepo(sync)
     service.conversations = conversations
@@ -235,9 +237,10 @@ class InlineHistoryClient(FakeHistoryClient):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("attachment", [False, True])
-async def test_history_sync_uses_inline_details_when_standalone_lookup_is_denied(monkeypatch, attachment):
+@pytest.mark.parametrize("production", [False, True])
+async def test_history_sync_uses_inline_details_when_standalone_lookup_is_denied(monkeypatch, attachment, production):
     client = InlineHistoryClient(attachment=attachment)
-    workspace_id, sync, conversations, messages, service = make_service(monkeypatch, client)
+    workspace_id, sync, conversations, messages, service = make_service(monkeypatch, client, WorkerHistorySyncService if production else InstagramHistorySyncService)
 
     await service.process_next()
 
@@ -290,9 +293,10 @@ class ReducedInlineHistoryClient(InlineHistoryClient):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("mode", ["hydrate_media", "text_denied", "empty_denied", "temporary_error"])
-async def test_reduced_inline_details_preserve_media_hydration_and_safe_fallback(monkeypatch, mode):
+@pytest.mark.parametrize("production", [False, True])
+async def test_reduced_inline_details_preserve_media_hydration_and_safe_fallback(monkeypatch, mode, production):
     client = ReducedInlineHistoryClient(mode)
-    _, sync, _, messages, service = make_service(monkeypatch, client)
+    _, sync, _, messages, service = make_service(monkeypatch, client, WorkerHistorySyncService if production else InstagramHistorySyncService)
     await service.process_next()
     assert client.detail_requests == 1
     if mode == "temporary_error":
@@ -331,9 +335,10 @@ class MidPageLimitClient(FakeHistoryClient):
 
 
 @pytest.mark.asyncio
-async def test_mid_page_throttle_resumes_without_skipping_conversations_or_duplicating_messages(monkeypatch):
+@pytest.mark.parametrize("production", [False, True])
+async def test_mid_page_throttle_resumes_without_skipping_conversations_or_duplicating_messages(monkeypatch, production):
     client = MidPageLimitClient()
-    _, sync, _, messages, service = make_service(monkeypatch, client)
+    _, sync, _, messages, service = make_service(monkeypatch, client, WorkerHistorySyncService if production else InstagramHistorySyncService)
     sync.conversation_limit = 2
     sync.attempt_count = 9  # Successful pages must not make the first throttle wait 32 minutes.
     await service.process_next()
@@ -363,9 +368,10 @@ async def test_mid_page_throttle_resumes_without_skipping_conversations_or_dupli
 
 
 @pytest.mark.asyncio
-async def test_replaying_a_throttled_page_keeps_permanent_errors_visible(monkeypatch):
+@pytest.mark.parametrize("production", [False, True])
+async def test_replaying_a_throttled_page_keeps_permanent_errors_visible(monkeypatch, production):
     client = MidPageLimitClient()
-    _, sync, _, messages, service = make_service(monkeypatch, client)
+    _, sync, _, messages, service = make_service(monkeypatch, client, WorkerHistorySyncService if production else InstagramHistorySyncService)
     sync.conversation_limit = 2
     def failed_lead(sync, *args):
         sync.error_count += 1
