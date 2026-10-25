@@ -292,7 +292,13 @@ class MetaInstagramHistoryClient:
             ) from exc
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            if status == 429:
+            try:
+                body = {} if status == 429 else exc.response.json()
+            except ValueError:
+                body = {}
+            provider_error = body.get("error") if isinstance(body, dict) else None
+            application_limited = isinstance(provider_error, dict) and str(provider_error.get("code")) == "4"
+            if status == 429 or application_limited:
                 raise MetaInstagramError(
                     "META_HISTORY_RATE_LIMITED",
                     "Meta rate limited the history request.",

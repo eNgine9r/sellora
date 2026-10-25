@@ -13,6 +13,7 @@ from app.integrations.meta_instagram.history_client import (
     MetaConversationSummary,
     MetaInstagramHistoryClient,
     MetaMessageDetails,
+    MetaMessageSummary,
 )
 from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
 from app.integrations.meta_instagram.repositories.inbox_sync_repository import InstagramHistorySyncRepository
@@ -135,7 +136,13 @@ class InstagramHistorySyncService:
             self._complete(sync)
             return sync
 
-        client = self._client(decrypt_instagram_token(connection.access_token_ciphertext))
+        client = self._client(self._decrypt(connection.access_token_ciphertext))
+        # The provider cursor advances only after an entire page. On a temporary
+        # failure replay that page; already saved messages remain deduplicated.
+        page_progress = {name: getattr(sync, name) for name in (
+            "conversation_cursor", "conversation_pages_processed", "conversations_discovered",
+            "conversations_synced",
+        )}
         try:
             page = await client.list_conversations(
                 connection.instagram_account_id,
@@ -147,12 +154,12 @@ class InstagramHistorySyncService:
             sync.conversations_discovered += len(summaries)
             for summary in summaries:
                 try:
-                    await self._sync_conversation(sync, connection, client, summary)
-                    sync.conversations_synced += 1
+                    materialized = await self._sync_conversation(sync, connection, client, summary)
+                    if self._counts_as_synced(materialized):
+                        sync.conversations_synced += 1
                 except MetaInstagramError as exc:
                     if exc.code in {"META_HISTORY_RATE_LIMITED", "META_HISTORY_PROVIDER_UNAVAILABLE"}:
-                        self._schedule_retry(sync, exc)
-                        return sync
+                        raise
                     sync.error_count += 1
                     sync.last_error_code = exc.code
                     sync.last_error_message = exc.message[:300]
@@ -170,10 +177,37 @@ class InstagramHistorySyncService:
             return sync
         except MetaInstagramError as exc:
             if exc.code in {"META_HISTORY_RATE_LIMITED", "META_HISTORY_PROVIDER_UNAVAILABLE"}:
+                for name, value in page_progress.items():
+                    setattr(sync, name, value)
                 self._schedule_retry(sync, exc)
             else:
                 self._fail_safe(sync, exc.code, exc.message)
             return sync
+
+    def _decrypt(self, ciphertext: str) -> str:
+        return decrypt_instagram_token(ciphertext)
+
+    def _counts_as_synced(self, materialized: object) -> bool:
+        return True
+
+    async def _message_details(
+        self, client: MetaInstagramHistoryClient, summary: MetaMessageSummary, account_id: str,
+    ) -> MetaMessageDetails:
+        inline = summary.details
+        # Identity is required to attach historical content to the correct buyer.
+        usable = bool(inline and inline.from_id and (inline.from_id != account_id or inline.to))
+        details = inline if usable else None
+        try:
+            # Reduced responses can omit photos. Hydrate them before the message
+            # becomes durable and provider-ID dedup prevents a later repair.
+            if details is None or not summary.details_complete:
+                details = await client.get_message(summary.id)
+        except MetaInstagramError as exc:
+            if not (details is not None
+                    and (details.message or details.attachments or details.is_unsupported)
+                    and exc.code in {"META_HISTORY_ACCESS_DENIED", "META_HISTORY_MESSAGE_UNAVAILABLE"}):
+                raise
+        return details
 
     async def _sync_conversation(
         self,
@@ -211,25 +245,13 @@ class InstagramHistorySyncService:
                     if conversation is None:
                         conversation = self.conversations.get(sync.workspace_id, existing.conversation_id)
                     continue
-                details = message_summary.details
                 try:
-                    # Reduced-field responses may omit photos: hydrate them before
-                    # deduplication makes the import durable. Full inline payloads
-                    # need no potentially unavailable standalone lookup.
-                    if details is None or not message_summary.details_complete:
-                        details = await client.get_message(message_summary.id)
+                    details = await self._message_details(client, message_summary, connection.instagram_account_id)
                 except MetaInstagramError as exc:
-                    if (details is not None
-                            and (details.message or details.attachments or details.is_unsupported)
-                            and exc.code in {"META_HISTORY_ACCESS_DENIED", "META_HISTORY_MESSAGE_UNAVAILABLE"}):
-                        # Retain accessible content, but never record an empty
-                        # reduced payload as a successfully imported media message.
-                        pass
-                    elif exc.code == "META_HISTORY_MESSAGE_UNAVAILABLE":
+                    if exc.code == "META_HISTORY_MESSAGE_UNAVAILABLE":
                         sync.messages_unavailable += 1
                         continue
-                    else:
-                        raise
+                    raise
 
                 direction, participant_id, participant_username = self._identity(
                     connection.instagram_account_id,
@@ -395,10 +417,11 @@ class InstagramHistorySyncService:
 
     def _schedule_retry(self, sync: InstagramHistorySync, exc: MetaInstagramError) -> None:
         sync.status = InstagramHistorySyncStatus.RETRY_PENDING.value
-        sync.error_count += 1
+        # Retried provider throttling is not a permanently failed conversation.
         if exc.code == "META_HISTORY_RATE_LIMITED":
             sync.rate_limit_count += 1
-        delay_minutes = min(60, 2 ** min(sync.attempt_count, 5))
+        retries = sync.rate_limit_count if exc.code == "META_HISTORY_RATE_LIMITED" else sync.attempt_count
+        delay_minutes = min(60, 2 ** min(retries, 5))
         sync.next_retry_at = datetime.now(UTC) + timedelta(minutes=delay_minutes)
         sync.last_error_code = exc.code
         sync.last_error_message = exc.message[:300]
