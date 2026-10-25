@@ -206,6 +206,24 @@ jobs:
             tests/test_meta_instagram_foundation.py \
             tests/integrations/meta_instagram
 
+      - name: Run isolated authenticated sale API canary
+        env:
+          SELLORA_SALE_DISPOSABLE_CANARY: "YES"
+          SELLORA_COOKIE_SESSIONS_ENABLED: "true"
+          META_INSTAGRAM_WEBHOOK_WORKER_ENABLED: "false"
+        run: |
+          python - <<'PY'
+          import os
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.environ["DATABASE_URL"], isolation_level="AUTOCOMMIT")
+          with engine.connect() as connection:
+              connection.execute(text("CREATE DATABASE sellora_sale_canary_isolated"))
+          engine.dispose()
+          PY
+          export DATABASE_URL=postgresql+psycopg://sellora:sellora@localhost:5432/sellora_sale_canary_isolated
+          alembic upgrade head
+          PYTHONPATH=. python scripts/verify_sale_api_canary.py
+
   frontend-production:
     name: frontend-production
     runs-on: ubuntu-24.04
