@@ -26,6 +26,7 @@ class MetaMessageSummary:
     created_time: str | None = None
     is_unsupported: bool = False
     details: MetaMessageDetails | None = None
+    details_complete: bool = False
 
 
 @dataclass(frozen=True)
@@ -105,6 +106,7 @@ class MetaInstagramHistoryClient:
         basic_fields = f"messages.limit({bounded_limit}){{id,created_time}}"
         rich_params = {"fields": rich_fields}
         basic_params = {"fields": basic_fields}
+        details_complete = True
         if after:
             # The cursor belongs to the nested messages edge, not the thread object.
             edge_params = {
@@ -116,6 +118,7 @@ class MetaInstagramHistoryClient:
             except MetaInstagramError as exc:
                 if not self._unsupported_fields_error(exc):
                     raise
+                details_complete = False
                 try:
                     payload = await self._get(
                         f"/{conversation_id}/messages",
@@ -135,6 +138,7 @@ class MetaInstagramHistoryClient:
             except MetaInstagramError as exc:
                 if not self._unsupported_fields_error(exc):
                     raise
+                details_complete = False
                 try:
                     payload = await self._get(f"/{conversation_id}", params={"fields": rich_without_media})
                 except MetaInstagramError as fallback_exc:
@@ -148,6 +152,7 @@ class MetaInstagramHistoryClient:
                 id=str(item["id"]),
                 created_time=str(item["created_time"]) if item.get("created_time") else None,
                 is_unsupported=bool(item.get("is_unsupported", False)),
+                details_complete=details_complete,
                 details=self._details_from_payload(item) if (
                     ("from" in item or "to" in item) and
                     (item.get("message") is not None or item.get("is_unsupported") or item.get("attachments"))

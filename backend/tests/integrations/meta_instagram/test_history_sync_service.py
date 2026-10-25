@@ -207,3 +207,105 @@ async def test_history_sync_rate_limit_uses_bounded_retry(monkeypatch):
     assert sync.rate_limit_count == 1
     assert sync.last_error_code == "META_HISTORY_RATE_LIMITED"
     assert sync.next_retry_at > datetime.now(UTC)
+
+
+class InlineHistoryClient(FakeHistoryClient):
+    def __init__(self, *, attachment=False):
+        super().__init__()
+        self.detail_requests = 0
+        self.attachment = attachment
+
+    async def list_messages(self, conversation_id, after=None, limit=20):
+        details = await super().get_message("mid-inline")
+        if self.attachment:
+            from dataclasses import replace
+            details = replace(details, message=None, attachments=[{
+                "type": "image", "url": "https://example.com/synthetic-history.jpg",
+            }])
+        return MetaMessagePage(messages=[MetaMessageSummary(
+            id="mid-inline", created_time=details.created_time, details=details, details_complete=True,
+        )])
+
+    async def get_message(self, message_id):
+        self.detail_requests += 1
+        raise MetaInstagramError(
+            "META_HISTORY_ACCESS_DENIED", "Standalone historical message is unavailable.", 400,
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("attachment", [False, True])
+async def test_history_sync_uses_inline_details_when_standalone_lookup_is_denied(monkeypatch, attachment):
+    client = InlineHistoryClient(attachment=attachment)
+    workspace_id, sync, conversations, messages, service = make_service(monkeypatch, client)
+
+    await service.process_next()
+
+    assert sync.status == "COMPLETED"
+    assert sync.error_count == 0
+    assert sync.messages_imported == 1
+    assert client.detail_requests == 0
+    assert len(conversations.rows) == 1
+    assert messages.rows[0].workspace_id == workspace_id
+    assert messages.rows[0].provider_message_id == "mid-inline"
+    assert not messages.rows[0].is_synthetic
+    if attachment:
+        assert messages.rows[0].attachment_metadata["attachments"][0]["type"] == "image"
+    else:
+        assert messages.rows[0].text == "Скільки коштує?"
+
+    sync.status = "PENDING"
+    sync.conversations_discovered = 0
+    await service.process_next()
+    assert len(messages.rows) == 1
+    assert sync.messages_existing == 1
+    assert client.detail_requests == 0
+
+
+class ReducedInlineHistoryClient(InlineHistoryClient):
+    def __init__(self, mode):
+        super().__init__()
+        self.mode = mode
+
+    async def list_messages(self, conversation_id, after=None, limit=20):
+        from dataclasses import replace
+        page = await super().list_messages(conversation_id, after, limit)
+        summary = page.messages[0]
+        details = summary.details
+        if self.mode in {"hydrate_media", "empty_denied"}:
+            details = replace(details, message="")
+        return MetaMessagePage(messages=[replace(summary, details=details, details_complete=False)])
+
+    async def get_message(self, message_id):
+        self.detail_requests += 1
+        if self.mode == "hydrate_media":
+            from dataclasses import replace
+            details = await FakeHistoryClient.get_message(self, message_id)
+            return replace(details, message="", attachments=[{
+                "type": "image", "url": "https://example.com/synthetic-hydrated.jpg",
+            }])
+        code = "META_HISTORY_PROVIDER_UNAVAILABLE" if self.mode == "temporary_error" else "META_HISTORY_ACCESS_DENIED"
+        raise MetaInstagramError(code, "Synthetic standalone lookup rejected.", 503 if self.mode == "temporary_error" else 400)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["hydrate_media", "text_denied", "empty_denied", "temporary_error"])
+async def test_reduced_inline_details_preserve_media_hydration_and_safe_fallback(monkeypatch, mode):
+    client = ReducedInlineHistoryClient(mode)
+    _, sync, _, messages, service = make_service(monkeypatch, client)
+    await service.process_next()
+    assert client.detail_requests == 1
+    if mode == "temporary_error":
+        assert sync.status == "RETRY_PENDING"
+        assert not messages.rows
+    elif mode == "empty_denied":
+        assert sync.status == "PARTIAL"
+        assert sync.error_count == 1
+        assert not messages.rows
+    else:
+        assert sync.status == "COMPLETED"
+        assert len(messages.rows) == 1
+        if mode == "hydrate_media":
+            assert messages.rows[0].attachment_metadata["attachments"][0]["type"] == "image"
+        else:
+            assert messages.rows[0].text == "Скільки коштує?"
