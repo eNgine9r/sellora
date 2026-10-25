@@ -33,6 +33,7 @@ import { useI18n } from "@/i18n/provider";
 import { fetchAISuggestions } from "@/services/ai";
 import {
   ensureDirectCustomer,
+  ensureDirectLead,
   confirmDirectOrderEvidence,
   fetchDirectConversations,
   fetchDirectOrderEvidence,
@@ -168,6 +169,14 @@ function DirectPageContent() {
   const profileMutation = useMutation({
     mutationFn: (conversationId: string) => refreshDirectParticipantProfile(conversationId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] }),
+  });
+  const ensureLeadMutation = useMutation({
+    mutationFn: (conversationId: string) => ensureDirectLead(conversationId),
+    onSuccess: (_conversation, conversationId) => {
+      void queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["leads", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-customer-automation", workspaceId, conversationId] });
+    },
   });
   const ensureCustomerMutation = useMutation({
     mutationFn: (conversationId: string) => ensureDirectCustomer(conversationId),
@@ -373,6 +382,9 @@ function DirectPageContent() {
           canManage={canManage}
           ensuringCustomer={ensureCustomerMutation.isPending}
           onEnsureCustomer={() => selectedConversation && ensureCustomerMutation.mutate(selectedConversation.id)}
+          ensuringLead={ensureLeadMutation.isPending}
+          leadError={ensureLeadMutation.isError}
+          onEnsureLead={() => selectedConversation && ensureLeadMutation.mutate(selectedConversation.id)}
           loading={messagesQuery.isLoading}
           error={messagesQuery.isError}
           messages={messagesQuery.data ?? []}
@@ -673,6 +685,9 @@ function MessageThread({
   canManage,
   ensuringCustomer,
   onEnsureCustomer,
+  ensuringLead,
+  leadError,
+  onEnsureLead,
   loading,
   error,
   messages,
@@ -707,6 +722,9 @@ function MessageThread({
   canManage: boolean;
   ensuringCustomer: boolean;
   onEnsureCustomer: () => void;
+  ensuringLead: boolean;
+  leadError: boolean;
+  onEnsureLead: () => void;
   loading: boolean;
   error: boolean;
   messages: DirectMessage[];
@@ -756,6 +774,7 @@ function MessageThread({
       </header>
       <div className="hidden lg:block">
         <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
+        <DirectLeadCard conversation={conversation} canManage={canManage} ensuring={ensuringLead} error={leadError} onEnsure={onEnsureLead} />
         <CustomerAutomationCard
         conversation={conversation}
         automation={automation}
@@ -773,6 +792,7 @@ function MessageThread({
         <summary className="cursor-pointer px-4 py-2 text-xs font-bold text-text-secondary">Деталі клієнта та замовлення</summary>
         <div className="max-h-[35dvh] overflow-y-auto">
           <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
+          <DirectLeadCard conversation={conversation} canManage={canManage} ensuring={ensuringLead} error={leadError} onEnsure={onEnsureLead} />
           <CustomerAutomationCard conversation={conversation} automation={automation} existingOrdersCount={orderEvidence?.verified_orders.length ?? 0} evidenceReady={!orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated} loading={automationLoading} error={automationError} canManage={canManage} ensuring={ensuringCustomer} onEnsure={onEnsureCustomer} />
           <DirectOrderEvidenceCard evidence={orderEvidence} loading={orderEvidenceLoading} error={orderEvidenceError} canManage={canManage} confirming={orderEvidenceConfirming} confirmError={orderEvidenceConfirmError} onConfirm={onConfirmOrderEvidence} />
         </div>
@@ -848,6 +868,51 @@ function MessageThread({
     </section>
   );
 }
+
+function DirectLeadCard({
+  conversation, canManage, ensuring, error, onEnsure,
+}: {
+  conversation: DirectConversation;
+  canManage: boolean;
+  ensuring: boolean;
+  error: boolean;
+  onEnsure: () => void;
+}) {
+  if (conversation.channel !== "INSTAGRAM") return null;
+  const linked = Boolean(conversation.linked_lead_id);
+  const actionable = canManage && !linked && conversation.status !== "SPAM" && conversation.status !== "ARCHIVED";
+  return (
+    <section className="border-b border-border-subtle bg-surface-2/40 px-4 py-3" data-direct-lead>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-black text-text-primary">Заявка на продаж</p>
+            <span className={`rounded-full px-2 py-1 text-xs font-bold ${linked ? "bg-emerald-500/15 text-emerald-700" : "bg-surface-1 text-text-muted"}`}>
+              {linked ? "Лід прив’язано" : "Без ліда"}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-text-secondary">
+            {linked
+              ? "Інтерес покупця збережено як лід. Це не підтвердження покупки."
+              : "Створіть лід для звернення покупця. Клієнт, замовлення й відправлення не створюються автоматично."}
+          </p>
+          {error ? <p className="mt-1 text-xs font-semibold text-rose-600" role="alert" data-direct-lead-error>Не вдалося створити лід. Перевірте, чи є вхідне повідомлення, і повторіть спробу.</p> : null}
+        </div>
+        {linked ? (
+          <Link className="inline-flex min-h-10 items-center rounded-2xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-bold text-primary" href="/leads">
+            Перейти до лідів
+          </Link>
+        ) : actionable ? (
+          <Button variant="secondary" onClick={onEnsure} disabled={ensuring} data-direct-lead-action>
+            {ensuring ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+            {ensuring ? "Створення…" : "Створити лід"}
+          </Button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 
 function CustomerAutomationCard({
   conversation,

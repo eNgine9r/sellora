@@ -1,0 +1,20 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const page = readFileSync("frontend/src/app/direct/page.tsx", "utf8");
+const service = readFileSync("frontend/src/services/direct.ts", "utf8");
+assert.match(service, /export function ensureDirectLead\(conversationId: string\)/);
+assert.match(service, /\/direct\/conversations\/\$\{conversationId\}\/lead\/ensure/);
+assert.match(service, /lead\/ensure\`, \{ method: "POST" \}/);
+assert.match(page, /mutationFn: \(conversationId: string\) => ensureDirectLead\(conversationId\)/);
+assert.match(page, /actionable = canManage && !linked && conversation.status !== "SPAM" && conversation.status !== "ARCHIVED"/);
+assert.match(page, /conversation.channel !== "INSTAGRAM"\) return null/);
+assert.match(page, /linked \? "Лід прив’язано" : "Без ліда"/);
+assert.match(page, /disabled=\{ensuring\}/);
+assert.match(page, /data-direct-lead-error/);
+assert.match(page, /href="\/leads"/);
+assert.match(page, /onEnsureLead=\{\(\) => selectedConversation && ensureLeadMutation.mutate\(selectedConversation.id\)\}/);
+const instances = (page.match(/<DirectLeadCard conversation=\{conversation\}/g) ?? []).length;
+assert.equal(instances, 2, "Direct lead card must be available on desktop and mobile");
+assert.match(page, /Клієнт, замовлення й відправлення не створюються автоматично/);
+console.log("Direct-to-Lead manager CTA and mobile/desktop safety regressions passed.");
