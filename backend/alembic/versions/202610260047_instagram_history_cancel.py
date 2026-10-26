@@ -23,7 +23,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["sync_id"], ["instagram_history_syncs.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["requested_by"], ["users.id"], ondelete="SET NULL"),
         sa.UniqueConstraint("workspace_id", name="uq_ig_history_cancel_workspace"),
     )
