@@ -70,6 +70,16 @@ def test_note_due_date_rejected():
         WorkspaceMemoUpdate(title="  ")
 
 
+def test_non_nullable_fields_cannot_be_patched_to_null(db):
+    service = service_for(db)
+    workspace = uuid4()
+    actor = uuid4()
+    note = service.create(workspace, WorkspaceMemoCreate(title="Keep me"), actor)
+    with pytest.raises(ValueError):
+        service.update(workspace, note.id, WorkspaceMemoUpdate(body=None), actor)
+    assert service.memos.get(workspace, note.id).title == "Keep me"
+
+
 def test_workspace_memos_route_has_role_guard_and_four_methods():
     methods = {(method, route.path) for route in router.routes for method in route.methods}
     assert methods == {
