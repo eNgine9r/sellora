@@ -212,8 +212,8 @@ function DirectPageContent() {
 
   const historyActive = Boolean(historyQuery.data && ACTIVE_HISTORY_STATUSES.has(historyQuery.data.status));
   const historyStopping = Boolean(historyActive && (historyQuery.data?.cancel_requested || cancelHistoryMutation.isPending || cancelHistoryMutation.data?.requested));
-  const startHistory = () => { if (window.confirm(t("direct.historyStartConfirm"))) historyMutation.mutate(); };
-  const stopHistory = () => { if (window.confirm(t("direct.historyStopConfirm"))) cancelHistoryMutation.mutate(); };
+  const startHistory = () => { if (window.confirm(t("direct.historyStartConfirm"))) { cancelHistoryMutation.reset(); historyMutation.mutate(); } };
+  const stopHistory = () => { if (window.confirm(t("direct.historyStopConfirm"))) { setHistoryPanelOpen(true); cancelHistoryMutation.mutate(); } };
 
   useEffect(() => {
     setSelectedId(null);
