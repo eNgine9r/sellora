@@ -2134,6 +2134,10 @@
   },
   "accountMenu": {
     "profile": "Профіль",
+    "preferences": "Вигляд і мова",
+    "roleOwner": "Власник",
+    "roleManager": "Менеджер",
+    "roleAnalyst": "Аналітик",
     "user": "Користувач",
     "workspace": "Робочий простір",
     "currentWorkspace": "Поточний робочий простір",
