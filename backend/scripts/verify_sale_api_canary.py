@@ -32,7 +32,7 @@ assert os.getenv("META_INSTAGRAM_WEBHOOK_WORKER_ENABLED") == "false"
 password = secrets.token_urlsafe(24)
 with SessionLocal() as db:
     assert db.scalar(text("SELECT count(*) FROM workspaces")) == 0, "Database is not empty"
-    assert db.scalar(text("SELECT version_num FROM alembic_version")) == "202610260047"
+    assert db.scalar(text("SELECT version_num FROM alembic_version")) == "202610260048"
     ws = Workspace(name="Isolated sale QA", slug="isolated-sale-qa")
     other = Workspace(name="Other tenant QA", slug="other-sale-qa")
     users = [User(email=f"sale-{role.lower()}@example.com", password_hash=hash_password(password),
