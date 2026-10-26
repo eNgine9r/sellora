@@ -357,15 +357,23 @@ function DirectPageContent() {
       {(historyPanelOpen || historyActive) ? (
         <section className="grid min-w-0 gap-3 rounded-2xl border border-border-subtle bg-surface-1 p-3 sm:p-4" aria-label={t("direct.historyHeading")}>
           {historyPanelOpen ? (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0 flex-1">
+            <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center" data-direct-history-controls>
+              <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-text-primary">{t("direct.historyHeading")}</h2>
-                <p className="mt-1 text-xs text-text-muted">{t("direct.historyHint")}</p>
-                <p className="mt-1 text-xs text-text-muted">{t("direct.historyLimit")}</p>
+                {!historyQuery.data ? (
+                  <p className="mt-1 text-xs leading-5 text-text-muted">{t("direct.historyHint")}</p>
+                ) : null}
+                <p className="mt-1 text-xs leading-5 text-text-muted">{t("direct.historyLimit")}</p>
               </div>
               {canManage && !historyActive ? (
-                <Button variant="secondary" onClick={startHistory} disabled={historyMutation.isPending || statusQuery.data?.status !== "CONNECTED"}>
-                  <RefreshCw className="h-4 w-4" />{t("direct.historyStart")}
+                <Button
+                  variant="secondary"
+                  className="w-full gap-2 font-semibold lg:w-auto"
+                  onClick={startHistory}
+                  disabled={historyMutation.isPending || statusQuery.data?.status !== "CONNECTED"}
+                >
+                  <RefreshCw className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {t("direct.historyStart")}
                 </Button>
               ) : null}
             </div>
@@ -525,15 +533,25 @@ function HistorySyncBanner({ sync, loading }: { sync?: InstagramHistorySync | nu
   const stopping = active && sync.cancel_requested;
   const progress = Math.min(100, Math.round(100 * sync.conversations_discovered / Math.max(sync.conversation_limit, 1)));
   return (
-    <div className="grid min-w-0 gap-2" data-direct-history-progress>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-text-primary">{stopping ? t("direct.historyStopping") : statusLabels[sync.status] ?? sync.status}</p>
-        <span className={`rounded-full px-2 py-1 text-xs font-medium ${active ? "bg-primary/10 text-primary" : sync.status === "FAILED_SAFE" ? "bg-[var(--danger-surface)] text-danger" : "bg-surface-2 text-text-secondary"}`}>{progress}%</span>
+    <div className="grid min-w-0 gap-2" data-direct-history-progress data-direct-history-active={active}>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {sync.status === "COMPLETED" ? (
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+        ) : null}
+        <p className="min-w-0 flex-1 text-sm font-semibold text-text-primary">{stopping ? t("direct.historyStopping") : statusLabels[sync.status] ?? sync.status}</p>
+        {active ? (
+          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">{progress}%</span>
+        ) : null}
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={sync.conversations_discovered} aria-valuemin={0} aria-valuemax={sync.conversation_limit} aria-label={t("direct.historyProgress")}>
-        <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
-      </div>
-      <p className="text-xs text-text-muted">{t("direct.historyProgress")}: {sync.conversations_discovered}/{sync.conversation_limit} · {t("direct.historyNew")}: {sync.messages_imported} · {t("direct.historyExisting")}: {sync.messages_existing}</p>
+      {active ? (
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={sync.conversations_discovered} aria-valuemin={0} aria-valuemax={sync.conversation_limit} aria-label={t("direct.historyProgress")}>
+          <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
+        </div>
+      ) : null}
+      <p className="min-w-0 text-xs leading-5 text-text-muted">
+        {t("direct.historyProgress")}: {sync.conversations_discovered}/{sync.conversation_limit}
+        <span className="hidden sm:inline"> · </span><span className="block sm:inline">{t("direct.historyNew")}: {sync.messages_imported} · {t("direct.historyExisting")}: {sync.messages_existing}</span>
+      </p>
       {sync.messages_unavailable > 0 || sync.error_count > 0 ? <p className="text-xs text-warning">{t("direct.historyUnavailable")}: {sync.messages_unavailable} · {t("direct.historyErrors")}: {sync.error_count}</p> : null}
     </div>
   );
