@@ -35,6 +35,7 @@ WORKSPACE_PREFIXES = (
     "/api/v1/onboarding",
     "/api/v1/ai",
     "/api/v1/direct",
+    "/api/v1/workspace-memos",
 )
 OWNER_ONLY_ENDPOINTS = {
     ("POST", "/api/v1/integrations/meta-ads/oauth/start"),
@@ -62,12 +63,12 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 9,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 213,
+    "WORKSPACE_SCOPED": 217,
     "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 243
-EXPECTED_MUTATION_ROUTES = 137
+EXPECTED_TOTAL_ROUTES = 247
+EXPECTED_MUTATION_ROUTES = 140
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
