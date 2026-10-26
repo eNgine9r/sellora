@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
   const priorityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2, positive: 3 };
   const rankedInsights = [...featuredInsights].sort((a, b) => (priorityOrder[a.type] ?? 2) - (priorityOrder[b.type] ?? 2));
   const insightTargets = new Set(["/orders", "/inventory", "/advertising", "/leads", "/products", "/customers", "/finance", "/analytics"]);
-  const salesChartRows = salesReport.data?.daily_rows ?? salesRows.map((row) => ({ ...row, revenue: String(row.revenue) }));
+  const salesChartRows = salesReport.data?.daily_rows ?? salesRows.map((row) => ({ date: row.date, orders: row.orders, revenue: String(row.revenue) }));
 
   const productRows = useMemo(() => (topProducts.data ?? []).map((item) => {
     const product = lookups.productById.get(item.product_id);
