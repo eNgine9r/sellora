@@ -28,7 +28,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("workspace_id", name="uq_ig_history_cancel_workspace"),
     )
     # Migration updates only the status check; it does not touch saved messages.
-    op.drop_constraint("ck_instagram_history_syncs_status", "instagram_history_syncs", type_="check")
+    op.drop_constraint(op.f("ck_instagram_history_syncs_ck_instagram_history_syncs_status"), "instagram_history_syncs", type_="check")
     op.create_check_constraint(
         "ck_instagram_history_syncs_status",
         "instagram_history_syncs",
@@ -47,6 +47,7 @@ def downgrade() -> None:
     op.drop_constraint("ck_instagram_history_syncs_status", "instagram_history_syncs", type_="check")
     op.execute(
         "ALTER TABLE instagram_history_syncs RENAME CONSTRAINT "
-        "ck_instagram_history_syncs_status_old_guard TO ck_instagram_history_syncs_status"
+        "ck_instagram_history_syncs_ck_instagram_history_syncs_status_old_guard "
+        "TO ck_instagram_history_syncs_ck_instagram_history_syncs_status"
     )
     op.drop_table("instagram_history_sync_cancel_requests")
