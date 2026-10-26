@@ -14,7 +14,8 @@ class WorkspaceMemo(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, 
     __tablename__ = "workspace_memos"
     __table_args__ = (
         CheckConstraint("kind IN ('NOTE', 'TASK')", name="kind"),
-        Index("ix_workspace_memos_active_due", "workspace_id", "due_on", postgresql_where=None),
+        Index("ix_workspace_memos_active_due", "workspace_id", "due_on"),
+        CheckConstraint("kind = 'TASK' OR (due_on IS NULL AND is_done = false)", name="note_task_fields"),
     )
 
     kind: Mapped[str] = mapped_column(String(8), nullable=False, default="NOTE")
