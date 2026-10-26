@@ -3,11 +3,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
+from sqlalchemy.dialects.postgresql import insert
 
 from app.models.instagram_inbox_sync import (
     InstagramHistorySync,
+    InstagramHistorySyncCancelRequest,
     InstagramHistorySyncStatus,
     InstagramMessageState,
 )
@@ -30,6 +32,38 @@ class InstagramHistorySyncRepository:
             .where(InstagramHistorySync.workspace_id == workspace_id)
             .with_for_update()
         ).scalar_one_or_none()
+
+    def get_for_update_skip_locked(self, workspace_id: UUID) -> InstagramHistorySync | None:
+        return self.db.execute(
+            select(InstagramHistorySync)
+            .where(InstagramHistorySync.workspace_id == workspace_id)
+            .with_for_update(skip_locked=True)
+        ).scalar_one_or_none()
+
+    def request_cancel(self, workspace_id: UUID, sync_id: UUID, user_id: UUID) -> None:
+        # Independent cancellation record: do not wait on worker's sync-row lock.
+        stmt = insert(InstagramHistorySyncCancelRequest).values(
+            workspace_id=workspace_id, sync_id=sync_id, requested_by=user_id,
+        )
+        self.db.execute(stmt.on_conflict_do_update(
+            constraint="uq_ig_history_cancel_workspace",
+            set_={"sync_id": sync_id, "requested_by": user_id},
+        ))
+
+    def cancellation_requested(self, workspace_id: UUID, sync_id: UUID) -> bool:
+        return self.db.execute(
+            select(InstagramHistorySyncCancelRequest.id).where(
+                InstagramHistorySyncCancelRequest.workspace_id == workspace_id,
+                InstagramHistorySyncCancelRequest.sync_id == sync_id,
+            )
+        ).scalar_one_or_none() is not None
+
+    def clear_cancellation(self, workspace_id: UUID) -> None:
+        self.db.execute(
+            delete(InstagramHistorySyncCancelRequest).where(
+                InstagramHistorySyncCancelRequest.workspace_id == workspace_id,
+            )
+        )
 
     def create(self, sync: InstagramHistorySync) -> InstagramHistorySync:
         self.db.add(sync)

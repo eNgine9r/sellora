@@ -81,7 +81,14 @@ def history_sync_status(
     _: User = Depends(require_min_role(RoleName.ANALYST)),
     db: Session = Depends(get_db),
 ):
-    return InstagramHistorySyncService(db).status(workspace_id)
+    service = InstagramHistorySyncService(db)
+    sync = service.status(workspace_id)
+    if sync is None:
+        return None
+    response = InstagramHistorySyncResponse.model_validate(sync)
+    return response.model_copy(update={
+        "cancel_requested": service.syncs.cancellation_requested(workspace_id, sync.id),
+    })
 
 
 @router.post(
@@ -104,6 +111,25 @@ def request_history_sync(
         db.commit()
         db.refresh(sync)
         return sync
+    except MetaInstagramError as exc:
+        db.rollback()
+        raise HTTPException(
+            exc.status_code,
+            {"code": exc.code, "message": exc.message},
+        ) from exc
+
+
+@router.post("/history-sync/cancel")
+def cancel_history_sync(
+    workspace_id: UUID = Depends(get_workspace_id),
+    user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    """Stop only this workspace's historical scan; live messaging stays active."""
+    try:
+        requested, status = InstagramHistorySyncService(db).cancel_sync(workspace_id, user.id)
+        db.commit()
+        return {"requested": requested, "status": status}
     except MetaInstagramError as exc:
         db.rollback()
         raise HTTPException(

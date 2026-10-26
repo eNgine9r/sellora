@@ -31,12 +31,27 @@ class FakeConnectionRepo:
 class FakeSyncRepo:
     def __init__(self, sync):
         self.sync = sync
+        self.cancel_requested = False
+        self.worker_locked = False
 
     def next_pending_for_update(self):
-        return self.sync
+        return self.sync if self.sync.status in {"PENDING", "RETRY_PENDING"} else None
 
     def get(self, workspace_id):
         return self.sync if self.sync.workspace_id == workspace_id else None
+
+    def get_for_update_skip_locked(self, workspace_id):
+        return None if self.worker_locked else self.get(workspace_id)
+
+    def request_cancel(self, workspace_id, sync_id, user_id):
+        assert self.sync.workspace_id == workspace_id and self.sync.id == sync_id
+        self.cancel_requested = True
+
+    def cancellation_requested(self, workspace_id, sync_id):
+        return self.cancel_requested and self.sync.workspace_id == workspace_id and self.sync.id == sync_id
+
+    def clear_cancellation(self, workspace_id):
+        self.cancel_requested = False
 
 
 class FakeConversationRepo:
@@ -108,6 +123,7 @@ class FakeHistoryClient:
 
 def make_sync(workspace_id, connection_id):
     return SimpleNamespace(
+        id=uuid4(),
         workspace_id=workspace_id,
         instagram_connection_id=connection_id,
         status="PENDING",
@@ -386,3 +402,60 @@ async def test_replaying_a_throttled_page_keeps_permanent_errors_visible(monkeyp
     assert sync.status == "PARTIAL"
     assert sync.error_count == 2
     assert len(messages.rows) == 2
+
+
+@pytest.mark.asyncio
+async def test_history_cancel_stops_before_calling_meta(monkeypatch):
+    client = FakeHistoryClient()
+    _, sync, conversations, messages, service = make_service(monkeypatch, client)
+    actor = uuid4()
+    requested, status = service.cancel_sync(sync.workspace_id, actor)
+    assert requested is True
+    assert status == "CANCELLED"
+    assert sync.status == "CANCELLED"
+    assert sync.completed_at is not None
+    assert len(conversations.rows) == 0 and len(messages.rows) == 0
+    assert await service.process_next() is None
+
+
+@pytest.mark.asyncio
+async def test_history_cancel_while_locked_is_cooperative_and_preserves_records(monkeypatch):
+    cancel_response = []
+
+    class Client(FakeHistoryClient):
+        async def list_conversations(self, account_id, after=None, limit=10):
+            # Simulate a concurrent cancel API request *during* a provider call.
+            # The history row is locked, but the independent cancellation record is not.
+            service.syncs.worker_locked = True
+            cancel_response.append(service.cancel_sync(sync.workspace_id, uuid4()))
+            return await super().list_conversations(account_id, after, limit)
+
+    client = Client()
+    _, sync, conversations, messages, service = make_service(monkeypatch, client)
+    result = await service.process_next()
+    assert cancel_response == [(True, "STOPPING")]
+    assert result is sync and sync.status == "CANCELLED"
+    assert sync.next_retry_at is None
+    assert not conversations.rows and not messages.rows
+
+
+@pytest.mark.asyncio
+async def test_history_cancel_does_not_affect_other_workspace(monkeypatch):
+    client = FakeHistoryClient()
+    _, sync, _, _, service = make_service(monkeypatch, client)
+    foreign_workspace_id = uuid4()
+    assert service.syncs.cancellation_requested(foreign_workspace_id, sync.id) is False
+    assert service.status(foreign_workspace_id) is None
+
+
+def test_history_cancel_signal_does_not_lock_active_sync_row_by_foreign_key():
+    # A foreign key on sync_id would acquire KEY SHARE on the worker's
+    # FOR UPDATE row and block the cancellation request itself.
+    from app.models.instagram_inbox_sync import InstagramHistorySyncCancelRequest
+
+    table = InstagramHistorySyncCancelRequest.__table__
+    assert not table.c.sync_id.foreign_keys
+    assert any(
+        constraint.name == "uq_ig_history_cancel_workspace"
+        for constraint in table.constraints
+    )

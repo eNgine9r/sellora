@@ -4,6 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  Clock3,
+  Square,
   BadgeCheck,
   Bot,
   CheckCircle2,
@@ -33,6 +35,7 @@ import { useI18n } from "@/i18n/provider";
 import { fetchAISuggestions } from "@/services/ai";
 import {
   ensureDirectCustomer,
+  cancelInstagramHistorySync,
   ensureDirectLead,
   confirmDirectOrderEvidence,
   fetchDirectConversations,
@@ -77,6 +80,7 @@ function DirectPageContent() {
   // its details. Mutations must never run against a stale previous thread.
   const selectionTargetRef = useRef<string | null>(null);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
   const profileRefreshAttempted = useRef(new Set<string>());
   const readAttempted = useRef(new Set<string>());
@@ -193,6 +197,10 @@ function DirectPageContent() {
     mutationFn: () => startInstagramHistorySync(100, 20),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-history-sync", workspaceId] }),
   });
+  const cancelHistoryMutation = useMutation({
+    mutationFn: cancelInstagramHistorySync,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-history-sync", workspaceId] }),
+  });
   const readMutation = useMutation({
     mutationFn: (conversationId: string) => markDirectConversationRead(conversationId),
     onSuccess: (_conversation, conversationId) => {
@@ -203,6 +211,9 @@ function DirectPageContent() {
   });
 
   const historyActive = Boolean(historyQuery.data && ACTIVE_HISTORY_STATUSES.has(historyQuery.data.status));
+  const historyStopping = Boolean(historyActive && (historyQuery.data?.cancel_requested || cancelHistoryMutation.isPending || cancelHistoryMutation.data?.requested));
+  const startHistory = () => { if (window.confirm(t("direct.historyStartConfirm"))) { cancelHistoryMutation.reset(); historyMutation.mutate(); } };
+  const stopHistory = () => { if (window.confirm(t("direct.historyStopConfirm"))) { setHistoryPanelOpen(true); cancelHistoryMutation.mutate(); } };
 
   useEffect(() => {
     setSelectedId(null);
@@ -317,42 +328,58 @@ function DirectPageContent() {
     <WorkspacePage className={threadOpenOnMobile ? "min-h-full !px-3 !py-2 lg:!px-6 lg:!py-4" : "min-h-full"}>
       <div className={threadOpenOnMobile ? "hidden lg:block" : ""}>
       <WorkspaceHeader
-        eyebrow={t("direct.kicker")}
         title={t("direct.title")}
         description={t("direct.description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex min-h-10 items-center gap-2 rounded-2xl border px-3 text-xs font-black ${liveError ? "border-rose-500/30 bg-rose-500/10 text-rose-600" : isLive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-amber-500/30 bg-amber-500/10 text-amber-600"}`} data-direct-live-status>
-              {liveError ? <WifiOff className="h-4 w-4" /> : <Wifi className={`h-4 w-4 ${isLive ? "" : "animate-pulse"}`} />}
-              {liveError ? "Live недоступний" : isLive ? "Live" : "Підключення…"}
-            </span>
-            <Button
-              variant="secondary"
-              onClick={() => historyMutation.mutate()}
-              disabled={historyMutation.isPending || historyActive || statusQuery.data?.status !== "CONNECTED"}
-            >
-              <RefreshCw className={`h-4 w-4 ${historyMutation.isPending || historyActive ? "animate-spin" : ""}`} />
-              {historyActive ? "Синхронізація історії…" : "Синхронізувати історію"}
-            </Button>
-            <Button onClick={() => conversationsQuery.refetch()}>
-              <RefreshCw className="h-4 w-4" />
-              {t("actions.refresh")}
-            </Button>
+            <button
+              type="button"
+              onClick={() => setAiPanelOpen(true)}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border-subtle bg-surface-1 px-3 text-sm font-medium text-text-secondary transition hover:bg-surface-hover lg:hidden"
+            ><Sparkles className="h-4 w-4" aria-hidden="true" /> {t("direct.aiQuick")}</button>
+            <button
+              type="button"
+              aria-expanded={historyPanelOpen}
+              onClick={() => setHistoryPanelOpen((value) => !value)}
+              className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-medium transition hover:bg-surface-hover ${historyPanelOpen ? "border-primary/40 bg-primary/10 text-primary" : "border-border-subtle bg-surface-1 text-text-secondary"}`}
+            ><Clock3 className="h-4 w-4" aria-hidden="true" /> {t("direct.history")}</button>
+            <button
+              type="button"
+              onClick={() => void conversationsQuery.refetch()}
+              disabled={conversationsQuery.isFetching}
+              title={t("direct.refreshList")}
+              aria-label={t("direct.refreshList")}
+              className="grid min-h-11 min-w-11 place-items-center rounded-xl border border-border-subtle bg-surface-1 text-text-secondary transition hover:bg-surface-hover disabled:opacity-60"
+            ><RefreshCw className={`h-4 w-4 ${conversationsQuery.isFetching ? "animate-spin" : ""}`} aria-hidden="true" /></button>
           </div>
         }
       />
-
-      <HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} />
-      </div>
-
-      <div className={threadOpenOnMobile ? "hidden lg:block" : "lg:hidden"}>
-        <button
-          type="button"
-          onClick={() => setAiPanelOpen(true)}
-          className="min-h-11 w-full rounded-2xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-black text-primary shadow-[var(--shadow-card)]"
-        >
-          {t("direct.openAiPanel")}
-        </button>
+      {(historyPanelOpen || historyActive) ? (
+        <section className="grid min-w-0 gap-3 rounded-2xl border border-border-subtle bg-surface-1 p-3 sm:p-4" aria-label={t("direct.historyHeading")}>
+          {historyPanelOpen ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-semibold text-text-primary">{t("direct.historyHeading")}</h2>
+                <p className="mt-1 text-xs text-text-muted">{t("direct.historyHint")}</p>
+                <p className="mt-1 text-xs text-text-muted">{t("direct.historyLimit")}</p>
+              </div>
+              {canManage && !historyActive ? (
+                <Button variant="secondary" onClick={startHistory} disabled={historyMutation.isPending || statusQuery.data?.status !== "CONNECTED"}>
+                  <RefreshCw className="h-4 w-4" />{t("direct.historyStart")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          <HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} />
+          {historyActive && canManage ? (
+            <button type="button" onClick={stopHistory} disabled={historyStopping} className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-danger/30 px-3 text-sm font-medium text-danger transition hover:bg-[var(--danger-surface)] disabled:opacity-60">
+              <Square className="h-3.5 w-3.5" aria-hidden="true" />{historyStopping ? t("direct.historyStopping") : t("direct.historyStop")}
+            </button>
+          ) : null}
+          {historyMutation.isError ? <p role="alert" className="text-sm text-danger">{t("direct.historyStartError")}</p> : null}
+          {cancelHistoryMutation.isError ? <p role="alert" className="text-sm text-danger">{t("direct.historyStopError")}</p> : null}
+        </section>
+      ) : null}
       </div>
 
       <section
@@ -483,35 +510,32 @@ function DirectPageContent() {
 }
 
 function HistorySyncBanner({ sync, loading }: { sync?: InstagramHistorySync | null; loading: boolean }) {
+  const { t } = useI18n();
   if (loading || !sync) return null;
   const active = ACTIVE_HISTORY_STATUSES.has(sync.status);
-  const statusLabel: Record<string, string> = {
-    PENDING: "Очікує запуску",
-    RUNNING: "Синхронізація виконується",
-    RETRY_PENDING: "Meta обмежила запити — повтор буде автоматично",
-    COMPLETED: "Історію синхронізовано",
-    PARTIAL: "Історію синхронізовано частково",
-    FAILED_SAFE: "Синхронізацію безпечно зупинено",
+  const statusLabels: Record<string, string> = {
+    PENDING: t("direct.historyPending"),
+    RUNNING: t("direct.historyRunning"),
+    RETRY_PENDING: t("direct.historyRetry"),
+    COMPLETED: t("direct.historyCompleted"),
+    PARTIAL: t("direct.historyPartial"),
+    CANCELLED: t("direct.historyCancelled"),
+    FAILED_SAFE: t("direct.historyFailed"),
   };
+  const stopping = active && sync.cancel_requested;
+  const progress = Math.min(100, Math.round(100 * sync.conversations_discovered / Math.max(sync.conversation_limit, 1)));
   return (
-    <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="font-black">{statusLabel[sync.status] ?? sync.status}</p>
-          <p className="mt-1 text-sm text-text-secondary">
-            Діалоги: {sync.conversations_synced}/{sync.conversations_discovered} · Нові повідомлення: {sync.messages_imported} · Уже були в Sellora: {sync.messages_existing}
-          </p>
-        </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-black ${active ? "bg-violet-500/15 text-primary" : sync.status === "FAILED_SAFE" ? "bg-rose-500/15 text-rose-600" : "bg-emerald-500/15 text-emerald-700"}`}>
-          {sync.status}
-        </span>
+    <div className="grid min-w-0 gap-2" data-direct-history-progress>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-text-primary">{stopping ? t("direct.historyStopping") : statusLabels[sync.status] ?? sync.status}</p>
+        <span className={`rounded-full px-2 py-1 text-xs font-medium ${active ? "bg-primary/10 text-primary" : sync.status === "FAILED_SAFE" ? "bg-[var(--danger-surface)] text-danger" : "bg-surface-2 text-text-secondary"}`}>{progress}%</span>
       </div>
-      {sync.messages_unavailable > 0 || sync.error_count > 0 ? (
-        <p className="mt-2 text-xs font-semibold text-amber-700">
-          Недоступні старі повідомлення: {sync.messages_unavailable} · Помилки: {sync.error_count}. Нові webhooks продовжують працювати.
-        </p>
-      ) : null}
-    </section>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={sync.conversations_discovered} aria-valuemin={0} aria-valuemax={sync.conversation_limit} aria-label={t("direct.historyProgress")}>
+        <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
+      </div>
+      <p className="text-xs text-text-muted">{t("direct.historyProgress")}: {sync.conversations_discovered}/{sync.conversation_limit} · {t("direct.historyNew")}: {sync.messages_imported} · {t("direct.historyExisting")}: {sync.messages_existing}</p>
+      {sync.messages_unavailable > 0 || sync.error_count > 0 ? <p className="text-xs text-warning">{t("direct.historyUnavailable")}: {sync.messages_unavailable} · {t("direct.historyErrors")}: {sync.error_count}</p> : null}
+    </div>
   );
 }
 

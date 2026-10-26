@@ -46,6 +46,8 @@ class InstagramHistorySyncVisibilityService(InstagramHistorySyncService):
         seen_cursors: set[str] = set()
         checked = 0
         while checked < sync.messages_per_conversation:
+            if self._cancel_if_requested(sync):
+                return False
             page = await client.list_messages(
                 summary.id, after=cursor,
                 limit=min(20, sync.messages_per_conversation - checked),
@@ -55,6 +57,8 @@ class InstagramHistorySyncVisibilityService(InstagramHistorySyncService):
             checked += len(page.messages)
             sync.messages_discovered += len(page.messages)
             for message_summary in reversed(page.messages):
+                if self._cancel_if_requested(sync):
+                    return False
                 existing = self.messages.get_by_provider_message(
                     sync.workspace_id,
                     "INSTAGRAM",

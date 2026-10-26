@@ -75,6 +75,7 @@ class InstagramHistorySyncService:
         sync = self.syncs.get_for_update(workspace_id)
         if sync and sync.status in ACTIVE_SYNC_STATUSES:
             return sync
+        self.syncs.clear_cancellation(workspace_id)
         if not sync:
             sync = self.syncs.create(
                 InstagramHistorySync(
@@ -108,10 +109,41 @@ class InstagramHistorySyncService:
     def status(self, workspace_id: UUID) -> InstagramHistorySync | None:
         return self.syncs.get(workspace_id)
 
+    def cancel_sync(self, workspace_id: UUID, user_id: UUID) -> tuple[bool, str]:
+        sync = self.syncs.get(workspace_id)
+        if not sync:
+            raise MetaInstagramError("META_HISTORY_SYNC_NOT_FOUND", "History sync was not started.", 404)
+        if sync.status not in ACTIVE_SYNC_STATUSES:
+            return False, sync.status
+
+        # Cancellation uses another row, not the long-lived locked history record.
+        self.syncs.request_cancel(workspace_id, sync.id, user_id)
+        unlocked = self.syncs.get_for_update_skip_locked(workspace_id)
+        if unlocked and unlocked.id == sync.id and unlocked.status in ACTIVE_SYNC_STATUSES:
+            self._mark_cancelled(unlocked)
+            return True, InstagramHistorySyncStatus.CANCELLED.value
+        return True, "STOPPING"
+
+    def _cancel_if_requested(self, sync: InstagramHistorySync) -> bool:
+        if not self.syncs.cancellation_requested(sync.workspace_id, sync.id):
+            return False
+        self._mark_cancelled(sync)
+        return True
+
+    def _mark_cancelled(self, sync: InstagramHistorySync) -> None:
+        sync.status = InstagramHistorySyncStatus.CANCELLED.value
+        sync.completed_at = datetime.now(UTC)
+        sync.next_retry_at = None
+        sync.last_error_code = None
+        sync.last_error_message = None
+        # Keep progress counters and already imported messages; never rewind them.
+
     async def process_next(self) -> InstagramHistorySync | None:
         sync = self.syncs.next_pending_for_update()
         if not sync:
             return None
+        if self._cancel_if_requested(sync):
+            return sync
         connection = self.connections.get_active(sync.workspace_id)
         if (
             not connection
@@ -144,17 +176,25 @@ class InstagramHistorySyncService:
             "conversations_synced",
         )}
         try:
+            if self._cancel_if_requested(sync):
+                return sync
             page = await client.list_conversations(
                 connection.instagram_account_id,
                 after=sync.conversation_cursor,
                 limit=min(10, remaining),
             )
+            if self._cancel_if_requested(sync):
+                return sync
             summaries = page.conversations[:remaining]
             sync.conversation_pages_processed += 1
             sync.conversations_discovered += len(summaries)
             for summary in summaries:
+                if self._cancel_if_requested(sync):
+                    return sync
                 try:
                     materialized = await self._sync_conversation(sync, connection, client, summary)
+                    if self._cancel_if_requested(sync):
+                        return sync
                     if self._counts_as_synced(materialized):
                         sync.conversations_synced += 1
                 except MetaInstagramError as exc:
@@ -168,6 +208,8 @@ class InstagramHistorySyncService:
                     sync.last_error_code = "META_HISTORY_CONVERSATION_FAILED"
                     sync.last_error_message = exc.__class__.__name__
 
+            if self._cancel_if_requested(sync):
+                return sync
             reached_limit = sync.conversations_discovered >= sync.conversation_limit
             sync.conversation_cursor = None if reached_limit else page.after_cursor
             if reached_limit or not page.after_cursor:
@@ -176,6 +218,8 @@ class InstagramHistorySyncService:
                 sync.status = InstagramHistorySyncStatus.PENDING.value
             return sync
         except MetaInstagramError as exc:
+            if self._cancel_if_requested(sync):
+                return sync
             if exc.code in {"META_HISTORY_RATE_LIMITED", "META_HISTORY_PROVIDER_UNAVAILABLE"}:
                 for name, value in page_progress.items():
                     setattr(sync, name, value)
@@ -226,6 +270,8 @@ class InstagramHistorySyncService:
         seen_cursors: set[str] = set()
         checked = 0
         while checked < sync.messages_per_conversation:
+            if self._cancel_if_requested(sync):
+                return False
             page = await client.list_messages(
                 summary.id, after=cursor,
                 limit=min(20, sync.messages_per_conversation - checked),
@@ -235,6 +281,8 @@ class InstagramHistorySyncService:
             checked += len(page.messages)
             sync.messages_discovered += len(page.messages)
             for message_summary in reversed(page.messages):
+                if self._cancel_if_requested(sync):
+                    return False
                 existing = self.messages.get_by_provider_message(
                     sync.workspace_id,
                     "INSTAGRAM",
