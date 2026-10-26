@@ -2970,7 +2970,8 @@
     "desktopUpcoming": "Upcoming deadlines",
     "desktopNoUpcoming": "No dated tasks scheduled yet.",
     "desktopEmptyTitle": "Space for ideas and plans",
-    "desktopEmptyHint": "Keep your team decisions, notes and to-dos together. Start with your first entry."
+    "desktopEmptyHint": "Keep your team decisions, notes and to-dos together. Start with your first entry.",
+    "desktopMoreCategories": "Other event types"
   },
   "insightHub": {
     "subtitle": "What needs attention in your store, based on verified business rules.",
