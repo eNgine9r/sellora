@@ -357,7 +357,7 @@ function DirectPageContent() {
       {(historyPanelOpen || historyActive) ? (
         <section className="grid min-w-0 gap-3 rounded-2xl border border-border-subtle bg-surface-1 p-3 sm:p-4" aria-label={t("direct.historyHeading")}>
           {historyPanelOpen ? (
-            <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" data-direct-history-controls>
+            <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center" data-direct-history-controls>
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-text-primary">{t("direct.historyHeading")}</h2>
                 {!historyQuery.data ? (
@@ -368,7 +368,7 @@ function DirectPageContent() {
               {canManage && !historyActive ? (
                 <Button
                   variant="secondary"
-                  className="w-full gap-2 font-semibold sm:w-auto"
+                  className="w-full gap-2 font-semibold lg:w-auto"
                   onClick={startHistory}
                   disabled={historyMutation.isPending || statusQuery.data?.status !== "CONNECTED"}
                 >
