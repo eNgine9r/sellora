@@ -34,8 +34,8 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["created_by"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["updated_by"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["deleted_by"], ["users.id"], ondelete="SET NULL"),
-        sa.CheckConstraint("kind IN ('NOTE','TASK')", name="ck_workspace_memos_kind"),
-        sa.CheckConstraint("kind = 'TASK' OR (due_on IS NULL AND is_done = false)", name="ck_workspace_memos_note_task_fields"),
+        sa.CheckConstraint("kind IN ('NOTE','TASK')", name="kind"),
+        sa.CheckConstraint("kind = 'TASK' OR (due_on IS NULL AND is_done = false)", name="note_task_fields"),
     )
     op.create_index("ix_workspace_memos_workspace_id", "workspace_memos", ["workspace_id"])
     op.create_index("ix_workspace_memos_active_due", "workspace_memos", ["workspace_id", "due_on"])
