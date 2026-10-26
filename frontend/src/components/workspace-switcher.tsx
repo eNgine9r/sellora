@@ -16,6 +16,10 @@ export function WorkspaceSwitcher({ memberships, currentWorkspaceId, onSwitchWor
     creating: t("accountMenu.creating"),
     emptyWorkspace: t("accountMenu.emptyWorkspace"),
     createError: t("accountMenu.createWorkspaceError"),
+    roleOwner: t("accountMenu.roleOwner"),
+    roleManager: t("accountMenu.roleManager"),
+    roleAnalyst: t("accountMenu.roleAnalyst"),
+    cancel: t("actions.cancel"),
   };
   return <WorkspaceMenuContent memberships={memberships} currentWorkspaceId={currentWorkspaceId} labels={labels} onSwitchWorkspace={onSwitchWorkspace} onCreated={onCreated} onClose={onClose} />;
 }
