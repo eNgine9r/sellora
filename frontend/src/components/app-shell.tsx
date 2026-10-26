@@ -102,7 +102,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             currentWorkspaceId={currentWorkspaceId}
             mobileMoreOpen={mobileMoreOpen}
             onOpenMenu={() => setMobileMenuOpen(true)}
-            onOpenMobileMore={() => setMobileMoreOpen(true)}
             onCloseMobileMore={() => setMobileMoreOpen(false)}
             onLogout={handleLogout}
             onSwitchWorkspace={switchWorkspace}
@@ -121,7 +120,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               const active = isActiveNav(pathname, item.href);
               return <Link key={item.href} href={item.href} className={`flex min-h-[3.375rem] min-w-0 flex-col items-center justify-center rounded-[18px] px-0.5 py-1 text-[10px] font-semibold leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${active ? "bg-primary/10 text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"}`} aria-current={active ? "page" : undefined}><Icon className="h-[18px] w-[18px]" aria-hidden="true" /><span className="mt-1 block w-full truncate text-center">{item.href === "/orders" ? t("mobileNavigation.ordersShort") : t(item.labelKey)}</span></Link>;
             })}
-            <button type="button" className={`flex min-h-[3.375rem] min-w-0 items-center justify-center rounded-[18px] px-0.5 py-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${mobileMoreOpen ? "bg-surface-selected text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"}`} aria-label={t("accountMenu.profile")} aria-expanded={mobileMoreOpen} onClick={() => setMobileMoreOpen(true)}>
+            <button type="button" className={`flex min-h-[3.375rem] min-w-0 items-center justify-center rounded-[18px] px-0.5 py-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${mobileMoreOpen ? "bg-surface-selected text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"}`} aria-label={t("accountMenu.profile")} aria-haspopup="dialog" aria-expanded={mobileMoreOpen} onClick={() => setMobileMoreOpen(true)}>
               <span className="grid h-8 w-8 place-items-center rounded-full border border-primary/25 bg-primary/15 text-xs font-bold text-primary">{profileInitial}</span>
             </button>
           </div>

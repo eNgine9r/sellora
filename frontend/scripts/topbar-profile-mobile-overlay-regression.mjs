@@ -10,6 +10,13 @@ const checks = [
   ["overlay portal usage exists", read("frontend/src/components/profile-menu.tsx").includes("<Portal>") && read("frontend/src/components/ui/bottom-sheet.tsx").includes("<Portal>")],
   ["workspace switcher integrated into profile/mobile menu", read("frontend/src/components/profile-menu.tsx").includes("<WorkspaceSwitcher") && read("frontend/src/components/mobile-more-sheet.tsx").includes("<WorkspaceSwitcher")],
   ["create workspace action is still reachable", read("frontend/src/components/workspace-menu-content.tsx").includes("createWorkspace")],
+  ["single mobile profile entry point", !read("frontend/src/components/app-topbar.tsx").includes("MoreHorizontal") && read("frontend/src/components/app-shell.tsx").includes('aria-haspopup="dialog"')],
+  ["profile header is localized", read("frontend/src/components/mobile-more-sheet.tsx").includes('title={t("accountMenu.profile")}')],
+  ["workspace switcher hides extra workspaces until requested", read("frontend/src/components/workspace-menu-content.tsx").includes("showWorkspaces ?") && read("frontend/src/components/workspace-menu-content.tsx").includes("otherWorkspaces")],
+  ["create workspace form is collapsed by default", read("frontend/src/components/workspace-menu-content.tsx").includes("showCreate ?") && read("frontend/src/components/workspace-menu-content.tsx").includes("setShowCreate(true)")],
+  ["membership roles are localized", read("frontend/src/components/workspace-switcher.tsx").includes("accountMenu.roleOwner") && read("frontend/src/i18n/messages/en.json").includes('"roleManager": "Manager"')],
+  ["Direct, feedback and preferences remain accessible", read("frontend/src/components/mobile-more-sheet.tsx").includes('href="/direct"') && read("frontend/src/components/mobile-more-sheet.tsx").includes("<FeedbackDialog") && read("frontend/src/components/mobile-more-sheet.tsx").includes("<ThemeToggle")],
+
   ["logout action is still reachable", read("frontend/src/components/profile-menu.tsx").includes("onLogout") && read("frontend/src/components/mobile-more-sheet.tsx").includes("onLogout")],
   ["duplicate standalone workspace selector removed from topbar", !read("frontend/src/components/app-topbar.tsx").includes("<WorkspaceSwitcher")],
   ["bottom sheet labels exist", read("frontend/src/i18n/messages/uk.json").includes("Швидкі дії") && read("frontend/src/i18n/messages/uk.json").includes("Більше")],
