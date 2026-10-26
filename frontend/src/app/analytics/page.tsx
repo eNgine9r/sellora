@@ -42,6 +42,10 @@ export default function AnalyticsPage() {
   const endDate = range.date_to || undefined;
   const [analyticsPage, setAnalyticsPage] = useState(1);
   const [analyticsPageSize, setAnalyticsPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
+  const [customersPage, setCustomersPage] = useState(1);
+  const [customersPageSize, setCustomersPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
+  const [inventoryPage, setInventoryPage] = useState(1);
+  const [inventoryPageSize, setInventoryPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
 
   const salesReport = useQuery({ queryKey: ["analytics-sales-report", workspaceId, startDate, endDate], queryFn: () => fetchSalesReport(workspaceId, undefined, startDate, endDate), enabled });
   const advertisingReport = useQuery({ queryKey: ["analytics-advertising-report", workspaceId, startDate, endDate], queryFn: () => fetchAdvertisingReport(workspaceId, undefined, startDate, endDate), enabled });
@@ -67,6 +71,10 @@ export default function AnalyticsPage() {
   const orderSummary = useMemo(() => summarizeOrders(currentOrders), [currentOrders]);
   const salesRows = useMemo(() => buildDailySalesRows(currentOrders), [currentOrders]);
   const paginatedSalesRows = useMemo(() => paginateItems(salesRows, analyticsPage, analyticsPageSize), [analyticsPage, analyticsPageSize, salesRows]);
+  const customerRows = customers.data ?? [];
+  const inventoryRows = inventorySummary.data?.low_stock_items ?? [];
+  const paginatedCustomerRows = useMemo(() => paginateItems(customerRows, customersPage, customersPageSize), [customers.data, customersPage, customersPageSize]);
+  const paginatedInventoryRows = useMemo(() => paginateItems(inventoryRows, inventoryPage, inventoryPageSize), [inventorySummary.data?.low_stock_items, inventoryPage, inventoryPageSize]);
   const backendAdSummary = advertisingReport.data;
   const adSummary = useMemo(() => summarizeAdvertising(advertising.data), [advertising.data]);
   const customerSummary = useMemo(() => summarizeCustomers(customers.data ?? []), [customers.data]);
@@ -115,6 +123,22 @@ export default function AnalyticsPage() {
   useEffect(() => {
     setAnalyticsPage((currentPage) => clampPage(currentPage, analyticsPageSize, salesRows.length));
   }, [analyticsPageSize, salesRows.length]);
+
+  useEffect(() => {
+    setCustomersPage(1);
+  }, [workspaceId, startDate, endDate, customersPageSize]);
+
+  useEffect(() => {
+    setInventoryPage(1);
+  }, [workspaceId, startDate, endDate, inventoryPageSize]);
+
+  useEffect(() => {
+    setCustomersPage((page) => clampPage(page, customersPageSize, customerRows.length));
+  }, [customersPageSize, customerRows.length]);
+
+  useEffect(() => {
+    setInventoryPage((page) => clampPage(page, inventoryPageSize, inventoryRows.length));
+  }, [inventoryPageSize, inventoryRows.length]);
 
   return (
     <WorkspacePage>
@@ -275,8 +299,8 @@ export default function AnalyticsPage() {
         </ReportCard>
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <ReportCard id="reports-customers" title={t("analytics.customers.title")} subtitle={t("analytics.customers.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.newCustomers")} value={customersSummary.data?.new_customers ?? 0} /><MetricCard label={t("analytics.metrics.repeatCustomerRate")} value={formatPercentValue(customerSummary.repeatCustomerRate)} helper={t("analytics.tooltips.repeatCustomerRate")} /><MetricCard label={t("analytics.metrics.averageSpend") } value={customerSummary.averageSpend == null ? UNAVAILABLE : formatMoney(customerSummary.averageSpend, currencyCode)} /><MetricCard label={t("analytics.metrics.customersWithOrders")} value={customerSummary.customersWithOrders} /><MetricCard label={t("analytics.metrics.leadConversionRate")} value={formatPercentValue(leadConversionRate)} helper={t("analytics.tooltips.conversionRate")} /></div><ResponsiveReportTable
-  rows={(customers.data ?? []).slice(0, 8)}
+          <ReportCard id="reports-customers" title={t("analytics.customers.title")} subtitle={t("analytics.customers.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.newCustomers")} value={customersSummary.data?.new_customers ?? 0} /><MetricCard label={t("analytics.metrics.repeatCustomerRate")} value={formatPercentValue(customerSummary.repeatCustomerRate)} helper={t("analytics.tooltips.repeatCustomerRate")} /><MetricCard label={t("analytics.metrics.averageSpend") } value={customerSummary.averageSpend == null ? UNAVAILABLE : formatMoney(customerSummary.averageSpend, currencyCode)} /><MetricCard label={t("analytics.metrics.customersWithOrders")} value={customerSummary.customersWithOrders} /><MetricCard label={t("analytics.metrics.leadConversionRate")} value={formatPercentValue(leadConversionRate)} helper={t("analytics.tooltips.conversionRate")} /></div><div className="analytics-pagination-section grid min-w-0 gap-3"><ResponsiveReportTable
+  rows={paginatedCustomerRows}
   rowKey={(row) => row.id}
   columns={[
     { key: "customer", label: t("analytics.tables.customer"), render: (row) => row.name ,emphasis: true },
@@ -287,9 +311,11 @@ export default function AnalyticsPage() {
   ]}
   empty={<EmptyState title={t("analytics.emptyStates.noCustomers")} description={t("analytics.emptyStates.noCustomersDescription")} />}
   wide
-/></ReportCard>
-          <ReportCard id="reports-inventory" title={t("analytics.inventory.title")} subtitle={t("analytics.inventory.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.lowStock")} value={inventoryReport.data?.low_stock_count ?? inventoryRollup.lowStockCount} helper={t("analytics.tooltips.lowStock")} /><MetricCard label={t("analytics.metrics.outOfStock")} value={inventoryReport.data?.out_of_stock_count ?? inventoryRollup.outOfStockCount} /><MetricCard label={t("analytics.metrics.reservedStock")} value={inventoryRollup.reservedQuantity} helper={t("analytics.tooltips.reservedStock")} /><MetricCard label={t("analytics.metrics.incomingStock")} value={inventoryRollup.incomingQuantity} /></div><ResponsiveReportTable
-  rows={inventorySummary.data?.low_stock_items ?? []}
+/>
+            {customerRows.length > 0 ? <PaginationControls page={clampPage(customersPage, customersPageSize, customerRows.length)} pageSize={customersPageSize} totalItems={customerRows.length} onPageChange={setCustomersPage} onPageSizeChange={(size) => setCustomersPageSize(size as (typeof PAGE_SIZE_OPTIONS)[number])} /> : null}</div>
+          </ReportCard>
+          <ReportCard id="reports-inventory" title={t("analytics.inventory.title")} subtitle={t("analytics.inventory.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.lowStock")} value={inventoryReport.data?.low_stock_count ?? inventoryRollup.lowStockCount} helper={t("analytics.tooltips.lowStock")} /><MetricCard label={t("analytics.metrics.outOfStock")} value={inventoryReport.data?.out_of_stock_count ?? inventoryRollup.outOfStockCount} /><MetricCard label={t("analytics.metrics.reservedStock")} value={inventoryRollup.reservedQuantity} helper={t("analytics.tooltips.reservedStock")} /><MetricCard label={t("analytics.metrics.incomingStock")} value={inventoryRollup.incomingQuantity} /></div><div className="analytics-pagination-section grid min-w-0 gap-3"><ResponsiveReportTable
+  rows={paginatedInventoryRows}
   rowKey={(row) => row.variant_id}
   columns={[
     { key: "product", label: t("analytics.tables.product"), render: (row) => row.product_name ,emphasis: true },
@@ -302,7 +328,9 @@ export default function AnalyticsPage() {
   ]}
   empty={<EmptyState title={t("analytics.emptyStates.noInventoryAlerts")} description={t("analytics.emptyStates.noInventoryAlertsDescription")} />}
   wide
-/></ReportCard>
+/>
+            {inventoryRows.length > 0 ? <PaginationControls page={clampPage(inventoryPage, inventoryPageSize, inventoryRows.length)} pageSize={inventoryPageSize} totalItems={inventoryRows.length} onPageChange={setInventoryPage} onPageSizeChange={(size) => setInventoryPageSize(size as (typeof PAGE_SIZE_OPTIONS)[number])} /> : null}</div>
+          </ReportCard>
         </section>
     </WorkspacePage>
   );
