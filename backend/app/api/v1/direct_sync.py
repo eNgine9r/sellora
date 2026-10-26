@@ -112,6 +112,25 @@ def request_history_sync(
         ) from exc
 
 
+@router.post("/history-sync/cancel")
+def cancel_history_sync(
+    workspace_id: UUID = Depends(get_workspace_id),
+    user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    """Stop only this workspace's historical scan; live messaging stays active."""
+    try:
+        requested, status = InstagramHistorySyncService(db).cancel_sync(workspace_id, user.id)
+        db.commit()
+        return {"requested": requested, "status": status}
+    except MetaInstagramError as exc:
+        db.rollback()
+        raise HTTPException(
+            exc.status_code,
+            {"code": exc.code, "message": exc.message},
+        ) from exc
+
+
 @router.get(
     "/conversations/{conversation_id}/message-timeline",
     response_model=list[DirectMessageResponse],
