@@ -1,7 +1,7 @@
 export type DirectConversationChannel = "SYNTHETIC" | "INSTAGRAM" | "MANUAL";
 export type DirectMessageDirection = "INBOUND" | "OUTBOUND" | "INTERNAL";
 export type ParticipantProfileStatus = "PENDING" | "READY" | "RETRY_PENDING" | "UNAVAILABLE";
-export type InstagramHistorySyncStatus = "PENDING" | "RUNNING" | "COMPLETED" | "PARTIAL" | "RETRY_PENDING" | "FAILED_SAFE";
+export type InstagramHistorySyncStatus = "PENDING" | "RUNNING" | "COMPLETED" | "PARTIAL" | "RETRY_PENDING" | "FAILED_SAFE" | "CANCELLED";
 
 export type DirectConversation = {
   id: string;
@@ -178,6 +178,7 @@ export type DirectCustomerExtraction = {
 };
 
 export type InstagramHistorySync = {
+  cancel_requested: boolean;
   id: string;
   workspace_id: string;
   instagram_connection_id: string;
