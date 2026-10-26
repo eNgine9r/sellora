@@ -38,16 +38,16 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Data-loss safe downgrade only when there are no CANCELLED status rows.
+    # Re-adding the original constraint fails safely if CANCELLED rows remain;
+    # PostgreSQL rolls back the entire Alembic transaction without data loss.
+    op.drop_constraint(
+        op.f("ck_instagram_history_syncs_ck_instagram_history_syncs_status"),
+        "instagram_history_syncs",
+        type_="check",
+    )
     op.create_check_constraint(
-        "ck_instagram_history_syncs_status_old_guard",
+        "ck_instagram_history_syncs_status",
         "instagram_history_syncs",
         "status IN ('PENDING','RUNNING','COMPLETED','PARTIAL','RETRY_PENDING','FAILED_SAFE')",
-    )
-    op.drop_constraint("ck_instagram_history_syncs_status", "instagram_history_syncs", type_="check")
-    op.execute(
-        "ALTER TABLE instagram_history_syncs RENAME CONSTRAINT "
-        "ck_instagram_history_syncs_ck_instagram_history_syncs_status_old_guard "
-        "TO ck_instagram_history_syncs_ck_instagram_history_syncs_status"
     )
     op.drop_table("instagram_history_sync_cancel_requests")
