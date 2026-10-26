@@ -254,6 +254,8 @@ jobs:
       - name: Run mobile navigation and safe-area static regression
         working-directory: frontend
         run: npm run mobile:audit:static
+      - name: Run workspace calendar, notes and insights regression
+        run: node frontend/scripts/workspace-planner-regression.mjs
       - name: Run full CRM and report table consistency regression
         run: node frontend/scripts/sellora-all-tables-regression.mjs
       - name: Run desktop CRM table consistency regression
