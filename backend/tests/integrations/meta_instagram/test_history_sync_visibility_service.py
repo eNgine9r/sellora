@@ -34,6 +34,9 @@ class FakeSyncRepo:
     def next_pending_for_update(self):
         return self.sync
 
+    def cancellation_requested(self, workspace_id, sync_id):
+        return False
+
 
 class FakeConversationRepo:
     def __init__(self, rows=None):
