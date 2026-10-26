@@ -420,18 +420,20 @@ async def test_history_cancel_stops_before_calling_meta(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_history_cancel_while_locked_is_cooperative_and_preserves_records(monkeypatch):
+    cancel_response = []
+
     class Client(FakeHistoryClient):
         async def list_conversations(self, account_id, after=None, limit=10):
-            # An independent API transaction sets this cancellation flag while Meta is in flight.
-            service.syncs.cancel_requested = True
+            # Simulate a concurrent cancel API request *during* a provider call.
+            # The history row is locked, but the independent cancellation record is not.
+            service.syncs.worker_locked = True
+            cancel_response.append(service.cancel_sync(sync.workspace_id, uuid4()))
             return await super().list_conversations(account_id, after, limit)
 
     client = Client()
     _, sync, conversations, messages, service = make_service(monkeypatch, client)
-    service.syncs.worker_locked = True
-    requested, status = service.cancel_sync(sync.workspace_id, uuid4())
-    assert requested and status == "STOPPING"
     result = await service.process_next()
+    assert cancel_response == [(True, "STOPPING")]
     assert result is sync and sync.status == "CANCELLED"
     assert sync.next_retry_at is None
     assert not conversations.rows and not messages.rows
