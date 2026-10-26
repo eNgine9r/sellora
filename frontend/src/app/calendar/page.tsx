@@ -164,8 +164,14 @@ export default function CalendarPage() {
               <span className={`${day === today ? "grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground" : ""} lg:!mx-0 lg:text-sm lg:font-bold`}>{Number(day.slice(-2))}</span>
               <span className="flex h-1.5 items-center gap-0.5" aria-hidden="true">{Array.from(new Set(items.map((item) => item.type))).slice(0, 3).map(kind => <span key={kind} className={`h-1.5 w-1.5 rounded-full ${dotClass[kind]}`} />)}</span>
               <span className="hidden min-w-0 space-y-1 lg:block" aria-hidden="true">
-                {items.slice(0, 2).map(event => <span key={event.id} className={`block truncate rounded-md border-l-2 bg-surface-1/75 px-1.5 py-1 text-left text-[10px] font-semibold leading-4 ${event.type === "task" ? "border-primary" : event.type === "order" ? "border-info" : event.type === "shipped" ? "border-warning" : "border-success"}`}>{event.title}</span>)}
-                {items.length > 2 ? <span className="block text-left text-[10px] font-semibold text-text-muted">{t("planner.desktopMoreEvents", { count: items.length - 2 })}</span> : null}
+                {kinds.filter(kind => items.some(event => event.type === kind)).slice(0, 3).map(kind => (
+                  <span key={kind} className={`flex min-w-0 items-center gap-1.5 rounded-md bg-surface-1/75 px-1.5 py-1 text-left text-[10px] font-semibold leading-4 ${kind === "task" ? "text-primary" : kind === "order" ? "text-info" : kind === "shipped" ? "text-warning" : "text-success"}`}>
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass[kind]}`} />
+                    <span className="truncate">{t(`planner.event.${kind}`)}</span>
+                    <span className="ml-auto shrink-0 font-bold tabular-nums">{items.filter(event => event.type === kind).length}</span>
+                  </span>
+                ))}
+                {kinds.filter(kind => items.some(event => event.type === kind)).length > 3 ? <span className="block text-left text-[10px] font-semibold text-text-muted">{t("planner.desktopMoreCategories")}</span> : null}
               </span>
             </button>;
           })}
