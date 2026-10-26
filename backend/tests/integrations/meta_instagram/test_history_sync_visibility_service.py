@@ -138,6 +138,7 @@ class FakeHistoryClient:
 
 def make_sync(workspace_id, connection_id):
     return SimpleNamespace(
+        id=uuid4(),
         workspace_id=workspace_id,
         instagram_connection_id=connection_id,
         status="PENDING",
