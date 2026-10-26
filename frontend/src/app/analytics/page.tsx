@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { Activity, ArrowRight, BarChart3, CalendarRange, PackageSearch, ShieldCheck, ShoppingBag, TrendingUp, Users, Wallet } from "lucide-react";
+import { SalesTrendPanel } from "@/components/reports/sales-trend-panel";
 import { DateRangeSelector } from "@/components/date-range-selector";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -18,14 +20,14 @@ import { fetchAdvertisingReport, fetchBusinessInsights, fetchCustomersSummary, f
 import { fetchCustomers, fetchLeads } from "@/services/crm";
 import { fetchOrders } from "@/services/orders";
 import { fetchInventory, fetchProducts, fetchProductVariants } from "@/services/products";
-import { CompactSummary, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
+import { WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 
-function ReportCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return <section className="min-w-0 overflow-hidden rounded-[24px] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)] sm:p-5"><div className="mb-4 min-w-0"><h2 className="break-words text-xl font-black text-text-primary">{title}</h2>{subtitle ? <p className="mt-1 break-words text-sm text-text-muted">{subtitle}</p> : null}</div>{children}</section>;
+function ReportCard({ id, title, subtitle, children }: { id?: string; title: string; subtitle?: string; children: React.ReactNode }) {
+  return <section id={id} className="min-w-0 scroll-mt-36 overflow-hidden rounded-[24px] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)] sm:p-5 lg:p-6" data-reports-section={id}><div className="mb-5 min-w-0 border-b border-border-subtle pb-4"><h2 className="break-words text-lg font-bold text-text-primary lg:text-xl">{title}</h2>{subtitle ? <p className="mt-1 max-w-3xl break-words text-sm leading-6 text-text-muted">{subtitle}</p> : null}</div>{children}</section>;
 }
 
 function MetricCard({ label, value, helper }: { label: string; value: string | number; helper?: string }) {
-  return <article className="min-w-0 rounded-2xl border border-border-subtle bg-surface-2 p-4 "><p className="break-words text-xs font-black uppercase tracking-[0.18em] text-text-muted">{label}</p><p className="mt-2 break-words text-2xl font-black text-text-primary">{value}</p>{helper ? <p className="mt-1 break-words text-xs font-semibold text-text-muted">{helper}</p> : null}</article>;
+  return <article className="min-w-0 rounded-2xl border border-border-subtle bg-surface-2/70 p-4"><p className="break-words text-[11px] font-bold uppercase tracking-[0.1em] text-text-muted">{label}</p><p className="mt-2 break-words text-xl font-bold tabular-nums text-text-primary lg:text-2xl">{value}</p>{helper ? <p className="mt-2 break-words text-xs leading-5 text-text-muted">{helper}</p> : null}</article>;
 }
 
 export default function AnalyticsPage() {
@@ -73,6 +75,11 @@ export default function AnalyticsPage() {
   const lookups = useMemo(() => buildVariantLookups(products.data ?? [], variants.data ?? [], inventory.data ?? []), [products.data, variants.data, inventory.data]);
   const insights = useMemo(() => buildBusinessInsights({ orders: currentOrders, adSummary: advertising.data, inventory: inventory.data ?? [], products: products.data ?? [], variants: variants.data ?? [], leads: currentLeads }), [advertising.data, currentLeads, currentOrders, inventory.data, products.data, variants.data]);
   const backendInsightRows = backendInsights.data?.insights ?? [];
+  const featuredInsights = backendInsightRows.length ? backendInsightRows.map((insight) => ({ type: insight.type, titleKey: insight.title_key, descriptionKey: insight.description_key, sourceMetric: insight.source_metric, href: insight.route ?? undefined, ctaKey: insight.cta_key ?? undefined, values: insight.value == null ? undefined : { value: insight.value } })) : insights;
+  const priorityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2, positive: 3 };
+  const rankedInsights = [...featuredInsights].sort((a, b) => (priorityOrder[a.type] ?? 2) - (priorityOrder[b.type] ?? 2));
+  const insightTargets = new Set(["/orders", "/inventory", "/advertising", "/leads", "/products", "/customers", "/finance", "/analytics"]);
+  const salesChartRows = salesReport.data?.daily_rows ?? salesRows.map((row) => ({ date: row.date, orders: row.orders, revenue: String(row.revenue) }));
 
   const productRows = useMemo(() => (topProducts.data ?? []).map((item) => {
     const product = lookups.productById.get(item.product_id);
@@ -116,20 +123,74 @@ export default function AnalyticsPage() {
         {hasError ? <ErrorState description={t("analytics.errors.loadFailed")} /> : null}
         {isLoading ? <div className="grid gap-4 md:grid-cols-3"><LoadingSkeleton title={t("analytics.reports.loading")} rows={3} /><LoadingSkeleton title={t("analytics.sales.title")} rows={3} /><LoadingSkeleton title={t("analytics.insights.title")} rows={3} /></div> : null}
 
-        <div className="grid gap-2 rounded-3xl border border-slate-100 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900 md:grid-cols-[1fr_auto] md:items-center">
-          <div><h2 className="font-black text-text-primary">{t("analytics.filters.period")}</h2><p className="text-sm text-text-muted">{t("analytics.filters.periodHelp")}</p></div>
-          <div className="rounded-3xl bg-slate-50 p-2 dark:bg-white/5"><DateRangeSelector compact /></div>
+        <section className="relative min-w-0 overflow-hidden rounded-[26px] border border-primary/20 bg-gradient-to-br from-primary/[0.13] via-surface-1 to-surface-1 p-4 shadow-[var(--shadow-card)] sm:p-5 lg:flex lg:items-center lg:justify-between lg:gap-6 lg:p-6" aria-label={t("analytics.filters.period")} data-reports-period>
+          <div className="pointer-events-none absolute -left-14 -top-20 h-48 w-48 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
+          <div className="relative min-w-0">
+            <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-primary"><CalendarRange className="h-4 w-4" />{t("analytics.modern.periodLabel")}</p>
+            <h2 className="mt-2 text-lg font-bold text-text-primary">{t("analytics.modern.overviewTitle")}</h2>
+            <p className="mt-1 max-w-xl text-xs leading-5 text-text-secondary">{t("analytics.filters.periodHelp")}</p>
+            <p className="mt-2 text-xs font-medium tabular-nums text-text-muted">{range.date_from} — {range.date_to}</p>
+          </div>
+          <div className="relative mt-4 rounded-2xl border border-border-subtle bg-surface-1/90 p-2 lg:mt-0 lg:min-w-[195px]"><DateRangeSelector compact /></div>
+        </section>
+
+        <section className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4" aria-label={t("analytics.modern.kpiTitle")} data-reports-kpi>
+          {[
+            { label: t("analytics.metrics.revenue"), value: formatMoney(toFiniteNumber(salesReport.data?.revenue ?? orderSummary.revenue), currencyCode), helper: t("analytics.modern.revenueHelper"), icon: Wallet, important: true },
+            { label: t("analytics.metrics.orders"), value: salesReport.data?.orders_count ?? orderSummary.ordersCount, helper: t("analytics.modern.ordersHelper"), icon: ShoppingBag },
+            { label: t("analytics.metrics.netProfit"), value: (salesReport.data?.can_view_profit ?? canSeeProfit) ? formatMoney(toFiniteNumber(salesReport.data?.net_profit ?? profit.data?.total_net_profit ?? orderSummary.netProfit), currencyCode) : t("analytics.metrics.restricted"), helper: t("analytics.modern.profitHelper"), icon: TrendingUp },
+            { label: t("analytics.metrics.aov"), value: (salesReport.data?.aov ?? orderSummary.aov) == null ? UNAVAILABLE : formatMoney(toFiniteNumber(salesReport.data?.aov ?? orderSummary.aov), currencyCode), helper: t("analytics.modern.aovHelper"), icon: BarChart3 },
+          ].map(({ label, value, helper, icon: Icon, important }) => <article key={label} className={`group relative min-w-0 overflow-hidden rounded-[22px] border p-4 transition duration-200 hover:-translate-y-0.5 sm:p-5 ${important ? "border-primary/30 bg-gradient-to-br from-primary/[0.16] via-surface-1 to-surface-1" : "border-border-subtle bg-surface-1 hover:border-primary/25"}`}>
+            <div className="pointer-events-none absolute -right-5 -top-5 h-24 w-24 rounded-full bg-primary/[0.045] blur-xl" aria-hidden="true" />
+            <div className="relative flex min-w-0 items-start justify-between gap-2">
+              <p className="min-w-0 text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted sm:tracking-[0.13em]">{label}</p>
+              <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary sm:grid"><Icon className="h-4 w-4" aria-hidden="true" /></span>
+            </div>
+            <p className="relative mt-3 break-words text-xl font-bold tabular-nums tracking-tight text-text-primary sm:text-2xl xl:text-[28px]">{isLoading ? "—" : value}</p>
+            <p className="relative mt-2 text-xs leading-5 text-text-muted">{helper}</p>
+          </article>)}
+        </section>
+
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3" data-reports-secondary-metrics>
+          <span className="text-[11px] font-bold uppercase tracking-[0.13em] text-text-muted">{t("analytics.modern.moreMetrics")}</span>
+          <span className="inline-flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-xs text-text-secondary"><Users className="h-4 w-4 text-primary" aria-hidden="true" />{t("analytics.metrics.repeatCustomerRate")}: <strong className="font-bold tabular-nums text-text-primary">{isLoading ? "—" : formatPercentValue(customerSummary.repeatCustomerRate)}</strong></span>
+          <span className="inline-flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-xs text-text-secondary"><Activity className="h-4 w-4 text-primary" aria-hidden="true" />{t("analytics.metrics.returnRate")}: <strong className="font-bold tabular-nums text-text-primary">{isLoading ? "—" : formatPercentValue(toFiniteNumber(salesReport.data?.return_rate ?? orderSummary.returnRate))}</strong></span>
+          <span className="inline-flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-xs text-text-secondary"><PackageSearch className="h-4 w-4 text-warning" aria-hidden="true" />{t("analytics.metrics.lowStock")}: <strong className="font-bold tabular-nums text-text-primary">{inventorySummary.data?.low_stock_count ?? inventoryRollup.lowStockCount}</strong></span>
         </div>
 
-        <CompactSummary layout="five-balanced" items={[{ label: t("analytics.metrics.orders"), value: orderSummary.ordersCount }, { label: t("analytics.metrics.revenue"), value: formatMoney(toFiniteNumber(salesReport.data?.revenue ?? orderSummary.revenue), currencyCode) }, { label: t("analytics.metrics.netProfit"), value: (salesReport.data?.can_view_profit ?? canSeeProfit) ? formatMoney(toFiniteNumber(salesReport.data?.net_profit ?? profit.data?.total_net_profit ?? orderSummary.netProfit), currencyCode) : t("analytics.metrics.restricted") }, { label: t("analytics.metrics.aov"), value: (salesReport.data?.aov ?? orderSummary.aov) == null ? UNAVAILABLE : formatMoney(toFiniteNumber(salesReport.data?.aov ?? orderSummary.aov), currencyCode), unavailable: (salesReport.data?.aov ?? orderSummary.aov) == null }, { label: t("analytics.metrics.repeatCustomerRate"), value: formatPercentValue(customerSummary.repeatCustomerRate), helper: t("analytics.tooltips.repeatCustomerRate") }]} />
+        <nav className="flex min-w-0 items-center gap-1 overflow-x-auto rounded-2xl border border-border-subtle bg-surface-1/95 p-1.5 lg:sticky lg:top-[76px] lg:z-20 lg:backdrop-blur-xl" aria-label={t("analytics.modern.sectionNav")} data-reports-navigation>
+          {[
+            { id: "reports-overview", label: t("analytics.modern.sectionOverview"), icon: Activity },
+            { id: "reports-sales", label: t("analytics.sales.title"), icon: TrendingUp },
+            { id: "reports-products", label: t("analytics.products.title"), icon: ShoppingBag },
+            { id: "reports-advertising", label: t("analytics.advertising.title"), icon: BarChart3 },
+            { id: "reports-customers", label: t("analytics.customers.title"), icon: Users },
+            { id: "reports-inventory", label: t("analytics.inventory.title"), icon: PackageSearch },
+          ].map(({ id, label, icon: Icon }) => <a key={id} href={`#${id}`} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-semibold text-text-secondary transition hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"><Icon className="h-4 w-4" aria-hidden="true" />{label}</a>)}
+        </nav>
 
-        <ReportCard title={t("analytics.insights.title")} subtitle={t("analytics.insights.subtitle")}>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {(backendInsightRows.length ? backendInsightRows.map((insight) => ({ type: insight.type, titleKey: insight.title_key, descriptionKey: insight.description_key, sourceMetric: insight.source_metric, href: insight.route ?? undefined, ctaKey: insight.cta_key ?? undefined, values: insight.value == null ? undefined : { value: insight.value } })) : insights).map((insight) => <Link key={`${insight.sourceMetric}-${insight.titleKey}`} href={insight.href ?? "/analytics"} className="rounded-2xl border border-border-subtle bg-surface-2 p-4 transition hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50  dark:hover:bg-violet-400/10"><span className="text-xs font-black uppercase tracking-[0.18em] text-violet-600 dark:text-violet-200">{t(`analytics.insights.types.${insight.type}`)} · {insight.sourceMetric}</span><h3 className="mt-2 font-black text-text-primary">{t(insight.titleKey, insight.values)}</h3><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t(insight.descriptionKey, insight.values)}</p>{insight.ctaKey ? <p className="mt-3 text-sm font-bold text-violet-700 dark:text-violet-200">{t(insight.ctaKey)}</p> : null}</Link>)}
-          </div>
-        </ReportCard>
+        <div id="reports-overview" className="grid min-w-0 scroll-mt-36 gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(315px,1fr)]" data-reports-overview>
+          <SalesTrendPanel rows={salesChartRows} currencyCode={currencyCode} loading={isLoading || salesReport.isLoading} />
+          <section className="min-w-0 rounded-[24px] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)] sm:p-5 lg:p-6" aria-labelledby="reports-insights-heading">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-primary"><ShieldCheck className="h-4 w-4" />{t("analytics.modern.priorityEyebrow")}</div>
+                <h2 id="reports-insights-heading" className="mt-2 text-lg font-bold text-text-primary lg:text-xl">{t("analytics.insights.title")}</h2>
+              </div>
+              <Link href="/insights" className="inline-flex min-h-10 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-primary hover:bg-primary/10">{t("analytics.modern.allInsights")}<ArrowRight className="h-4 w-4" /></Link>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-text-muted">{t("analytics.modern.rulesOnly")}</p>
+            {rankedInsights.length ? <div className="mt-4 grid gap-2">
+              {rankedInsights.slice(0, 3).map((insight) => <Link key={`${insight.sourceMetric}-${insight.titleKey}`} href={insightTargets.has(insight.href ?? "") ? insight.href! : "/insights"} className="group flex min-w-0 items-start gap-3 rounded-2xl border border-border-subtle bg-surface-2/70 p-3.5 transition hover:border-primary/30 hover:bg-surface-hover">
+                <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${insight.type === "critical" ? "bg-danger" : insight.type === "warning" ? "bg-warning" : insight.type === "positive" ? "bg-success" : "bg-info"}`} aria-hidden="true" />
+                <span className="min-w-0 flex-1"><span className="block text-[11px] font-semibold text-text-muted">{t(`analytics.insights.types.${insight.type}`)}</span><span className="mt-1 block break-words text-sm font-bold text-text-primary">{t(insight.titleKey, insight.values)}</span><span className="mt-1 line-clamp-2 text-xs leading-5 text-text-secondary">{t(insight.descriptionKey, insight.values)}</span></span>
+                <ArrowRight className="mt-3 h-4 w-4 shrink-0 text-text-muted transition group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
+              </Link>)}
+            </div> : <div className="mt-5 rounded-2xl border border-dashed border-border-subtle bg-surface-2/40 p-5 text-sm leading-6 text-text-muted">{t("analytics.modern.noInsights")}</div>}
+          </section>
+        </div>
 
-        <ReportCard title={t("analytics.sales.title")} subtitle={t("analytics.sales.subtitle")}>
+        <ReportCard id="reports-sales" title={t("analytics.sales.title")} subtitle={t("analytics.sales.subtitle")}>
           <div className="mb-4 grid gap-3 md:grid-cols-4"><MetricCard label={t("analytics.metrics.revenue")} value={formatMoney(toFiniteNumber(salesReport.data?.revenue ?? orderSummary.revenue), currencyCode)} helper={t("analytics.tooltips.revenue")} /><MetricCard label={t("analytics.metrics.netProfit")} value={(salesReport.data?.can_view_profit ?? canSeeProfit) ? formatMoney(toFiniteNumber(salesReport.data?.net_profit ?? profit.data?.total_net_profit ?? orderSummary.netProfit), currencyCode) : t("analytics.metrics.restricted")} helper={t("analytics.tooltips.netProfit")} /><MetricCard label={t("analytics.metrics.aov")} value={(salesReport.data?.aov ?? orderSummary.aov) == null ? UNAVAILABLE : formatMoney(toFiniteNumber(salesReport.data?.aov ?? orderSummary.aov), currencyCode)} helper={t("analytics.tooltips.aov")} /><MetricCard label={t("analytics.metrics.returnRate")} value={formatPercentValue(toFiniteNumber(salesReport.data?.return_rate ?? orderSummary.returnRate))} helper={t("analytics.tooltips.returnRate")} /></div>
           <div className="mb-4 grid gap-3 md:grid-cols-4"><MetricCard label={t("analytics.metrics.orders")} value={orderSummary.ordersCount} /><MetricCard label={t("analytics.metrics.margin")} value={canSeeProfit ? formatPercentValue(orderSummary.margin) : t("analytics.metrics.restricted")} helper={t("analytics.tooltips.margin")} /><MetricCard label={t("analytics.metrics.cancelledOrders")} value={orderSummary.cancelledOrders} /><MetricCard label={t("analytics.metrics.deliveredOrders")} value={orderSummary.deliveredOrders} /></div>
           <div className="analytics-pagination-section grid gap-3">
@@ -149,10 +210,28 @@ export default function AnalyticsPage() {
   wide
 />{salesRows.length > 0 ? <PaginationControls page={analyticsPage} pageSize={analyticsPageSize} totalItems={salesRows.length} onPageChange={setAnalyticsPage} onPageSizeChange={(nextPageSize) => setAnalyticsPageSize(nextPageSize as (typeof PAGE_SIZE_OPTIONS)[number])} /> : null}
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2"><div className="rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.05]"><h3 className="font-black dark:text-white">{t("analytics.sales.byStatus")}</h3><div className="mt-3 grid gap-2">{ANALYTICS_ORDER_STATUSES.map((status) => <div key={status} className="flex justify-between text-sm"><span>{formatStatus("order", status)}</span><strong>{orderSummary.statusCounts[status]}</strong></div>)}</div></div><div className="rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.05]"><h3 className="font-black dark:text-white">{t("analytics.sales.byPayment")}</h3><div className="mt-3 grid gap-2">{ANALYTICS_PAYMENT_STATUSES.map((status) => <div key={status} className="flex justify-between text-sm"><span>{formatStatus("payment", status)}</span><strong>{orderSummary.paymentCounts[status]}</strong></div>)}</div></div></div>
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {[
+              { title: t("analytics.sales.byStatus"), keys: ANALYTICS_ORDER_STATUSES, counts: orderSummary.statusCounts, statusType: "order" as const },
+              { title: t("analytics.sales.byPayment"), keys: ANALYTICS_PAYMENT_STATUSES, counts: orderSummary.paymentCounts, statusType: "payment" as const },
+            ].map((group) => {
+              const total = group.keys.reduce((sum, key) => sum + ((group.counts as Record<string, number>)[key] ?? 0), 0);
+              return <div key={group.title} className="min-w-0 rounded-2xl border border-border-subtle bg-surface-2/60 p-4">
+                <h3 className="font-bold text-text-primary">{group.title}</h3>
+                <div className="mt-4 grid gap-3">{group.keys.map(status => {
+                  const count = (group.counts as Record<string, number>)[status] ?? 0;
+                  const percent = total ? (count / total) * 100 : 0;
+                  return <div key={status} className="min-w-0">
+                    <div className="flex items-center justify-between gap-3 text-xs"><span className="truncate text-text-secondary">{formatStatus(group.statusType, status)}</span><strong className="tabular-nums text-text-primary">{count}</strong></div>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-3"><div className="h-full rounded-full bg-primary/75" style={{ width: `${percent}%` }} /></div>
+                  </div>;
+                })}</div>
+              </div>;
+            })}
+          </div>
         </ReportCard>
 
-        <ReportCard title={t("analytics.products.title")} subtitle={t("analytics.products.subtitle")}>
+        <ReportCard id="reports-products" title={t("analytics.products.title")} subtitle={t("analytics.products.subtitle")}>
           <div className="mb-4 grid gap-3 md:grid-cols-3"><MetricCard label={t("analytics.products.topByRevenue")} value={productRows[0]?.product_name ?? UNAVAILABLE} /><MetricCard label={t("analytics.products.lowStockBestSellers")} value={productRows.filter((row) => row.stockQuantity <= 0 || row.status === t("analytics.inventory.lowStockStatus")).length} /><MetricCard label={t("analytics.products.categoriesTracked")} value={topCategories.length} /></div>
           <ResponsiveReportTable
   rows={productRows}
@@ -174,7 +253,7 @@ export default function AnalyticsPage() {
           <div className="mt-4 grid gap-3 md:grid-cols-2">{topCategories.map((row) => <div key={row.category} className="rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.05]"><h3 className="font-black text-text-primary">{row.category}</h3><p className="text-sm text-text-muted">{row.quantity} {t("analytics.products.unitsSold")} · {formatMoney(row.revenue, currencyCode)} · {row.share}</p></div>)}</div>
         </ReportCard>
 
-        <ReportCard title={t("analytics.advertising.title")} subtitle={t("analytics.advertising.subtitle")}>
+        <ReportCard id="reports-advertising" title={t("analytics.advertising.title")} subtitle={t("analytics.advertising.subtitle")}>
           <div className="mb-4 grid gap-3 md:grid-cols-4"><MetricCard label={t("analytics.metrics.spend")} value={formatMoney(toFiniteNumber(backendAdSummary?.spend ?? adSummary.spend), currencyCode)} /><MetricCard label={t("analytics.metrics.roas")} value={formatDecimal(adSummary.roas)} helper={t("analytics.tooltips.roas")} /><MetricCard label={t("analytics.metrics.cpa")} value={(backendAdSummary?.cpa ?? adSummary.cpa) == null ? UNAVAILABLE : formatMoney(toFiniteNumber(backendAdSummary?.cpa ?? adSummary.cpa), currencyCode)} helper={t("analytics.tooltips.cpa")} /><MetricCard label={t("analytics.metrics.cpl")} value={(backendAdSummary?.cpl ?? adSummary.cpl) == null ? UNAVAILABLE : formatMoney(toFiniteNumber(backendAdSummary?.cpl ?? adSummary.cpl), currencyCode)} helper={t("analytics.tooltips.cpl")} /></div>
           <ResponsiveReportTable
   rows={campaignPerformance.data ?? []}
@@ -196,7 +275,7 @@ export default function AnalyticsPage() {
         </ReportCard>
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <ReportCard title={t("analytics.customers.title")} subtitle={t("analytics.customers.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.newCustomers")} value={customersSummary.data?.new_customers ?? 0} /><MetricCard label={t("analytics.metrics.repeatCustomerRate")} value={formatPercentValue(customerSummary.repeatCustomerRate)} helper={t("analytics.tooltips.repeatCustomerRate")} /><MetricCard label={t("analytics.metrics.averageSpend") } value={customerSummary.averageSpend == null ? UNAVAILABLE : formatMoney(customerSummary.averageSpend, currencyCode)} /><MetricCard label={t("analytics.metrics.customersWithOrders")} value={customerSummary.customersWithOrders} /><MetricCard label={t("analytics.metrics.leadConversionRate")} value={formatPercentValue(leadConversionRate)} helper={t("analytics.tooltips.conversionRate")} /></div><ResponsiveReportTable
+          <ReportCard id="reports-customers" title={t("analytics.customers.title")} subtitle={t("analytics.customers.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.newCustomers")} value={customersSummary.data?.new_customers ?? 0} /><MetricCard label={t("analytics.metrics.repeatCustomerRate")} value={formatPercentValue(customerSummary.repeatCustomerRate)} helper={t("analytics.tooltips.repeatCustomerRate")} /><MetricCard label={t("analytics.metrics.averageSpend") } value={customerSummary.averageSpend == null ? UNAVAILABLE : formatMoney(customerSummary.averageSpend, currencyCode)} /><MetricCard label={t("analytics.metrics.customersWithOrders")} value={customerSummary.customersWithOrders} /><MetricCard label={t("analytics.metrics.leadConversionRate")} value={formatPercentValue(leadConversionRate)} helper={t("analytics.tooltips.conversionRate")} /></div><ResponsiveReportTable
   rows={(customers.data ?? []).slice(0, 8)}
   rowKey={(row) => row.id}
   columns={[
@@ -209,7 +288,7 @@ export default function AnalyticsPage() {
   empty={<EmptyState title={t("analytics.emptyStates.noCustomers")} description={t("analytics.emptyStates.noCustomersDescription")} />}
   wide
 /></ReportCard>
-          <ReportCard title={t("analytics.inventory.title")} subtitle={t("analytics.inventory.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.lowStock")} value={inventoryReport.data?.low_stock_count ?? inventoryRollup.lowStockCount} helper={t("analytics.tooltips.lowStock")} /><MetricCard label={t("analytics.metrics.outOfStock")} value={inventoryReport.data?.out_of_stock_count ?? inventoryRollup.outOfStockCount} /><MetricCard label={t("analytics.metrics.reservedStock")} value={inventoryRollup.reservedQuantity} helper={t("analytics.tooltips.reservedStock")} /><MetricCard label={t("analytics.metrics.incomingStock")} value={inventoryRollup.incomingQuantity} /></div><ResponsiveReportTable
+          <ReportCard id="reports-inventory" title={t("analytics.inventory.title")} subtitle={t("analytics.inventory.subtitle")}><div className="mb-4 grid gap-3 md:grid-cols-2"><MetricCard label={t("analytics.metrics.lowStock")} value={inventoryReport.data?.low_stock_count ?? inventoryRollup.lowStockCount} helper={t("analytics.tooltips.lowStock")} /><MetricCard label={t("analytics.metrics.outOfStock")} value={inventoryReport.data?.out_of_stock_count ?? inventoryRollup.outOfStockCount} /><MetricCard label={t("analytics.metrics.reservedStock")} value={inventoryRollup.reservedQuantity} helper={t("analytics.tooltips.reservedStock")} /><MetricCard label={t("analytics.metrics.incomingStock")} value={inventoryRollup.incomingQuantity} /></div><ResponsiveReportTable
   rows={inventorySummary.data?.low_stock_items ?? []}
   rowKey={(row) => row.variant_id}
   columns={[

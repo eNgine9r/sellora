@@ -1337,6 +1337,30 @@
       "pageSize": "Rows per page",
       "emptyTitle": "No report rows for this period",
       "emptyDescription": "Change the period or add orders to populate detailed analytics."
+    },
+    "modern": {
+      "periodLabel": "Shared report period",
+      "overviewTitle": "Store performance at a glance",
+      "kpiTitle": "Key performance indicators",
+      "revenueHelper": "Revenue in selected period",
+      "ordersHelper": "Orders created in period",
+      "profitHelper": "Based on available costs",
+      "aovHelper": "Average order value",
+      "moreMetrics": "Also tracked",
+      "sectionNav": "Report sections",
+      "sectionOverview": "Overview",
+      "trendEyebrow": "Sales activity",
+      "trendTitle": "Revenue over time",
+      "trendDescription": "Actual revenue on days with recorded orders. Days without records are not plotted.",
+      "trendEmpty": "No chart data yet",
+      "trendEmptyHelp": "Choose another period or add orders to view sales activity.",
+      "trendChartAria": "Revenue chart for {count} days with records",
+      "activeDays": "Days with records",
+      "peakDay": "Highest daily revenue",
+      "priorityEyebrow": "Priority signals",
+      "allInsights": "All insights",
+      "rulesOnly": "Deterministic insights from available data, not forecasts.",
+      "noInsights": "Not enough data for recommendations yet. Reports update as store data is added."
     }
   },
   "settings": {
