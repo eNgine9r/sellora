@@ -42,7 +42,7 @@ export function MobileMoreSheet({ open, currentUser, currentWorkspace, currentWo
             <Link href="/settings/team" className={actionClass} onClick={onClose}><Users className="h-[18px] w-[18px] text-text-secondary" aria-hidden="true" />{t("accountMenu.team")}</Link>
           ) : null}
           <Link href="/direct" className={actionClass} onClick={onClose}><MessageCircle className="h-[18px] w-[18px] text-text-secondary" aria-hidden="true" />{t("navigation.direct")}</Link>
-          <FeedbackDialog workspaceId={currentWorkspaceId} buttonClassName={actionClass} onOpenChange={(nextOpen) => { if (nextOpen) onClose(); }} />
+          <FeedbackDialog workspaceId={currentWorkspaceId} buttonClassName={actionClass} />
         </nav>
 
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-2 px-3 py-2">
