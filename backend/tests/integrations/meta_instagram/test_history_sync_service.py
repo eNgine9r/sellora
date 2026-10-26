@@ -446,3 +446,16 @@ async def test_history_cancel_does_not_affect_other_workspace(monkeypatch):
     foreign_workspace_id = uuid4()
     assert service.syncs.cancellation_requested(foreign_workspace_id, sync.id) is False
     assert service.status(foreign_workspace_id) is None
+
+
+def test_history_cancel_signal_does_not_lock_active_sync_row_by_foreign_key():
+    # A foreign key on sync_id would acquire KEY SHARE on the worker's
+    # FOR UPDATE row and block the cancellation request itself.
+    from app.models.instagram_inbox_sync import InstagramHistorySyncCancelRequest
+
+    table = InstagramHistorySyncCancelRequest.__table__
+    assert not table.c.sync_id.foreign_keys
+    assert any(
+        constraint.name == "uq_ig_history_cancel_workspace"
+        for constraint in table.constraints
+    )
