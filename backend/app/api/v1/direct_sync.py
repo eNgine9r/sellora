@@ -81,7 +81,14 @@ def history_sync_status(
     _: User = Depends(require_min_role(RoleName.ANALYST)),
     db: Session = Depends(get_db),
 ):
-    return InstagramHistorySyncService(db).status(workspace_id)
+    service = InstagramHistorySyncService(db)
+    sync = service.status(workspace_id)
+    if sync is None:
+        return None
+    response = InstagramHistorySyncResponse.model_validate(sync)
+    return response.model_copy(update={
+        "cancel_requested": service.syncs.cancellation_requested(workspace_id, sync.id),
+    })
 
 
 @router.post(
