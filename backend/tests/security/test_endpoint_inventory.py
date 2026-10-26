@@ -62,12 +62,12 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 9,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 212,
+    "WORKSPACE_SCOPED": 213,
     "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 242
-EXPECTED_MUTATION_ROUTES = 136
+EXPECTED_TOTAL_ROUTES = 243
+EXPECTED_MUTATION_ROUTES = 137
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -83,6 +83,7 @@ EXPECTED_DIRECT_CUSTOMER_AUTOMATION_ROUTES = {
     ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/complete"),
     ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/finalize-order"),
 }
+EXPECTED_HISTORY_CANCEL_ROUTES = {("POST", "/api/v1/direct/history-sync/cancel")}
 EXPECTED_DIRECT_ORDER_EVIDENCE_ROUTES = {
     ("GET", "/api/v1/direct/conversations/{conversation_id}/order-evidence"),
     ("POST", "/api/v1/direct/conversations/{conversation_id}/order-evidence/confirm"),
@@ -121,6 +122,12 @@ def _primary_scope(path: str, method: str | None = None) -> str:
     if path.startswith(WORKSPACE_PREFIXES):
         return "WORKSPACE_SCOPED"
     return "INTERNAL_OR_DOCUMENTATION"
+
+
+def test_history_cancel_endpoint_is_explicitly_workspace_scoped() -> None:
+    routes = { (method, path): route for path, route in _api_routes() for method in route.methods }
+    assert EXPECTED_HISTORY_CANCEL_ROUTES.issubset(routes)
+    assert all(_primary_scope(path) == "WORKSPACE_SCOPED" for _method, path in EXPECTED_HISTORY_CANCEL_ROUTES)
 
 
 def test_endpoint_inventory_primary_classifications_are_exactly_reconciled() -> None:
