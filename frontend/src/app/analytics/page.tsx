@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, ArrowRight, BarChart3, CalendarRange, ClipboardList, PackageSearch, ShieldCheck, ShoppingBag, TrendingUp, Users, Wallet } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, CalendarRange, PackageSearch, ShieldCheck, ShoppingBag, TrendingUp, Users, Wallet } from "lucide-react";
 import { SalesTrendPanel } from "@/components/reports/sales-trend-panel";
 import { DateRangeSelector } from "@/components/date-range-selector";
 import { useEffect, useMemo, useState } from "react";
