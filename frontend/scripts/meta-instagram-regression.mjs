@@ -34,6 +34,8 @@ const checks = [
   ["Direct page shows potential customer indicators", directPage.includes("підписників") && directPage.includes("Підписаний на магазин") && directPage.includes("Verified")],
   ["History sync uses backend endpoints and bounded limits", directService.includes("/direct/history-sync") && directService.includes("conversation_limit") && directService.includes("messages_per_conversation") && directService.includes("message-timeline")],
   ["History sync progress is visible in Direct", directPage.includes('t("direct.historyStart")') && uk.includes("Синхронізувати історію") && directPage.includes("HistorySyncBanner") && directPage.includes("messages_unavailable")],
+  ["History controls stack before desktop width", directPage.includes("data-direct-history-controls") && directPage.includes("lg:grid-cols-[minmax(0,1fr)_auto]") && directPage.includes('className="w-full gap-2 font-semibold lg:w-auto"')],
+  ["Completed history stays compact; progress bar appears only while active", directPage.includes('data-direct-history-active={active}') && directPage.includes('{active ? (\n        <div className="h-1.5') && directPage.includes('sync.status === "COMPLETED"')],
   ["History cancellation is wired and requires explicit confirmation", directPage.includes("cancelInstagramHistorySync") && directService.includes("/direct/history-sync/cancel") && directPage.includes('t("direct.historyStopConfirm")')],
   ["History import is collapsed and never accidental", directPage.includes("historyPanelOpen") && directPage.includes('t("direct.historyStartConfirm")')],
   ["Message state contract includes seen edit and reaction", directTypes.includes("seen_at") && directTypes.includes("edit_count") && directTypes.includes("reaction_updated_at")],
