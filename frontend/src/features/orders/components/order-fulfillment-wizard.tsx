@@ -17,9 +17,9 @@ import { Customer } from "@/types/crm";
 import { OrderFulfillmentPayload, OrderFulfillmentResult } from "@/types/order-fulfillment";
 import { Inventory, Product, ProductVariant } from "@/types/products";
 
-type WizardItem = { key: string; product_variant_id: string; quantity: string; unit_price: string };
+type WizardItem = { key: string; product_variant_id: string; quantity: string; unit_price: string; search: string };
 const newKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-const emptyItem = (): WizardItem => ({ key: newKey(), product_variant_id: "", quantity: "1", unit_price: "" });
+const emptyItem = (): WizardItem => ({ key: newKey(), product_variant_id: "", quantity: "1", unit_price: "", search: "" });
 const inputClass = "min-h-11 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring";
 
 function normalizeUaPhonePreview(value: string) {
@@ -339,8 +339,18 @@ export function OrderFulfillmentWizard({
             {items.map((item) => {
               const stock = inventoryByVariant.get(item.product_variant_id);
               const available = stock ? stock.stock_quantity - stock.reserved_quantity : null;
-              return <article className="grid gap-3 rounded-2xl border border-border-subtle p-3 sm:grid-cols-[1fr_110px_140px_auto] sm:items-end" key={item.key}>
-                <label className="grid gap-1 text-sm font-semibold">{t("fulfillment.product")}<select className={inputClass} value={item.product_variant_id} onChange={(event) => selectVariant(item, event.target.value)}><option value="">{t("orders.selectVariant")}</option>{variants.filter((variant) => variant.is_active).map((variant) => { const product = productById.get(variant.product_id); const rowStock = inventoryByVariant.get(variant.id); const rowAvailable = rowStock ? rowStock.stock_quantity - rowStock.reserved_quantity : 0; return <option key={variant.id} value={variant.id}>{product?.name || variant.sku} · {variant.sku} · {t("orders.available")}: {rowAvailable}</option>; })}</select>{available != null ? <span className="text-xs text-text-secondary">{t("orders.available")}: {available}</span> : null}</label>
+              const queryWords = item.search.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+              const matches = variants.filter((variant) => {
+                const product = productById.get(variant.product_id);
+                const text = [product?.name, product?.sku, variant.sku, variant.color, variant.size, variant.barcode].filter(Boolean).join(" ").toLocaleLowerCase();
+                return variant.is_active && queryWords.every((word) => text.includes(word));
+              });
+              const options = matches.slice(0, 30);
+              const selectedVariant = variants.find((variant) => variant.id === item.product_variant_id);
+              if (selectedVariant && !options.some((variant) => variant.id === selectedVariant.id)) options.unshift(selectedVariant);
+              return <article className="grid min-w-0 gap-3 rounded-2xl border border-border-subtle p-3 sm:grid-cols-[minmax(0,1fr)_110px_140px_auto] sm:items-end" key={item.key}>
+                <label className="grid min-w-0 gap-1 text-sm font-semibold sm:col-span-4">{t("fulfillment.productSearch")}<input className={inputClass} type="search" value={item.search} placeholder={t("fulfillment.productSearchHint")} onChange={(event) => updateItem(item.key, { search: event.target.value })} /></label>
+                <label className="grid min-w-0 gap-1 text-sm font-semibold">{t("fulfillment.product")}<select className={inputClass} value={item.product_variant_id} onChange={(event) => selectVariant(item, event.target.value)}><option value="">{t("orders.selectVariant")}</option>{options.map((variant) => { const product = productById.get(variant.product_id); const rowStock = inventoryByVariant.get(variant.id); const rowAvailable = rowStock ? rowStock.stock_quantity - rowStock.reserved_quantity : null; return <option key={variant.id} value={variant.id}>{[product?.name, variant.color, variant.size, variant.sku, variant.price == null ? null : formatMoney(variant.price, currencyCode), `${t("orders.available")}: ${rowAvailable ?? "—"}`].filter(Boolean).join(" · ")}</option>; })}</select><span className="text-xs text-text-secondary" role="status">{matches.length === 0 ? t("fulfillment.productSearchEmpty") : matches.length > 30 ? t("fulfillment.productSearchNarrow") : null}</span>{selectedVariant ? <span className="break-words text-xs text-text-secondary">{[productById.get(selectedVariant.product_id)?.name, selectedVariant.color, selectedVariant.size, selectedVariant.sku].filter(Boolean).join(" · ")}</span> : null}{available != null ? <span className="text-xs text-text-secondary">{t("orders.available")}: {available}</span> : null}</label>
                 <label className="grid gap-1 text-sm font-semibold">{t("orders.quantity")}<input className={inputClass} min="1" type="number" value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: event.target.value })} /></label>
                 <label className="grid gap-1 text-sm font-semibold">{t("orders.unitPrice")}<input className={inputClass} min="0" step="0.01" type="number" value={item.unit_price} onChange={(event) => updateItem(item.key, { unit_price: event.target.value })} /></label>
                 <button className="min-h-11 rounded-xl border border-danger/30 px-3 text-danger disabled:opacity-40" disabled={items.length === 1} type="button" onClick={() => setItems((current) => current.filter((row) => row.key !== item.key))}>×</button>

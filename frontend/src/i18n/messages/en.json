@@ -2220,6 +2220,10 @@
     }
   },
   "fulfillment": {
+    "productSearch": "Find a product",
+    "productSearchHint": "Name, SKU, color or size",
+    "productSearchEmpty": "No matches. Try another name or SKU.",
+    "productSearchNarrow": "Showing the first 30 matches. Refine your search to find the right variant.",
     "progress": "Checkout steps",
     "step1": "Customer and delivery",
     "step2": "Products and payment",
