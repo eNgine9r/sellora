@@ -32,6 +32,8 @@ class WorkspaceMemoService:
         if memo is None:
             return None
         changes = payload.model_dump(exclude_unset=True)
+        if ("title" in changes and changes["title"] is None) or ("body" in changes and changes["body"] is None) or ("is_pinned" in changes and changes["is_pinned"] is None) or ("is_done" in changes and changes["is_done"] is None):
+            raise ValueError("Required fields cannot be null")
         if memo.kind != "TASK" and (changes.get("due_on") is not None or changes.get("is_done") is not None):
             raise ValueError("Only tasks may have a deadline or completion state")
         for field, value in changes.items():
