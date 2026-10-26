@@ -2958,7 +2958,19 @@
     "emptyDay": "No events for this day",
     "emptyDayHint": "Choose another date or add a task.",
     "partialLoad": "Some events could not be loaded. This view may be incomplete.",
-    "calendarFactNote": "Order and shipment dates are actual recorded events, not estimated delivery dates."
+    "calendarFactNote": "Order and shipment dates are actual recorded events, not estimated delivery dates.",
+    "desktopOpenTasks": "Open tasks",
+    "desktopOpenTasksHint": "Due this month",
+    "desktopActiveDays": "Days with activity",
+    "desktopActiveDaysHint": "In selected month",
+    "desktopMoreEvents": "+{count} events",
+    "desktopDayAgenda": "Day agenda",
+    "desktopWorkspaceTitle": "Your team workspace",
+    "desktopWorkspaceSubtitle": "Ideas, decisions and tasks in one shared place. Keep the important information with your store team.",
+    "desktopUpcoming": "Upcoming deadlines",
+    "desktopNoUpcoming": "No dated tasks scheduled yet.",
+    "desktopEmptyTitle": "Space for ideas and plans",
+    "desktopEmptyHint": "Keep your team decisions, notes and to-dos together. Start with your first entry."
   },
   "insightHub": {
     "subtitle": "What needs attention in your store, based on verified business rules.",
@@ -2997,6 +3009,12 @@
       "operations": "Business rules",
       "customers": "Customer data",
       "leads": "Lead data"
-    }
+    },
+    "desktopOverview": "Top signal this period",
+    "desktopSourceNote": "Rule-based insights from Sellora records",
+    "desktopRoasHint": "ROAS from advertising reports. Results can be incomplete without attribution data.",
+    "desktopNextSteps": "Quick navigation",
+    "desktopNextStepsHint": "Review the underlying metrics and act where needed.",
+    "desktopTransparency": "How these insights work"
   }
 }

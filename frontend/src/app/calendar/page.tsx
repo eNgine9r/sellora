@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, CalendarCheck2, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Plus } from "lucide-react";
+import { ArrowRight, CalendarCheck2, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Plus, CalendarDays, TrendingUp } from "lucide-react";
 
 import { WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { MemoEditor } from "@/components/memo-editor";
@@ -95,6 +95,8 @@ export default function CalendarPage() {
   });
   const selectedEvents = (byDay.get(selected) ?? []).sort((a, b) => kinds.indexOf(a.type) - kinds.indexOf(b.type));
   const monthEvents = filtered.filter((item) => item.date.startsWith(shownMonth));
+  const currentTasks = monthEvents.filter((item) => item.type === "task" && !item.done).length;
+  const daysWithEvents = new Set(monthEvents.map((item) => item.date)).size;
   const monthLabel = dateLabel(`${shownMonth}-01`, locale, { month: "long", year: "numeric" });
   const loading = memos.isLoading || orders.isLoading || shipments.isLoading;
 
@@ -108,7 +110,7 @@ export default function CalendarPage() {
     setVisibleTypes((prev) => prev.includes(type) ? prev.filter((item) => item !== type) : [...prev, type]);
   }
 
-  return <WorkspacePage>
+  return <WorkspacePage className="lg:!px-7 lg:!py-7 2xl:!px-9">
     <WorkspaceHeader title={t("navigation.calendar")} description={t("planner.calendarSubtitle")} actions={
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={jumpToday}>{t("planner.today")}</Button>
@@ -116,10 +118,31 @@ export default function CalendarPage() {
       </div>
     } />
 
+    <div className="hidden min-w-0 gap-3 lg:grid lg:grid-cols-3" data-planner-desktop-summary>
+      <div className="relative overflow-hidden rounded-[22px] border border-primary/20 bg-gradient-to-br from-primary/15 via-surface-1 to-surface-1 p-5">
+        <CalendarDays className="absolute right-4 top-4 h-10 w-10 text-primary/20" aria-hidden="true" />
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{t("planner.monthEvents", { count: monthEvents.length })}</p>
+        <p className="mt-3 text-3xl font-bold tabular-nums text-text-primary">{loading ? "—" : monthEvents.length}</p>
+        <p className="mt-1 text-xs text-text-secondary">{monthLabel}</p>
+      </div>
+      <div className="relative overflow-hidden rounded-[22px] border border-border-subtle bg-surface-1 p-5">
+        <ClipboardList className="absolute right-4 top-4 h-10 w-10 text-primary/15" aria-hidden="true" />
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{t("planner.desktopOpenTasks")}</p>
+        <p className="mt-3 text-3xl font-bold tabular-nums text-text-primary">{loading ? "—" : currentTasks}</p>
+        <p className="mt-1 text-xs text-text-secondary">{t("planner.desktopOpenTasksHint")}</p>
+      </div>
+      <div className="relative overflow-hidden rounded-[22px] border border-border-subtle bg-surface-1 p-5">
+        <TrendingUp className="absolute right-4 top-4 h-10 w-10 text-success/15" aria-hidden="true" />
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{t("planner.desktopActiveDays")}</p>
+        <p className="mt-3 text-3xl font-bold tabular-nums text-text-primary">{loading ? "—" : daysWithEvents}</p>
+        <p className="mt-1 text-xs text-text-secondary">{t("planner.desktopActiveDaysHint")}</p>
+      </div>
+    </div>
+
     {editorOpen && canEdit ? <MemoEditor key={selected} kind="TASK" initialDueOn={selected} saving={createTask.isPending} error={createTask.isError ? t("planner.saveError") : null} onSave={(payload) => createTask.mutate(payload)} onCancel={() => setEditorOpen(false)} /> : null}
 
-    <section className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,350px)] lg:items-start">
-      <div className="min-w-0 rounded-3xl border border-border-subtle bg-surface-1 p-3 shadow-[var(--shadow-card)] sm:p-5" data-planner-calendar>
+    <section className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,360px)] lg:items-start xl:gap-5">
+      <div className="min-w-0 rounded-3xl border border-border-subtle bg-surface-1 p-3 shadow-[var(--shadow-card)] sm:p-5 lg:p-6 lg:ring-1 lg:ring-white/[0.02]" data-planner-calendar>
         <div className="flex items-center justify-between gap-3 px-1 py-1">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold capitalize text-text-primary">{monthLabel}</h2>
@@ -130,16 +153,20 @@ export default function CalendarPage() {
             <button type="button" onClick={() => move(1)} aria-label={t("planner.nextMonth")} className="grid h-11 w-11 place-items-center rounded-xl text-text-secondary transition hover:bg-surface-hover"><ChevronRight className="h-5 w-5" /></button>
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-7 gap-1 sm:gap-1.5" role="grid" aria-label={monthLabel}>
-          {Array.from({ length: 7 }, (_, index) => <div key={index} className="pb-2 text-center text-[11px] font-semibold uppercase text-text-muted" role="columnheader">{t(`planner.week.${index}`)}</div>)}
+        <div className="mt-4 grid grid-cols-7 gap-1 sm:gap-1.5 lg:gap-1" role="grid" aria-label={monthLabel}>
+          {Array.from({ length: 7 }, (_, index) => <div key={index} className="pb-2 text-center text-[11px] font-semibold uppercase text-text-muted lg:border-b lg:border-border-subtle lg:pb-3 lg:tracking-[0.15em]" role="columnheader">{t(`planner.week.${index}`)}</div>)}
           {cells.map((day) => {
             const within = day.startsWith(shownMonth);
             const items = byDay.get(day) ?? [];
             return <button type="button" key={day} onClick={() => { setSelected(day); if (!within) setShownMonth(day.slice(0, 7)); }} role="gridcell" aria-selected={selected === day}
               aria-label={`${dateLabel(day, locale, { day: "numeric", month: "long", year: "numeric" })}: ${items.length}`}
-              className={`relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl border text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:min-h-16 ${selected === day ? "border-primary bg-primary/15 text-primary" : "border-transparent hover:border-border-subtle hover:bg-surface-hover"} ${within ? "text-text-primary" : "text-text-muted/50"}`}>
-              <span className={`${day === today ? "grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground" : ""}`}>{Number(day.slice(-2))}</span>
+              className={`group relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl border text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:min-h-16 lg:min-h-[100px] lg:items-stretch lg:justify-start lg:gap-2 lg:rounded-2xl lg:p-2 2xl:min-h-[110px] ${selected === day ? "border-primary bg-primary/15 text-primary lg:shadow-[inset_0_0_0_1px_var(--primary)]" : "border-transparent hover:border-border-subtle hover:bg-surface-hover lg:border-border-subtle/60 lg:bg-surface-2/35"} ${within ? "text-text-primary" : "text-text-muted/50 lg:opacity-50"}`}>
+              <span className={`${day === today ? "grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground" : ""} lg:!mx-0 lg:text-sm lg:font-bold`}>{Number(day.slice(-2))}</span>
               <span className="flex h-1.5 items-center gap-0.5" aria-hidden="true">{Array.from(new Set(items.map((item) => item.type))).slice(0, 3).map(kind => <span key={kind} className={`h-1.5 w-1.5 rounded-full ${dotClass[kind]}`} />)}</span>
+              <span className="hidden min-w-0 space-y-1 lg:block" aria-hidden="true">
+                {items.slice(0, 2).map(event => <span key={event.id} className={`block truncate rounded-md border-l-2 bg-surface-1/75 px-1.5 py-1 text-left text-[10px] font-semibold leading-4 ${event.type === "task" ? "border-primary" : event.type === "order" ? "border-info" : event.type === "shipped" ? "border-warning" : "border-success"}`}>{event.title}</span>)}
+                {items.length > 2 ? <span className="block text-left text-[10px] font-semibold text-text-muted">{t("planner.desktopMoreEvents", { count: items.length - 2 })}</span> : null}
+              </span>
             </button>;
           })}
         </div>
@@ -148,14 +175,15 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <aside className="min-w-0 rounded-3xl border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)] sm:p-5">
-        <h2 className="text-base font-semibold text-text-primary">{dateLabel(selected, locale, { weekday: "long", day: "numeric", month: "long" })}</h2>
+      <aside className="min-w-0 rounded-3xl border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)] sm:p-5 lg:sticky lg:top-5 lg:border-primary/15 lg:p-6 lg:shadow-[var(--shadow-card)]">
+        <div className="hidden items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary lg:flex"><span className="h-2 w-2 rounded-full bg-primary" />{t("planner.desktopDayAgenda")}</div>
+        <h2 className="text-base font-semibold text-text-primary lg:mt-3 lg:text-xl">{dateLabel(selected, locale, { weekday: "long", day: "numeric", month: "long" })}</h2>
         <p className="mt-1 text-xs text-text-muted">{t("planner.dayEvents", { count: selectedEvents.length })}</p>
         {loading ? <div className="mt-4"><LoadingSkeleton rows={2} /></div> : null}
         {(memos.isError || orders.isError || shipments.isError) ? <p role="alert" className="mt-3 text-xs text-danger">{t("planner.partialLoad")}</p> : null}
         {!loading && selectedEvents.length === 0 ? <div className="mt-5"><EmptyState title={t("planner.emptyDay")} description={t("planner.emptyDayHint")} /></div> : null}
         {!loading && selectedEvents.length > 0 ? <div className="mt-4 grid gap-2">
-          {selectedEvents.map(event => <div key={event.id} className="flex items-start gap-3 rounded-2xl border border-border-subtle bg-surface-2 p-3">
+          {selectedEvents.map(event => <div key={event.id} className="flex items-start gap-3 rounded-2xl border border-border-subtle bg-surface-2 p-3 lg:transition lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:border-primary/30 lg:hover:shadow-[var(--shadow-card)]">
             <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${dotClass[event.type]}`} />
             <div className="min-w-0 flex-1">
               <p className={`break-words text-sm font-semibold text-text-primary ${event.done ? "line-through opacity-65" : ""}`}>{event.title}</p>
