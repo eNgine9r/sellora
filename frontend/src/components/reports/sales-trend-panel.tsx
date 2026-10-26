@@ -10,7 +10,7 @@ import { toFiniteNumber } from "@/lib/analytics-formulas";
 import type { SalesReportDailyRow } from "@/types/analytics";
 
 type Props = {
-  rows: SalesReportDailyRow[];
+  rows: Pick<SalesReportDailyRow, "date" | "orders" | "revenue">[];
   currencyCode: string;
   loading: boolean;
 };
