@@ -73,11 +73,10 @@ class InstagramHistorySyncCancelRequest(UUIDPrimaryKeyMixin, WorkspaceScopedMixi
     __tablename__ = "instagram_history_sync_cancel_requests"
     __table_args__ = (UniqueConstraint("workspace_id", name="uq_ig_history_cancel_workspace"),)
 
-    sync_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("instagram_history_syncs.id", ondelete="CASCADE"),
-        nullable=False,
-    )
+    # No FK to the long-lived sync row: a PostgreSQL FK KEY SHARE lock
+    # would block cancellation behind the worker's FOR UPDATE lock.
+    # The service validates workspace and sync identity before writing.
+    sync_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     requested_by: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
