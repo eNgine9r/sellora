@@ -215,11 +215,11 @@ export default function AnalyticsPage() {
               { title: t("analytics.sales.byStatus"), keys: ANALYTICS_ORDER_STATUSES, counts: orderSummary.statusCounts, statusType: "order" as const },
               { title: t("analytics.sales.byPayment"), keys: ANALYTICS_PAYMENT_STATUSES, counts: orderSummary.paymentCounts, statusType: "payment" as const },
             ].map((group) => {
-              const total = group.keys.reduce((sum, key) => sum + group.counts[key], 0);
+              const total = group.keys.reduce((sum, key) => sum + ((group.counts as Record<string, number>)[key] ?? 0), 0);
               return <div key={group.title} className="min-w-0 rounded-2xl border border-border-subtle bg-surface-2/60 p-4">
                 <h3 className="font-bold text-text-primary">{group.title}</h3>
                 <div className="mt-4 grid gap-3">{group.keys.map(status => {
-                  const count = group.counts[status];
+                  const count = (group.counts as Record<string, number>)[status] ?? 0;
                   const percent = total ? (count / total) * 100 : 0;
                   return <div key={status} className="min-w-0">
                     <div className="flex items-center justify-between gap-3 text-xs"><span className="truncate text-text-secondary">{formatStatus(group.statusType, status)}</span><strong className="tabular-nums text-text-primary">{count}</strong></div>
