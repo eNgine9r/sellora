@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, CalendarCheck2, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, PackageCheck, Plus, ShoppingBag } from "lucide-react";
+import { ArrowRight, CalendarCheck2, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Plus } from "lucide-react";
 
 import { WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { MemoEditor } from "@/components/memo-editor";
