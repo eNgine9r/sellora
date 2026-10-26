@@ -2134,6 +2134,10 @@
   },
   "accountMenu": {
     "profile": "Profile",
+    "preferences": "Appearance & language",
+    "roleOwner": "Owner",
+    "roleManager": "Manager",
+    "roleAnalyst": "Analyst",
     "user": "User",
     "workspace": "Workspace",
     "currentWorkspace": "Current workspace",
