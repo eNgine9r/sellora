@@ -69,6 +69,8 @@ class DirectCustomerAutomationService:
         # workspace guard. Never wait while other webhook locks may be held.
         conversation = self._lock_conversation(workspace_id, conversation_id)
         existing = self.customers.get(workspace_id, conversation.linked_customer_id) if conversation.linked_customer_id else None
+        if conversation.linked_customer_id and existing is None:
+            raise DirectCustomerAutomationError("DIRECT_CUSTOMER_NOT_FOUND")
         created = False
         try:
             customer = existing or self.customers.find_by_instagram_identity(
