@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { BarChart3, Home, LogOut, Package, Settings, ShoppingBag, Users } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
-import { BrandLockup } from "@/components/brand";
+import { DesktopBrandLockup } from "@/components/brand";
 import { GlobalAppLoader } from "@/components/global-app-loader";
 import { DirectLiveProvider } from "@/components/direct-live-provider";
 import { NoWorkspaceOnboarding } from "@/components/no-workspace-onboarding";
@@ -141,10 +141,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <DirectLiveProvider workspaceId={currentWorkspaceId}>
-      <div className="min-h-screen w-full overflow-x-clip bg-canvas text-text-primary lg:grid lg:[--sidebar-width:220px] lg:[--topbar-height:72px] lg:[grid-template-columns:var(--sidebar-width)_minmax(0,1fr)] lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]" data-protected-shell-grid>
-        <div className="hidden min-w-0 border-b border-r border-border-subtle bg-canvas/92 px-4 backdrop-blur-xl lg:flex lg:h-[var(--topbar-height)] lg:w-[var(--sidebar-width)] lg:items-center" data-shell-brand-cell>
-          <Link href="/dashboard" aria-label={t("navigation.dashboard")} className="flex min-w-0 items-center rounded-2xl border border-transparent px-1 py-1 transition hover:border-border-subtle hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
-            <BrandLockup markClassName="h-10 w-10" textClassName="text-text-primary" />
+      <div className="min-h-screen w-full overflow-x-clip bg-canvas text-text-primary lg:grid lg:[--sidebar-width:232px] 2xl:[--sidebar-width:244px] lg:[--topbar-height:72px] lg:[grid-template-columns:var(--sidebar-width)_minmax(0,1fr)] lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]" data-protected-shell-grid>
+        <div className="relative hidden min-w-0 overflow-hidden border-b border-r border-border-subtle bg-sidebar px-5 lg:flex lg:h-[var(--topbar-height)] lg:w-[var(--sidebar-width)] lg:items-center 2xl:px-6" data-shell-brand-cell>
+          <div className="pointer-events-none absolute -left-14 -top-16 h-32 w-32 rounded-full bg-primary/[0.10] blur-3xl" aria-hidden="true" />
+          <Link href="/dashboard" aria-label={t("navigation.dashboard")} className="group relative flex w-full min-w-0 items-center rounded-xl py-1 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+            <DesktopBrandLockup />
           </Link>
         </div>
         <aside className="hidden min-h-0 lg:block lg:[grid-column:1] lg:[grid-row:2]">
