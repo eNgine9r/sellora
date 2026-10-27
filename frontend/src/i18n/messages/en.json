@@ -2309,6 +2309,7 @@
       "city": "Select a city from the Nova Poshta directory.",
       "warehouse": "Select a branch or parcel locker from the directory.",
       "items": "Add a product, quantity and price.",
+      "amounts": "Enter valid non-negative cash-on-delivery and declared values.",
       "stock": "One of the products does not have enough available stock."
     }
   },

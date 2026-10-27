@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fulfillmentAmount, isNonNegativeAmount, isPositiveWholeQuantity } from "@/features/orders/lib/fulfillment-amounts";
 import { CitySearchSelect } from "@/features/integrations/components/city-search-select";
 import { WarehouseSearchSelect } from "@/features/integrations/components/warehouse-search-select";
 import { useI18n } from "@/i18n/provider";
@@ -177,8 +178,8 @@ export function OrderFulfillmentWizard({
   const total = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
   const normalizedPhone = normalizeUaPhonePreview(recipientPhone);
   const normalizedCustomerPhone = normalizeUaPhonePreview(customerPhone);
-  const codAmount = paymentStatus === "COD" ? codOverride ?? String(total || "") : "0";
-  const declaredValue = declaredOverride ?? String(total || "");
+  const codAmount = paymentStatus === "COD" ? fulfillmentAmount(codOverride, total) : "0";
+  const declaredValue = fulfillmentAmount(declaredOverride, total);
   const canCreateTtn = readinessQuery.data?.provider_writes_enabled === true;
   const writeBlockers = readinessQuery.data?.write_blockers ?? [];
 
@@ -200,7 +201,7 @@ export function OrderFulfillmentWizard({
 
   function selectVariant(item: WizardItem, variantId: string) {
     const variant = variants.find((row) => row.id === variantId);
-    updateItem(item.key, { product_variant_id: variantId, unit_price: variant?.price || "0" });
+    updateItem(item.key, { product_variant_id: variantId, unit_price: variant?.price ?? "" });
   }
 
   function validateStep(nextStep: number) {
@@ -214,7 +215,8 @@ export function OrderFulfillmentWizard({
       if (!warehouseRef || !warehouse.trim()) return t("fulfillment.validation.warehouse");
     }
     if (nextStep > 2) {
-      if (!items.length || items.some((item) => !item.product_variant_id || Number(item.quantity) < 1 || Number(item.unit_price) < 0)) return t("fulfillment.validation.items");
+      if (!items.length || items.some((item) => !item.product_variant_id || !isPositiveWholeQuantity(item.quantity) || !isNonNegativeAmount(item.unit_price))) return t("fulfillment.validation.items");
+      if (!isNonNegativeAmount(declaredValue) || (paymentStatus === "COD" && !isNonNegativeAmount(codAmount))) return t("fulfillment.validation.amounts");
       for (const item of items) {
         const stock = inventoryByVariant.get(item.product_variant_id);
         if (stock && stock.stock_quantity - stock.reserved_quantity < Number(item.quantity)) return t("fulfillment.validation.stock");
@@ -259,8 +261,8 @@ export function OrderFulfillmentWizard({
       save_address_as_default: saveAddress,
       items: items.map((item) => ({ product_variant_id: item.product_variant_id, quantity: Number(item.quantity), unit_price: Number(item.unit_price), unit_cost: 0 })),
       payment_status: paymentStatus,
-      cod_amount: paymentStatus === "COD" ? Number(codAmount || total) : 0,
-      declared_value: Number(declaredValue || total),
+      cod_amount: paymentStatus === "COD" ? Number(codAmount) : 0,
+      declared_value: Number(declaredValue),
       campaign_id: campaignId || null,
       ad_cost: Number(adCost || 0),
       shipping_cost: Number(shippingCost || 0),
@@ -362,7 +364,7 @@ export function OrderFulfillmentWizard({
 
         {step === 3 ? <section className="grid gap-4">
           <div className="grid gap-3 rounded-2xl border border-border-subtle p-4 sm:grid-cols-2"><div><span className="text-xs text-text-muted">{t("orders.customerSelector")}</span><strong className="block">{selectedCustomer?.name || customerName}</strong><span className="text-sm text-text-secondary">{normalizedPhone}</span></div><div><span className="text-xs text-text-muted">{t("fulfillment.delivery")}</span><strong className="block">{city}</strong><span className="text-sm text-text-secondary">{warehouse}</span></div><div className="sm:col-span-2"><span className="text-xs text-text-muted">{t("orders.items")}</span><ul className="mt-1 grid gap-2">{items.map((item) => { const variant = variants.find((row) => row.id === item.product_variant_id); return <li key={item.key} className="break-words text-sm"><strong>{[variant && productById.get(variant.product_id)?.name, variant?.color, variant?.size, variant?.sku].filter(Boolean).join(" · ")}</strong><span className="block text-text-secondary">{item.quantity} × {formatMoney(item.unit_price, currencyCode)}</span></li>; })}</ul></div><div><span className="text-xs text-text-muted">{t("tables.payment")}</span><strong className="block">{formatStatus("payment", paymentStatus)}</strong></div></div>
-          <div className="rounded-2xl bg-surface-2 p-4"><div className="flex items-center justify-between text-lg"><span>{t("fulfillment.total")}</span><strong>{formatMoney(total, currencyCode)}</strong></div>{paymentStatus === "COD" ? <div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("fulfillment.codAmount")}</span><span>{formatMoney(codAmount || total, currencyCode)}</span></div> : null}{showProfit ? <p className="mt-2 text-sm text-text-secondary">{t("fulfillment.profitUnavailable")}</p> : null}</div>
+          <div className="rounded-2xl bg-surface-2 p-4"><div className="flex items-center justify-between text-lg"><span>{t("fulfillment.total")}</span><strong>{formatMoney(total, currencyCode)}</strong></div>{paymentStatus === "COD" ? <div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("fulfillment.codAmount")}</span><span>{formatMoney(codAmount, currencyCode)}</span></div> : null}<div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("fulfillment.declaredValue")}</span><span>{formatMoney(declaredValue, currencyCode)}</span></div>{showProfit ? <p className="mt-2 text-sm text-text-secondary">{t("fulfillment.profitUnavailable")}</p> : null}</div>
           {readinessQuery.isLoading ? <div className="rounded-xl border border-blue-300 bg-blue-50 p-3 text-sm font-semibold text-blue-900 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-100">{t("fulfillment.readinessLoading")}</div> : null}
           {readinessQuery.isError ? <div className="grid gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100" role="alert"><strong>{t("fulfillment.readinessLoadFailed")}</strong><Link className="w-fit font-black underline underline-offset-4" href="/settings/integrations">{t("fulfillment.openIntegrationSettings")}</Link></div> : null}
           {!readinessQuery.isLoading && !readinessQuery.isError && !canCreateTtn ? <div className="grid gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100"><strong>{t("fulfillment.readinessTitle")}</strong><p>{t("fulfillment.readinessHelp")}</p>{writeBlockers.length ? <ul className="list-disc space-y-1 pl-5 font-semibold">{writeBlockers.map((blocker) => <li key={blocker}>{t(`fulfillment.blockers.${blocker}`)}</li>)}</ul> : null}<Link className="w-fit font-black underline underline-offset-4" href="/settings/integrations">{t("fulfillment.openIntegrationSettings")}</Link></div> : null}
