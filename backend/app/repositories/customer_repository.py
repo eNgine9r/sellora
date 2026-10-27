@@ -9,6 +9,23 @@ from sqlalchemy.orm import Session
 from app.models.customer import Customer
 
 
+class InstagramIdentityConflict(ValueError):
+    """Matching customer identities require manual verification."""
+
+
+def select_instagram_identity(candidates, instagram_scoped_id: str | None):
+    # A username can change or be reused; multiple matching records or a
+    # conflicting scoped ID cannot safely be resolved automatically.
+    if len(candidates) > 1:
+        raise InstagramIdentityConflict("DIRECT_CUSTOMER_IDENTITY_CONFLICT")
+    if not candidates:
+        return None
+    candidate = candidates[0]
+    if instagram_scoped_id and candidate.instagram_scoped_id and candidate.instagram_scoped_id != instagram_scoped_id:
+        raise InstagramIdentityConflict("DIRECT_CUSTOMER_IDENTITY_CONFLICT")
+    return candidate
+
+
 class CustomerRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -30,15 +47,15 @@ class CustomerRepository:
             identity_filters.append(Customer.instagram_scoped_id == instagram_scoped_id)
         normalized_username = (instagram_username or "").strip().lstrip("@").lower()
         if normalized_username:
-            identity_filters.append(func.lower(Customer.instagram_username) == normalized_username)
+            identity_filters.append(func.ltrim(func.trim(func.lower(Customer.instagram_username)), "@") == normalized_username)
         if not identity_filters:
             return None
         statement = select(Customer).where(
             Customer.workspace_id == workspace_id,
             Customer.deleted_at.is_(None),
             or_(*identity_filters),
-        ).order_by(Customer.created_at.asc()).limit(1)
-        return self.db.execute(statement).scalar_one_or_none()
+        ).order_by(Customer.created_at.asc()).limit(2)
+        return select_instagram_identity(list(self.db.execute(statement).scalars()), instagram_scoped_id)
 
     def create(self, customer: Customer) -> Customer:
         self.db.add(customer)
