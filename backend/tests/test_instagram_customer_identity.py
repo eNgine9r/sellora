@@ -58,3 +58,27 @@ def test_inbound_conflict_is_contained_and_reported():
     service._ensure_customer_safe("workspace", conversation, "order")
     assert conversation.provider_sync_status == "CUSTOMER_IDENTITY_CONFLICT"
     assert conversation.linked_customer_id is None
+
+
+def test_direct_matching_lock_serializes_workspace_on_postgres():
+    import os
+    from uuid import uuid4
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+    from app.repositories.customer_repository import CustomerRepository
+
+    url = os.getenv("DATABASE_URL", "")
+    if not url.startswith("postgresql"):
+        pytest.skip("requires disposable PostgreSQL")
+    engine = create_engine(url)
+    workspace = uuid4()
+    try:
+        with Session(engine) as first, Session(engine) as second:
+            assert CustomerRepository(first).try_lock_direct_matching(workspace)
+            assert not CustomerRepository(second).try_lock_direct_matching(workspace)
+            assert CustomerRepository(second).try_lock_direct_matching(uuid4())
+            first.rollback()
+            assert CustomerRepository(second).try_lock_direct_matching(workspace)
+            second.rollback()
+    finally:
+        engine.dispose()
