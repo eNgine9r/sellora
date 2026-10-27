@@ -68,6 +68,16 @@ class OrderUpdate(BaseModel):
     items: list[OrderItemCreate] | None = Field(default=None, min_length=1)
 
 
+class OrderProductCostItem(BaseModel):
+    item_id: UUID
+    # Null explicitly marks an unknown cost; zero confirms a free item.
+    unit_cost: Decimal | None = Field(ge=0, max_digits=12, decimal_places=2)
+
+
+class OrderProductCostsUpdate(BaseModel):
+    items: list[OrderProductCostItem] = Field(min_length=1, max_length=1000)
+
+
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus
     note: str | None = None

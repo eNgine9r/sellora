@@ -36,9 +36,9 @@ with SessionLocal() as db:
     ws = Workspace(name="Isolated sale QA", slug="isolated-sale-qa")
     other = Workspace(name="Other tenant QA", slug="other-sale-qa")
     users = [User(email=f"sale-{role.lower()}@example.com", password_hash=hash_password(password),
-                  first_name="Synthetic", last_name=role) for role in ("MANAGER", "ANALYST")]
+                  first_name="Synthetic", last_name=role) for role in ("MANAGER", "ANALYST", "OWNER")]
     db.add_all([ws, other, *users]); db.flush()
-    for user, role in zip(users, ("MANAGER", "ANALYST")):
+    for user, role in zip(users, ("MANAGER", "ANALYST", "OWNER")):
         role_id = db.scalar(select(Role.id).where(Role.name == role))
         if role_id is None:
             new_role = Role(name=role); db.add(new_role); db.flush(); role_id=new_role.id
@@ -67,6 +67,7 @@ with TestClient(app, base_url="http://localhost:3000") as client:
         return {"Authorization":"Bearer "+r.json()["access_token"], "X-Workspace-ID":str(ws_id)}
     manager = login("MANAGER")
     analyst = login("ANALYST")
+    owner = login("OWNER")
     def request(method, path, *, status=200, headers=None, **kwargs):
         r = client.request(method, "/api/v1"+path, headers=headers or manager, **kwargs)
         assert r.status_code == status, (path, r.status_code, r.text[:300])
@@ -145,14 +146,28 @@ with TestClient(app, base_url="http://localhost:3000") as client:
         assert db.scalar(text("SELECT count(*) FROM order_items WHERE cost_confirmed IS TRUE")) == 1
         assert db.scalar(text("SELECT count(*) FROM nova_poshta_operations")) == 0
         assert db.scalar(text("SELECT count(*) FROM direct_messages WHERE direction='OUTBOUND'")) == 0
-    corrected = request("PUT", f"/orders/{unknown['id']}", json={"items":[
-        dict(product_variant_id=str(variant_id), quantity=1, unit_price="500", unit_cost="200", cost_confirmed=True)
-    ]})
+    request("POST", f"/orders/{unknown['id']}/status", json={"status":"CONFIRMED"})
+    request("POST", f"/orders/{unknown['id']}/status", json={"status":"SHIPPED"})
+    item_id = unknown["items"][0]["id"]
+    correction = {"items": [{"item_id": item_id, "unit_cost": "200"}]}
+    with SessionLocal() as db:
+        before = db.scalar(select(Inventory).where(Inventory.workspace_id == ws_id))
+        before_stock = (before.stock_quantity, before.reserved_quantity)
+        before_count = db.scalar(text("SELECT count(*) FROM inventory_transactions"))
+    cost_path = f"/orders/{unknown['id']}/product-costs"
+    request("PUT", cost_path, headers=manager, status=403, json=correction)
+    request("PUT", cost_path, headers=analyst, status=403, json=correction)
+    request("PUT", cost_path, headers=owner | {"X-Workspace-ID":str(other_id)}, status=403, json=correction)
+    corrected = request("PUT", cost_path, headers=owner, json=correction)
     assert Decimal(corrected["product_cost"]) == 200 and Decimal(corrected["net_profit"]) == 300
     finance = request("GET", "/finance/summary", headers=analyst)
     assert Decimal(finance["cogs"]) == 320 and Decimal(finance["net_profit"]) == 1180
     assert Decimal(request("GET", "/analytics/profit-summary", headers=analyst)["total_net_profit"]) == 1180
+    with SessionLocal() as db:
+        after = db.scalar(select(Inventory).where(Inventory.workspace_id == ws_id))
+        assert (after.stock_quantity, after.reserved_quantity) == before_stock
+        assert db.scalar(text("SELECT count(*) FROM inventory_transactions")) == before_count
     print("COST_COMPLETENESS_API_CANARY=PASS")
     print(json.dumps({"sale_api_canary":"PASS","lead":1,"customer":1,"order":3,"shipment_draft":3,
-        "reserved_quantity":3,"stock_quantity":5,"provider_writes":0,"outbound_messages":0,
+        "reserved_quantity":2,"stock_quantity":4,"provider_writes":0,"outbound_messages":0,
         "replay_dedup":"PASS","analyst_and_tenant_denial":"PASS","prepare":"READY"}))

@@ -14,6 +14,9 @@ depends_on = None
 
 def upgrade() -> None:
     # No rewrite or guessed backfill of existing financial records.
+    # Do not wait indefinitely behind a long-running transaction on a live DB.
+    if op.get_bind().dialect.name == "postgresql":
+        op.execute("SET LOCAL lock_timeout = '5s'")
     op.add_column("order_items", sa.Column("cost_confirmed", sa.Boolean(), nullable=True))
 
 

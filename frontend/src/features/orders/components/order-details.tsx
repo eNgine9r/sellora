@@ -5,7 +5,8 @@ import { Order, OrderStatus } from "@/types/orders";
 import { Shipment } from "@/types/shipments";
 import { CopyTtnButton } from "@/features/shipments/components/ttn-actions";
 import { HistoricalCostEstimateCard } from "@/features/orders/components/historical-cost-estimate-card";
-import type { HistoricalEstimatedCostPayload } from "@/types/orders";
+import { OrderCostEditor } from "@/features/orders/components/order-cost-editor";
+import type { HistoricalEstimatedCostPayload, OrderProductCostsPayload } from "@/types/orders";
 
 const NEXT_STATUSES: OrderStatus[] = [
   "CONFIRMED",
@@ -29,6 +30,9 @@ export function OrderDetails({
   onClearEstimate,
   estimateSaving = false,
   estimateError,
+  onSaveProductCosts,
+  productCostsSaving = false,
+  productCostsError,
 }: {
   order: Order;
   currencyCode?: string;
@@ -42,6 +46,9 @@ export function OrderDetails({
   onClearEstimate?: () => void;
   estimateSaving?: boolean;
   estimateError?: string | null;
+  onSaveProductCosts?: (payload: OrderProductCostsPayload) => Promise<void>;
+  productCostsSaving?: boolean;
+  productCostsError?: string | null;
 }) {
   const { t, formatStatus } = useI18n();
   const archivePlaceholder = order.is_historical && order.items.some((item) => item.sku === "NP-ARCHIVE-OTHER");
@@ -71,6 +78,7 @@ export function OrderDetails({
         saving={estimateSaving}
         error={estimateError}
       />
+      {onSaveProductCosts ? <OrderCostEditor order={order} onSave={onSaveProductCosts} saving={productCostsSaving} error={productCostsError} /> : null}
       <div className="grid min-w-0 grid-cols-[auto,minmax(0,1fr)] gap-2 text-sm">
         <span>{t("orders.revenue")}</span>
         <strong>{archivePlaceholder && Number(order.revenue) === 0 ? t("orders.unknownAmount") : formatMoney(order.revenue, currencyCode)}</strong>

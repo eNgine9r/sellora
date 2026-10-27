@@ -44,7 +44,7 @@ export function HistoricalCostEstimateCard({
     setValidationError(null);
   }, [order.id, order.estimated_product_cost, order.estimated_cost_source, order.estimated_cost_reference]);
 
-  if (!order.is_historical || Number(order.product_cost) > 0) return null;
+  if (!order.is_historical || order.product_cost != null) return null;
 
   function handleSave(event: FormEvent) {
     event.preventDefault();

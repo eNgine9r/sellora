@@ -9,6 +9,8 @@ export type HistoricalEstimatedCostPayload = {
   reference: string | null;
 };
 
+export type OrderProductCostsPayload = { items: { item_id: string; unit_cost: number | null }[] };
+
 export type OrderItem = {
   id: string;
   workspace_id: string;

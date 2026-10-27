@@ -33,6 +33,7 @@ import {
   fetchOrderDashboard,
   fetchOrders,
   updateOrder,
+  updateOrderProductCosts,
 } from "@/services/orders";
 import { fetchOrderShipment } from "@/services/shipments";
 import { syncNovaPoshtaStatus } from "@/services/integrations";
@@ -42,7 +43,7 @@ import {
   fetchProducts,
   fetchProductVariants,
 } from "@/services/products";
-import { HistoricalEstimatedCostPayload, Order, OrderStatus, PaymentStatus } from "@/types/orders";
+import { HistoricalEstimatedCostPayload, Order, OrderProductCostsPayload, OrderStatus, PaymentStatus } from "@/types/orders";
 import { useAuth } from "@/hooks/use-auth";
 import { safeApiErrorMessage } from "@/services/api";
 import { useI18n } from "@/i18n/provider";
@@ -162,6 +163,14 @@ export default function OrdersPage() {
     onSuccess: (order) => {
       setSelectedOrder(order);
       queryClient.invalidateQueries({ queryKey: ["orders", workspaceId] });
+    },
+  });
+  const productCostsMutation = useMutation({
+    mutationFn: ({ orderId, payload }: { orderId: string; payload: OrderProductCostsPayload }) => updateOrderProductCosts(workspaceId, orderId, payload),
+    onSuccess: (order) => {
+      setSelectedOrder((current) => current?.id === order.id ? order : current);
+      invalidateOrderState();
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[1] === workspaceId && typeof query.queryKey[0] === "string" && /^(dashboard|analytics|finance)-/.test(query.queryKey[0]) });
     },
   });
   const shipmentSyncMutation = useMutation({
@@ -336,6 +345,9 @@ export default function OrdersPage() {
               onClearEstimate={canEdit ? () => historicalEstimateMutation.mutate({ orderId: selectedOrder.id, payload: null }) : undefined}
               estimateSaving={historicalEstimateMutation.isPending}
               estimateError={historicalEstimateMutation.isError ? safeApiErrorMessage(historicalEstimateMutation.error, t("orders.historicalEstimate.saveError")) : null}
+              onSaveProductCosts={currentWorkspace?.role === "OWNER" ? async (payload) => { await productCostsMutation.mutateAsync({ orderId: selectedOrder.id, payload }); } : undefined}
+              productCostsSaving={productCostsMutation.isPending}
+              productCostsError={productCostsMutation.isError ? safeApiErrorMessage(productCostsMutation.error, t("orders.costCorrection.invalid")) : null}
             />
           </EntitySidePanel>
         ) : null}

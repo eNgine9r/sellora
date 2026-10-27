@@ -115,6 +115,7 @@ class ProfitCalculationService:
             and isinstance(attestation, dict)
             and attestation.get("profit_cost_status") == "UNKNOWN"
             and cls.money(order.product_cost) == MONEY_ZERO
+            and not cls.order_cost_known(order)
         ):
             return MONEY_ZERO
         return cls.components(order).net_profit

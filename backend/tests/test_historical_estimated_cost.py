@@ -151,3 +151,16 @@ def test_estimate_cannot_override_nonzero_item_cost_even_if_order_aggregate_zero
     with pytest.raises(OrderServiceError):
         service.set_historical_cost_estimate(order.workspace_id, order.id, estimate(), uuid4())
     assert service.db.commits == 0
+
+
+def test_estimate_cannot_override_confirmed_zero_cost():
+    service, order = make_service()
+    order.items = [OrderItem(
+        id=uuid4(), workspace_id=order.workspace_id, order_id=order.id,
+        product_variant_id=uuid4(), sku="ARCHIVE-SKU", product_name="Watch",
+        quantity=1, unit_price=Decimal("0"), unit_cost=Decimal("0"),
+        line_total=Decimal("0"), line_cost=Decimal("0"), cost_confirmed=True,
+    )]
+    with pytest.raises(OrderServiceError):
+        service.set_historical_cost_estimate(order.workspace_id, order.id, estimate(), uuid4())
+    assert service.db.commits == 0
