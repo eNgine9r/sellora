@@ -357,3 +357,18 @@ def test_review_rechecks_identity_after_locking_customer():
     with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_CANDIDATE_CHANGED"):
         service.link_identity_candidate(workspace_id, conversation.id, customer.id, uuid4())
     assert conversation.linked_customer_id is None
+
+
+def test_busy_conversation_never_creates_or_links_a_customer():
+    import pytest
+    from app.repositories.ai_direct_repository import DirectConversationBusy
+    from app.services.direct_customer_automation_service import DirectCustomerAutomationError
+
+    service, conversation, workspace_id = make_service()
+    def busy(_workspace_id, _conversation_id):
+        raise DirectConversationBusy()
+    service.conversations.get_for_update_nowait = busy
+    with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_IDENTITY_BUSY"):
+        service.ensure_candidate(workspace_id, conversation.id, uuid4())
+    assert not service.customers.customers
+    assert conversation.linked_customer_id is None
