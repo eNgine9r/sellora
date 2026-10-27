@@ -297,3 +297,41 @@ def test_cross_connection_scoped_identity_requires_review():
     assert conversation.linked_customer_id is None
     assert len(service.customers.customers) == 1
     assert service.customers.customers[0] is customer
+
+
+def test_same_connection_scoped_identity_with_matching_source_can_link():
+    from app.models.customer import Customer
+
+    service, conversation, workspace_id = make_service()
+    conversation.instagram_connection_id = uuid4()
+    customer = service.customers.create(Customer(
+        workspace_id=workspace_id, name="Existing", instagram_username="buyer_one",
+        instagram_scoped_id="igs-user-1", source_direct_conversation_id=conversation.id,
+        source=CustomerSource.MANUAL.value, lifecycle_status=CustomerLifecycleStatus.CUSTOMER.value,
+        profile_status=CustomerProfileStatus.INCOMPLETE.value,
+    ))
+    state = service.ensure_candidate(workspace_id, conversation.id, uuid4())
+    assert state.customer.id == customer.id
+    assert conversation.linked_customer_id == customer.id
+
+
+def test_same_connection_with_wrong_source_scoped_id_requires_review():
+    import pytest
+    from app.models.customer import Customer
+    from app.services.direct_customer_automation_service import DirectCustomerAutomationError
+
+    service, conversation, workspace_id = make_service()
+    conversation.instagram_connection_id = uuid4()
+    customer = service.customers.create(Customer(
+        workspace_id=workspace_id, name="Existing", instagram_username="buyer_one",
+        instagram_scoped_id="igs-user-1", source_direct_conversation_id=uuid4(),
+    ))
+    original_get = service.conversations.get
+    def get_source(workspace, conversation_id):
+        if conversation_id == customer.source_direct_conversation_id:
+            return SimpleNamespace(instagram_connection_id=conversation.instagram_connection_id, participant_scoped_id="different")
+        return original_get(workspace, conversation_id)
+    service.conversations.get = get_source
+    with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_IDENTITY_CONFLICT"):
+        service.ensure_candidate(workspace_id, conversation.id, uuid4())
+    assert conversation.linked_customer_id is None
