@@ -32,6 +32,7 @@ assert.ok(sidebar.includes('className="flex min-h-11 w-full'), "Section header m
 assert.ok(sidebar.includes('const opened = group.id === "main" || expanded[group.id]'), "Primary navigation should remain expanded");
 assert.ok(sidebar.includes('growth: navigationGroups[2].items.some') && sidebar.includes('organization: navigationGroups[3].items.some'), "Secondary mobile groups must reveal active route by default");
 assert.ok(sidebar.includes('hidden lg:grid'), "Collapsed secondary sections should remain accessible on desktop");
+assert.ok(sidebar.includes('className={`min-w-0 gap-1 ${opened ? "grid" : "hidden lg:grid"}`}'), "Mobile hidden state must not be overridden by an unconditional grid display class");
 assert.ok(sidebar.includes('const mobileHidden = group.id === "system"') && sidebar.includes('hidden lg:block'), "Settings belongs in one place: mobile footer / desktop System");
 assert.ok(sidebar.includes('onClick={onNavigate}') && sidebar.includes('aria-label={t("actions.close")}'), "Drawer close button and link navigation should work");
 assert.ok(shell.includes('mobile-sidebar-footer-compact') && shell.includes('href="/settings" onClick={() => setMobileMenuOpen(false)}'), "Mobile footer keeps only Settings shortcut");
