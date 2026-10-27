@@ -2383,7 +2383,9 @@
     "historyUnavailable": "Unavailable messages",
     "historyErrors": "Errors",
     "refreshList": "Refresh conversations",
-    "aiQuick": "AI assistant"
+    "aiQuick": "AI assistant",
+    "identityConflict": "Instagram details conflict or match multiple customers. Review customer records before linking.",
+    "retryIdentityMatch": "Check again"
   },
   "instagramSettings": {
     "title": "Instagram Direct",
