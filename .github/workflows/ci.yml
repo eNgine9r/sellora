@@ -203,6 +203,7 @@ jobs:
         run: |
           python -m pytest -q \
             tests/integrations/fulfillment/test_fulfillment_concurrency_postgres.py \
+            tests/test_instagram_customer_identity.py \
             tests/test_order_fulfillment_consolidation_migration.py \
             tests/test_meta_instagram_foundation.py \
             tests/integrations/meta_instagram
