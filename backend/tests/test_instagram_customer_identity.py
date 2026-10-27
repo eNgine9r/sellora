@@ -82,3 +82,47 @@ def test_direct_matching_lock_serializes_workspace_on_postgres():
             second.rollback()
     finally:
         engine.dispose()
+
+
+def test_conversation_nowait_keeps_outer_transaction_usable_on_postgres():
+    import os
+    from uuid import uuid4
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+    from app.models.workspace import Workspace
+    from app.models.ai_direct import DirectConversation
+    from app.repositories.ai_direct_repository import DirectConversationBusy, DirectConversationRepository
+
+    url = os.getenv("DATABASE_URL", "")
+    if os.getenv("SELLORA_DISPOSABLE_DATABASE") != "1" or not url.startswith("postgresql"):
+        pytest.skip("requires explicitly disposable PostgreSQL")
+    engine = create_engine(url)
+    workspace_id = conversation_id = None
+    try:
+        with Session(engine) as seed:
+            workspace = Workspace(name="Synthetic identity test", slug=uuid4().hex)
+            seed.add(workspace)
+            seed.flush()
+            conversation = DirectConversation(workspace_id=workspace.id)
+            seed.add(conversation)
+            seed.commit()
+            workspace_id, conversation_id = workspace.id, conversation.id
+        with Session(engine) as first, Session(engine) as second:
+            assert DirectConversationRepository(first).get_for_update_nowait(workspace_id, conversation_id)
+            with pytest.raises(DirectConversationBusy):
+                DirectConversationRepository(second).get_for_update_nowait(workspace_id, conversation_id)
+            assert second.scalar(select(1)) == 1
+            first.rollback()
+            assert DirectConversationRepository(second).get_for_update_nowait(workspace_id, conversation_id)
+            second.rollback()
+    finally:
+        if workspace_id is not None:
+            with Session(engine) as cleanup:
+                conversation = cleanup.get(DirectConversation, conversation_id)
+                if conversation:
+                    cleanup.delete(conversation)
+                workspace = cleanup.get(Workspace, workspace_id)
+                if workspace:
+                    cleanup.delete(workspace)
+                cleanup.commit()
+        engine.dispose()
