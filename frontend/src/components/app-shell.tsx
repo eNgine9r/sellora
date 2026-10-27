@@ -69,6 +69,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => document.body.classList.remove("overflow-hidden");
   }, [mobileMenuOpen]);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", onEscape);
+    return () => document.removeEventListener("keydown", onEscape);
+  }, [mobileMenuOpen]);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -131,22 +140,22 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("actions.close")} onClick={() => setMobileMenuOpen(false)} />
             <div className="relative grid h-[100dvh] w-[88vw] max-w-sm grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-sidebar shadow-2xl">
               <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
-              <div className="mobile-sidebar-footer-compact min-w-0 border-t border-border-subtle bg-sidebar px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5">
-                <div className="mb-2 flex min-w-0 items-center gap-2 rounded-xl bg-surface-1 px-2.5 py-2">
-                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary/15 text-xs font-bold text-primary">{(currentWorkspace?.workspace_name ?? "S").slice(0, 1)}</div>
+              <div className="mobile-sidebar-footer-compact min-w-0 border-t border-border-subtle bg-sidebar px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
+                <div className="mb-2 flex min-w-0 items-center gap-2.5 rounded-xl border border-border-subtle bg-surface-1/70 px-3 py-2">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-xs font-bold text-primary" aria-hidden="true">{(currentWorkspace?.workspace_name ?? "S").slice(0, 1)}</div>
                   <div className="min-w-0 flex-1 leading-tight" aria-label={t("mobileSidebar.profile")}>
                     <p className="truncate text-xs font-semibold text-text-primary">{currentWorkspace?.workspace_name ?? t("accountMenu.workspace")}</p>
-                    <p className="truncate text-[11px] text-text-muted">{currentUser?.email}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-text-muted">{currentUser?.email}</p>
                   </div>
                 </div>
-                <div className="flex min-w-0 items-center justify-between gap-1.5" aria-label={t("mobileSidebar.quickControls")}>
-                  <Link href="/settings" onClick={() => setMobileMenuOpen(false)} aria-label={t("navigation.settings")} title={t("navigation.settings")} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border-subtle bg-surface-2 text-text-secondary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
-                    <Settings className="h-4 w-4" aria-hidden="true" />
+                <div className="flex min-w-0 items-center justify-between gap-1.5 [&>button]:!h-11 [&>button]:!min-h-11 [&>label]:!h-11 [&>label]:!min-h-11" aria-label={t("mobileSidebar.quickControls")}>
+                  <Link href="/settings" onClick={() => setMobileMenuOpen(false)} aria-label={t("navigation.settings")} title={t("navigation.settings")} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border-subtle bg-surface-2 text-text-secondary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+                    <Settings className="h-[18px] w-[18px]" aria-hidden="true" />
                   </Link>
                   <LanguageSwitcher compact />
                   <ThemeToggle compact />
-                  <button type="button" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border-subtle bg-surface-2 text-text-secondary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" aria-label={t("actions.logout")} title={t("actions.logout")} onClick={handleLogout}>
-                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                  <button type="button" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border-subtle bg-surface-2 text-text-secondary transition hover:border-danger/30 hover:bg-[var(--danger-surface)] hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" aria-label={t("actions.logout")} title={t("actions.logout")} onClick={handleLogout}>
+                    <LogOut className="h-[18px] w-[18px]" aria-hidden="true" />
                   </button>
                 </div>
               </div>
