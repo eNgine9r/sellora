@@ -50,6 +50,12 @@ class CustomerRepository:
         stmt = select(Customer).where(Customer.workspace_id == workspace_id, Customer.id == customer_id, Customer.deleted_at.is_(None))
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def get_for_update(self, workspace_id: UUID, customer_id: UUID) -> Customer | None:
+        statement = select(Customer).where(
+            Customer.workspace_id == workspace_id, Customer.id == customer_id, Customer.deleted_at.is_(None),
+        ).with_for_update().execution_options(populate_existing=True)
+        return self.db.execute(statement).scalar_one_or_none()
+
     def find_by_instagram_identity(self, workspace_id: UUID, instagram_scoped_id: str | None = None, instagram_username: str | None = None) -> Customer | None:
         candidates = self.list_instagram_identity_candidates(workspace_id, instagram_scoped_id, instagram_username, limit=2)
         return select_instagram_identity(candidates, instagram_scoped_id)
