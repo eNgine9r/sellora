@@ -242,6 +242,8 @@ def test_manager_links_reviewed_candidate_without_overwriting_identifiers():
     customer = service.customers.create(Customer(
         workspace_id=workspace_id, name="Existing", instagram_username="buyer_one",
         instagram_scoped_id="different-connection-id", phone=None,
+        source=CustomerSource.MANUAL.value, lifecycle_status=CustomerLifecycleStatus.CUSTOMER.value,
+        profile_status=CustomerProfileStatus.INCOMPLETE.value,
     ))
     actor = uuid4()
     candidates = service.identity_candidates(workspace_id, conversation.id)
