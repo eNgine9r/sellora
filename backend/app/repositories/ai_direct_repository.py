@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError
 
 from app.models.ai_direct import (
     AIActionDraft,
@@ -14,6 +15,10 @@ from app.models.ai_direct import (
     DirectConversation,
     DirectMessage,
 )
+
+
+class DirectConversationBusy(Exception):
+    pass
 
 
 class DirectConversationRepository:
@@ -58,6 +63,24 @@ class DirectConversationRepository:
                 DirectConversation.deleted_at.is_(None),
             ).with_for_update().execution_options(populate_existing=True)
         ).scalar_one_or_none()
+
+    def get_for_update_nowait(self, workspace_id: UUID, conversation_id: UUID) -> DirectConversation | None:
+        # A savepoint contains lock contention without aborting the caller's
+        # transaction, which may already contain an inbound message.
+        try:
+            with self.db.begin_nested():
+                return self.db.execute(
+                    select(DirectConversation).where(
+                        DirectConversation.workspace_id == workspace_id,
+                        DirectConversation.id == conversation_id,
+                        DirectConversation.deleted_at.is_(None),
+                    ).with_for_update(nowait=True).execution_options(populate_existing=True)
+                ).scalar_one_or_none()
+        except OperationalError as exc:
+            sqlstate = getattr(exc.orig, "sqlstate", None) or getattr(exc.orig, "pgcode", None)
+            if sqlstate == "55P03":
+                raise DirectConversationBusy() from exc
+            raise
 
     def lock_instagram_participant(self, workspace_id: UUID, connection_id: UUID, scoped_id: str) -> None:
         # PostgreSQL transaction-scoped lock protects replay/concurrency across
