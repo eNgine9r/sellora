@@ -123,7 +123,7 @@ export function OrderFulfillmentWizard({
             nova_poshta_warehouse_ref: warehouseRef,
           });
         } catch {
-          setAutomationWarning("Замовлення створено, але зв’язок із Direct потребує повторної синхронізації.");
+          setAutomationWarning("Замовлення створено та пов’язано з Direct, але профіль клієнта потребує повторної синхронізації.");
         }
       }
       setResult(nextResult);
@@ -246,6 +246,7 @@ export function OrderFulfillmentWizard({
     setError(null);
     mutation.mutate({
       idempotency_key: idempotencyKey.current,
+      source_direct_conversation_id: sourceDirectConversationId || null,
       customer_id: mode === "existing" ? customerId : null,
       customer_name: mode === "new" ? customerName.trim() : null,
       customer_phone: mode === "new" ? (normalizedCustomerPhone || normalizedPhone) : null,
