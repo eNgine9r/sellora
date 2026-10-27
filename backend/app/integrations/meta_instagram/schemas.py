@@ -48,10 +48,11 @@ class InstagramValidateResponse(BaseModel):
     token_present: bool
 
 class InstagramHistorySyncRequest(BaseModel):
-    conversation_limit: int = Field(default=100, ge=1, le=500)
-    messages_per_conversation: int = Field(default=20, ge=1, le=20)
+    conversation_limit: int = Field(default=100, ge=1, le=2000)
+    messages_per_conversation: int = Field(default=100, ge=1, le=200)
 
 class InstagramHistorySyncResponse(BaseModel):
+    cancel_requested: bool = False
     id: UUID
     workspace_id: UUID
     instagram_connection_id: UUID

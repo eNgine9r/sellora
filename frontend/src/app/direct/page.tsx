@@ -4,6 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  Clock3,
+  Square,
   BadgeCheck,
   Bot,
   CheckCircle2,
@@ -26,13 +28,18 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { useDirectLive } from "@/components/direct-live-provider";
+import { DirectOrderEvidenceCard } from "@/components/direct-order-evidence-card";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 import { fetchAISuggestions } from "@/services/ai";
 import {
   ensureDirectCustomer,
+  cancelInstagramHistorySync,
+  ensureDirectLead,
+  confirmDirectOrderEvidence,
   fetchDirectConversations,
+  fetchDirectOrderEvidence,
   fetchDirectCustomerAutomation,
   fetchDirectMessages,
   fetchInstagramHistorySync,
@@ -47,6 +54,7 @@ import { fetchInstagramStatus } from "@/services/meta-instagram";
 import { AISuggestion } from "@/types/ai";
 import {
   DirectConversation,
+  DirectOrderEvidence,
   DirectCustomerAutomationState,
   DirectMessage,
   InstagramHistorySync,
@@ -68,7 +76,11 @@ function DirectPageContent() {
   const queryClient = useQueryClient();
   const { isLive, isError: liveError, orderIntentConversationIds } = useDirectLive();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Synchronously track a newly requested dialog before React has rendered
+  // its details. Mutations must never run against a stale previous thread.
+  const selectionTargetRef = useRef<string | null>(null);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
   const profileRefreshAttempted = useRef(new Set<string>());
   const readAttempted = useRef(new Set<string>());
@@ -113,6 +125,23 @@ function DirectPageContent() {
     refetchInterval: 2000,
     refetchIntervalInBackground: true,
   });
+  const orderEvidenceQuery = useQuery({
+    queryKey: ["direct-order-evidence", workspaceId, selectedConversation?.id],
+    queryFn: () => fetchDirectOrderEvidence(selectedConversation!.id),
+    enabled: Boolean(workspaceId && selectedConversation?.id),
+    staleTime: 60_000,
+  });
+  const confirmOrderEvidenceMutation = useMutation({
+    mutationFn: () => confirmDirectOrderEvidence(
+      selectedConversation!.id,
+      Array.from(new Set((orderEvidenceQuery.data?.verified_orders ?? []).map((item) => item.order_id))),
+    ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["direct-order-evidence", workspaceId, selectedConversation?.id] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-customer-automation", workspaceId, selectedConversation?.id] });
+    },
+  });
   const suggestionsQuery = useQuery({
     queryKey: ["ai-suggestions", workspaceId, selectedConversation?.id],
     queryFn: () => fetchAISuggestions(selectedConversation!.id),
@@ -148,6 +177,14 @@ function DirectPageContent() {
     mutationFn: (conversationId: string) => refreshDirectParticipantProfile(conversationId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] }),
   });
+  const ensureLeadMutation = useMutation({
+    mutationFn: (conversationId: string) => ensureDirectLead(conversationId),
+    onSuccess: (_conversation, conversationId) => {
+      void queryClient.invalidateQueries({ queryKey: ["direct-conversations", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["leads", workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-customer-automation", workspaceId, conversationId] });
+    },
+  });
   const ensureCustomerMutation = useMutation({
     mutationFn: (conversationId: string) => ensureDirectCustomer(conversationId),
     onSuccess: (_state, conversationId) => {
@@ -160,6 +197,10 @@ function DirectPageContent() {
     mutationFn: () => startInstagramHistorySync(100, 20),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-history-sync", workspaceId] }),
   });
+  const cancelHistoryMutation = useMutation({
+    mutationFn: cancelInstagramHistorySync,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["instagram-history-sync", workspaceId] }),
+  });
   const readMutation = useMutation({
     mutationFn: (conversationId: string) => markDirectConversationRead(conversationId),
     onSuccess: (_conversation, conversationId) => {
@@ -170,6 +211,9 @@ function DirectPageContent() {
   });
 
   const historyActive = Boolean(historyQuery.data && ACTIVE_HISTORY_STATUSES.has(historyQuery.data.status));
+  const historyStopping = Boolean(historyActive && (historyQuery.data?.cancel_requested || cancelHistoryMutation.isPending || cancelHistoryMutation.data?.requested));
+  const startHistory = () => { if (window.confirm(t("direct.historyStartConfirm"))) { cancelHistoryMutation.reset(); historyMutation.mutate(); } };
+  const stopHistory = () => { if (window.confirm(t("direct.historyStopConfirm"))) { setHistoryPanelOpen(true); cancelHistoryMutation.mutate(); } };
 
   useEffect(() => {
     setSelectedId(null);
@@ -249,7 +293,15 @@ function DirectPageContent() {
     }
   }, [historyStatus, queryClient, selectedConversation?.id, workspaceId]);
 
+  const safeSelectedConversationId = () => {
+    const conversationId = selectedConversation?.id;
+    if (!conversationId) return null;
+    if (selectionTargetRef.current && selectionTargetRef.current !== conversationId) return null;
+    return conversationId;
+  };
+
   const handleSelectConversation = (conversationId: string) => {
+    selectionTargetRef.current = conversationId;
     if (isMobile) {
       listScrollPosition.current = window.scrollY;
       window.scrollTo(0, 0);
@@ -258,6 +310,7 @@ function DirectPageContent() {
     router.push(`/direct?conversation=${encodeURIComponent(conversationId)}`, { scroll: false });
   };
   const handleBackToInbox = () => {
+    selectionTargetRef.current = null;
     setSelectedId(null);
     setAiPanelOpen(false);
     router.replace("/direct", { scroll: false });
@@ -275,42 +328,66 @@ function DirectPageContent() {
     <WorkspacePage className={threadOpenOnMobile ? "min-h-full !px-3 !py-2 lg:!px-6 lg:!py-4" : "min-h-full"}>
       <div className={threadOpenOnMobile ? "hidden lg:block" : ""}>
       <WorkspaceHeader
-        eyebrow={t("direct.kicker")}
         title={t("direct.title")}
         description={t("direct.description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex min-h-10 items-center gap-2 rounded-2xl border px-3 text-xs font-black ${liveError ? "border-rose-500/30 bg-rose-500/10 text-rose-600" : isLive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-amber-500/30 bg-amber-500/10 text-amber-600"}`} data-direct-live-status>
-              {liveError ? <WifiOff className="h-4 w-4" /> : <Wifi className={`h-4 w-4 ${isLive ? "" : "animate-pulse"}`} />}
-              {liveError ? "Live недоступний" : isLive ? "Live" : "Підключення…"}
-            </span>
-            <Button
-              variant="secondary"
-              onClick={() => historyMutation.mutate()}
-              disabled={historyMutation.isPending || historyActive || statusQuery.data?.status !== "CONNECTED"}
-            >
-              <RefreshCw className={`h-4 w-4 ${historyMutation.isPending || historyActive ? "animate-spin" : ""}`} />
-              {historyActive ? "Синхронізація історії…" : "Синхронізувати історію"}
-            </Button>
-            <Button onClick={() => conversationsQuery.refetch()}>
-              <RefreshCw className="h-4 w-4" />
-              {t("actions.refresh")}
-            </Button>
+            <button
+              type="button"
+              onClick={() => setAiPanelOpen(true)}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border-subtle bg-surface-1 px-3 text-sm font-medium text-text-secondary transition hover:bg-surface-hover lg:hidden"
+            ><Sparkles className="h-4 w-4" aria-hidden="true" /> {t("direct.aiQuick")}</button>
+            <button
+              type="button"
+              aria-expanded={historyPanelOpen}
+              onClick={() => setHistoryPanelOpen((value) => !value)}
+              className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-medium transition hover:bg-surface-hover ${historyPanelOpen ? "border-primary/40 bg-primary/10 text-primary" : "border-border-subtle bg-surface-1 text-text-secondary"}`}
+            ><Clock3 className="h-4 w-4" aria-hidden="true" /> {t("direct.history")}</button>
+            <button
+              type="button"
+              onClick={() => void conversationsQuery.refetch()}
+              disabled={conversationsQuery.isFetching}
+              title={t("direct.refreshList")}
+              aria-label={t("direct.refreshList")}
+              className="grid min-h-11 min-w-11 place-items-center rounded-xl border border-border-subtle bg-surface-1 text-text-secondary transition hover:bg-surface-hover disabled:opacity-60"
+            ><RefreshCw className={`h-4 w-4 ${conversationsQuery.isFetching ? "animate-spin" : ""}`} aria-hidden="true" /></button>
           </div>
         }
       />
-
-      <HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} />
-      </div>
-
-      <div className={threadOpenOnMobile ? "hidden lg:block" : "lg:hidden"}>
-        <button
-          type="button"
-          onClick={() => setAiPanelOpen(true)}
-          className="min-h-11 w-full rounded-2xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-black text-primary shadow-[var(--shadow-card)]"
-        >
-          {t("direct.openAiPanel")}
-        </button>
+      {(historyPanelOpen || historyActive) ? (
+        <section className="grid min-w-0 gap-3 rounded-2xl border border-border-subtle bg-surface-1 p-3 sm:p-4" aria-label={t("direct.historyHeading")}>
+          {historyPanelOpen ? (
+            <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center" data-direct-history-controls>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-text-primary">{t("direct.historyHeading")}</h2>
+                {!historyQuery.data ? (
+                  <p className="mt-1 text-xs leading-5 text-text-muted">{t("direct.historyHint")}</p>
+                ) : null}
+                <p className="mt-1 text-xs leading-5 text-text-muted">{t("direct.historyLimit")}</p>
+              </div>
+              {canManage && !historyActive ? (
+                <Button
+                  variant="secondary"
+                  className="w-full gap-2 font-semibold lg:w-auto"
+                  onClick={startHistory}
+                  disabled={historyMutation.isPending || statusQuery.data?.status !== "CONNECTED"}
+                >
+                  <RefreshCw className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {t("direct.historyStart")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          <HistorySyncBanner sync={historyQuery.data} loading={historyQuery.isLoading} />
+          {historyActive && canManage ? (
+            <button type="button" onClick={stopHistory} disabled={historyStopping} className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-danger/30 px-3 text-sm font-medium text-danger transition hover:bg-[var(--danger-surface)] disabled:opacity-60">
+              <Square className="h-3.5 w-3.5" aria-hidden="true" />{historyStopping ? t("direct.historyStopping") : t("direct.historyStop")}
+            </button>
+          ) : null}
+          {historyMutation.isError ? <p role="alert" className="text-sm text-danger">{t("direct.historyStartError")}</p> : null}
+          {cancelHistoryMutation.isError ? <p role="alert" className="text-sm text-danger">{t("direct.historyStopError")}</p> : null}
+        </section>
+      ) : null}
       </div>
 
       <section
@@ -337,11 +414,31 @@ function DirectPageContent() {
           onOpenAiPanel={() => setAiPanelOpen(true)}
           conversation={selectedConversation}
           automation={automationQuery.data}
+          orderEvidence={orderEvidenceQuery.data}
+          orderEvidenceLoading={orderEvidenceQuery.isLoading}
+          orderEvidenceError={orderEvidenceQuery.isError}
+          orderEvidenceConfirming={confirmOrderEvidenceMutation.isPending}
+          orderEvidenceConfirmError={confirmOrderEvidenceMutation.isError}
+          onConfirmOrderEvidence={() => {
+            if (!safeSelectedConversationId()) return;
+            const count = orderEvidenceQuery.data?.verified_orders.length ?? 0;
+            if (!count || !window.confirm(`Зберегти точні зв’язки з ${count} відправленнями? Замовлення, ціни, оплата й товари не зміняться.`)) return;
+            confirmOrderEvidenceMutation.mutate();
+          }}
           automationLoading={automationQuery.isLoading}
           automationError={automationQuery.isError || ensureCustomerMutation.isError}
           canManage={canManage}
           ensuringCustomer={ensureCustomerMutation.isPending}
-          onEnsureCustomer={() => selectedConversation && ensureCustomerMutation.mutate(selectedConversation.id)}
+          onEnsureCustomer={() => {
+            const conversationId = safeSelectedConversationId();
+            if (conversationId) ensureCustomerMutation.mutate(conversationId);
+          }}
+          ensuringLead={ensureLeadMutation.isPending}
+          leadError={ensureLeadMutation.isError}
+          onEnsureLead={() => {
+            const conversationId = safeSelectedConversationId();
+            if (conversationId) ensureLeadMutation.mutate(conversationId);
+          }}
           loading={messagesQuery.isLoading}
           error={messagesQuery.isError}
           messages={messagesQuery.data ?? []}
@@ -421,35 +518,42 @@ function DirectPageContent() {
 }
 
 function HistorySyncBanner({ sync, loading }: { sync?: InstagramHistorySync | null; loading: boolean }) {
+  const { t } = useI18n();
   if (loading || !sync) return null;
   const active = ACTIVE_HISTORY_STATUSES.has(sync.status);
-  const statusLabel: Record<string, string> = {
-    PENDING: "Очікує запуску",
-    RUNNING: "Синхронізація виконується",
-    RETRY_PENDING: "Meta обмежила запити — повтор буде автоматично",
-    COMPLETED: "Історію синхронізовано",
-    PARTIAL: "Історію синхронізовано частково",
-    FAILED_SAFE: "Синхронізацію безпечно зупинено",
+  const statusLabels: Record<string, string> = {
+    PENDING: t("direct.historyPending"),
+    RUNNING: t("direct.historyRunning"),
+    RETRY_PENDING: t("direct.historyRetry"),
+    COMPLETED: t("direct.historyCompleted"),
+    PARTIAL: t("direct.historyPartial"),
+    CANCELLED: t("direct.historyCancelled"),
+    FAILED_SAFE: t("direct.historyFailed"),
   };
+  const stopping = active && sync.cancel_requested;
+  const progress = Math.min(100, Math.round(100 * sync.conversations_discovered / Math.max(sync.conversation_limit, 1)));
   return (
-    <section className="rounded-[var(--radius-shell)] border border-border-subtle bg-surface-1 p-4 shadow-[var(--shadow-card)]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="font-black">{statusLabel[sync.status] ?? sync.status}</p>
-          <p className="mt-1 text-sm text-text-secondary">
-            Діалоги: {sync.conversations_synced}/{sync.conversations_discovered} · Нові повідомлення: {sync.messages_imported} · Уже були в Sellora: {sync.messages_existing}
-          </p>
-        </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-black ${active ? "bg-violet-500/15 text-primary" : sync.status === "FAILED_SAFE" ? "bg-rose-500/15 text-rose-600" : "bg-emerald-500/15 text-emerald-700"}`}>
-          {sync.status}
-        </span>
+    <div className="grid min-w-0 gap-2" data-direct-history-progress data-direct-history-active={active}>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {sync.status === "COMPLETED" ? (
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+        ) : null}
+        <p className="min-w-0 flex-1 text-sm font-semibold text-text-primary">{stopping ? t("direct.historyStopping") : statusLabels[sync.status] ?? sync.status}</p>
+        {active ? (
+          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">{progress}%</span>
+        ) : null}
       </div>
-      {sync.messages_unavailable > 0 || sync.error_count > 0 ? (
-        <p className="mt-2 text-xs font-semibold text-amber-700">
-          Недоступні старі повідомлення: {sync.messages_unavailable} · Помилки: {sync.error_count}. Нові webhooks продовжують працювати.
-        </p>
+      {active ? (
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={sync.conversations_discovered} aria-valuemin={0} aria-valuemax={sync.conversation_limit} aria-label={t("direct.historyProgress")}>
+          <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
+        </div>
       ) : null}
-    </section>
+      <p className="min-w-0 text-xs leading-5 text-text-muted">
+        {t("direct.historyProgress")}: {sync.conversations_discovered}/{sync.conversation_limit}
+        <span className="hidden sm:inline"> · </span><span className="block sm:inline">{t("direct.historyNew")}: {sync.messages_imported} · {t("direct.historyExisting")}: {sync.messages_existing}</span>
+      </p>
+      {sync.messages_unavailable > 0 || sync.error_count > 0 ? <p className="text-xs text-warning">{t("direct.historyUnavailable")}: {sync.messages_unavailable} · {t("direct.historyErrors")}: {sync.error_count}</p> : null}
+    </div>
   );
 }
 
@@ -631,11 +735,20 @@ type PrepareResult = { ready: boolean; blockers: string[]; warnings: string[]; m
 function MessageThread({
   conversation,
   automation,
+  orderEvidence,
+  orderEvidenceLoading,
+  orderEvidenceError,
+  orderEvidenceConfirming,
+  orderEvidenceConfirmError,
+  onConfirmOrderEvidence,
   automationLoading,
   automationError,
   canManage,
   ensuringCustomer,
   onEnsureCustomer,
+  ensuringLead,
+  leadError,
+  onEnsureLead,
   loading,
   error,
   messages,
@@ -659,11 +772,20 @@ function MessageThread({
   onOpenAiPanel: () => void;
   conversation?: DirectConversation | null;
   automation?: DirectCustomerAutomationState;
+  orderEvidence?: DirectOrderEvidence;
+  orderEvidenceLoading: boolean;
+  orderEvidenceError: boolean;
+  orderEvidenceConfirming: boolean;
+  orderEvidenceConfirmError: boolean;
+  onConfirmOrderEvidence: () => void;
   automationLoading: boolean;
   automationError: boolean;
   canManage: boolean;
   ensuringCustomer: boolean;
   onEnsureCustomer: () => void;
+  ensuringLead: boolean;
+  leadError: boolean;
+  onEnsureLead: () => void;
   loading: boolean;
   error: boolean;
   messages: DirectMessage[];
@@ -713,21 +835,27 @@ function MessageThread({
       </header>
       <div className="hidden lg:block">
         <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
+        <DirectLeadCard conversation={conversation} canManage={canManage} ensuring={ensuringLead} error={leadError} onEnsure={onEnsureLead} />
         <CustomerAutomationCard
         conversation={conversation}
         automation={automation}
+        existingOrdersCount={orderEvidence?.verified_orders.length ?? 0}
+        evidenceReady={!orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated}
         loading={automationLoading}
         error={automationError}
         canManage={canManage}
         ensuring={ensuringCustomer}
         onEnsure={onEnsureCustomer}
         />
+        <DirectOrderEvidenceCard evidence={orderEvidence} loading={orderEvidenceLoading} error={orderEvidenceError} canManage={canManage} confirming={orderEvidenceConfirming} confirmError={orderEvidenceConfirmError} onConfirm={onConfirmOrderEvidence} />
       </div>
       <details className="shrink-0 border-b border-border-subtle lg:hidden" data-direct-mobile-details>
         <summary className="cursor-pointer px-4 py-2 text-xs font-bold text-text-secondary">Деталі клієнта та замовлення</summary>
         <div className="max-h-[35dvh] overflow-y-auto">
           <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
-          <CustomerAutomationCard conversation={conversation} automation={automation} loading={automationLoading} error={automationError} canManage={canManage} ensuring={ensuringCustomer} onEnsure={onEnsureCustomer} />
+          <DirectLeadCard conversation={conversation} canManage={canManage} ensuring={ensuringLead} error={leadError} onEnsure={onEnsureLead} />
+          <CustomerAutomationCard conversation={conversation} automation={automation} existingOrdersCount={orderEvidence?.verified_orders.length ?? 0} evidenceReady={!orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated} loading={automationLoading} error={automationError} canManage={canManage} ensuring={ensuringCustomer} onEnsure={onEnsureCustomer} />
+          <DirectOrderEvidenceCard evidence={orderEvidence} loading={orderEvidenceLoading} error={orderEvidenceError} canManage={canManage} confirming={orderEvidenceConfirming} confirmError={orderEvidenceConfirmError} onConfirm={onConfirmOrderEvidence} />
         </div>
       </details>
       <div ref={scrollContainer} className="sellora-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto p-3 lg:p-4" data-direct-live-thread>
@@ -802,9 +930,56 @@ function MessageThread({
   );
 }
 
+function DirectLeadCard({
+  conversation, canManage, ensuring, error, onEnsure,
+}: {
+  conversation: DirectConversation;
+  canManage: boolean;
+  ensuring: boolean;
+  error: boolean;
+  onEnsure: () => void;
+}) {
+  if (conversation.channel !== "INSTAGRAM") return null;
+  const linked = Boolean(conversation.linked_lead_id);
+  const actionable = canManage && !linked && conversation.status !== "SPAM" && conversation.status !== "ARCHIVED";
+  return (
+    <section className="border-b border-border-subtle bg-surface-2/40 px-4 py-3" data-direct-lead>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-black text-text-primary">Заявка на продаж</p>
+            <span className={`rounded-full px-2 py-1 text-xs font-bold ${linked ? "bg-emerald-500/15 text-emerald-700" : "bg-surface-1 text-text-muted"}`}>
+              {linked ? "Лід прив’язано" : "Без ліда"}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-text-secondary">
+            {linked
+              ? "Інтерес покупця збережено як лід. Це не підтвердження покупки."
+              : "Створіть лід для звернення покупця. Клієнт, замовлення й відправлення не створюються автоматично."}
+          </p>
+          {error ? <p className="mt-1 text-xs font-semibold text-rose-600" role="alert" data-direct-lead-error>Не вдалося створити лід. Перевірте, чи є вхідне повідомлення, і повторіть спробу.</p> : null}
+        </div>
+        {linked ? (
+          <Link className="inline-flex min-h-10 items-center rounded-2xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-bold text-primary" href="/leads">
+            Перейти до лідів
+          </Link>
+        ) : actionable ? (
+          <Button variant="secondary" onClick={onEnsure} disabled={ensuring} data-direct-lead-action>
+            {ensuring ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+            {ensuring ? "Створення…" : "Створити лід"}
+          </Button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+
 function CustomerAutomationCard({
   conversation,
   automation,
+  existingOrdersCount,
+  evidenceReady,
   loading,
   error,
   canManage,
@@ -813,6 +988,8 @@ function CustomerAutomationCard({
 }: {
   conversation: DirectConversation;
   automation?: DirectCustomerAutomationState;
+  existingOrdersCount: number;
+  evidenceReady: boolean;
   loading: boolean;
   error: boolean;
   canManage: boolean;
@@ -856,13 +1033,13 @@ function CustomerAutomationCard({
               Створити prospect
             </Button>
           ) : null}
-          {customer && !automation?.linked_order_id && canManage ? (
+          {customer && evidenceReady && canManage ? (
             <Link
               className="inline-flex min-h-10 items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-black text-primary-foreground"
               href={`/orders?create=1&customer_id=${encodeURIComponent(customer.id)}&direct_conversation_id=${encodeURIComponent(conversation.id)}`}
             >
               <ShoppingBag className="h-4 w-4" />
-              Оформити замовлення
+              {existingOrdersCount > 0 || automation?.linked_order_id ? "Створити нове замовлення" : "Оформити замовлення"}
             </Link>
           ) : null}
           {automation?.linked_order_id ? (

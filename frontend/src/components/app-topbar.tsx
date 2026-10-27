@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Menu, MoreHorizontal, Plus, Search, ShoppingBag } from "lucide-react";
+import { Bell, Menu, Plus, Search, ShoppingBag } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BrandIcon } from "@/components/brand";
@@ -21,7 +21,6 @@ type Props = {
   currentWorkspaceId: string | null;
   mobileMoreOpen: boolean;
   onOpenMenu: () => void;
-  onOpenMobileMore: () => void;
   onCloseMobileMore: () => void;
   onLogout: () => void;
   onSwitchWorkspace: (workspaceId: string) => void;
@@ -34,7 +33,7 @@ function participantLabel(event: DirectLiveEvent) {
     ?? "Клієнт Instagram";
 }
 
-export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, mobileMoreOpen, onOpenMenu, onOpenMobileMore, onCloseMobileMore, onLogout, onSwitchWorkspace, onWorkspaceCreated }: Props) {
+export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, mobileMoreOpen, onOpenMenu, onCloseMobileMore, onLogout, onSwitchWorkspace, onWorkspaceCreated }: Props) {
   const router = useRouter();
   const { t } = useI18n();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -97,12 +96,9 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, m
 
         <IconButton variant="brand" onClick={createOrder} aria-label={t("topbar.createOrder")}><Plus className="h-5 w-5" /></IconButton>
         <ProfileMenu currentUser={currentUser} currentWorkspace={currentWorkspace} currentWorkspaceId={currentWorkspaceId} memberships={validMemberships} onLogout={onLogout} onSwitchWorkspace={onSwitchWorkspace} onWorkspaceCreated={onWorkspaceCreated} />
-        <IconButton className="topbar-action md:hidden" type="button" aria-expanded={mobileMoreOpen} aria-controls="mobile-more-sheet" aria-label={t("mobileTopbar.more")} onClick={onOpenMobileMore}>
-          <MoreHorizontal className="h-5 w-5" />
-        </IconButton>
       </div>
 
-      <MobileMoreSheet open={mobileMoreOpen} currentUser={currentUser} currentWorkspace={currentWorkspace} currentWorkspaceId={currentWorkspaceId} memberships={validMemberships} onClose={onCloseMobileMore} onLogout={onLogout} onSwitchWorkspace={onSwitchWorkspace} onWorkspaceCreated={onWorkspaceCreated} onCreateOrder={createOrder} />
+      <MobileMoreSheet open={mobileMoreOpen} currentUser={currentUser} currentWorkspace={currentWorkspace} currentWorkspaceId={currentWorkspaceId} memberships={validMemberships} onClose={onCloseMobileMore} onLogout={onLogout} onSwitchWorkspace={onSwitchWorkspace} onWorkspaceCreated={onWorkspaceCreated} />
     </header>
   );
 }

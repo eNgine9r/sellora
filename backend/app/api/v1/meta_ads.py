@@ -116,3 +116,63 @@ def disconnect_meta_ads(
         return MetaAdsConnectionService(db).disconnect(workspace_id, current_user.id)
     except MetaAdsConnectionServiceError as exc:
         raise _service_error(exc)
+
+
+from app.services.meta_ads_live_sync_service import MetaAdsLiveSyncService
+from app.schemas.meta_ads_connection import (
+    MetaAdsAccountSelectionRequest, MetaAdsSyncRequest, MetaAdsAccountsResponse, MetaAdsSyncResponse,
+)
+
+
+@router.get("/accounts", response_model=MetaAdsAccountsResponse)
+def list_live_accounts(
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.OWNER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return MetaAdsLiveSyncService(db).accounts(workspace_id, current_user.id)
+    except MetaAdsConnectionServiceError as exc:
+        raise _service_error(exc)
+
+
+@router.post("/account", response_model=MetaAdsConnectionStatusResponse)
+def select_live_account(
+    payload: MetaAdsAccountSelectionRequest,
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.OWNER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return MetaAdsLiveSyncService(db).select_account(workspace_id, current_user.id, payload.external_account_id)
+    except MetaAdsConnectionServiceError as exc:
+        raise _service_error(exc)
+
+
+@router.post("/sync", response_model=MetaAdsSyncResponse)
+def sync_live_account(
+    payload: MetaAdsSyncRequest,
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.OWNER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return MetaAdsLiveSyncService(db).sync(workspace_id, current_user.id, payload.date_from, payload.date_to)
+    except MetaAdsConnectionServiceError as exc:
+        raise _service_error(exc)
+
+
+@router.get("/oauth/callback", include_in_schema=False)
+def redirect_meta_ads_callback(
+    code: str | None = Query(default=None, max_length=4096),
+    state: str | None = Query(default=None, max_length=2048),
+    error: str | None = Query(default=None, max_length=200),
+):
+    # Public redirect only; token exchange remains authenticated OWNER POST.
+    from starlette.responses import RedirectResponse
+    try:
+        target = MetaAdsConnectionService(None).callback_redirect(code=code, state=state, denied=error is not None)
+        return RedirectResponse(target, status_code=303,
+            headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
+    except MetaAdsConnectionServiceError as exc:
+        raise _service_error(exc)

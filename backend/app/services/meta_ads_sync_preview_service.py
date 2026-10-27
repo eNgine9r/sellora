@@ -21,7 +21,7 @@ from app.schemas.meta_ads_read_only import (
     MetaReadOnlyNotReadyResponse,
 )
 
-PREVIEW_WARNING = "This is a no-write preview. No Meta data has been imported into Sellora."
+PREVIEW_WARNING = "This is a synthetic no-write preview. No Meta data has been imported into Sellora."
 NO_DB_WRITE_WARNING = "No ad_campaigns or ad_metrics rows are written by this preview. Manual/CSV remains the active Advertising source."
 
 
@@ -123,6 +123,8 @@ class MetaAdsSyncPreviewService:
             return MetaAdsReadinessResult(False, "connection_not_ready", "Meta Ads connection is not ready for discovery preview.", connection)
         if status == MetaAdConnectionStatus.CONNECTED and not connection.encrypted_access_token:
             return MetaAdsReadinessResult(False, "token_missing", "Meta Ads connection token is not available for read-only preview.", connection)
+        if status == MetaAdConnectionStatus.CONNECTED:
+            return MetaAdsReadinessResult(False, "use_live_accounts", "Use live Meta Ads account selection and manual sync.", connection)
         if self.settings.meta_sync_enabled:
             return MetaAdsReadinessResult(False, "sync_must_remain_disabled", "Meta Ads production sync must remain disabled for preview.", connection)
         return MetaAdsReadinessResult(True, None, "Meta Ads read-only preview is ready.", connection)

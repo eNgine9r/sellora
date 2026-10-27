@@ -34,6 +34,12 @@ class LeadRepository:
         )
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def get_for_update(self, workspace_id: UUID, lead_id: UUID) -> Lead | None:
+        return self.db.execute(
+            select(Lead).where(Lead.workspace_id == workspace_id, Lead.id == lead_id,
+                Lead.deleted_at.is_(None)).with_for_update().execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+
     def create(self, lead: Lead) -> Lead:
         self.db.add(lead)
         self.db.flush()

@@ -1,7 +1,8 @@
+import hashlib
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.models.ai_direct import (
@@ -38,6 +39,46 @@ class DirectConversationRepository:
                 DirectConversation.id == conversation_id,
                 DirectConversation.deleted_at.is_(None),
             )
+        ).scalar_one_or_none()
+
+    def get_by_linked_lead(self, workspace_id: UUID, lead_id: UUID) -> DirectConversation | None:
+        return self.db.execute(
+            select(DirectConversation).where(
+                DirectConversation.workspace_id == workspace_id,
+                DirectConversation.linked_lead_id == lead_id,
+                DirectConversation.deleted_at.is_(None),
+            ).order_by(DirectConversation.created_at.desc()).limit(1)
+        ).scalar_one_or_none()
+
+    def get_for_update(self, workspace_id: UUID, conversation_id: UUID) -> DirectConversation | None:
+        return self.db.execute(
+            select(DirectConversation).where(
+                DirectConversation.workspace_id == workspace_id,
+                DirectConversation.id == conversation_id,
+                DirectConversation.deleted_at.is_(None),
+            ).with_for_update().execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+
+    def lock_instagram_participant(self, workspace_id: UUID, connection_id: UUID, scoped_id: str) -> None:
+        # PostgreSQL transaction-scoped lock protects replay/concurrency across
+        # multiple threads, without locking any other workspace's contacts.
+        if self.db.get_bind().dialect.name != "postgresql":
+            return
+        identity = f"sellora:direct-lead:{workspace_id}:{connection_id}:{scoped_id}"
+        key = int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], "big", signed=True)
+        self.db.execute(select(func.pg_advisory_xact_lock(key)))
+
+    def find_lead_for_instagram_participant(
+        self, workspace_id: UUID, connection_id: UUID, scoped_id: str,
+    ) -> DirectConversation | None:
+        return self.db.execute(
+            select(DirectConversation).where(
+                DirectConversation.workspace_id == workspace_id,
+                DirectConversation.instagram_connection_id == connection_id,
+                DirectConversation.participant_scoped_id == scoped_id,
+                DirectConversation.linked_lead_id.is_not(None),
+                DirectConversation.deleted_at.is_(None),
+            ).order_by(DirectConversation.created_at.desc()).limit(1)
         ).scalar_one_or_none()
 
     def get_by_instagram_participant(
@@ -102,6 +143,19 @@ class DirectMessageRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
+    def get_for_attachment(self, workspace_id: UUID, message_id: UUID) -> DirectMessage | None:
+        return self.db.execute(
+            select(DirectMessage)
+            .join(DirectConversation, DirectConversation.id == DirectMessage.conversation_id)
+            .where(
+                DirectMessage.id == message_id,
+                DirectMessage.workspace_id == workspace_id,
+                DirectMessage.deleted_at.is_(None),
+                DirectConversation.workspace_id == workspace_id,
+                DirectConversation.deleted_at.is_(None),
+            )
+        ).scalar_one_or_none()
+
     def list_for_conversation(self, workspace_id: UUID, conversation_id: UUID) -> list[DirectMessage]:
         return list(
             self.db.execute(
@@ -157,6 +211,43 @@ class DirectMessageRepository:
             .limit(max(1, min(limit, 50)))
         )
         return [(message, conversation) for message, conversation in self.db.execute(statement).all()]
+
+    def proposal_inbound(self, workspace_id: UUID, conversation_id: UUID, limit: int = 51) -> list[DirectMessage]:
+        return list(self.db.execute(
+            select(DirectMessage).where(
+                DirectMessage.workspace_id == workspace_id,
+                DirectMessage.conversation_id == conversation_id,
+                DirectMessage.deleted_at.is_(None),
+                DirectMessage.direction == "INBOUND", DirectMessage.message_type == "TEXT",
+            ).order_by(DirectMessage.created_at.desc(), DirectMessage.id.desc()).limit(min(limit, 51))
+        ).scalars())
+
+    def proposal_context_changed(self, workspace_id: UUID, conversation_id: UUID, since: datetime) -> bool:
+        # Import/storage times catch an old provider timestamp arriving late.
+        # Edits update DirectMessage.updated_at in the existing inbound service.
+        stmt = select(DirectMessage.id).where(
+            DirectMessage.workspace_id == workspace_id,
+            DirectMessage.conversation_id == conversation_id,
+            DirectMessage.message_type == "TEXT",
+            or_(
+                and_(DirectMessage.direction == "INBOUND", DirectMessage.created_at > since),
+                and_(DirectMessage.updated_at > since, DirectMessage.updated_at > DirectMessage.created_at),
+                DirectMessage.deleted_at > since,
+            ),
+        ).limit(1)
+        return self.db.execute(stmt).scalar_one_or_none() is not None
+
+    def latest_instagram_inbound(self, workspace_id: UUID, conversation_id: UUID) -> DirectMessage | None:
+        return self.db.execute(
+            select(DirectMessage).where(
+                DirectMessage.workspace_id == workspace_id,
+                DirectMessage.conversation_id == conversation_id,
+                DirectMessage.direction == "INBOUND",
+                DirectMessage.provider == "INSTAGRAM",
+                DirectMessage.is_synthetic.is_(False),
+                DirectMessage.deleted_at.is_(None),
+            ).order_by(DirectMessage.received_at.desc(), DirectMessage.id.desc()).limit(1)
+        ).scalar_one_or_none()
 
     def latest_analyzable(self, workspace_id: UUID, conversation_id: UUID) -> DirectMessage | None:
         return self.db.execute(
@@ -234,6 +325,15 @@ class AIRepository:
                 .order_by(AIAnalysis.created_at.desc())
             ).scalars()
         )
+
+    def latest_generic_analysis(self, workspace_id: UUID, conversation_id: UUID) -> AIAnalysis | None:
+        return self.db.execute(
+            select(AIAnalysis).where(
+                AIAnalysis.workspace_id == workspace_id,
+                AIAnalysis.conversation_id == conversation_id,
+                AIAnalysis.prompt_key == "DIRECT_MESSAGE_ANALYSIS",
+            ).order_by(AIAnalysis.created_at.desc(), AIAnalysis.id.desc()).limit(1)
+        ).scalar_one_or_none()
 
     def get_analysis(self, workspace_id: UUID, analysis_id: UUID) -> AIAnalysis | None:
         return self.db.execute(

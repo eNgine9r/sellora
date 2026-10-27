@@ -16,7 +16,7 @@ export function CampaignTable({ campaigns, selectedCampaignId, onSelect, onEdit,
           <h2 className="text-lg font-semibold">{t("advertising.campaigns")}</h2>
           <p className="mt-1 text-sm text-text-secondary">{t("advertising.mappingHint")}</p>
         </div>
-        <span className="w-fit shrink-0 rounded-full bg-surface-2 px-3 py-1 text-xs font-bold text-text-secondary">{t("advertising.manualSource")}</span>
+        <span className="w-fit shrink-0 rounded-full bg-surface-2 px-3 py-1 text-xs font-bold text-text-secondary">{t("advertising.campaignMetricsSource")}</span>
       </div>
       <div className="sellora-adaptive-table mt-3 min-w-0">
         <table className="w-full table-fixed text-left text-sm">
@@ -43,7 +43,7 @@ export function CampaignTable({ campaigns, selectedCampaignId, onSelect, onEdit,
               <tr key={campaign.id} className={`cursor-pointer border-b border-border-subtle last:border-0 transition hover:bg-surface-hover ${selectedCampaignId === campaign.id ? "bg-surface-selected" : ""}`} onClick={() => onSelect?.(campaign)}>
                 <td className="min-w-0 px-2 py-3">
                   <span className="block truncate font-semibold text-text-primary" title={campaign.name}>{campaign.name}</span>
-                  <span className="block truncate text-xs text-text-muted">{campaign.platform} · {t("advertising.manualSource")}</span>
+                  <span className="block truncate text-xs text-text-muted">{campaign.platform} · {t("advertising.campaignMetricsSource")}</span>
                 </td>
                 <td className="px-2 py-3"><span className={campaignStatus(campaign)}>{formatStatus("campaign", campaign.status)}</span></td>
                 <td className="min-w-0 truncate px-2 py-3 text-text-secondary" title={campaign.objective ?? undefined}>{campaign.objective ?? "—"}</td>
@@ -58,7 +58,7 @@ export function CampaignTable({ campaigns, selectedCampaignId, onSelect, onEdit,
                 <td className="px-1 py-2"><RowActionButtons entityLabel={campaign.name} editLabel={t("advertising.editCampaign")} archiveLabel={t("actions.archive")} onEdit={onEdit ? () => onEdit(campaign) : undefined} onArchive={onArchive ? () => onArchive(campaign) : undefined} /></td>
               </tr>
             ))}
-            {campaigns.length === 0 ? <tr><td className="p-6 text-center text-text-muted" colSpan={6}>{t("advertising.emptyCampaigns")} {t("advertising.manualImportFirst")}</td></tr> : null}
+            {campaigns.length === 0 ? <tr><td className="p-6 text-center text-text-muted" colSpan={6}>{t("advertising.emptyCampaigns")}</td></tr> : null}
           </tbody>
         </table>
       </div>
@@ -67,7 +67,7 @@ export function CampaignTable({ campaigns, selectedCampaignId, onSelect, onEdit,
           <article key={campaign.id} className={`min-w-0 rounded-xl border border-border-subtle bg-surface-2 p-3 ${selectedCampaignId === campaign.id ? "bg-surface-selected" : ""}`}>
             <button type="button" className="w-full min-w-0 text-left" onClick={() => onSelect?.(campaign)}>
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0"><h3 className="truncate font-semibold text-text-primary">{campaign.name}</h3><p className="text-xs text-text-muted">{campaign.platform} · {t("advertising.manualSource")}</p></div>
+                <div className="min-w-0"><h3 className="truncate font-semibold text-text-primary">{campaign.name}</h3><p className="text-xs text-text-muted">{campaign.platform} · {t("advertising.campaignMetricsSource")}</p></div>
                 <span className={campaignStatus(campaign)}>{formatStatus("campaign", campaign.status)}</span>
               </div>
               <p className="mt-2 text-sm text-text-secondary">{t("advertising.objective")}: {campaign.objective ?? "—"}</p>

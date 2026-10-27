@@ -1,5 +1,6 @@
 "use client";
 
+import { ResponsiveReportTable, type ReportTableColumn } from "@/components/ui/responsive-report-table";
 import { CampaignDecisionBadge } from "@/features/advertising/components/campaign-decision-badge";
 import { buildCampaignInsightSummary } from "@/features/advertising/lib/decision-support";
 import type { EnrichedCampaignPerformance } from "@/features/advertising/lib/decision-support";
@@ -42,6 +43,19 @@ export function CampaignInsightsPanel({ rows, campaigns, currencyCode }: { rows:
     NO_DATA: t("advertising.decisionNoData"),
   };
 
+  const comparisonColumns: ReportTableColumn<EnrichedCampaignPerformance>[] = [
+    { key: "campaign", label: t("advertising.campaignComparison"), emphasis: true, render: (campaign) =>
+      <><span className="block">{campaign.campaign_name}</span><span className="block text-xs font-normal text-text-muted">{t("advertising.campaignMetricsSource")}</span></> },
+    { key: "spend", label: t("advertising.spend"), render: (campaign) => campaign.decision.status === "NO_DATA" ? DASH : formatMoney(campaign.spendValue, currencyCode) },
+    { key: "revenue", label: t("advertising.revenue"), render: (campaign) =>
+      <><span className="block">{campaign.decision.status === "NO_DATA" ? DASH : formatMoney(campaign.revenueValue, currencyCode)}</span><span className="block text-xs text-text-muted">{t("finance.netProfit")}: {campaign.netProfitValue == null ? DASH : formatMoney(campaign.netProfitValue, currencyCode)}</span></> },
+    { key: "orders", label: t("advertising.orders"), render: (campaign) =>
+      <><span className="block">{campaign.hasMetricData ? campaign.orders : DASH}</span><span className="block text-xs text-text-muted">{t("advertising.leads")}: {campaign.hasMetricData ? campaign.leads : DASH} · {t("advertising.messages")}: {campaign.hasMetricData ? campaign.messages : DASH}</span></> },
+    { key: "efficiency", label: "ROAS / CPA / CPL", render: (campaign) =>
+      <><span className="block">ROAS: {formatMetric(campaign.roasValue, 1)}</span><details className="mt-1 text-xs"><summary className="cursor-pointer text-primary">{t("advertising.moreMetrics")}</summary><dl className="mt-1 grid gap-1"><div>CPA: {campaign.cpaValue == null ? DASH : formatMoney(campaign.cpaValue, currencyCode)}</div><div>CPL: {campaign.cplValue == null ? DASH : formatMoney(campaign.cplValue, currencyCode)}</div><div>CR: {formatPercent(campaign.conversionRateValue)}</div></dl></details></> },
+    { key: "decision", label: t("advertising.decisionStatus"), render: (campaign) => <CampaignDecisionBadge label={decisionLabels[campaign.decision.status]} status={campaign.decision.status} /> },
+  ];
+
   return (
     <section className="grid w-full max-w-full min-w-0 gap-4 overflow-hidden rounded-2xl bg-white p-4 shadow-sm dark:bg-slate-950" data-advertising-insights="campaign-comparison-decision-support" data-decision-statuses="GOOD WATCH PROBLEM NO_DATA">
       <div>
@@ -81,12 +95,7 @@ export function CampaignInsightsPanel({ rows, campaigns, currencyCode }: { rows:
         </div>
       </div>
 
-      <div className="sellora-scrollbar max-w-full overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
-        <table className="w-full min-w-[980px] text-left text-sm text-slate-700 dark:text-slate-200">
-          <thead><tr className="border-b bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"><th className="p-3">{t("advertising.campaignComparison")}</th><th>{t("advertising.source")}</th><th>{t("advertising.spend")}</th><th>{t("advertising.messages")}</th><th>{t("advertising.leads")}</th><th>{t("advertising.orders")}</th><th>{t("advertising.revenue")}</th><th>Net Profit</th><th>ROAS</th><th>CPA</th><th>CPL</th><th>Conversion Rate</th><th>{t("advertising.decisionStatus")}</th></tr></thead>
-          <tbody>{insights.rows.map((campaign) => <tr key={`comparison-${campaign.campaign_id}`} className="border-b last:border-0 dark:border-slate-800"><td className="p-3 font-bold text-slate-950 dark:text-slate-50">{campaign.campaign_name}</td><td>{t("advertising.manualSource")}</td><td>{campaign.decision.status === "NO_DATA" ? DASH : formatMoney(campaign.spendValue, currencyCode)}</td><td>{campaign.hasMetricData ? campaign.messages : DASH}</td><td>{campaign.hasMetricData ? campaign.leads : DASH}</td><td>{campaign.hasMetricData ? campaign.orders : DASH}</td><td>{campaign.decision.status === "NO_DATA" ? DASH : formatMoney(campaign.revenueValue, currencyCode)}</td><td>{campaign.netProfitValue == null ? DASH : formatMoney(campaign.netProfitValue, currencyCode)}</td><td>{formatMetric(campaign.roasValue, 1)}</td><td>{campaign.cpaValue == null ? DASH : formatMoney(campaign.cpaValue, currencyCode)}</td><td>{campaign.cplValue == null ? DASH : formatMoney(campaign.cplValue, currencyCode)}</td><td>{formatPercent(campaign.conversionRateValue)}</td><td><CampaignDecisionBadge label={decisionLabels[campaign.decision.status]} status={campaign.decision.status} /></td></tr>)}</tbody>
-        </table>
-      </div>
+      <ResponsiveReportTable rows={insights.rows} columns={comparisonColumns} rowKey={(campaign) => campaign.campaign_id} wide />
     </section>
   );
 }

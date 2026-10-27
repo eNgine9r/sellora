@@ -37,7 +37,7 @@ def _settings(**overrides):
     return Settings(_env_file=None, **data)
 
 
-def _connection(workspace_id: UUID, status: MetaAdConnectionStatus = MetaAdConnectionStatus.CONNECTED) -> MetaAdConnection:
+def _connection(workspace_id: UUID, status: MetaAdConnectionStatus = MetaAdConnectionStatus.MOCK_ONLY) -> MetaAdConnection:
     return MetaAdConnection(
         workspace_id=workspace_id,
         provider="meta_ads",
@@ -55,6 +55,7 @@ def test_preview_returns_not_ready_when_connection_missing_or_token_missing() ->
     )
     missing_token = _connection(workspace_id)
     missing_token.encrypted_access_token = None
+    missing_token.connection_status = MetaAdConnectionStatus.CONNECTED.value
     missing_token_service = MetaAdsSyncPreviewService(
         WriteTrapDb(),
         settings=_settings(meta_connections_enabled=True, meta_sync_preview_enabled=True),
@@ -112,3 +113,14 @@ def test_invalid_date_range_returns_safe_response() -> None:
 
     assert response.ready is False
     assert response.reason == "invalid_date_range"
+
+
+def test_connected_live_preview_never_falls_back_to_synthetic_client():
+    workspace_id = uuid4()
+    service = MetaAdsSyncPreviewService(WriteTrapDb(),
+        settings=_settings(meta_connections_enabled=True, meta_sync_preview_enabled=True),
+        connection_repository=FakeConnectionRepository(_connection(workspace_id, MetaAdConnectionStatus.CONNECTED)))
+    response = service.preview_insights(workspace_id, date(2026, 7, 1), date(2026, 7, 2))
+    assert response.ready is False
+    assert response.reason == "use_live_accounts"
+    assert response.insights == []

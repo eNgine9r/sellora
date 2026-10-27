@@ -472,7 +472,6 @@ def test_disconnect_clears_verification_and_permission(monkeypatch) -> None:
     [
         ("counterparty", "NOVA_POSHTA_SENDER_COUNTERPARTY_INVALID"),
         ("contact", "NOVA_POSHTA_SENDER_CONTACT_INVALID"),
-        ("address", "NOVA_POSHTA_SENDER_ADDRESS_INVALID"),
         ("city", "NOVA_POSHTA_SENDER_CITY_MISMATCH"),
         ("unavailable", "NOVA_POSHTA_SENDER_VALIDATION_UNAVAILABLE"),
     ],
@@ -491,6 +490,16 @@ def test_sender_tuple_validation_failures_are_sanitized(sender_error, expected_c
     assert "067" not in dumped
     assert not service.connections.connection.provider_writes_allowed
     assert service.connections.connection.provider_connection_verified_at is None
+
+
+def test_warehouse_sender_is_not_validated_as_street_address() -> None:
+    # WarehouseWarehouse uses a city/warehouse directory Ref rather than
+    # the sender's street-address ownership.
+    service = _settings_service(lambda key: FakeClient(key, sender_error="address"))
+    workspace_id = uuid4()
+    service.save_settings(workspace_id, _complete_settings(), uuid4())
+    response = service.test_connection(workspace_id, uuid4())
+    assert response.success
 
 
 def test_sender_tuple_invalid_phone_fails_without_provider_write() -> None:

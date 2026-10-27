@@ -140,6 +140,7 @@ def make_service(message_text="Хочу замовити цей годинник
     service.customers = FakeCustomerRepository()
     service.customer_crm = FakeCustomerCrm()
     service.audit_logs = FakeAuditLogs()
+    service.ad_attribution = SimpleNamespace(inherit_verified_direct_lead=lambda *args, **kwargs: False)
     return service, conversation, workspace_id
 
 

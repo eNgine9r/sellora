@@ -1,5 +1,5 @@
 import { apiRequest } from "@/services/api";
-import { Order, OrderDashboard, OrderStatus, PaymentStatus } from "@/types/orders";
+import { HistoricalEstimatedCostPayload, Order, OrderDashboard, OrderStatus, PaymentStatus } from "@/types/orders";
 
 function workspaceHeaders(workspaceId?: string): HeadersInit {
   return workspaceId ? { "X-Workspace-ID": workspaceId } : {};
@@ -34,6 +34,24 @@ export async function createOrder(workspaceId: string, payload: OrderCreatePaylo
 
 export async function updateOrder(workspaceId: string, orderId: string, payload: Partial<OrderCreatePayload>): Promise<Order> {
   return apiRequest<Order>(`/orders/${orderId}`, { method: "PUT", headers: workspaceHeaders(workspaceId), body: JSON.stringify(payload) });
+}
+
+export async function saveHistoricalCostEstimate(
+  workspaceId: string,
+  orderId: string,
+  payload: HistoricalEstimatedCostPayload,
+): Promise<Order> {
+  return apiRequest<Order>(
+    "/orders/" + orderId + "/estimated-cost",
+    { method: "PUT", headers: workspaceHeaders(workspaceId), body: JSON.stringify(payload) },
+  );
+}
+
+export async function clearHistoricalCostEstimate(workspaceId: string, orderId: string): Promise<Order> {
+  return apiRequest<Order>(
+    "/orders/" + orderId + "/estimated-cost",
+    { method: "DELETE", headers: workspaceHeaders(workspaceId) },
+  );
 }
 
 export async function changeOrderStatus(workspaceId: string, orderId: string, status: OrderStatus): Promise<Order> {

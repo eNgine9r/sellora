@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from uuid import UUID
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -77,11 +78,19 @@ class AdMetricUpdate(BaseModel):
 
 
 class AdMetricResponse(BaseModel):
+    source_type: str | None = None
+    provider_controlled_fields: list[str] = Field(default_factory=list)
     id: UUID
     workspace_id: UUID
     campaign_id: UUID
     metric_date: date
     spend: Decimal
+    original_spend: Decimal | None = None
+    original_currency: str | None = None
+    spend_currency: str | None = None
+    exchange_rate: Decimal | None = None
+    exchange_rate_date: date | None = None
+    exchange_rate_source: str | None = None
     impressions: int
     reach: int
     clicks: int
@@ -145,3 +154,48 @@ class AdvertisingTrendPoint(BaseModel):
     leads: int
     cpa: Decimal | None = None
     roas: Decimal | None = None
+
+
+class CrmAttributionTotals(BaseModel):
+    """Created-order cohort, current lifecycle/payment state, not cash accounting.
+
+    Active = NEW/CONFIRMED/SHIPPED/DELIVERED/COMPLETED excluding REFUNDED.
+    Active/cancelled/returned_refunded are disjoint; cancellation has priority.
+    Fulfilled is DELIVERED/COMPLETED excluding REFUNDED; paid is its PAID subset.
+    Placed/active revenue is pipeline value, not realized or paid revenue.
+    """
+    placed_orders: int = 0
+    placed_revenue: Decimal = Decimal("0")
+    active_orders: int = 0
+    active_revenue: Decimal = Decimal("0")
+    cancelled_orders: int = 0
+    returned_refunded_orders: int = 0
+    fulfilled_orders: int = 0
+    fulfilled_revenue: Decimal = Decimal("0")
+    paid_fulfilled_orders: int = 0
+    paid_fulfilled_revenue: Decimal = Decimal("0")
+    spend: Decimal = Decimal("0")
+    metric_declared_orders: int = 0
+    metric_declared_revenue: Decimal = Decimal("0")
+    crm_period_revenue_to_spend: Decimal | None = Field(default=None, description="Fulfilled CRM revenue / visible same-period metric spend. Partial period ratio, not causal ROAS. Overall totals are a shop-period comparison including unattributed CRM sales; campaign rows include only linked sales. Null when spend is zero.")
+    cost_per_fulfilled_order: Decimal | None = Field(default=None, description="Visible same-period spend / fulfilled CRM count. Overall totals include unattributed sales (shop-period comparison); campaign rows use linked sales only. Null when count is zero or campaign spend cannot be mapped (unattributed bucket).")
+
+
+class CrmAttributionCampaign(CrmAttributionTotals):
+    campaign_id: UUID
+    campaign_name: str
+    campaign_status: str
+
+
+class CrmAttributionResponse(BaseModel):
+    start_date: date
+    end_date: date
+    date_basis: Literal["order_created_at_utc"] = "order_created_at_utc"
+    source: Literal["crm_manual_campaign_link"] = "crm_manual_campaign_link"
+    state_basis: Literal["current_state"] = "current_state"
+    totals: CrmAttributionTotals
+    attributed_orders: int
+    unattributed_orders: int
+    attribution_coverage_percent: Decimal | None
+    unattributed: CrmAttributionTotals = Field(description="Orders without a visible workspace campaign, including deleted/missing/foreign links; no hidden names.")
+    campaigns: list[CrmAttributionCampaign]

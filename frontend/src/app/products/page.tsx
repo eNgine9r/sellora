@@ -8,6 +8,8 @@ import { FormDialog } from "@/components/form-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
 import { Button, CompactSummary, DrawerTabs, EntitySidePanel, FieldGrid, FieldItem, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
+import { ResponsiveReportTable } from "@/components/ui/responsive-report-table";
+import { RowActionButtons } from "@/components/ui/row-action-buttons";
 import { Select } from "@/components/ui/primitives";
 import { PaginationControls, clampPage, paginateItems } from "@/components/pagination-controls";
 import { ProductForm } from "@/features/products/components/product-form";
@@ -266,54 +268,31 @@ export default function ProductsPage() {
                 {t("products.createVariant")}
               </Button>
             </div>
-            <div className="sellora-scrollbar mt-3 overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
-                <thead className="text-xs uppercase text-text-muted">
-                  <tr>
-                    <th className="px-3 py-2">SKU</th>
-                    <th className="px-3 py-2">{t("inventory.product")}</th>
-                    <th className="px-3 py-2">{t("products.color")}</th>
-                    <th className="px-3 py-2">{t("products.size")}</th>
-                    <th className="px-3 py-2">{t("products.sellingPrice")}</th>
-                    <th className="px-3 py-2">{t("products.barcode")}</th>
-                    <th className="px-3 py-2">{t("tables.status")}</th>
-                    <th className="px-3 py-2">{t("tables.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedVariants.map((variant) => (
-                    <tr key={variant.id} className="border-t border-border-subtle hover:bg-surface-hover">
-                      <td className="px-3 py-2 font-semibold">{variant.sku}</td>
-                      <td className="px-3 py-2">{products.find((product) => product.id === variant.product_id)?.name ?? "—"}</td>
-                      <td className="px-3 py-2">{variant.color ?? "—"}</td>
-                      <td className="px-3 py-2">{variant.size ?? "—"}</td>
-                      <td className="px-3 py-2">{variant.price ?? "—"}</td>
-                      <td className="px-3 py-2">{variant.barcode ?? "—"}</td>
-                      <td className="px-3 py-2">{variant.is_active ? t("products.active") : t("products.inactive")}</td>
-                      <td className="px-3 py-2">
-                        {canEdit ? (
-                          <div className="flex flex-wrap gap-2">
-                            <Button aria-label={`${t("products.editVariant")} ${variant.sku}`} size="sm" variant="secondary" onClick={() => setEditingVariant(variant)}>
-                              {t("products.editVariant")}
-                            </Button>
-                            <Button aria-label={`${t("products.archive")} ${variant.sku}`} size="sm" variant="danger" onClick={() => setArchivingVariant(variant)}>
-                              {t("products.archive")}
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-xs font-semibold uppercase text-text-muted">{t("common.readOnly")}</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {paginatedVariants.length === 0 ? (
-                    <tr>
-                      <td className="px-3 py-6 text-text-muted" colSpan={8}>{t("products.createProductVariantFirst")}</td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
+            <ResponsiveReportTable
+              className="mt-3"
+              rows={paginatedVariants}
+              rowKey={(variant) => variant.id}
+              columns={[
+                { key: "sku", label: "SKU", emphasis: true, render: (variant) => variant.sku },
+                { key: "product", label: t("inventory.product"), render: (variant) => products.find((product) => product.id === variant.product_id)?.name ?? "—" },
+                { key: "color", label: t("products.color"), render: (variant) => variant.color ?? "—" },
+                { key: "size", label: t("products.size"), render: (variant) => variant.size ?? "—" },
+                { key: "price", label: t("products.sellingPrice"), render: (variant) => variant.price ?? "—" },
+                { key: "barcode", label: t("products.barcode"), render: (variant) => variant.barcode ?? "—" },
+                { key: "status", label: t("tables.status"), render: (variant) => variant.is_active ? t("products.active") : t("products.inactive") },
+                { key: "actions", label: t("tables.actions"), render: (variant) => canEdit
+                  ? <RowActionButtons
+                      entityLabel={variant.sku}
+                      editLabel={t("products.editVariant")}
+                      archiveLabel={t("products.archive")}
+                      onEdit={() => setEditingVariant(variant)}
+                      onArchive={() => setArchivingVariant(variant)}
+                    />
+                  : <span className="text-xs font-semibold text-text-muted">{t("common.readOnly")}</span> },
+              ]}
+              empty={<p className="rounded-xl border border-dashed border-border-subtle p-4 text-sm text-text-muted">{t("products.createProductVariantFirst")}</p>}
+              wide
+            />
           </section>
           <PaginationControls page={variantPage} pageSize={variantPageSize} totalItems={variants.length} onPageChange={setVariantPage} onPageSizeChange={(size) => { setVariantPageSize(size); setVariantPage(1); }} />
         </WorkspaceSplitView>

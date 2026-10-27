@@ -17,7 +17,7 @@ from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.inventory_repository import InventoryRepository
 from app.repositories.order_repository import OrderRepository
 from app.schemas.inventory import InventoryTransactionCreate
-from app.schemas.order import OrderCreate, OrderDashboardResponse, OrderStatusUpdate, OrderUpdate
+from app.schemas.order import HistoricalCostConfidence, HistoricalCostSource, HistoricalEstimatedCostUpsert, OrderCreate, OrderDashboardResponse, OrderStatusUpdate, OrderUpdate
 from app.services.business_utils import snapshot
 from app.services.inventory_service import InventoryService, InventoryServiceError
 from app.services.profit_calculation_service import ProfitCalculationService
@@ -155,11 +155,88 @@ class OrderService:
             setattr(order, field, value.value if hasattr(value, "value") else value)
         if item_payloads is not None:
             self._replace_items_for_update(workspace_id, order, item_payloads, actor_user_id, old_value)
+            # Once historical costs are confirmed in item snapshots, clear the
+            # advisory estimate; the ORDER_UPDATE audit records its prior value.
+            if order.is_historical and order.product_cost > 0 and order.estimated_product_cost is not None:
+                order.estimated_product_cost = None
+                order.estimated_cost_source = None
+                order.estimated_cost_confidence = None
+                order.estimated_cost_reference = None
         self._recalculate_profit(order)
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="ORDER_UPDATE", old_value=old_value, new_value=snapshot(order))
         self.db.commit()
         self.db.refresh(order)
         return self.get(workspace_id, order_id) or order
+
+    def set_historical_cost_estimate(
+        self, workspace_id: UUID, order_id: UUID,
+        payload: HistoricalEstimatedCostUpsert, actor_user_id: UUID | None,
+    ) -> Order | None:
+        order = self._get_order_for_update(workspace_id, order_id)
+        if order is None:
+            return None
+        self._validate_estimate_target(order)
+        reference = payload.reference.strip() if payload.reference else None
+        if payload.source == HistoricalCostSource.SHEET_ROW_MATCH and not reference:
+            raise OrderServiceError("A source-row reference is required for matched historical cost")
+        confidence = {
+            HistoricalCostSource.SHEET_ROW_MATCH: HistoricalCostConfidence.MULTI_SIGNAL_MATCH,
+            HistoricalCostSource.PRICE_MEDIAN: HistoricalCostConfidence.PRICE_ONLY,
+            HistoricalCostSource.PRICE_BAND: HistoricalCostConfidence.LOW,
+            HistoricalCostSource.MANUAL: HistoricalCostConfidence.MANUAL_REVIEW,
+        }[payload.source]
+        previous = self._estimated_cost_snapshot(order)
+        order.estimated_product_cost = payload.amount
+        order.estimated_cost_source = payload.source.value
+        order.estimated_cost_confidence = confidence.value
+        order.estimated_cost_reference = reference
+        self.audit_logs.create(
+            workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order",
+            entity_id=order.id, action="HISTORICAL_COST_ESTIMATE_SET",
+            old_value=previous, new_value=self._estimated_cost_snapshot(order),
+        )
+        # Do not recalculate profit, replace line items or affect inventory here.
+        self.db.commit()
+        self.db.refresh(order)
+        return self.get(workspace_id, order_id) or order
+
+    def clear_historical_cost_estimate(
+        self, workspace_id: UUID, order_id: UUID, actor_user_id: UUID | None,
+    ) -> Order | None:
+        order = self._get_order_for_update(workspace_id, order_id)
+        if order is None:
+            return None
+        if not order.is_historical:
+            raise OrderServiceError("Cost estimates are allowed only for historical orders")
+        previous = self._estimated_cost_snapshot(order)
+        order.estimated_product_cost = None
+        order.estimated_cost_source = None
+        order.estimated_cost_confidence = None
+        order.estimated_cost_reference = None
+        self.audit_logs.create(
+            workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order",
+            entity_id=order.id, action="HISTORICAL_COST_ESTIMATE_CLEARED",
+            old_value=previous, new_value=self._estimated_cost_snapshot(order),
+        )
+        self.db.commit()
+        self.db.refresh(order)
+        return self.get(workspace_id, order_id) or order
+
+    @staticmethod
+    def _validate_estimate_target(order: Order) -> None:
+        if not order.is_historical:
+            raise OrderServiceError("Cost estimates are allowed only for historical orders")
+        if order.product_cost > 0 or any(item.unit_cost > 0 for item in order.items):
+            raise OrderServiceError("Confirmed historical costs cannot be overwritten by an estimate")
+
+    @staticmethod
+    def _estimated_cost_snapshot(order: Order) -> dict:
+        return {
+            "estimated_product_cost": str(order.estimated_product_cost) if order.estimated_product_cost is not None else None,
+            "estimated_cost_source": order.estimated_cost_source,
+            "estimated_cost_confidence": order.estimated_cost_confidence,
+            "estimated_cost_reference": order.estimated_cost_reference,
+        }
 
     def _replace_items_for_update(self, workspace_id: UUID, order: Order, item_payloads: list, actor_user_id: UUID | None, old_value: dict | None = None) -> None:
         historical = bool(order.is_historical)

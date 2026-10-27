@@ -10,9 +10,11 @@ from app.api.v1.direct_sync import router as direct_sync_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.attachments import router as attachments_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.session_auth import router as session_auth_router
 from app.api.v1.customers import router as customers_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.finance import router as finance_router
+from app.api.v1.cod_reconciliation import router as cod_reconciliation_router
 from app.api.v1.lead_sources import router as lead_sources_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.meta_ads import router as meta_ads_router
@@ -30,6 +32,7 @@ from app.api.v1.instagram import router as instagram_router
 from app.api.v1.inventory import router as inventory_router
 from app.api.v1.workspaces import router as workspaces_router
 from app.api.v1.workspace_users import router as workspace_users_router
+from app.api.v1.workspace_memos import router as workspace_memos_router
 
 api_router = APIRouter()
 api_router.include_router(ai_router)
@@ -41,11 +44,13 @@ api_router.include_router(direct_sync_router)
 api_router.include_router(advertising_router)
 api_router.include_router(analytics_router)
 api_router.include_router(auth_router)
+api_router.include_router(session_auth_router)
 api_router.include_router(lead_sources_router)
 api_router.include_router(leads_router)
 api_router.include_router(customers_router)
 api_router.include_router(feedback_router)
 api_router.include_router(finance_router)
+api_router.include_router(cod_reconciliation_router)
 api_router.include_router(products_router)
 api_router.include_router(import_center_router)
 api_router.include_router(instagram_router)
@@ -62,3 +67,4 @@ api_router.include_router(tags_router)
 api_router.include_router(attachments_router)
 api_router.include_router(workspaces_router)
 api_router.include_router(workspace_users_router)
+api_router.include_router(workspace_memos_router)

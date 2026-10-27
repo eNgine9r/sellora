@@ -4,7 +4,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -41,7 +41,21 @@ class Order(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Timestam
     payment_status: Mapped[str] = mapped_column(String(30), default=PaymentStatus.PENDING.value, nullable=False)
     is_historical: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     revenue: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
+    # Historical NP label evidence only. Never recognized as revenue/net profit.
+    historical_order_value: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    historical_value_source: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # Private provenance: source message IDs, extracted price candidates,
+    # review classification; never raw customer chat content.
+    historical_value_evidence: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+
     product_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
+    # Historical estimates are advisory snapshots, NEVER included in revenue,
+    # confirmed product_cost, financial aggregates or stock movements.
+    estimated_product_cost: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    estimated_cost_source: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    estimated_cost_confidence: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    estimated_cost_reference: Mapped[str | None] = mapped_column(String(512), nullable=True)
     ad_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     shipping_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     cod_fee: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)

@@ -15,12 +15,15 @@ from app.models.customer_address import DeliveryProvider
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.customer_repository import CustomerRepository
+from app.repositories.lead_repository import LeadRepository
+from app.models.lead import LeadStatus
 from app.schemas.crm_completion import CustomerAddressCreate, CustomerAddressUpdate
 from app.schemas.customer import CustomerResponse
 from app.schemas.direct_customer_automation import (
     DirectCustomerAutomationState,
     DirectCustomerCompleteRequest,
 )
+from app.services.advertising_attribution_service import AdvertisingAttributionService
 from app.services.business_utils import snapshot
 from app.services.crm_completion_service import CustomerCrmService
 
@@ -35,8 +38,10 @@ class DirectCustomerAutomationService:
         self.conversations = DirectConversationRepository(db)
         self.messages = DirectMessageRepository(db)
         self.customers = CustomerRepository(db)
+        self.leads = LeadRepository(db)
         self.customer_crm = CustomerCrmService(db)
         self.audit_logs = AuditLogRepository(db)
+        self.ad_attribution = AdvertisingAttributionService(db)
 
     def state(self, workspace_id: UUID, conversation_id: UUID) -> DirectCustomerAutomationState:
         conversation = self._conversation(workspace_id, conversation_id)
@@ -160,6 +165,11 @@ class DirectCustomerAutomationService:
             warehouse_ref=payload.nova_poshta_warehouse_ref,
             actor_user_id=actor_user_id,
         )
+        # Only inherit a campaign from an explicitly linked Direct lead.
+        # Never replace an existing manager-selected campaign.
+        self.ad_attribution.inherit_verified_direct_lead(
+            workspace_id, conversation, customer.id, conversation.linked_order_id, actor_user_id,
+        )
         self.audit_logs.create(
             workspace_id=workspace_id,
             user_id=actor_user_id,
@@ -191,6 +201,20 @@ class DirectCustomerAutomationService:
         old_value = snapshot(customer)
         conversation.linked_customer_id = customer.id
         conversation.linked_order_id = order_id
+        if conversation.linked_lead_id:
+            lead = self.leads.get(workspace_id, conversation.linked_lead_id)
+            if lead and lead.status not in {LeadStatus.CONVERTED.value, LeadStatus.LOST.value}:
+                lead.status = LeadStatus.CONVERTED.value
+                self.audit_logs.create(
+                    workspace_id=workspace_id, user_id=actor_user_id,
+                    entity_type="Lead", entity_id=lead.id,
+                    action="DIRECT_LEAD_CONVERT",
+                    new_value={
+                        "status": LeadStatus.CONVERTED.value,
+                        "order_id": str(order_id),
+                        "customer_id": str(customer.id),
+                    },
+                )
         customer.name = recipient_name.strip() or customer.name
         customer.phone = recipient_phone or customer.phone
         customer.city = city.strip() or customer.city
@@ -249,13 +273,18 @@ class DirectCustomerAutomationService:
             stage = "PROSPECT_READY_FOR_ORDER"
         else:
             stage = "NOT_CREATED"
+        repeat_lead = (self.leads.get(workspace_id, conversation.linked_lead_id)
+                       if conversation.linked_order_id and conversation.linked_lead_id else None)
+        repeat_eligible = bool(repeat_lead and repeat_lead.status in {
+            LeadStatus.NEW.value, LeadStatus.IN_PROGRESS.value, LeadStatus.QUALIFIED.value,
+        })
         return DirectCustomerAutomationState(
             conversation_id=conversation.id,
             customer=CustomerResponse.model_validate(customer) if customer else None,
             linked_order_id=conversation.linked_order_id,
             stage=stage,
             missing_fields=missing,
-            can_create_order=customer is not None and conversation.linked_order_id is None,
+            can_create_order=customer is not None and (conversation.linked_order_id is None or repeat_eligible),
             profile_complete=profile_complete,
         )
 

@@ -118,7 +118,7 @@
     "password": "Password",
     "login": "Log in",
     "loading": "Signing in…",
-    "helper": "Enter your account details to access the store.",
+    "helper": "Sign in to your team’s workspace.",
     "error": "Invalid email or password. Check the details and try again.",
     "sessionExpired": "Session expired. Please log in again.",
     "networkError": "Could not connect to the server. Try again a bit later.",
@@ -126,9 +126,9 @@
     "backHome": "Back to site",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "contextTitle": "All store work in one workspace",
-    "contextDescription": "Sellora brings sales, customers, products, shipments, ads, and finance into one protected workspace for your team.",
-    "trustStatement": "Access is protected by an account, and each store’s data is kept separately.",
+    "contextTitle": "Every sale.\nOne workspace.",
+    "contextDescription": "Customers, orders and results — pick up right where you left off.",
+    "trustStatement": "Account-based workspace access. Your team’s data is kept separate from other workspaces.",
     "indicators": [
       {
         "label": "operations workspace",
@@ -142,7 +142,12 @@
         "label": "English interface",
         "value": "EN"
       }
-    ]
+    ],
+    "workspaceLabel": "Your workspace",
+    "formNote": "Use the email and password for your account.",
+    "secureLabel": "Access your CRM",
+    "previewLabel": "Customer → order → result",
+    "validationError": "Enter a valid email address and your password."
   },
   "landing": {
     "nav": {
@@ -296,11 +301,17 @@
     "finalCtaEyebrow": "Ready for clarity",
     "ctaTitle": "Start from your real Sellora workspace",
     "ctaSubtitle": "If you already have workspace access, log in and keep managing sales without spreadsheets.",
-    "footer": "© 2026 Sellora. CRM/ERP for Instagram stores.",
-    "footerDescription": "Sellora helps Instagram stores manage leads, customers, orders, stock, shipments, advertising, and finance in one workspace.",
+    "footer": "© 2026 Sellora. CRM for managing sales.",
+    "footerDescription": "Sellora connects customers, orders, products, inventory, shipping, advertising and finances in one workspace.",
     "headerExploreCta": "Explore features"
   },
   "dashboard": {
+    "codReconciliation": {
+      "title": "COD reconciliation",
+      "received": "COD receipts (registers)",
+      "pending": "Unverified historical amounts",
+      "unverified": "Unverified, all-time archive"
+    },
     "eyebrow": "Sellora Dashboard",
     "title": "CRM for Instagram stores",
     "subtitle": "Leads, customers, orders, inventory, shipments, advertising, finance, and analytics in one modern SaaS interface.",
@@ -403,7 +414,8 @@
       "noRecentOrders": "No orders yet",
       "noRecentOrdersDescription": "Create your first order or import historical data to start tracking revenue and fulfillment.",
       "noNotifications": "No urgent notifications",
-      "noActivity": "No recent activity in this period"
+      "noActivity": "No recent activity in this period",
+      "noRecordedFinancials": "Orders exist but no revenue is recorded in this period. Check payments and imports."
     },
     "errors": {
       "loadFailed": "Dashboard data could not be loaded. Refresh the page or retry after checking the current workspace connection."
@@ -437,11 +449,12 @@
       "ordersHasData": "Orders for period: {period}.",
       "ordersZero": "No orders in the selected period yet.",
       "revenueHasData": "Revenue for period: {period}.",
-      "revenueZero": "Revenue appears after paid or completed orders.",
+      "revenueZero": "No revenue for the selected period. Choose All time to review past sales.",
       "profitMissing": "Not enough data to calculate profit. Check product costs.",
       "profitRestricted": "Profit is available to owners or analysts.",
       "roasHasData": "ROAS shows ad return for the selected period.",
-      "roasMissing": "Add ad spend to see advertising return."
+      "roasMissing": "Add ad spend to see advertising return.",
+      "revenueNoRecorded": "No recorded revenue for the selected period. Choose All time to review historical sales."
     },
     "ownerAlerts": {
       "title": "What needs attention",
@@ -466,7 +479,8 @@
       "noPeriodData": {
         "title": "No data in selected period",
         "description": "Create a lead or order to make the dashboard useful."
-      }
+      },
+      "subtitleCompact": "Key actions and store data states."
     },
     "ownerActions": {
       "openInventory": "Open inventory",
@@ -487,7 +501,9 @@
       "deliveryRate": "Delivered from orders: {rate}%",
       "noRate": "Not enough data for a rate.",
       "emptyTitle": "Not enough data for the funnel",
-      "emptyDescription": "Create leads and orders to see conversion."
+      "emptyDescription": "Create leads and orders to see conversion.",
+      "subtitleAccurate": "Event counts for the period. Orders are not necessarily linked to leads.",
+      "orderRatio": "Orders / leads: {rate}% (not conversion)"
     },
     "fulfillment": {
       "title": "Order fulfillment state",
@@ -511,7 +527,12 @@
     },
     "blockError": "Could not load this block.",
     "titleCompact": "Dashboard",
-    "descriptionCompact": "Store performance overview"
+    "descriptionCompact": "Store performance overview",
+    "onboarding": {
+      "title": "Store setup",
+      "expand": "Details",
+      "collapse": "Collapse"
+    }
   },
   "tables": {
     "name": "Name",
@@ -675,6 +696,35 @@
     "unlinkedHistoryNotice": "Historical sales without a verified customer link are not included here."
   },
   "orders": {
+    "historicalEstimate": {
+      "title": "Estimated historical product cost",
+      "notConfirmed": "Unverified",
+      "help": "Only for imported orders without confirmed product costs. Purchase price + inbound shipping from China, excluding advertising.",
+      "amount": "Estimated product cost",
+      "source": "Estimation method",
+      "confidence": "Confidence",
+      "reference": "Source link / row reference",
+      "referencePlaceholder": "For example: Google Sheets, row 4175",
+      "empty": "No estimate has been recorded.",
+      "save": "Save estimate",
+      "clear": "Clear estimate",
+      "validationAmount": "Enter a positive monetary amount with no more than two decimal places.",
+      "validationReference": "A source reference is required for matched rows.",
+      "saveError": "Failed to save the estimate.",
+      "exclusion": "This estimate does not affect confirmed COGS, payments, stock, or reported profit.",
+      "sources": {
+        "SHEET_ROW_MATCH": "Matched Google Sheets row",
+        "PRICE_MEDIAN": "Median for matching price",
+        "PRICE_BAND": "Price-band estimate",
+        "MANUAL": "Manual estimate"
+      },
+      "confidences": {
+        "MULTI_SIGNAL_MATCH": "Multi-signal match (not yet verified)",
+        "PRICE_ONLY": "Price-based only",
+        "LOW": "Low",
+        "MANUAL_REVIEW": "Manual, review required"
+      }
+    },
     "title": "Orders",
     "subtitle": "Create orders and track payment, profit, and delivery statuses.",
     "create": "Create order",
@@ -1050,7 +1100,7 @@
     "source": "Source",
     "manualSource": "Manual/import",
     "metaReadySource": "Meta-ready mapping",
-    "mappingHint": "External campaign/adset/ad IDs will appear in details after safe Meta Ads sync is added.",
+    "mappingHint": "Imported campaigns and daily metrics retain their Meta Ads identifiers.",
     "importMetricsFirst": "Import advertising metrics first to see ROAS, CPA, and CPL.",
     "roasExplanation": "ROAS shows how much revenue 1 UAH of ad spend brings.",
     "cpaExplanation": "CPA shows the average cost of one advertising-driven order.",
@@ -1081,10 +1131,10 @@
     "cplShortExplanation": "Average cost of one lead.",
     "conversionRateShortExplanation": "What share of leads became orders.",
     "costPerMessageShortExplanation": "Average cost of one message.",
-    "manualImportInsightSource": "Insights use only manual or CSV-imported advertising metrics.",
-    "metaFutureWorkInsight": "Meta Ads API sync remains future work, not an active integration.",
+    "manualImportInsightSource": "Insights use daily advertising metrics, including Meta Ads imports.",
+    "metaFutureWorkInsight": "Revenue and order metrics require CRM entries or attribution.",
     "noMisleadingInsight": "When spend or enough events are missing, Sellora shows a safe status instead of a scaling recommendation.",
-    "stagingBlockedInsight": "Advertising import is not marked pilot-ready while manual staging QA remains blocked.",
+    "stagingBlockedInsight": "Evaluate campaigns after checking spend and CRM data completeness.",
     "noCampaignInsights": "There is not enough advertising data to compare campaigns yet.",
     "decisionProblemLeadsNoOrders": "Leads exist, but there are no orders — check Direct follow-up or the offer.",
     "decisionWatchWeakConversion": "Leads and orders exist, but conversion is below the expected level.",
@@ -1099,7 +1149,7 @@
     "manualAttributionManual": "Attribution is manual.",
     "manualAttributionLinkedOnly": "Sellora counts only orders where an advertising campaign was selected manually.",
     "manualAttributionUnattributedValid": "Orders without a campaign remain valid and are not treated as errors.",
-    "manualAttributionMetaFuture": "Meta Ads API attribution is future work and is not active now.",
+    "manualAttributionMetaFuture": "Meta Ads import does not create sales attribution automatically.",
     "readinessEyebrow": "Pilot readiness gate",
     "readinessTitle": "Advertising module status",
     "readinessDescription": "This block helps the owner and QA team see what works now and what still needs final runtime/staging validation. It does not mean production-ready status.",
@@ -1115,7 +1165,17 @@
     "readinessPendingPostgresMigration": "PostgreSQL runtime validation for the attribution migration",
     "readinessPendingBrowserMobileQa": "browser/mobile QA for leads, orders, and advertising",
     "readinessMetaFuture": "future stage, not active now",
-    "safeZeroDenominator": "Shown as unavailable when spend is missing or zero."
+    "safeZeroDenominator": "Shown as unavailable when spend is missing or zero.",
+    "fxEvidence": "Original: {amount} {currency}; NBU rate: {rate} on {date}.",
+    "connectedSubtitle": "Track advertising spend and results from Meta Ads, manual entries and CSV.",
+    "mixedSource": "Meta Ads and manual/CSV data",
+    "availableSources": "The owner can connect Meta Ads in integration settings. Manual entry and CSV import are also available.",
+    "deliveryOnlySync": "Meta Ads updates spend, impressions, clicks and conversations started. Orders, revenue and profit remain CRM data.",
+    "crmAttributionNotice": "Link orders to campaigns in CRM to evaluate sales. Missing attribution does not mean no sales.",
+    "campaignMetricsSource": "Daily metrics",
+    "metaOwnerSettings": "Owner connection and manual import are available in integration settings.",
+    "addMoreMetrics": "Add advertising data",
+    "importAlternative": "Update Meta Ads in integration settings or upload CSV."
   },
   "analytics": {
     "title": "Analytics",
@@ -1277,6 +1337,30 @@
       "pageSize": "Rows per page",
       "emptyTitle": "No report rows for this period",
       "emptyDescription": "Change the period or add orders to populate detailed analytics."
+    },
+    "modern": {
+      "periodLabel": "Shared report period",
+      "overviewTitle": "Store performance at a glance",
+      "kpiTitle": "Key performance indicators",
+      "revenueHelper": "Revenue in selected period",
+      "ordersHelper": "Orders created in period",
+      "profitHelper": "Based on available costs",
+      "aovHelper": "Average order value",
+      "moreMetrics": "Also tracked",
+      "sectionNav": "Report sections",
+      "sectionOverview": "Overview",
+      "trendEyebrow": "Sales activity",
+      "trendTitle": "Revenue over time",
+      "trendDescription": "Actual revenue on days with recorded orders. Days without records are not plotted.",
+      "trendEmpty": "No chart data yet",
+      "trendEmptyHelp": "Choose another period or add orders to view sales activity.",
+      "trendChartAria": "Revenue chart for {count} days with records",
+      "activeDays": "Days with records",
+      "peakDay": "Highest daily revenue",
+      "priorityEyebrow": "Priority signals",
+      "allInsights": "All insights",
+      "rulesOnly": "Deterministic insights from available data, not forecasts.",
+      "noInsights": "Not enough data for recommendations yet. Reports update as store data is added."
     }
   },
   "settings": {
@@ -2074,6 +2158,10 @@
   },
   "accountMenu": {
     "profile": "Profile",
+    "preferences": "Appearance & language",
+    "roleOwner": "Owner",
+    "roleManager": "Manager",
+    "roleAnalyst": "Analyst",
     "user": "User",
     "workspace": "Workspace",
     "currentWorkspace": "Current workspace",
@@ -2160,6 +2248,12 @@
     }
   },
   "fulfillment": {
+    "selectRecipientCityFirst": "Select the recipient city first.",
+    "profitUnavailable": "Profit is unavailable: product costs are not included yet.",
+    "productSearch": "Find a product",
+    "productSearchHint": "Name, SKU, color or size",
+    "productSearchEmpty": "No matches. Try another name or SKU.",
+    "productSearchNarrow": "Showing the first 30 matches. Refine your search to find the right variant.",
     "progress": "Checkout steps",
     "step1": "Customer and delivery",
     "step2": "Products and payment",
@@ -2215,6 +2309,7 @@
       "city": "Select a city from the Nova Poshta directory.",
       "warehouse": "Select a branch or parcel locker from the directory.",
       "items": "Add a product, quantity and price.",
+      "amounts": "Enter valid non-negative cash-on-delivery and declared values.",
       "stock": "One of the products does not have enough available stock."
     }
   },
@@ -2227,15 +2322,40 @@
   },
   "direct": {
     "kicker": "AI Direct Intelligence",
-    "title": "Direct Intelligence",
-    "description": "Synthetic inbox for safe Instagram Direct analysis: AI analyzes and suggests, while a manager approves every action. Production Meta integration and automatic messaging are disabled.",
+    "title": "Direct",
+    "description": "Customer messages, leads and orders in one place.",
     "createSynthetic": "Create test conversation",
     "conversations": "Conversations",
     "search": "Search by name, username, or message",
     "noAutoSend": "AI drafts are never sent to customers automatically.",
     "aiPanel": "AI panel",
     "openAiPanel": "Open AI panel",
-    "syntheticBadge": "Test conversation"
+    "syntheticBadge": "Test conversation",
+    "history": "History",
+    "historyHeading": "Import Direct history",
+    "historyHint": "Imports previous Instagram conversations. Live messages continue arriving independently.",
+    "historyLimit": "Up to 100 conversations · up to 20 messages each",
+    "historyStart": "Sync history",
+    "historyStop": "Stop import",
+    "historyStopping": "Stopping import…",
+    "historyStartConfirm": "Import up to 100 conversations and 20 messages each? This may take time and make additional Meta API calls.",
+    "historyStopConfirm": "Stop importing history? Already saved messages will remain in Sellora. New Direct messages will continue arriving.",
+    "historyStopError": "Could not request the import stop. Try again.",
+    "historyStartError": "Could not start the history import.",
+    "historyPending": "Waiting to import",
+    "historyRunning": "Importing history",
+    "historyRetry": "Meta has limited requests — waiting to retry",
+    "historyCompleted": "History imported",
+    "historyPartial": "History partially imported",
+    "historyCancelled": "Import stopped",
+    "historyFailed": "Import paused after an error",
+    "historyProgress": "Conversations checked",
+    "historyNew": "Messages added",
+    "historyExisting": "Already in Sellora",
+    "historyUnavailable": "Unavailable messages",
+    "historyErrors": "Errors",
+    "refreshList": "Refresh conversations",
+    "aiQuick": "AI assistant"
   },
   "instagramSettings": {
     "title": "Instagram Direct",
@@ -2315,5 +2435,623 @@
       "messages": "Messages",
       "messaging_postbacks": "Button taps"
     }
+  },
+  "adsLive": {
+    "source": "Meta Ads imports spend, impressions, clicks and conversation starts. Sales and profit remain Sellora data. Reach is not imported and does not verify unique people.",
+    "loadFailed": "Could not load Meta Ads status.",
+    "retry": "Try again",
+    "ownerOnly": "Only the workspace owner can manage connection and sync.",
+    "connect": "Connect Meta Ads",
+    "reconnect": "Reconnect",
+    "redirecting": "Opening Meta…",
+    "accountTitle": "Ad account",
+    "selectionRequired": "Choose an ad account before syncing.",
+    "accountsFailed": "Could not load ad accounts.",
+    "noAccounts": "No ad accounts are available. Check your Meta access or reconnect.",
+    "currencyHelp": "Workspace currency: {currency}. Choose an account with the same currency.",
+    "chooseAccount": "Choose an account",
+    "currencyMismatch": "Different currency",
+    "selectAccount": "Confirm account",
+    "accountSaved": "Account selected.",
+    "rangeHelp": "Daily metrics use account timezone: {timezone}. Maximum 91 days inclusive.",
+    "from": "Sync start date",
+    "to": "Sync end date",
+    "sync": "Sync date range",
+    "syncSuccess": "Range synced. Repeating a sync updates the same daily metrics.",
+    "lastSync": "Last sync",
+    "never": "Never",
+    "disconnect": "Disconnect Meta Ads",
+    "disconnectConfirm": "Disconnect Meta Ads for this workspace? Imported metrics will be retained.",
+    "confirmDisconnect": "Confirm disconnect",
+    "disconnected": "Meta Ads disconnected.",
+    "callbackTitle": "Connect Meta Ads",
+    "back": "Back to integrations",
+    "providerFields": "Meta Ads controls date, spend, impressions, clicks and messages. These are read-only. Local CRM fields remain editable. Reach is local and is not imported from Meta.",
+    "localReach": "Local reach (not Meta)",
+    "callback": {
+      "processing": "Verifying connection…",
+      "success": "Meta Ads connected. Choose an ad account next.",
+      "invalid_state": "Connection could not be confirmed for this session and workspace. Start again from integrations.",
+      "denied": "You cancelled the Meta Ads connection."
+    },
+    "statuses": {
+      "NOT_CONNECTED": "Not connected",
+      "MOCK_ONLY": "Test mode",
+      "CONNECTING": "Waiting for Meta",
+      "CONNECTED": "Connected",
+      "NEEDS_REAUTH": "Reconnect required",
+      "PERMISSION_MISSING": "Permission missing",
+      "TOKEN_EXPIRED": "Access expired",
+      "DISCONNECTED": "Disconnected",
+      "ERROR": "Connection error"
+    },
+    "errors": {
+      "failed": "Could not complete this action. Refresh status and try again.",
+      "ownerOnly": "Only the owner can perform this action.",
+      "feature_disabled": "This integration is not enabled in this environment.",
+      "live_oauth_disabled": "Meta connection is not enabled yet.",
+      "token_storage_disabled": "Secure access storage is not configured yet.",
+      "unsupported_api_version": "The Sellora team needs to update Meta settings.",
+      "missing_required_configuration": "Meta Ads setup is incomplete. Contact the Sellora team.",
+      "invalid_encryption_configuration": "The Sellora team needs to configure access protection.",
+      "sync_disabled": "Sync is not enabled yet.",
+      "invalid_date_range": "Choose a valid range of up to 91 days inclusive.",
+      "connection_not_ready": "Reconnect Meta Ads.",
+      "account_selection_required": "Choose an ad account first.",
+      "connection_changed": "Connection changed. Refresh status and check the account.",
+      "currency_mismatch": "Account currency differs from workspace currency. Choose another account.",
+      "manual_spend_conflict": "Manual or imported spend exists for this range. Sync was cancelled with no partial import. Review the data before retrying.",
+      "import_conflict": "Existing metrics conflict with this import. No partial import was performed.",
+      "invalid_provider_data": "Meta returned incomplete data. Try later.",
+      "credential_unavailable": "Access is unavailable. Reconnect Meta Ads.",
+      "RATE_LIMITED": "Meta temporarily limited requests. Try later.",
+      "TOKEN_EXPIRED": "Access expired. Reconnect Meta Ads.",
+      "TOKEN_INVALID": "Access was lost. Reconnect Meta Ads.",
+      "PERMISSION_MISSING": "Grant ads read permission when reconnecting.",
+      "NETWORK_ERROR": "Meta is unavailable. Try later.",
+      "MALFORMED_RESPONSE": "Meta returned an unexpected response. Try later.",
+      "UNKNOWN_ERROR": "Could not retrieve Meta data. Try later.",
+      "provider_metric_read_only": "Meta Ads controls delivery fields and date. Refresh metrics and edit local CRM fields only.",
+      "exchange_rate_unavailable": "NBU rates are unavailable for some dates. No advertising spend was imported. Try again later."
+    },
+    "impressions": "Impressions",
+    "clicks": "Clicks",
+    "dailyMetrics": "Daily metrics",
+    "editMetric": "Edit metric",
+    "deleteMetric": "Delete metric",
+    "readOnly": "Read-only",
+    "reach": "Reach",
+    "roi": "ROI",
+    "reviewSync": "Review before syncing",
+    "syncReviewTitle": "Confirm advertising metrics import",
+    "syncReviewNotice": "Check the ad account and date range. This confirms the parameters; it is not a row-by-row database change preview. If manual or CSV data conflict, the server rejects the entire import. Orders, revenue and profit are unchanged.",
+    "confirmSync": "Confirm metrics import",
+    "simple": {
+      "description": "Ad spend and results, all in one place.",
+      "chooseTitle": "Choose your ad account",
+      "chooseHelp": "Select the account Sellora will read advertising data from.",
+      "notReady": "Connection is not configured yet. You can still track ads manually.",
+      "openAdvertising": "Open advertising",
+      "updateMetrics": "Update ad metrics",
+      "periodTitle": "Choose a date range",
+      "timezoneHelp": "Account timezone: {timezone} · up to 91 days.",
+      "syncPending": "Advertising sync is currently unavailable.",
+      "safety": "No changes to campaigns, budgets or your manual data.",
+      "whyUnavailable": "Why can't I connect?",
+      "connectionSettings": "Manage connection",
+      "changeAccount": "Change ad account"
+    },
+    "dailyNbuConversion": "USD spend is converted to UAH using the official NBU rate for each advertising day. The original amount, rate and date are retained."
+  },
+  "integrationHub": {
+    "pageDescription": "Connect and manage services without extra complexity.",
+    "instagramDescription": "Talk to customers directly from Sellora.",
+    "instagramConnectHint": "Connect Instagram to see your messages.",
+    "instagramRepairHint": "Review your Instagram connection or notifications.",
+    "needsAttention": "Needs attention",
+    "openDirect": "Open Direct",
+    "fixConnection": "Fix connection",
+    "manageConnection": "Settings",
+    "connectError": "Could not start the connection. Please try again.",
+    "novaDescription": "Shipping labels and deliveries in one place.",
+    "ready": "Ready",
+    "needsSetup": "Setup needed",
+    "notConnected": "Not connected",
+    "novaReadyHint": "Shipment labels can be created.",
+    "novaSetupHint": "Complete setup to start creating shipping labels.",
+    "novaConnectHint": "Connect delivery for your orders.",
+    "statusUnavailable": "Could not check connection status.",
+    "openShipments": "Open shipments",
+    "completeSetup": "Finish setup",
+    "connectNova": "Set up delivery"
+  },
+  "adsDashboard": {
+    "eyebrow": "ADVERTISING ANALYTICS",
+    "pageDescription": "Ad spend, conversations, and campaign results in one place.",
+    "heroTitle": "Your advertising performance",
+    "heroSubtitle": "See spend, conversations, and campaign results recorded in ad metrics.",
+    "integrations": "Connections",
+    "period": "Reporting period",
+    "period_7": "7 days",
+    "period_30": "30 days",
+    "period_90": "90 days",
+    "period_all": "All time",
+    "period_custom": "Custom",
+    "spend": "Ad spend",
+    "spendCaption": "Spend in your workspace currency",
+    "messages": "Messages",
+    "messagesCaption": "Conversations started according to ad data",
+    "costPerMessage": "Cost per message",
+    "costPerMessageCaption": "Spend / conversation starts",
+    "orders": "Orders",
+    "ordersCaption": "Orders reported in daily ad metrics",
+    "revenue": "Revenue in ad metrics",
+    "revenueCaption": "Revenue recorded in daily ad metrics",
+    "roasCaption": "Recorded ad metric revenue / ad spend",
+    "topCampaigns": "Highest-spend campaigns",
+    "spendRanking": "By spend",
+    "noCampaignData": "No campaign spend for the selected period.",
+    "dataQualityTitle": "About these numbers",
+    "source": "Spend source",
+    "metaSource": "Meta Ads",
+    "manualSource": "Manual / CSV",
+    "attributionNotice": "Spend and messages come from Meta Ads or manual/CSV reports. Orders and revenue shown here are recorded in daily ad metrics. They are not yet automatically reconciled with CRM orders.",
+    "noAttributionNotice": "Ads have spend, but there are no sales recorded in daily ad metrics. This does not mean these campaigns generated no CRM orders.",
+    "trendTitle": "Spend and revenue trend",
+    "trendCaption": "Daily values in workspace currency · recorded ad metric revenue",
+    "noTrendData": "No chart data for this period.",
+    "sections": "Advertising sections",
+    "tab_overview": "Overview",
+    "tab_campaigns": "Campaigns",
+    "tab_data": "Data & settings",
+    "nextStepsTitle": "What next?",
+    "nextStepsDescription": "Check which campaigns use most of your budget. Link leads and orders to campaigns in the CRM to understand sales performance.",
+    "viewCampaigns": "View campaigns",
+    "campaignsTitle": "Campaign performance",
+    "campaignsCaption": "Spend, messages and recorded orders from daily ad metrics",
+    "searchCampaigns": "Search campaigns...",
+    "advancedInsights": "Advanced campaign insights",
+    "crmLabel": "Daily metrics",
+    "manageData": "Manage advertising data",
+    "manageDataHint": "Manual campaigns, CSV imports and historical metrics.",
+    "metaConnection": "Meta Ads connection and sync",
+    "loadError": "Some advertising data could not be loaded. Try refreshing.",
+    "retry": "Refresh",
+    "crmAttributionTitle": "Sales linked to campaigns",
+    "crmAttributionSubtitle": "CRM order cohort by UTC creation date; current order statuses shown.",
+    "crmAttributionSource": "Source: CRM",
+    "crmLinkedOrders": "Active orders with campaigns",
+    "crmLinkedCaption": "Excludes cancelled, returned and refunded",
+    "crmPaidCompletedRevenue": "Paid linked campaign revenue",
+    "crmPaidOrders": "paid delivered/completed orders",
+    "crmUnattributed": "Paid with no campaign",
+    "crmUnattributedCaption": "Delivered/completed without campaign linkage",
+    "crmLinkedCampaigns": "Campaigns linked to CRM orders",
+    "crmOrdersShort": "orders",
+    "crmEmpty": "No confirmed campaign links for orders in this period yet.",
+    "crmTruthNotice": "Real CRM orders: recognized paid revenue only for delivered/completed orders with PAID status. This report shows recorded campaign links, not ad causality or causal ROAS. Returned orders and statuses reflect the current state.",
+    "crmAttributionError": "Could not load CRM order attribution."
+  },
+  "cinematicLanding": {
+    "eyebrow": "CRM for Instagram shops",
+    "headline": "From “I want to order”",
+    "accent": "to profit.",
+    "subtitle": "Direct, orders, shipping and finances. One space for your shop.",
+    "demo": "Explore the demo",
+    "pilot": "Pilot access",
+    "demoLabel": "Demo data · interactive walkthrough",
+    "heroAlt": "Dimensional Sellora composition with a customer message, order and brand ribbon",
+    "storyTitle": "One sale. All the context together.",
+    "storyIntro": "Follow an order from the first message to the financial result.",
+    "stages": [
+      {
+        "title": "Conversation",
+        "body": "Review messages and conversation history. Keep customer details alongside the conversation.",
+        "label": "New enquiry",
+        "value": "Hi! I would like to order earrings.",
+        "detail": "A manager checks the customer details.",
+        "action": "Continue to order"
+      },
+      {
+        "title": "Order",
+        "body": "Add products and variants, check stock, customer information and payment.",
+        "label": "Preparing an order",
+        "value": "Earrings · 1 item · UAH 679",
+        "detail": "Demo: product selected. Payment is not confirmed.",
+        "action": "Continue to shipping"
+      },
+      {
+        "title": "Shipping",
+        "body": "Prepare shipments, create tracking numbers after configuring Nova Poshta and check delivery status.",
+        "label": "Preparing shipment",
+        "value": "Nova Poshta · Kyiv",
+        "detail": "Demo: verify the recipient and branch before creating a shipment.",
+        "action": "View the result"
+      },
+      {
+        "title": "Result",
+        "body": "Separate revenue, costs and profit. See what is missing when product cost is unknown.",
+        "label": "Financial context",
+        "value": "Product cost needs information",
+        "detail": "Profit requires confirmed revenue and costs.",
+        "action": "Start again"
+      }
+    ],
+    "capTitle": "As your shop grows, keep the whole picture.",
+    "capIntro": "Less switching between tools. More attention to customers.",
+    "capabilities": [
+      {
+        "title": "Customer history",
+        "body": "Contacts, notes, purchases and linked shipments in one profile."
+      },
+      {
+        "title": "Products and inventory",
+        "body": "Catalog, variants, SKUs, stock and reservations for daily work."
+      },
+      {
+        "title": "Advertising in context",
+        "body": "Meta Ads spend, conversation starts, cost per message, trends and campaign comparisons."
+      },
+      {
+        "title": "Finances without guessing",
+        "body": "Revenue, costs and COD reconciliation using NovaPay or bank CSV registers."
+      }
+    ],
+    "intTitle": "Your working tools, closer together.",
+    "intIntro": "Integration availability depends on your shop configuration and permissions.",
+    "integrations": [
+      {
+        "title": "Instagram Direct",
+        "body": "Conversations, customer information and order preparation. Pilot access after connection."
+      },
+      {
+        "title": "Nova Poshta",
+        "body": "Shipment information, tracking numbers and status checks after sender configuration."
+      },
+      {
+        "title": "Meta Ads",
+        "body": "Pilot import of ad metrics for a selected period. Manual refresh and USD to UAH conversion at daily NBU rates."
+      }
+    ],
+    "sourceNote": "Sales in advertising reports depend on recorded metrics. Automatic CRM order attribution is still in development.",
+    "faqTitle": "A few things before you start.",
+    "faqs": [
+      {
+        "q": "Is everything automatic?",
+        "a": "Some actions require a manager to start and verify them. Meta Ads imports are manual; shipment creation requires configured integration."
+      },
+      {
+        "q": "How is profit calculated?",
+        "a": "Product cost and relevant expenses are deducted from confirmed revenue. Unknown product cost is not treated as zero."
+      },
+      {
+        "q": "Can I use my phone?",
+        "a": "Sellora has a responsive interface for desktop and mobile work."
+      }
+    ],
+    "finalTitle": "More attention to customers. More clarity in sales.",
+    "finalBody": "Explore the walkthrough or sign in to your workspace.",
+    "motionLabel": "Reduce motion",
+    "customerLabel": "Customer",
+    "customerValue": "Demo customer",
+    "productLabel": "Product",
+    "productValue": "Leia earrings · 1 item",
+    "paymentLabel": "Payment",
+    "paymentValue": "Awaiting confirmation",
+    "shippingLabel": "Shipping",
+    "shippingValue": "Nova Poshta · Kyiv",
+    "demoOrder": "Demo order",
+    "amountLabel": "Product total",
+    "amountValue": "UAH 679",
+    "costLabel": "Product cost",
+    "costValue": "Needs information",
+    "contextLabel": "Context for this sale",
+    "heroCaption": "Product illustration · sample data",
+    "shipmentAlt": "Parcel on a dark platform in Sellora brand lighting",
+    "storyLead": "One sale.",
+    "storyRest": "All the context together."
+  },
+  "scrollLanding": {
+    "eyebrow": "CRM for managing sales",
+    "headline": "One workspace.",
+    "accent": "Every step of a sale.",
+    "subtitle": "Customers, orders, products, inventory, shipping and finances — one CRM for your team.",
+    "explore": "Explore Sellora",
+    "pilot": "Pilot access",
+    "reduceMotion": "Reduce motion",
+    "enableMotion": "Enable animation",
+    "scrollHint": "Scroll to bring the story to life",
+    "journeyLabel": "A sale in Sellora",
+    "journeyEyebrow": "From first contact to the result",
+    "demoNote": "An illustration of CRM capabilities. All data in this story is for demonstration.",
+    "sceneCaption": "One sale · the full context",
+    "chapters": [
+      {
+        "title": "Your CRM",
+        "heading": "Your work comes together.",
+        "body": "Customer, product, order and result stay connected. Scroll to follow one sale from start to finish."
+      },
+      {
+        "title": "Enquiry",
+        "heading": "Every contact has a next step.",
+        "body": "Keep enquiries, contact details and customer history together. Manage sales wherever a customer finds you."
+      },
+      {
+        "title": "Order",
+        "heading": "From interest to an order.",
+        "body": "Products, variants, stock and payment in context. Your team checks the details and moves the sale forward."
+      },
+      {
+        "title": "Shipping",
+        "heading": "The next step stays in sight.",
+        "body": "Prepare shipments, check recipient details and delivery status. Carrier integration requires configuration."
+      },
+      {
+        "title": "Finances",
+        "heading": "The sale ends. Context stays.",
+        "body": "See revenue, product cost and expenses separately. Profit is meaningful when all required data is confirmed."
+      }
+    ],
+    "preview": {
+      "label": "Illustrative Sellora CRM workspace",
+      "request": "Enquiry",
+      "customer": "Demo customer",
+      "newCustomer": "History and contacts",
+      "new": "New",
+      "message": "Hello! I would like to order the sweatshirt. Is size M available?",
+      "customerContext": "Customer context follows the sale",
+      "order": "Order #1042",
+      "product": "Essential sweatshirt",
+      "variant": "Black · M · 1 item",
+      "revenueValue": "UAH 679",
+      "stock": "Inventory",
+      "reserved": "1 item reserved",
+      "payment": "Demo payment",
+      "paid": "Confirmed",
+      "orderContext": "Customer and product linked to the order",
+      "shipment": "Shipping",
+      "delivery": "Delivered to the customer",
+      "deliveryNote": "Example shipment statuses",
+      "deliverySteps": [
+        "Prepared",
+        "Shipped",
+        "Delivered"
+      ],
+      "shipmentContext": "Demonstration · no actual shipment is created",
+      "finance": "Financial result",
+      "revenue": "Revenue",
+      "costs": [
+        {
+          "label": "Product cost",
+          "value": "−UAH 300"
+        },
+        {
+          "label": "Shipping and fees",
+          "value": "−UAH 80"
+        },
+        {
+          "label": "Other expenses",
+          "value": "−UAH 20"
+        }
+      ],
+      "profit": "Demo profit",
+      "profitValue": "UAH 279",
+      "financeContext": "Revenue and all expenses are known in this example"
+    },
+    "capTitle": "More capabilities. Fewer disconnected tools.",
+    "capIntro": "From everyday tasks to a clearer view of your business.",
+    "capabilities": [
+      {
+        "title": "Customers and enquiries",
+        "body": "Contacts, notes, purchases and linked orders. Keep context for the first conversation and the next."
+      },
+      {
+        "title": "Order management",
+        "body": "Products, variants, payment and status history. A clear next step for your team."
+      },
+      {
+        "title": "Catalog and inventory",
+        "body": "SKUs, stock, reservations and inventory movements. Check availability before confirming a sale."
+      },
+      {
+        "title": "Shipping",
+        "body": "Recipient details, shipments, tracking numbers and statuses. Nova Poshta tools after carrier setup."
+      },
+      {
+        "title": "Finances and COD",
+        "body": "Revenue, product cost, expenses and cash-on-delivery reconciliation from NovaPay or bank CSV registers."
+      },
+      {
+        "title": "Reporting and advertising",
+        "body": "Sales and advertising trends. Periods, expenses and comparisons to support daily decisions."
+      }
+    ],
+    "intTitle": "Your CRM is the center. Channels can evolve.",
+    "intIntro": "Connect available tools to a shared workflow. Additional platforms will be added over time.",
+    "integrations": [
+      {
+        "title": "Nova Poshta",
+        "status": "After configuration",
+        "body": "Prepare shipments, create tracking numbers and check statuses with a configured sender."
+      },
+      {
+        "title": "Instagram Direct · Meta Ads",
+        "status": "Pilot integrations",
+        "body": "Pilot conversations and manual advertising metric imports by period. Availability depends on connection and permissions."
+      },
+      {
+        "title": "More platforms",
+        "status": "Planned",
+        "body": "We plan to expand channels and integrations. Future connections are not yet available features."
+      }
+    ],
+    "integrationNote": "Meta Ads metrics are imported manually; USD is converted using the daily NBU exchange rate. Automatic attribution of CRM orders is still evolving.",
+    "faqEyebrow": "Before you start",
+    "faqTitle": "A few things to know.",
+    "faqs": [
+      {
+        "q": "Why use Sellora as a team?",
+        "a": "Manage enquiries, customers, orders, inventory and finances in a shared workspace. Sales channels can change while your history stays in the CRM."
+      },
+      {
+        "q": "Does everything happen automatically?",
+        "a": "Some actions are started and reviewed by your team. Advertising metric imports are manual, and tracking number creation requires a configured integration."
+      },
+      {
+        "q": "How is profit calculated?",
+        "a": "Product cost and relevant expenses are deducted from confirmed revenue. Unknown product cost is not treated as zero."
+      },
+      {
+        "q": "Can I use it on my phone?",
+        "a": "Sellora has a responsive interface. The homepage uses a shorter animation flow on small screens and offers reduced motion."
+      }
+    ],
+    "finalTitle": "Your team. Your sales. One workspace.",
+    "finalBody": "Return to your customers, orders and results in Sellora."
+  },
+  "planner": {
+    "notesSubtitle": "Team notes and tasks, saved within your store workspace.",
+    "calendarSubtitle": "Tasks with deadlines and actual order and shipment events.",
+    "new": "New entry",
+    "newNote": "New note",
+    "newTask": "New task",
+    "edit": "Edit entry",
+    "taskHint": "Set a due date to show this task on the calendar.",
+    "noteHint": "This entry is shared with your store team.",
+    "titleLabel": "Title",
+    "titlePlaceholder": "For example, check low-stock items",
+    "bodyLabel": "Details",
+    "bodyPlaceholder": "Short description or important details…",
+    "dueLabel": "Due on",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "save": "Save",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this entry for the entire team?",
+    "complete": "Mark completed",
+    "reopen": "Reopen task",
+    "task": "Task",
+    "note": "Note",
+    "done": "Completed",
+    "overdue": "Overdue",
+    "summary": "Notes and tasks overview",
+    "allCount": "Total",
+    "openCount": "Open tasks",
+    "overdueCount": "Overdue",
+    "search": "Search titles and text",
+    "filterLabel": "Entry filter",
+    "filter": {
+      "ALL": "All",
+      "NOTE": "Notes",
+      "TASK": "Tasks",
+      "OPEN": "Open"
+    },
+    "emptyTitle": "No entries yet",
+    "emptyHint": "Create a note or task and share it across your store.",
+    "noMatches": "No matching entries",
+    "noMatchesHint": "Try a different search or filter.",
+    "pinnedCount": "Pinned: {count}",
+    "openCalendar": "Open calendar",
+    "openNotes": "All notes and tasks",
+    "saveError": "Unable to save. Check your connection and try again.",
+    "loadError": "Unable to load workspace entries.",
+    "today": "Today",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "monthEvents": "Events this month: {count}",
+    "dayEvents": "Events today: {count}",
+    "eventsFilter": "Event types",
+    "event": {
+      "task": "Tasks",
+      "order": "New orders",
+      "shipped": "Shipped",
+      "delivered": "Delivered"
+    },
+    "week": {
+      "0": "Mon",
+      "1": "Tue",
+      "2": "Wed",
+      "3": "Thu",
+      "4": "Fri",
+      "5": "Sat",
+      "6": "Sun"
+    },
+    "orderCreated": "Order #{number}",
+    "shipped": "Shipment · {number}",
+    "delivered": "Delivered · {number}",
+    "viewDetails": "Open",
+    "emptyDay": "No events for this day",
+    "emptyDayHint": "Choose another date or add a task.",
+    "partialLoad": "Some events could not be loaded. This view may be incomplete.",
+    "calendarFactNote": "Order and shipment dates are actual recorded events, not estimated delivery dates.",
+    "desktopOpenTasks": "Open tasks",
+    "desktopOpenTasksHint": "Due this month",
+    "desktopActiveDays": "Days with activity",
+    "desktopActiveDaysHint": "In selected month",
+    "desktopMoreEvents": "+{count} events",
+    "desktopDayAgenda": "Day agenda",
+    "desktopWorkspaceTitle": "Your team workspace",
+    "desktopWorkspaceSubtitle": "Ideas, decisions and tasks in one shared place. Keep the important information with your store team.",
+    "desktopUpcoming": "Upcoming deadlines",
+    "desktopNoUpcoming": "No dated tasks scheduled yet.",
+    "desktopEmptyTitle": "Space for ideas and plans",
+    "desktopEmptyHint": "Keep your team decisions, notes and to-dos together. Start with your first entry.",
+    "desktopMoreCategories": "Other event types"
+  },
+  "insightHub": {
+    "subtitle": "What needs attention in your store, based on verified business rules.",
+    "reports": "All reports",
+    "period": "Analysis period",
+    "orders": "Orders",
+    "revenue": "Revenue",
+    "adSpend": "Ad spend",
+    "lowStock": "Low stock",
+    "orderContext": "Created in the selected period",
+    "revenueContext": "Sales report metric",
+    "adContext": "Advertising report data",
+    "stockContext": "Current inventory snapshot",
+    "actionsTitle": "What deserves attention",
+    "issuesCount": "Warnings: {count}",
+    "noIssues": "No critical alerts from available data.",
+    "loading": "Loading business insights…",
+    "loadError": "Unable to load metrics. Check your connection and permissions.",
+    "emptyTitle": "Not enough data for insights",
+    "emptyDescription": "Add sales, ad metrics or inventory to generate grounded suggestions.",
+    "source": "Source",
+    "openSection": "View data",
+    "disclaimer": "These are deterministic Sellora rules, not AI predictions. The selected period applies to sales and advertising; inventory reflects its current state. Missing data may limit conclusions.",
+    "category": {
+      "inventory": "Inventory",
+      "advertising": "Advertising",
+      "sales": "Orders",
+      "operations": "Operations",
+      "customers": "Customers",
+      "leads": "Leads"
+    },
+    "sourceKind": {
+      "inventory": "Inventory snapshot",
+      "advertising": "Advertising report",
+      "sales": "Sales report",
+      "operations": "Business rules",
+      "customers": "Customer data",
+      "leads": "Lead data"
+    },
+    "desktopOverview": "Top signal this period",
+    "desktopSourceNote": "Rule-based insights from Sellora records",
+    "desktopRoasHint": "ROAS from advertising reports. Results can be incomplete without attribution data.",
+    "desktopNextSteps": "Quick navigation",
+    "desktopNextStepsHint": "Review the underlying metrics and act where needed.",
+    "desktopTransparency": "How these insights work"
+  },
+  "navigationGroups": {
+    "main": "Core",
+    "operations": "Products & fulfillment",
+    "growth": "Analytics & growth",
+    "organization": "Organization",
+    "system": "System",
+    "expand": "Expand",
+    "collapse": "Collapse"
   }
 }

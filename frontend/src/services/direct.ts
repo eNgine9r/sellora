@@ -6,12 +6,23 @@ import {
   DirectCustomerExtraction,
   DirectCustomerFinalizeOrderPayload,
   DirectLiveSummary,
+  DirectOrderEvidence,
   DirectMessage,
   InstagramHistorySync,
   MessageOperation,
 } from "@/types/direct";
 
 export function fetchDirectConversations() { return apiRequest<DirectConversation[]>("/direct/conversations"); }
+export function ensureDirectLead(conversationId: string) {
+  return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/lead/ensure`, { method: "POST" });
+}
+export function fetchDirectOrderEvidence(conversationId: string) { return apiRequest<DirectOrderEvidence>(`/direct/conversations/${conversationId}/order-evidence`); }
+export function confirmDirectOrderEvidence(conversationId: string, expectedOrderIds: string[]) {
+  return apiRequest<{ confirmed_order_count: number; created_links: number; existing_links: number; primary_order_linked: boolean }>(
+    `/direct/conversations/${conversationId}/order-evidence/confirm`,
+    { method: "POST", body: JSON.stringify({ expected_order_ids: expectedOrderIds }) },
+  );
+}
 export function fetchDirectMessages(conversationId: string) { return apiRequest<DirectMessage[]>(`/direct/conversations/${conversationId}/message-timeline`); }
 export function fetchDirectLiveSummary() { return apiRequest<DirectLiveSummary>("/direct/live-summary?limit=30"); }
 export function markDirectConversationRead(conversationId: string) { return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/read`, { method: "POST" }); }
@@ -51,6 +62,7 @@ export function startInstagramHistorySync(conversationLimit = 100, messagesPerCo
     body: JSON.stringify({ conversation_limit: conversationLimit, messages_per_conversation: messagesPerConversation }),
   });
 }
+export function cancelInstagramHistorySync() { return apiRequest<{ requested: boolean; status: string }>("/direct/history-sync/cancel", { method: "POST" }); }
 export function addSyntheticMessage(conversationId: string, text: string) { return apiRequest<DirectMessage>(`/direct/conversations/${conversationId}/messages`, { method: "POST", body: JSON.stringify({ text }) }); }
 export function runDirectAnalysis(conversationId: string) { return apiRequest(`/direct/conversations/${conversationId}/analyze`, { method: "POST" }); }
 export function prepareDirectReply(conversationId: string, messageText: string, humanAgentRequested = false) { return apiRequest<{ ready: boolean; blockers: string[]; warnings: string[]; message_preview: string }>(`/direct/conversations/${conversationId}/reply/prepare`, { method: "POST", body: JSON.stringify({ message_text: messageText, human_agent_requested: humanAgentRequested }) }); }

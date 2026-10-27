@@ -32,16 +32,70 @@ class InstagramWebhookService:
         if not hmac.compare_digest(f"sha256={digest}", signature):
             raise MetaInstagramError("META_WEBHOOK_SIGNATURE_INVALID", "Webhook signature invalid.", 403)
 
+    def persist_verified_events(self, body: bytes, payload: dict[str, Any]) -> list[MetaWebhookEvent]:
+        """Route each signed Meta messaging item to its own workspace.
+
+        The signature is validated over the original HTTP body before this method.
+        Keeping one provider event per item means a batch containing several
+        messages or different IG accounts cannot be silently deduplicated by
+        the first message ID or written into the first account's workspace.
+        """
+        entries = payload.get("entry") or []
+        if not isinstance(entries, list):
+            raise MetaInstagramError("META_WEBHOOK_PAYLOAD_INVALID", "Webhook payload invalid.", 400)
+        parts: list[dict[str, Any]] = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise MetaInstagramError("META_WEBHOOK_PAYLOAD_INVALID", "Webhook payload invalid.", 400)
+            items = entry.get("messaging") or []
+            if not isinstance(items, list):
+                raise MetaInstagramError("META_WEBHOOK_PAYLOAD_INVALID", "Webhook payload invalid.", 400)
+            for item in items:
+                if not isinstance(item, dict):
+                    raise MetaInstagramError("META_WEBHOOK_PAYLOAD_INVALID", "Webhook payload invalid.", 400)
+                parts.append({
+                    "object": payload.get("object"),
+                    "entry": [{ "id": entry.get("id"), "time": entry.get("time"), "messaging": [item]}],
+                })
+        if not parts or (len(parts) == 1 and len(entries) == 1):
+            # Preserve the legacy exact-body digest and event identity for
+            # singleton events. Even one message in a multi-entry envelope
+            # must be split: an earlier empty entry can belong to another shop.
+            return [self.persist_verified_event(body, payload)]
+        if len(parts) > 100:
+            raise MetaInstagramError("META_WEBHOOK_PAYLOAD_INVALID", "Webhook batch too large.", 413)
+        events: list[MetaWebhookEvent] = []
+        for part in parts:
+            canonical = json.dumps(part, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
+            events.append(self.persist_verified_event(canonical, part))
+        return events
+
     def persist_verified_event(self, body: bytes, payload: dict[str, Any]) -> MetaWebhookEvent:
         payload_hash = hashlib.sha256(body).hexdigest()
-        event_external_id = self._event_id(payload)
+        legacy_event_id = self._event_id(payload)
+        account_id = self._account_id(payload)
+        # A message ID alone must not deduplicate another business account's
+        # event. Hash the target account, never store its raw ID in the key.
+        event_external_id = (
+            f"{legacy_event_id[:160]}:{hashlib.sha256(account_id.encode()).hexdigest()[:16]}"
+            if legacy_event_id and account_id else legacy_event_id
+        )
         bucket = date.today()
         duplicate = self.repo.get_duplicate("INSTAGRAM", event_external_id, payload_hash, bucket)
         if duplicate:
             return duplicate
+        if event_external_id != legacy_event_id and legacy_event_id:
+            # Preserve replay idempotency for pre-migration events, but do not
+            # deduplicate an ignored event that becomes valid after linking IG.
+            old = self.repo.get_duplicate("INSTAGRAM", legacy_event_id, payload_hash, bucket)
+            if (
+                old is not None
+                and old.status not in (MetaWebhookEventStatus.IGNORED.value, MetaWebhookEventStatus.FAILED_SAFE.value)
+                and self._account_id(old.payload) == account_id
+            ):
+                return old
 
         now = datetime.now(UTC)
-        account_id = self._account_id(payload)
         connection = InstagramConnectionRepository(self.db).get_by_account(account_id) if account_id else None
         status = MetaWebhookEventStatus.VERIFIED.value if connection else MetaWebhookEventStatus.IGNORED.value
         error_code = None if connection else "META_CONNECTION_NOT_READY"

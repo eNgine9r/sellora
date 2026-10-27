@@ -12,6 +12,7 @@ export function AdMetricTable({ metrics, onEdit, onDelete }: { metrics: AdMetric
     return (
       <details className="mt-1 text-xs text-text-secondary">
         <summary className="cursor-pointer text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t("advertising.moreMetrics")}</summary>
+        {metric.exchange_rate_source === "NBU" ? <p className="mt-2 break-words">{t("advertising.fxEvidence", { amount: metric.original_spend ?? "—", currency: metric.original_currency ?? "—", rate: metric.exchange_rate ?? "—", date: metric.exchange_rate_date ?? "—" })}</p> : null}
         <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-surface-2 p-2">
           <span>{t("advertising.impressions")}: {metric.impressions}</span>
           <span>{t("advertising.reach")}: {metric.reach}</span>

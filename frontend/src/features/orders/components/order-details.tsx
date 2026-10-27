@@ -4,6 +4,8 @@ import { formatMoney } from "@/lib/currency";
 import { Order, OrderStatus } from "@/types/orders";
 import { Shipment } from "@/types/shipments";
 import { CopyTtnButton } from "@/features/shipments/components/ttn-actions";
+import { HistoricalCostEstimateCard } from "@/features/orders/components/historical-cost-estimate-card";
+import type { HistoricalEstimatedCostPayload } from "@/types/orders";
 
 const NEXT_STATUSES: OrderStatus[] = [
   "CONFIRMED",
@@ -22,6 +24,11 @@ export function OrderDetails({
   onSyncShipment,
   syncingShipment = false,
   shipmentSyncError,
+  canEditEstimate = false,
+  onSaveEstimate,
+  onClearEstimate,
+  estimateSaving = false,
+  estimateError,
 }: {
   order: Order;
   currencyCode?: string;
@@ -30,6 +37,11 @@ export function OrderDetails({
   onSyncShipment?: () => void;
   syncingShipment?: boolean;
   shipmentSyncError?: string | null;
+  canEditEstimate?: boolean;
+  onSaveEstimate?: (payload: HistoricalEstimatedCostPayload) => void;
+  onClearEstimate?: () => void;
+  estimateSaving?: boolean;
+  estimateError?: string | null;
 }) {
   const { t, formatStatus } = useI18n();
   const archivePlaceholder = order.is_historical && order.items.some((item) => item.sku === "NP-ARCHIVE-OTHER");
@@ -50,6 +62,15 @@ export function OrderDetails({
           </p>
         ) : null}
       </div>
+      <HistoricalCostEstimateCard
+        order={order}
+        currencyCode={currencyCode}
+        canEdit={canEditEstimate}
+        onSave={onSaveEstimate}
+        onClear={onClearEstimate}
+        saving={estimateSaving}
+        error={estimateError}
+      />
       <div className="grid min-w-0 grid-cols-[auto,minmax(0,1fr)] gap-2 text-sm">
         <span>{t("orders.revenue")}</span>
         <strong>{archivePlaceholder && Number(order.revenue) === 0 ? t("orders.unknownAmount") : formatMoney(order.revenue, currencyCode)}</strong>

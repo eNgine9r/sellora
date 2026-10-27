@@ -27,6 +27,8 @@ import { formatMoney } from "@/lib/currency";
 import { fetchCustomers } from "@/services/crm";
 import {
   changeOrderStatus,
+  saveHistoricalCostEstimate,
+  clearHistoricalCostEstimate,
   deleteOrder,
   fetchOrderDashboard,
   fetchOrders,
@@ -40,7 +42,7 @@ import {
   fetchProducts,
   fetchProductVariants,
 } from "@/services/products";
-import { Order, OrderStatus, PaymentStatus } from "@/types/orders";
+import { HistoricalEstimatedCostPayload, Order, OrderStatus, PaymentStatus } from "@/types/orders";
 import { useAuth } from "@/hooks/use-auth";
 import { safeApiErrorMessage } from "@/services/api";
 import { useI18n } from "@/i18n/provider";
@@ -150,6 +152,16 @@ export default function OrdersPage() {
       setEditingOrder(null);
       setSelectedOrder(order);
       invalidateOrderState();
+    },
+  });
+  const historicalEstimateMutation = useMutation({
+    mutationFn: async ({
+      orderId, payload,
+    }: { orderId: string; payload: HistoricalEstimatedCostPayload | null }) =>
+      payload ? saveHistoricalCostEstimate(workspaceId, orderId, payload) : clearHistoricalCostEstimate(workspaceId, orderId),
+    onSuccess: (order) => {
+      setSelectedOrder(order);
+      queryClient.invalidateQueries({ queryKey: ["orders", workspaceId] });
     },
   });
   const shipmentSyncMutation = useMutation({
@@ -315,6 +327,11 @@ export default function OrdersPage() {
               onSyncShipment={canEdit && shipmentQuery.data?.carrier === "NOVA_POSHTA" && !!shipmentQuery.data?.tracking_number ? () => shipmentSyncMutation.mutate(shipmentQuery.data!.id) : undefined}
               syncingShipment={shipmentSyncMutation.isPending}
               shipmentSyncError={shipmentSyncMutation.isError ? safeApiErrorMessage(shipmentSyncMutation.error, t("shipments.statusSyncFailed")) : null}
+              canEditEstimate={canEdit}
+              onSaveEstimate={canEdit ? (payload) => historicalEstimateMutation.mutate({ orderId: selectedOrder.id, payload }) : undefined}
+              onClearEstimate={canEdit ? () => historicalEstimateMutation.mutate({ orderId: selectedOrder.id, payload: null }) : undefined}
+              estimateSaving={historicalEstimateMutation.isPending}
+              estimateError={historicalEstimateMutation.isError ? safeApiErrorMessage(historicalEstimateMutation.error, t("orders.historicalEstimate.saveError")) : null}
             />
           </EntitySidePanel>
         ) : null}

@@ -19,6 +19,7 @@ class InstagramHistorySyncStatus(StrEnum):
     PARTIAL = "PARTIAL"
     RETRY_PENDING = "RETRY_PENDING"
     FAILED_SAFE = "FAILED_SAFE"
+    CANCELLED = "CANCELLED"
 
 
 class InstagramHistorySync(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, TimestampMixin, Base):
@@ -64,6 +65,23 @@ class InstagramHistorySync(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, TimestampM
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class InstagramHistorySyncCancelRequest(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, TimestampMixin, Base):
+    """Separate row so cancellation is writable while a worker holds the sync row lock."""
+
+    __tablename__ = "instagram_history_sync_cancel_requests"
+    __table_args__ = (UniqueConstraint("workspace_id", name="uq_ig_history_cancel_workspace"),)
+
+    # No FK to the long-lived sync row: a PostgreSQL FK KEY SHARE lock
+    # would block cancellation behind the worker's FOR UPDATE lock.
+    # The service validates workspace and sync identity before writing.
+    sync_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    requested_by: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
 
 class InstagramMessageState(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, TimestampMixin, Base):
