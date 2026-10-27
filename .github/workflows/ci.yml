@@ -251,6 +251,8 @@ jobs:
       - name: Production build
         working-directory: frontend
         run: npm run build
+      - name: Verify desktop Sellora brand alignment and mobile preservation
+        run: node frontend/scripts/desktop-sidebar-brand-regression.mjs
       - name: Verify iOS mobile drawer background scroll lock
         run: node frontend/scripts/mobile-drawer-scroll-lock-regression.mjs
       - name: Verify grouped mobile and desktop sidebar navigation
