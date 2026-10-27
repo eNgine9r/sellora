@@ -32,7 +32,7 @@ function FinanceCards({ summary, currencyCode }: { summary: FinanceSummary; curr
   return (
     <CompactSummary layout="five-balanced" items={[
       { label: t("finance.revenue"), value: formatMoney(summary.revenue, currencyCode), helper: t("finance.revenueHelper") },
-      { label: t("finance.cogs"), value: formatMoney(summary.cogs, currencyCode), helper: t("finance.grossProfitHelper") },
+      { label: t("finance.cogs"), value: formatMoney(summary.cogs, currencyCode), helper: t("finance.cogsHelper") },
       { label: t("finance.totalExpenses"), value: formatMoney(summary.cogs != null && Number.isFinite(totalExpenses) ? totalExpenses : null, currencyCode), helper: t("finance.expenseStructure") },
       { label: t("finance.netProfit"), value: formatMoney(summary.net_profit, currencyCode), helper: t("finance.netProfitHelper") },
       { label: t("finance.averageOrderValue"), value: summary.average_order_value ? formatMoney(summary.average_order_value, currencyCode) : "—", unavailable: summary.average_order_value == null, helper: t("finance.safeZeroDenominator") },
