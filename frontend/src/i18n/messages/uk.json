@@ -3041,5 +3041,14 @@
     "desktopNextSteps": "Швидкі переходи",
     "desktopNextStepsHint": "Перевірте джерела показників і дійте там, де це справді потрібно.",
     "desktopTransparency": "Як формуються висновки"
+  },
+  "navigationGroups": {
+    "main": "Основне",
+    "operations": "Товари та виконання",
+    "growth": "Аналітика та ріст",
+    "organization": "Організація",
+    "system": "Система",
+    "expand": "Розгорнути",
+    "collapse": "Згорнути"
   }
 }
