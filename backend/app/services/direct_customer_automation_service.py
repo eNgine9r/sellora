@@ -21,6 +21,7 @@ from app.schemas.crm_completion import CustomerAddressCreate, CustomerAddressUpd
 from app.schemas.customer import CustomerResponse
 from app.schemas.direct_customer_automation import (
     DirectCustomerAutomationState,
+    DirectCustomerIdentityCandidate,
     DirectCustomerCompleteRequest,
 )
 from app.services.advertising_attribution_service import AdvertisingAttributionService
@@ -62,6 +63,11 @@ class DirectCustomerAutomationService:
         if require_order_intent and not detect_direct_order_intent(latest.text if latest else None).detected:
             return self._state(workspace_id, conversation, None)
 
+        if not self.customers.try_lock_direct_matching(workspace_id):
+            raise DirectCustomerAutomationError("DIRECT_CUSTOMER_IDENTITY_BUSY")
+        # The conversation may have been linked since it was first read.
+        self.db.flush()
+        self.db.refresh(conversation, attribute_names=["linked_customer_id"])
         existing = self.customers.get(workspace_id, conversation.linked_customer_id) if conversation.linked_customer_id else None
         created = False
         try:
@@ -72,6 +78,16 @@ class DirectCustomerAutomationService:
             )
         except InstagramIdentityConflict as exc:
             raise DirectCustomerAutomationError(str(exc)) from exc
+        # Provider IDs are scoped to an Instagram connection. Without a
+        # known same-connection source, a match requires manager review.
+        connection_id = getattr(conversation, "instagram_connection_id", None)
+        if not existing and customer is not None and connection_id:
+            source_id = customer.source_direct_conversation_id
+            source = self.conversations.get(workspace_id, source_id) if source_id else None
+            if not source or source.instagram_connection_id != connection_id:
+                raise DirectCustomerAutomationError("DIRECT_CUSTOMER_IDENTITY_CONFLICT")
+        if not existing and customer is None and connection_id and not (conversation.participant_scoped_id or (conversation.participant_username or "").strip().lstrip("@")):
+            raise DirectCustomerAutomationError("DIRECT_CUSTOMER_IDENTITY_CONFLICT")
         if customer is None:
             display_name = self._display_name(conversation)
             customer = self.customers.create(
@@ -116,6 +132,41 @@ class DirectCustomerAutomationService:
         state = self._state(workspace_id, conversation, customer)
         state.created_automatically = created and actor_user_id is None
         return state
+
+    def identity_candidates(self, workspace_id: UUID, conversation_id: UUID) -> list[DirectCustomerIdentityCandidate]:
+        conversation = self._conversation(workspace_id, conversation_id)
+        if conversation.linked_customer_id:
+            return []
+        customers = self.customers.list_instagram_identity_candidates(
+            workspace_id, conversation.participant_scoped_id, conversation.participant_username,
+        )
+        return [DirectCustomerIdentityCandidate(
+            id=customer.id, name=customer.name, instagram_username=customer.instagram_username,
+            phone_last_four=customer.phone[-4:] if customer.phone else None,
+        ) for customer in customers]
+
+    def link_identity_candidate(self, workspace_id: UUID, conversation_id: UUID, customer_id: UUID, actor_user_id: UUID) -> DirectCustomerAutomationState:
+        conversation = self._conversation(workspace_id, conversation_id)
+        if not self.customers.try_lock_direct_matching(workspace_id):
+            raise DirectCustomerAutomationError("DIRECT_CUSTOMER_IDENTITY_BUSY")
+        self.db.flush()
+        self.db.refresh(conversation, attribute_names=["linked_customer_id", "linked_order_id"])
+        if conversation.linked_customer_id or conversation.linked_order_id:
+            raise DirectCustomerAutomationError("DIRECT_CUSTOMER_ALREADY_LINKED")
+        candidates = self.customers.list_instagram_identity_candidates(
+            workspace_id, conversation.participant_scoped_id, conversation.participant_username,
+        )
+        customer = next((item for item in candidates if item.id == customer_id), None)
+        if customer is None:
+            raise DirectCustomerAutomationError("DIRECT_CUSTOMER_CANDIDATE_CHANGED")
+        conversation.linked_customer_id = customer.id
+        self.audit_logs.create(
+            workspace_id=workspace_id, user_id=actor_user_id,
+            entity_type="DirectConversation", entity_id=conversation.id,
+            action="DIRECT_CUSTOMER_LINK", new_value={"customer_id": str(customer.id), "automatic": False, "identity_reviewed": True},
+        )
+        self.db.commit()
+        return self._state(workspace_id, conversation, customer)
 
     def ensure_from_inbound_order_intent(
         self,
