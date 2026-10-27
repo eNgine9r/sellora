@@ -1,4 +1,22 @@
 {
+  "directProductProposal": {
+    "title": "Product from conversation",
+    "find": "Find suggestions",
+    "loading": "Checking available conversation…",
+    "error": "Could not load suggestions. Try again.",
+    "help": "Suggestions only. Check the conversation, variant, price and quantity before ordering.",
+    "truncated": "The catalog or conversation was not fully scanned; suggestions may be incomplete.",
+    "stale": "Saved analysis may be stale after new messages.",
+    "empty": "No reliable suggestions found. Select a product manually.",
+    "analysisSource": "Source: saved analysis; check the chat",
+    "skuSource": "Source: SKU in message",
+    "productSource": "Source: name or category in message",
+    "notFound": "No catalog product identified.",
+    "price": "Price",
+    "available": "Available",
+    "choose": "Choose for order",
+    "more": "Only some variants are shown. Search manually if needed."
+  },
   "common": {
     "brand": "Sellora",
     "workspace": "Workspace",
