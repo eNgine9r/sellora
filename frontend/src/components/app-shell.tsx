@@ -65,8 +65,52 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [protectedPath, router, status]);
 
   useEffect(() => {
-    document.body.classList.toggle("overflow-hidden", mobileMenuOpen);
-    return () => document.body.classList.remove("overflow-hidden");
+    if (!mobileMenuOpen) return;
+
+    // overflow:hidden alone does not reliably lock the document on iOS Safari.
+    // Freeze the document at its exact scroll position, but keep the drawer's
+    // own scroll container independent and touch-scrollable.
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const html = document.documentElement;
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+      htmlOverflow: html.style.overflow,
+      htmlOverscroll: html.style.overscrollBehavior,
+    };
+
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setMobileMenuOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+
+    return () => {
+      desktop.removeEventListener("change", closeOnDesktop);
+      body.style.position = previous.position;
+      body.style.top = previous.top;
+      body.style.left = previous.left;
+      body.style.right = previous.right;
+      body.style.width = previous.width;
+      body.style.overflow = previous.overflow;
+      html.style.overflow = previous.htmlOverflow;
+      html.style.overscrollBehavior = previous.htmlOverscroll;
+      window.scrollTo(0, scrollY);
+    };
   }, [mobileMenuOpen]);
 
   useEffect(() => {
@@ -81,6 +125,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const handleLogout = async () => {
     try {
       await logout();
+      setMobileMenuOpen(false);
+      setMobileMoreOpen(false);
       router.replace("/login");
     } catch {
       // Do not navigate away if the server has not revoked the secure session.
@@ -110,7 +156,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             currentWorkspace={currentWorkspace}
             currentWorkspaceId={currentWorkspaceId}
             mobileMoreOpen={mobileMoreOpen}
-            onOpenMenu={() => setMobileMenuOpen(true)}
+            onOpenMenu={() => { setMobileMoreOpen(false); setMobileMenuOpen(true); }}
             onCloseMobileMore={() => setMobileMoreOpen(false)}
             onLogout={handleLogout}
             onSwitchWorkspace={switchWorkspace}
@@ -136,8 +182,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         {mobileMenuOpen ? (
-          <div className="mobile-sidebar-drawer fixed inset-0 z-[80] lg:hidden" role="dialog" aria-modal="true" aria-label={t("mobileNavigation.drawer")}>
-            <button className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("actions.close")} onClick={() => setMobileMenuOpen(false)} />
+          <div className="mobile-sidebar-drawer fixed inset-0 z-[80] h-[100dvh] overscroll-none lg:hidden" role="dialog" aria-modal="true" aria-label={t("mobileNavigation.drawer")}>
+            <button type="button" className="absolute inset-0 touch-none bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("actions.close")} onClick={() => setMobileMenuOpen(false)} />
             <div className="relative grid h-[100dvh] w-[88vw] max-w-sm grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-sidebar shadow-2xl">
               <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
               <div className="mobile-sidebar-footer-compact min-w-0 border-t border-border-subtle bg-sidebar px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">

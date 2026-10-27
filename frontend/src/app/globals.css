@@ -265,6 +265,9 @@ html {
 .sidebar-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .sidebar-scrollbar::-webkit-scrollbar {
