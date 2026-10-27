@@ -33,6 +33,7 @@ def _http_error(exc: DirectCustomerAutomationError) -> HTTPException:
     }:
         return HTTPException(status.HTTP_404_NOT_FOUND, code)
     if code in {
+        "DIRECT_CUSTOMER_IDENTITY_CONFLICT",
         "DIRECT_ORDER_REQUIRED",
         "DIRECT_CUSTOMER_WORKSPACE_MISMATCH",
         "DIRECT_ORDER_CUSTOMER_MISMATCH",
