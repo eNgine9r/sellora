@@ -50,6 +50,9 @@ class FakeCustomerRepository:
     def get(self, workspace_id, customer_id):
         return next((item for item in self.customers if item.workspace_id == workspace_id and item.id == customer_id), None)
 
+    def get_for_update(self, workspace_id, customer_id):
+        return self.get(workspace_id, customer_id)
+
     def find_by_instagram_identity(self, workspace_id, instagram_scoped_id=None, instagram_username=None):
         normalized = (instagram_username or "").lstrip("@").lower()
         return next(
@@ -334,4 +337,20 @@ def test_same_connection_with_wrong_source_scoped_id_requires_review():
     service.conversations.get = get_source
     with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_IDENTITY_CONFLICT"):
         service.ensure_candidate(workspace_id, conversation.id, uuid4())
+    assert conversation.linked_customer_id is None
+
+
+def test_review_rechecks_identity_after_locking_customer():
+    import pytest
+    from app.models.customer import Customer
+    from app.services.direct_customer_automation_service import DirectCustomerAutomationError
+
+    service, conversation, workspace_id = make_service()
+    customer = service.customers.create(Customer(workspace_id=workspace_id, name="Existing", instagram_username="buyer_one"))
+    def changed_after_listing(_workspace_id, _customer_id):
+        customer.instagram_username = "different_username"
+        return customer
+    service.customers.get_for_update = changed_after_listing
+    with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_CANDIDATE_CHANGED"):
+        service.link_identity_candidate(workspace_id, conversation.id, customer.id, uuid4())
     assert conversation.linked_customer_id is None
