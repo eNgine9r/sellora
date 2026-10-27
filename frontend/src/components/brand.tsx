@@ -34,3 +34,21 @@ export function BrandLockup({ className = "", markClassName = "h-10 w-10", textC
     </span>
   );
 }
+
+/**
+ * Desktop-only sidebar identity. Keep the mobile BrandLockup unchanged:
+ * no oversized button frame, and the mark/wordmark share one baseline.
+ */
+export function DesktopBrandLockup() {
+  return (
+    <span className="flex min-w-0 items-center gap-3" data-desktop-brand-lockup>
+      <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-[15px] border border-primary/20 bg-gradient-to-br from-primary/15 via-surface-2 to-surface-1 shadow-[0_0_22px_rgba(124,58,237,0.10)]">
+        <BrandIcon priority className="h-9 w-9" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-[20px] font-bold leading-[1.05] tracking-[-0.045em] text-text-primary">Sellora</span>
+        <span className="mt-1.5 block truncate text-[9px] font-semibold uppercase leading-none tracking-[0.19em] text-text-muted">CRM Platform</span>
+      </span>
+    </span>
+  );
+}
