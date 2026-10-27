@@ -2077,6 +2077,7 @@
     "revenueHelper": "Sum of valid orders excluding cancelled and returned orders.",
     "grossProfit": "Gross profit",
     "grossProfitHelper": "Revenue minus product cost.",
+    "cogsHelper": "Confirmed product costs in orders for the selected period.",
     "netProfit": "Net profit",
     "netProfitHelper": "Revenue minus COGS, advertising, shipping, and available other expenses.",
     "adSpend": "Ad spend",
