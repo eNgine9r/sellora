@@ -33,7 +33,7 @@ class CustomerRepository:
 
     def try_lock_direct_matching(self, workspace_id: UUID) -> bool:
         # Never wait while a webhook batch may hold other transaction locks.
-        # All Direct customer association writers use this transaction lock.
+        # Direct matching and manager review use the same transaction lock.
         if self.db.get_bind().dialect.name != "postgresql":
             return True
         key = int.from_bytes(hashlib.sha256(f"sellora:direct-customer:{workspace_id}".encode()).digest()[:8], "big", signed=True)
