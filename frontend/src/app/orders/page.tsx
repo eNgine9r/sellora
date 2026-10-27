@@ -89,6 +89,7 @@ export default function OrdersPage() {
   const requestedCreate = searchParams.get("create") === "1";
   const requestedCustomerId = searchParams.get("customer_id");
   const sourceDirectConversationId = searchParams.get("direct_conversation_id");
+  const requestedVariantId = searchParams.get("variant_id");
   const requestedOrderId = searchParams.get("order_id");
 
   const ordersQuery = useQuery({
@@ -403,6 +404,7 @@ export default function OrdersPage() {
             currencyCode={currencyCode}
             showProfit={currentWorkspace?.role === "OWNER"}
             initialCustomerId={requestedCreate ? requestedCustomerId : null}
+            initialVariantId={requestedCreate && sourceDirectConversationId ? requestedVariantId : null}
             sourceDirectConversationId={requestedCreate ? sourceDirectConversationId : null}
             onSuccess={(result) => {
               setSelectedOrder(result.order);
