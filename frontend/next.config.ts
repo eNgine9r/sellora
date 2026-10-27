@@ -63,6 +63,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       ...(upstreamConfig.headers ? await upstreamConfig.headers() : []),
+      { source: "/s1-qa-preview/fixture", headers: [
+        { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+      ] },
       { source: "/settings/integrations/meta-ads/callback", headers: [
         { key: "Referrer-Policy", value: "no-referrer" },
         { key: "Cache-Control", value: "no-store" },
