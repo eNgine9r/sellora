@@ -8,6 +8,7 @@ export type OrderFulfillmentResultCode =
 
 export type OrderFulfillmentPayload = {
   idempotency_key: string;
+  source_direct_conversation_id?: string | null;
   customer_id: string | null;
   customer_name: string | null;
   customer_phone: string | null;
