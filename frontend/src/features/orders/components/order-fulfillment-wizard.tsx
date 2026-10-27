@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { fulfillmentAmount, isNonNegativeAmount, isPositiveWholeQuantity } from "@/features/orders/lib/fulfillment-amounts";
+import { fulfillmentAmount, isConfirmedCost, isNonNegativeAmount, isPositiveWholeQuantity } from "@/features/orders/lib/fulfillment-amounts";
 import { CitySearchSelect } from "@/features/integrations/components/city-search-select";
 import { WarehouseSearchSelect } from "@/features/integrations/components/warehouse-search-select";
 import { useI18n } from "@/i18n/provider";
@@ -18,9 +18,9 @@ import { Customer } from "@/types/crm";
 import { OrderFulfillmentPayload, OrderFulfillmentResult } from "@/types/order-fulfillment";
 import { Inventory, Product, ProductVariant } from "@/types/products";
 
-type WizardItem = { key: string; product_variant_id: string; quantity: string; unit_price: string; search: string };
+type WizardItem = { key: string; product_variant_id: string; quantity: string; unit_price: string; unit_cost: string; search: string };
 const newKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-const emptyItem = (): WizardItem => ({ key: newKey(), product_variant_id: "", quantity: "1", unit_price: "", search: "" });
+const emptyItem = (): WizardItem => ({ key: newKey(), product_variant_id: "", quantity: "1", unit_price: "", unit_cost: "", search: "" });
 const inputClass = "min-h-11 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring";
 
 function normalizeUaPhonePreview(value: string) {
@@ -201,7 +201,7 @@ export function OrderFulfillmentWizard({
 
   function selectVariant(item: WizardItem, variantId: string) {
     const variant = variants.find((row) => row.id === variantId);
-    updateItem(item.key, { product_variant_id: variantId, unit_price: variant?.price ?? "" });
+    updateItem(item.key, { product_variant_id: variantId, unit_price: variant?.price ?? "", unit_cost: "" });
   }
 
   function validateStep(nextStep: number) {
@@ -216,6 +216,7 @@ export function OrderFulfillmentWizard({
     }
     if (nextStep > 2) {
       if (!items.length || items.some((item) => !item.product_variant_id || !isPositiveWholeQuantity(item.quantity) || !isNonNegativeAmount(item.unit_price))) return t("fulfillment.validation.items");
+      if (items.some((item) => item.unit_cost.trim() !== "" && !isNonNegativeAmount(item.unit_cost))) return t("fulfillment.validation.amounts");
       if (!isNonNegativeAmount(declaredValue) || (paymentStatus === "COD" && !isNonNegativeAmount(codAmount))) return t("fulfillment.validation.amounts");
       for (const item of items) {
         const stock = inventoryByVariant.get(item.product_variant_id);
@@ -260,7 +261,7 @@ export function OrderFulfillmentWizard({
       warehouse: warehouse.trim(),
       warehouse_number: warehouseNumber || null,
       save_address_as_default: saveAddress,
-      items: items.map((item) => ({ product_variant_id: item.product_variant_id, quantity: Number(item.quantity), unit_price: Number(item.unit_price), unit_cost: 0 })),
+      items: items.map((item) => ({ product_variant_id: item.product_variant_id, quantity: Number(item.quantity), unit_price: Number(item.unit_price), unit_cost: isConfirmedCost(item.unit_cost) ? Number(item.unit_cost) : 0, cost_confirmed: isConfirmedCost(item.unit_cost) })),
       payment_status: paymentStatus,
       cod_amount: paymentStatus === "COD" ? Number(codAmount) : 0,
       declared_value: Number(declaredValue),
@@ -346,11 +347,12 @@ export function OrderFulfillmentWizard({
               const options = matches.slice(0, 30);
               const selectedVariant = variants.find((variant) => variant.id === item.product_variant_id);
               if (selectedVariant && !options.some((variant) => variant.id === selectedVariant.id)) options.unshift(selectedVariant);
-              return <article className="grid min-w-0 gap-3 rounded-2xl border border-border-subtle p-3 sm:grid-cols-[minmax(0,1fr)_110px_140px_auto] sm:items-end" key={item.key}>
-                <label className="grid min-w-0 gap-1 text-sm font-semibold sm:col-span-4">{t("fulfillment.productSearch")}<input className={inputClass} type="search" value={item.search} placeholder={t("fulfillment.productSearchHint")} onChange={(event) => updateItem(item.key, { search: event.target.value })} /></label>
+              return <article className={`grid min-w-0 gap-3 rounded-2xl border border-border-subtle p-3 sm:items-end ${showProfit ? "sm:grid-cols-[minmax(0,1fr)_100px_120px_140px_auto]" : "sm:grid-cols-[minmax(0,1fr)_110px_140px_auto]"}`} key={item.key}>
+                <label className={`grid min-w-0 gap-1 text-sm font-semibold ${showProfit ? "sm:col-span-5" : "sm:col-span-4"}`}>{t("fulfillment.productSearch")}<input className={inputClass} type="search" value={item.search} placeholder={t("fulfillment.productSearchHint")} onChange={(event) => updateItem(item.key, { search: event.target.value })} /></label>
                 <label className="grid min-w-0 gap-1 text-sm font-semibold">{t("fulfillment.product")}<select className={inputClass} value={item.product_variant_id} onChange={(event) => selectVariant(item, event.target.value)}><option value="">{t("orders.selectVariant")}</option>{options.map((variant) => { const product = productById.get(variant.product_id); const rowStock = inventoryByVariant.get(variant.id); const rowAvailable = rowStock ? rowStock.stock_quantity - rowStock.reserved_quantity : null; return <option key={variant.id} value={variant.id}>{[product?.name, variant.color, variant.size, variant.sku, variant.price == null ? null : formatMoney(variant.price, currencyCode), `${t("orders.available")}: ${rowAvailable ?? "—"}`].filter(Boolean).join(" · ")}</option>; })}</select><span className="text-xs text-text-secondary" role="status">{matches.length === 0 ? t("fulfillment.productSearchEmpty") : matches.length > 30 ? t("fulfillment.productSearchNarrow") : null}</span>{selectedVariant ? <span className="break-words text-xs text-text-secondary">{[productById.get(selectedVariant.product_id)?.name, selectedVariant.color, selectedVariant.size, selectedVariant.sku].filter(Boolean).join(" · ")}</span> : null}{available != null ? <span className="text-xs text-text-secondary">{t("orders.available")}: {available}</span> : null}</label>
                 <label className="grid gap-1 text-sm font-semibold">{t("orders.quantity")}<input className={inputClass} min="1" type="number" value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: event.target.value })} /></label>
                 <label className="grid gap-1 text-sm font-semibold">{t("orders.unitPrice")}<input className={inputClass} min="0" step="0.01" type="number" value={item.unit_price} onChange={(event) => updateItem(item.key, { unit_price: event.target.value })} /></label>
+                {showProfit ? <label className="grid gap-1 text-sm font-semibold">{t("orders.unitCost")}<input className={inputClass} min="0" step="0.01" type="number" placeholder={t("orders.unknownAmount")} value={item.unit_cost} onChange={(event) => updateItem(item.key, { unit_cost: event.target.value })} /><span className="text-xs font-normal text-text-secondary">{t("orders.costOptionalHint")}</span></label> : null}
                 <button className="min-h-11 rounded-xl border border-danger/30 px-3 text-danger disabled:opacity-40" disabled={items.length === 1} type="button" onClick={() => setItems((current) => current.filter((row) => row.key !== item.key))}>×</button>
               </article>;
             })}

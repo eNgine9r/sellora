@@ -745,6 +745,14 @@
     "item": "Item",
     "unitPrice": "Unit price",
     "unitCost": "Unit cost",
+    "costOptionalHint": "Leave blank if the cost is unknown. Enter 0 only if the cost is confirmed to be zero.",
+    "costCorrection": {
+      "title": "Product costs",
+      "edit": "Set or edit",
+      "help": "Enter the cost per unit. A blank field means unknown; 0 confirms a zero cost. Inventory will not change.",
+      "save": "Save product costs",
+      "invalid": "Enter a non-negative amount with at most two decimal places."
+    },
     "quantity": "Quantity",
     "productOption": {
       "available": "Available",

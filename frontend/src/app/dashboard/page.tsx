@@ -80,7 +80,7 @@ export default function DashboardPage() {
   const currentOrders = useMemo(() => (orders.data ?? []).filter((order) => isInDateRange(order.created_at, range)), [orders.data, range]);
   const currentLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, range)), [leads.data, range]);
 
-  const trend = useMemo(() => (salesTrend.data ?? []).map((item) => ({ ...item, revenueNumber: toFiniteNumber(item.revenue), profitNumber: toFiniteNumber(item.net_profit), ordersCount: item.orders_count })), [salesTrend.data]);
+  const trend = useMemo(() => (salesTrend.data ?? []).map((item) => ({ ...item, revenueNumber: toFiniteNumber(item.revenue), profitNumber: item.net_profit == null ? null : toFiniteNumber(item.net_profit), ordersCount: item.orders_count })), [salesTrend.data]);
 
   const orderStatusData = useMemo(() => {
     const total = currentOrders.length;
@@ -94,7 +94,7 @@ export default function DashboardPage() {
 
   const topProductViews: TopProductView[] = useMemo(() => ((backendDashboard.data?.products.top_products ?? topProducts.data ?? []) as DashboardTopProductItem[]).map((item) => {
     const product = productById.get(item.product_id);
-    return { ...item, variant_id: item.variant_id ?? item.product_id, variant_sku: item.variant_sku ?? item.sku ?? "—", net_profit: item.net_profit ?? "0", categoryLabel: displayCategory(item.category ?? product?.category, t), imageUrl: item.image_url ?? productImage(product) };
+    return { ...item, variant_id: item.variant_id ?? item.product_id, variant_sku: item.variant_sku ?? item.sku ?? "—", net_profit: item.net_profit ?? null, categoryLabel: displayCategory(item.category ?? product?.category, t), imageUrl: item.image_url ?? productImage(product) };
   }), [backendDashboard.data?.products.top_products, productById, topProducts.data, t]);
 
 
@@ -110,8 +110,10 @@ export default function DashboardPage() {
   const previousOrderSummary = summarizeOrders(orders.data?.filter((order) => isInDateRange(order.created_at, previousRange)) ?? []);
   const totalRevenue = toFiniteNumber(backendDashboard.data?.sales.revenue ?? currentOrderSummary.revenue);
   const previousRevenue = toFiniteNumber(previousBackendDashboard.data?.sales.revenue ?? previousOrderSummary.revenue);
-  const netProfit = canSeeProfit ? toFiniteNumber(backendDashboard.data?.sales.net_profit ?? profitSummary.data?.total_net_profit) : 0;
-  const previousProfit = canSeeProfit ? toFiniteNumber(previousBackendDashboard.data?.sales.net_profit ?? previousProfitSummary.data?.total_net_profit) : 0;
+  const rawProfit = backendDashboard.data ? backendDashboard.data.sales.net_profit : profitSummary.data?.total_net_profit;
+  const rawPreviousProfit = previousBackendDashboard.data ? previousBackendDashboard.data.sales.net_profit : previousProfitSummary.data?.total_net_profit;
+  const netProfit = canSeeProfit ? toFiniteNumber(rawProfit) : 0;
+  const previousProfit = canSeeProfit ? toFiniteNumber(rawPreviousProfit) : 0;
   const adSpend = toFiniteNumber(backendDashboard.data?.advertising.spend ?? advertising.data?.total_spend);
   const adRevenue = toFiniteNumber(backendDashboard.data?.advertising.revenue ?? advertising.data?.total_revenue);
   const roas = adSpend > 0 ? formatSafeRatio(adRevenue, adSpend) : "—";
@@ -124,12 +126,12 @@ export default function DashboardPage() {
   const outOfStockCount = backendDashboard.data?.inventory.out_of_stock_count ?? inventory.data?.out_of_stock_count ?? 0;
   const hasAdvertisingData = adSpend > 0 || adRevenue > 0 || (backendDashboard.data?.advertising.orders ?? advertising.data?.total_orders ?? 0) > 0;
   const hasProductsData = (products.data?.length ?? 0) > 0 || (inventory.data?.total_stock_units ?? 0) > 0;
-  const profitMissing = canSeeProfit && totalRevenue > 0 && netProfit === 0;
+  const profitMissing = canSeeProfit && rawProfit == null;
   const selectedPeriodLabel = t(`dateRange.${range.preset}`);
   const ownerAlerts = [
     lowStockCount > 0 ? { title: t("dashboard.ownerAlerts.lowStock.title", { count: lowStockCount }), description: t("dashboard.ownerAlerts.lowStock.description"), href: "/inventory", action: t("dashboard.ownerActions.openInventory"), tone: "amber" as const } : null,
     confirmedOrders > 0 ? { title: t("dashboard.ownerAlerts.awaitingShipment.title", { count: confirmedOrders }), description: t("dashboard.ownerAlerts.awaitingShipment.description"), href: "/orders", action: t("dashboard.ownerActions.openOrders"), tone: "rose" as const } : null,
-    profitMissing ? { title: t("dashboard.ownerAlerts.profitMissing.title"), description: t("dashboard.ownerAlerts.profitMissing.description"), href: "/products", action: t("dashboard.ownerActions.openProducts"), tone: "amber" as const } : null,
+    profitMissing ? { title: t("dashboard.ownerAlerts.profitMissing.title"), description: t("dashboard.ownerAlerts.profitMissing.description"), href: "/orders", action: t("dashboard.ownerActions.openOrders"), tone: "amber" as const } : null,
     !hasAdvertisingData ? { title: t("dashboard.ownerAlerts.noAds.title"), description: t("dashboard.ownerAlerts.noAds.description"), href: "/advertising", action: t("dashboard.ownerActions.openAdvertising"), tone: "violet" as const } : null,
     ordersCount === 0 && currentLeads.length === 0 ? { title: t("dashboard.ownerAlerts.noPeriodData.title"), description: t("dashboard.ownerAlerts.noPeriodData.description"), href: "/leads", action: t("dashboard.ownerActions.createLead"), tone: "emerald" as const } : null,
   ].filter(Boolean) as { title: string; description: string; href: string; action: string; tone: "violet" | "amber" | "rose" | "emerald" }[];
@@ -147,7 +149,7 @@ export default function DashboardPage() {
         <section data-dashboard-kpi-row aria-label={t("dashboard.titleCompact")} className="grid min-w-0 grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
           <DashboardMetricCard label={t("dashboard.kpis.orders")} value={ordersCount} helper={ordersCount ? selectedPeriodLabel : t("dashboard.kpiHelpers.ordersZero")} trend={previousBackendDashboard.data || orders.data ? formatDeltaPercent(ordersCount, previousBackendDashboard.data?.sales.orders_count ?? previousOrderSummary.ordersCount) : undefined} explanation={t("dashboard.tooltips.orders")} />
           <DashboardMetricCard label={t("dashboard.kpis.revenue")} value={formatMoney(totalRevenue, currencyCode)} helper={totalRevenue > 0 ? selectedPeriodLabel : ordersCount > 0 ? t("dashboard.kpiHelpers.revenueNoRecorded") : t("dashboard.kpiHelpers.revenueZero")} trend={totalRevenue > 0 ? formatDeltaPercent(totalRevenue, previousRevenue) : undefined} explanation={t("dashboard.tooltips.revenue")} />
-          <DashboardMetricCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? (profitMissing ? "—" : formatMoney(netProfit, currencyCode)) : t("dashboard.restricted")} helper={!canSeeProfit ? t("dashboard.kpiHelpers.profitRestricted") : profitMissing ? t("dashboard.kpiHelpers.profitMissing") : selectedPeriodLabel} trend={canSeeProfit && !profitMissing && totalRevenue > 0 ? formatDeltaPercent(netProfit, previousProfit) : undefined} unavailable={!canSeeProfit || profitMissing} emphasized explanation={t("dashboard.tooltips.netProfit")} />
+          <DashboardMetricCard label={t("dashboard.kpis.netProfit")} value={canSeeProfit ? (profitMissing ? "—" : formatMoney(netProfit, currencyCode)) : t("dashboard.restricted")} helper={!canSeeProfit ? t("dashboard.kpiHelpers.profitRestricted") : profitMissing ? t("dashboard.kpiHelpers.profitMissing") : selectedPeriodLabel} trend={canSeeProfit && !profitMissing && rawPreviousProfit != null && totalRevenue > 0 ? formatDeltaPercent(netProfit, previousProfit) : undefined} unavailable={!canSeeProfit || profitMissing} emphasized explanation={t("dashboard.tooltips.netProfit")} />
           <DashboardMetricCard label={t("dashboard.kpis.roas")} value={hasAdvertisingData ? roas : "—"} helper={hasAdvertisingData ? selectedPeriodLabel : t("dashboard.kpiHelpers.roasMissing")} trend={adSpend > 0 ? formatDeltaPercent(toFiniteNumber(backendDashboard.data?.advertising.roas ?? advertising.data?.roas), toFiniteNumber(previousBackendDashboard.data?.advertising.roas ?? previousAdvertising.data?.roas)) : undefined} unavailable={!hasAdvertisingData} explanation={t("dashboard.tooltips.roas")} />
         </section>
 

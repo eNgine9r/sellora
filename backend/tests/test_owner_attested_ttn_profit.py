@@ -21,5 +21,11 @@ def test_confirmed_landed_cost_enables_normal_profit_calculation():
     assert ProfitCalculationService.order_net_profit(order(cost="125")) == Decimal("554.00")
 
 
+def test_owner_attested_order_can_confirm_an_explicit_zero_cost():
+    historical = order()
+    historical.items = [SimpleNamespace(unit_cost=Decimal("0"), cost_confirmed=True)]
+    assert ProfitCalculationService.order_net_profit(historical) == Decimal("679.00")
+
+
 def test_original_order_calculation_does_not_change_without_owner_attestation():
     assert ProfitCalculationService.order_net_profit(order(attested=False)) == Decimal("679.00")

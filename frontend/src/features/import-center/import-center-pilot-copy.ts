@@ -65,6 +65,7 @@ export function localizeImportIssue(issue: ValidationIssue, locale: string): str
     [/^Product variant not found\. Import product catalog first\.?$/i, () => "Варіант товару не знайдено. Спочатку імпортуйте каталог товарів."],
     [/^Quantity must be greater than 0\.?$/i, () => "Кількість має бути більшою за 0."],
     [/^Unit price is required\.?$/i, () => "Потрібно вказати ціну одиниці."],
+    [/^Unit cost is missing; profit is unavailable until it is confirmed\.?$/i, () => "Собівартість не вказана. Прибуток буде доступний після її підтвердження."],
     [/^Campaign name is required\.?$/i, () => "Потрібно вказати назву рекламної кампанії."],
     [/^Metric date is required\.?$/i, () => "Потрібно вказати дату рекламної метрики."],
     [/^Spend cannot be negative\.?$/i, () => "Витрати на рекламу не можуть бути від’ємними."],

@@ -7,6 +7,7 @@ export function normalizeCurrencyCode(value?: string | null): CurrencyCode {
 }
 
 export function formatMoney(value?: string | number | null, currencyCode?: string | null): string {
+  if (value == null) return "—";
   const amount = Number(value ?? 0);
   const safeAmount = Number.isFinite(amount) ? amount : 0;
   const currency = normalizeCurrencyCode(currencyCode);

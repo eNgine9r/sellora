@@ -47,7 +47,7 @@ const emptyItem = () => ({
   product_variant_id: "",
   quantity: "1",
   unit_price: "",
-  unit_cost: "0",
+  unit_cost: "",
 });
 const emptyFilter = (): ItemFilter => ({
   category: "all",
@@ -71,7 +71,7 @@ function initialOrderValues(order?: Order | null): OrderFormValues {
           product_variant_id: item.product_variant_id,
           quantity: String(item.quantity),
           unit_price: String(item.unit_price),
-          unit_cost: String(item.unit_cost),
+          unit_cost: (item.cost_confirmed ?? Number(item.unit_cost) > 0) ? String(item.unit_cost) : "",
         }))
       : [emptyItem()],
     ad_cost: order ? String(order.ad_cost) : undefined,
@@ -275,7 +275,7 @@ export function OrderForm({
     updateItem(index, {
       product_variant_id: "",
       unit_price: "",
-      unit_cost: "0",
+      unit_cost: "",
     });
   }
 
@@ -284,7 +284,7 @@ export function OrderForm({
     updateItem(index, {
       product_variant_id: "",
       unit_price: "",
-      unit_cost: "0",
+      unit_cost: "",
     });
   }
 
@@ -294,7 +294,7 @@ export function OrderForm({
     updateItem(index, {
       product_variant_id: variantId,
       unit_price: initialOrder?.is_historical ? "" : (variant?.price ? String(variant.price) : "0"),
-      unit_cost: "0",
+      unit_cost: "",
     });
   }
 
@@ -333,6 +333,8 @@ export function OrderForm({
       if (numberValue(item.quantity) <= 0) return t("errors.required");
       if (item.unit_price === "" || numberValue(item.unit_price) < 0)
         return t("errors.required");
+      if (item.unit_cost.trim() && (!Number.isFinite(Number(item.unit_cost)) || Number(item.unit_cost) < 0))
+        return t("fulfillment.validation.amounts");
       const stock = inventoryByVariantId.get(item.product_variant_id);
       if (
         !initialOrder?.is_historical &&
@@ -805,6 +807,7 @@ export function OrderForm({
                       updateItem(index, { unit_cost: event.target.value })
                     }
                   />
+                  <span className="text-xs font-normal">{t("orders.costOptionalHint")}</span>
                 </label>
                 <div className="rounded-lg bg-white px-3 py-2 text-sm dark:bg-white/[0.05]">
                   <span className="text-slate-500 dark:text-slate-300">
@@ -876,7 +879,7 @@ export function OrderForm({
           <>
             <span>{t("orders.productCost")}</span>
             <strong className="text-slate-950 dark:text-white">
-              {formatMoney(productCost, currencyCode)}
+              {values.items.some((item) => !item.unit_cost.trim()) ? t("orders.unknownAmount") : formatMoney(productCost, currencyCode)}
             </strong>
           </>
         ) : null}
@@ -892,7 +895,7 @@ export function OrderForm({
           <>
             <span>{t("orders.estimatedProfit")}</span>
             <strong className="text-emerald-700 dark:text-emerald-200">
-              {formatMoney(estimatedProfit, currencyCode)}
+              {values.items.some((item) => !item.unit_cost.trim()) ? t("orders.unknownAmount") : formatMoney(estimatedProfit, currencyCode)}
             </strong>
           </>
         ) : null}

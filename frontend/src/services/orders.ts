@@ -1,5 +1,5 @@
 import { apiRequest } from "@/services/api";
-import { HistoricalEstimatedCostPayload, Order, OrderDashboard, OrderStatus, PaymentStatus } from "@/types/orders";
+import { HistoricalEstimatedCostPayload, Order, OrderDashboard, OrderProductCostsPayload, OrderStatus, PaymentStatus } from "@/types/orders";
 
 function workspaceHeaders(workspaceId?: string): HeadersInit {
   return workspaceId ? { "X-Workspace-ID": workspaceId } : {};
@@ -9,7 +9,7 @@ export type OrderCreatePayload = {
   customer_id: string | null;
   campaign_id: string | null;
   payment_status: PaymentStatus;
-  items: { product_variant_id: string; quantity: number; unit_price: number; unit_cost: number }[];
+  items: { product_variant_id: string; quantity: number; unit_price: number; unit_cost: number; cost_confirmed?: boolean | null }[];
   ad_cost: number;
   shipping_cost: number;
   cod_fee: number;
@@ -34,6 +34,10 @@ export async function createOrder(workspaceId: string, payload: OrderCreatePaylo
 
 export async function updateOrder(workspaceId: string, orderId: string, payload: Partial<OrderCreatePayload>): Promise<Order> {
   return apiRequest<Order>(`/orders/${orderId}`, { method: "PUT", headers: workspaceHeaders(workspaceId), body: JSON.stringify(payload) });
+}
+
+export async function updateOrderProductCosts(workspaceId: string, orderId: string, payload: OrderProductCostsPayload): Promise<Order> {
+  return apiRequest<Order>(`/orders/${orderId}/product-costs`, { method: "PUT", headers: workspaceHeaders(workspaceId), body: JSON.stringify(payload) });
 }
 
 export async function saveHistoricalCostEstimate(

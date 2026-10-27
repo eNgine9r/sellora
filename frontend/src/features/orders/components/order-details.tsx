@@ -5,7 +5,8 @@ import { Order, OrderStatus } from "@/types/orders";
 import { Shipment } from "@/types/shipments";
 import { CopyTtnButton } from "@/features/shipments/components/ttn-actions";
 import { HistoricalCostEstimateCard } from "@/features/orders/components/historical-cost-estimate-card";
-import type { HistoricalEstimatedCostPayload } from "@/types/orders";
+import { OrderCostEditor } from "@/features/orders/components/order-cost-editor";
+import type { HistoricalEstimatedCostPayload, OrderProductCostsPayload } from "@/types/orders";
 
 const NEXT_STATUSES: OrderStatus[] = [
   "CONFIRMED",
@@ -29,6 +30,9 @@ export function OrderDetails({
   onClearEstimate,
   estimateSaving = false,
   estimateError,
+  onSaveProductCosts,
+  productCostsSaving = false,
+  productCostsError,
 }: {
   order: Order;
   currencyCode?: string;
@@ -42,18 +46,21 @@ export function OrderDetails({
   onClearEstimate?: () => void;
   estimateSaving?: boolean;
   estimateError?: string | null;
+  onSaveProductCosts?: (payload: OrderProductCostsPayload) => Promise<void>;
+  productCostsSaving?: boolean;
+  productCostsError?: string | null;
 }) {
   const { t, formatStatus } = useI18n();
   const archivePlaceholder = order.is_historical && order.items.some((item) => item.sku === "NP-ARCHIVE-OTHER");
   const historicalValuesMissing = archivePlaceholder && (Number(order.revenue) <= 0 || Number(order.product_cost) <= 0);
-  const hasCostContext = !historicalValuesMissing && (Number(order.product_cost) > 0 || Number(order.ad_cost) > 0 || Number(order.shipping_cost) > 0 || Number(order.cod_fee) > 0 || Number(order.other_cost) > 0);
+  const hasCostContext = !historicalValuesMissing && order.product_cost != null;
   return (
     <aside className="grid gap-4">
       <div>
         <h2 className="text-xl font-bold">{order.order_number}</h2>
         <p className="mt-1 text-sm text-text-secondary">{t("orders.orderStatus")}: {formatStatus("order", order.status)}</p>
         <p className="text-sm text-text-secondary">
-          {t("orders.profit")}: {historicalValuesMissing ? t("orders.unknownAmount") : formatMoney(order.net_profit, currencyCode)}
+          {t("orders.profit")}: {historicalValuesMissing || order.net_profit == null ? t("orders.unknownAmount") : formatMoney(order.net_profit, currencyCode)}
         </p>
         {order.is_historical && order.payment_status === "PENDING" && !historicalValuesMissing ? <p className="mt-1 text-xs text-text-muted">{t("orders.historicalUnpaidProfitHint")}</p> : null}
         {!hasCostContext ? (
@@ -71,11 +78,12 @@ export function OrderDetails({
         saving={estimateSaving}
         error={estimateError}
       />
+      {onSaveProductCosts ? <OrderCostEditor order={order} onSave={onSaveProductCosts} saving={productCostsSaving} error={productCostsError} /> : null}
       <div className="grid min-w-0 grid-cols-[auto,minmax(0,1fr)] gap-2 text-sm">
         <span>{t("orders.revenue")}</span>
         <strong>{archivePlaceholder && Number(order.revenue) === 0 ? t("orders.unknownAmount") : formatMoney(order.revenue, currencyCode)}</strong>
         <span>{t("orders.productCost")}</span>
-        <strong>{archivePlaceholder && Number(order.product_cost) === 0 ? t("orders.unknownAmount") : formatMoney(order.product_cost, currencyCode)}</strong>
+        <strong>{order.product_cost == null || (archivePlaceholder && Number(order.product_cost) === 0) ? t("orders.unknownAmount") : formatMoney(order.product_cost, currencyCode)}</strong>
         <span>{t("orders.adCost")}</span>
         <strong>{formatMoney(order.ad_cost, currencyCode)}</strong>
         <span>{t("shipments.shipping")}</span>

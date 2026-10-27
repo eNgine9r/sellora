@@ -5,11 +5,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.dependencies.rbac import get_workspace_id, require_min_role
+from app.dependencies.rbac import get_workspace_id, require_min_role, require_roles
 from app.models.order import OrderStatus
 from app.models.role import RoleName
 from app.models.user import User
-from app.schemas.order import HistoricalEstimatedCostUpsert, OrderCreate, OrderDashboardResponse, OrderResponse, OrderStatusUpdate, OrderUpdate
+from app.schemas.order import HistoricalEstimatedCostUpsert, OrderCreate, OrderDashboardResponse, OrderProductCostsUpdate, OrderResponse, OrderStatusUpdate, OrderUpdate
 from app.schemas.shipment import ShipmentCreate, ShipmentResponse
 from app.services.order_service import OrderService, OrderServiceError
 from app.services.shipment_service import ShipmentService, ShipmentServiceError
@@ -76,6 +76,23 @@ def set_estimated_cost(
         order = OrderService(db).set_historical_cost_estimate(workspace_id, order_id, payload, current_user.id)
     except OrderServiceError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    return order
+
+
+@router.put("/{order_id}/product-costs", response_model=OrderResponse)
+def update_order_product_costs(
+    order_id: UUID,
+    payload: OrderProductCostsUpdate,
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_roles(RoleName.OWNER)),
+    db: Session = Depends(get_db),
+) -> OrderResponse:
+    try:
+        order = OrderService(db).update_product_costs(workspace_id, order_id, payload, current_user.id)
+    except OrderServiceError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order

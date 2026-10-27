@@ -48,6 +48,7 @@ OWNER_ONLY_ENDPOINTS = {
     ("PUT", "/api/v1/workspace-users/{user_id}/role"),
     ("PATCH", "/api/v1/workspace-users/{user_id}/deactivate"),
     ("PUT", "/api/v1/workspaces/current"),
+    ("PUT", "/api/v1/orders/{order_id}/product-costs"),
     ("PATCH", "/api/v1/workspaces/demo/deactivate"),
     ("POST", "/api/v1/advertising/campaigns"),
     ("POST", "/api/v1/advertising/metrics"),
@@ -63,12 +64,12 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 9,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 217,
+    "WORKSPACE_SCOPED": 218,
     "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 247
-EXPECTED_MUTATION_ROUTES = 140
+EXPECTED_TOTAL_ROUTES = 248
+EXPECTED_MUTATION_ROUTES = 141
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),

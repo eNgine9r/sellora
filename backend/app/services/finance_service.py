@@ -172,7 +172,7 @@ class FinanceService:
         revenue = self._sum(order.revenue for order in valid_orders)
         cogs, missing_cost_count = self._calculate_cogs(valid_orders)
         if missing_cost_count:
-            warnings.append(self._warning("missing_product_cost", f"Product cost is missing for {missing_cost_count} order item(s), so COGS may be understated.", f"Для {missing_cost_count} позицій замовлень відсутня собівартість, тому COGS може бути заниженим."))
+            warnings.append(self._warning("missing_product_cost", f"Product cost is unconfirmed for {missing_cost_count} order item(s). Cost and profit cannot be calculated until it is confirmed.", f"Собівартість {missing_cost_count} позицій замовлень не підтверджена. Вкажіть її, щоб розрахувати витрати та прибуток."))
 
         ad_spend = self._sum(getattr(order, "ad_cost", MONEY_ZERO) for order in valid_orders)
         reported_campaign_spend = self._sum(metric.spend for metric in ad_metrics)
@@ -222,13 +222,13 @@ class FinanceService:
         paid_orders_count = sum(1 for order in valid_orders if order.payment_status in PAID_PAYMENT_STATUSES)
         average_denominator = paid_orders_count or orders_count
         average_order_value = self._divide(revenue, Decimal(average_denominator)) if average_denominator else None
-        profit_margin = self._divide(net_profit, revenue) * Decimal("100") if revenue else None
+        profit_margin = self._divide(net_profit, revenue) * Decimal("100") if revenue and not missing_cost_count else None
 
         summary = FinanceSummaryResponse(
             period=FinancePeriod(date_from=start_at.date(), date_to=end_at.date()),
             revenue=self._quantize(revenue),
-            cogs=self._quantize(cogs),
-            gross_profit=self._quantize(gross_profit),
+            cogs=self._quantize(cogs) if not missing_cost_count else None,
+            gross_profit=self._quantize(gross_profit) if not missing_cost_count else None,
             ad_spend=self._quantize(ad_spend),
             shipping_cost=self._quantize(shipping_cost),
             discounts=self._quantize(discounts),
@@ -239,7 +239,7 @@ class FinanceService:
             manual_discounts=self._quantize(manual_discounts),
             manual_fees=self._quantize(manual_fees),
             finance_adjustments_total=self._quantize(finance_adjustments_total),
-            net_profit=self._quantize(net_profit),
+            net_profit=self._quantize(net_profit) if not missing_cost_count else None,
             profit_margin=self._quantize(profit_margin) if profit_margin is not None else None,
             orders_count=orders_count,
             paid_orders_count=paid_orders_count,
@@ -263,9 +263,9 @@ class FinanceService:
             self._breakdown_item("net_profit", "Net profit", summary.net_profit, "result", summary.revenue),
         ]
 
-    def _breakdown_item(self, key: str, label: str, amount: Decimal, direction: str, revenue: Decimal) -> FinanceBreakdownItem:
-        share = self._divide(amount, revenue) * Decimal("100") if revenue else None
-        return FinanceBreakdownItem(key=key, label=label, amount=self._quantize(amount), direction=direction, share_of_revenue=self._quantize(share) if share is not None else None)
+    def _breakdown_item(self, key: str, label: str, amount: Decimal | None, direction: str, revenue: Decimal) -> FinanceBreakdownItem:
+        share = self._divide(amount, revenue) * Decimal("100") if amount is not None and revenue else None
+        return FinanceBreakdownItem(key=key, label=label, amount=self._quantize(amount) if amount is not None else None, direction=direction, share_of_revenue=self._quantize(share) if share is not None else None)
 
     def _comparison(self, current: Decimal | int | None, previous: Decimal | int | None) -> FinanceComparisonMetric:
         current_decimal = Decimal(current) if current is not None else None
@@ -308,13 +308,13 @@ class FinanceService:
             if items:
                 for item in items:
                     line_cost = Decimal(item.line_cost or 0)
-                    if line_cost == MONEY_ZERO and Decimal(item.line_total or 0) > MONEY_ZERO:
+                    if not ProfitCalculationService.item_cost_known(item):
                         missing += 1
                     total += line_cost
             else:
                 order_cost = Decimal(order.product_cost or 0)
-                if order_cost == MONEY_ZERO and Decimal(order.revenue or 0) > MONEY_ZERO:
-                    missing += 1
+                # No item-level evidence means the cost cannot be verified.
+                missing += 1
                 total += order_cost
         return total, missing
 

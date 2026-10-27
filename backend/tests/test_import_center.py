@@ -519,7 +519,15 @@ def test_orders_history_dry_run_groups_multi_item_order_and_does_not_write() -> 
     assert report.orders_detected == 1
     assert report.order_items_detected == 2
     assert report.estimated_revenue == Decimal("110.00")
+    assert report.estimated_profit is None
+    assert any("Unit cost is missing" in warning.message for warning in report.sample_warnings)
     assert db.added == []
+
+    rows[0]["Unit Cost"] = "10"
+    rows[1]["Unit Cost"] = "0"  # Explicit zero is different from a missing cell.
+    mapping["unit_cost"] = "Unit Cost"
+    known = HistoricalImportService(db, lookup).dry_run(workspace_id, uuid4(), "orders_history", "Orders", rows, mapping)
+    assert known.estimated_profit == Decimal("97.00")
 
 
 def test_advertising_history_dry_run_rejects_negative_spend() -> None:

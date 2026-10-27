@@ -17,7 +17,7 @@ from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.inventory_repository import InventoryRepository
 from app.repositories.order_repository import OrderRepository
 from app.schemas.inventory import InventoryTransactionCreate
-from app.schemas.order import HistoricalCostConfidence, HistoricalCostSource, HistoricalEstimatedCostUpsert, OrderCreate, OrderDashboardResponse, OrderStatusUpdate, OrderUpdate
+from app.schemas.order import HistoricalCostConfidence, HistoricalCostSource, HistoricalEstimatedCostUpsert, OrderCreate, OrderDashboardResponse, OrderProductCostsUpdate, OrderStatusUpdate, OrderUpdate
 from app.services.business_utils import snapshot
 from app.services.inventory_service import InventoryService, InventoryServiceError
 from app.services.profit_calculation_service import ProfitCalculationService
@@ -118,6 +118,7 @@ class OrderService:
                     quantity=item_payload.quantity,
                     unit_price=item_payload.unit_price,
                     unit_cost=item_payload.unit_cost,
+                    cost_confirmed=item_payload.cost_confirmed,
                     line_total=line_total,
                     line_cost=line_cost,
                 )
@@ -157,7 +158,7 @@ class OrderService:
             self._replace_items_for_update(workspace_id, order, item_payloads, actor_user_id, old_value)
             # Once historical costs are confirmed in item snapshots, clear the
             # advisory estimate; the ORDER_UPDATE audit records its prior value.
-            if order.is_historical and order.product_cost > 0 and order.estimated_product_cost is not None:
+            if order.is_historical and ProfitCalculationService.order_cost_known(order) and order.estimated_product_cost is not None:
                 order.estimated_product_cost = None
                 order.estimated_cost_source = None
                 order.estimated_cost_confidence = None
@@ -200,6 +201,47 @@ class OrderService:
         self.db.refresh(order)
         return self.get(workspace_id, order_id) or order
 
+    def update_product_costs(self, workspace_id: UUID, order_id: UUID, payload: OrderProductCostsUpdate, actor_user_id: UUID | None) -> Order | None:
+        """Correct cost snapshots only; never change quantities or stock."""
+        order = self._get_order_for_update(workspace_id, order_id)
+        if order is None:
+            return None
+        current_items = {item.id: item for item in order.items}
+        ids = [entry.item_id for entry in payload.items]
+        if len(ids) != len(set(ids)) or any(item_id not in current_items for item_id in ids):
+            raise OrderServiceError("Invalid or duplicate order item")
+
+        proposed = {entry.item_id: entry.unit_cost if entry.unit_cost is not None else Decimal("0") for entry in payload.items}
+        total = sum(((proposed.get(item.id, item.unit_cost) or Decimal("0")) * item.quantity for item in order.items), Decimal("0"))
+        limit = Decimal("9999999999.99")
+        profit = (Decimal(order.revenue or 0) - total - Decimal(order.ad_cost or 0) - Decimal(order.shipping_cost or 0)
+                  - Decimal(order.cod_fee or 0) - Decimal(order.other_cost or 0))
+        if total > limit or (ProfitCalculationService.includes_order(order) and abs(profit) > limit):
+            raise OrderServiceError("Order cost exceeds the supported amount")
+
+        before = [{"item_id": str(entry.item_id), "unit_cost": str(current_items[entry.item_id].unit_cost),
+                   "cost_confirmed": current_items[entry.item_id].cost_confirmed} for entry in payload.items]
+        for entry in payload.items:
+            item = current_items[entry.item_id]
+            item.unit_cost = entry.unit_cost if entry.unit_cost is not None else Decimal("0")
+            item.cost_confirmed = entry.unit_cost is not None
+            item.line_cost = item.unit_cost * item.quantity
+        order.product_cost = sum((Decimal(item.line_cost) for item in order.items), Decimal("0"))
+        if order.is_historical and ProfitCalculationService.order_cost_known(order):
+            order.estimated_product_cost = None
+            order.estimated_cost_source = None
+            order.estimated_cost_confidence = None
+            order.estimated_cost_reference = None
+        self._recalculate_profit(order)
+        after = [{"item_id": str(entry.item_id), "unit_cost": str(current_items[entry.item_id].unit_cost),
+                  "cost_confirmed": current_items[entry.item_id].cost_confirmed} for entry in payload.items]
+        self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order",
+                               entity_id=order.id, action="ORDER_PRODUCT_COSTS_CORRECTED",
+                               old_value={"items": before}, new_value={"items": after})
+        self.db.commit()
+        self.db.refresh(order)
+        return self.get(workspace_id, order_id) or order
+
     def clear_historical_cost_estimate(
         self, workspace_id: UUID, order_id: UUID, actor_user_id: UUID | None,
     ) -> Order | None:
@@ -226,7 +268,7 @@ class OrderService:
     def _validate_estimate_target(order: Order) -> None:
         if not order.is_historical:
             raise OrderServiceError("Cost estimates are allowed only for historical orders")
-        if order.product_cost > 0 or any(item.unit_cost > 0 for item in order.items):
+        if ProfitCalculationService.order_cost_known(order) or order.product_cost > 0 or any(item.unit_cost > 0 for item in order.items):
             raise OrderServiceError("Confirmed historical costs cannot be overwritten by an estimate")
 
     @staticmethod
@@ -242,6 +284,22 @@ class OrderService:
         historical = bool(order.is_historical)
         if not historical and OrderStatus(order.status) not in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
             raise OrderServiceError("Order items cannot be edited after shipment workflow has started")
+
+        # Older clients do not send the confirmation marker. Preserve a
+        # matching snapshot's explicit evidence instead of turning a confirmed
+        # zero back into an unknown value when the order is edited. If matching
+        # duplicate lines disagree, choose the conservative unknown state.
+        previous_items = list(order.items)
+        preserved_payloads = []
+        for payload in item_payloads:
+            matches = [item for item in previous_items if item.product_variant_id == payload.product_variant_id and getattr(item, "unit_cost", None) == payload.unit_cost]
+            if payload.cost_confirmed is None and matches:
+                if all(getattr(item, "cost_confirmed", None) is True for item in matches):
+                    payload = payload.model_copy(update={"cost_confirmed": True})
+                elif any(getattr(item, "cost_confirmed", None) is False for item in matches) or payload.unit_cost == 0:
+                    payload = payload.model_copy(update={"cost_confirmed": False})
+            preserved_payloads.append(payload)
+        item_payloads = preserved_payloads
 
         # Historical orders were imported without stock reservations. Correcting
         # their product/price/cost snapshots must NEVER change today's stock.
@@ -266,7 +324,7 @@ class OrderService:
                 line_cost = payload.unit_cost * payload.quantity
                 revenue += line_total
                 product_cost += line_cost
-                self.orders.add_item(OrderItem(
+                new_item = OrderItem(
                     workspace_id=workspace_id,
                     order_id=order.id,
                     product_variant_id=variant.id,
@@ -275,9 +333,13 @@ class OrderService:
                     quantity=payload.quantity,
                     unit_price=payload.unit_price,
                     unit_cost=payload.unit_cost,
+                    cost_confirmed=payload.cost_confirmed,
                     line_total=line_total,
                     line_cost=line_cost,
-                ))
+                )
+                self.orders.add_item(new_item)
+                if new_item not in order.items:
+                    order.items.append(new_item)
             order.revenue = revenue
             order.product_cost = product_cost
             self.audit_logs.create(
@@ -329,8 +391,7 @@ class OrderService:
             line_cost = item_payload.unit_cost * item_payload.quantity
             revenue += line_total
             product_cost += line_cost
-            self.orders.add_item(
-                OrderItem(
+            new_item = OrderItem(
                     workspace_id=workspace_id,
                     order_id=order.id,
                     product_variant_id=variant.id,
@@ -339,10 +400,13 @@ class OrderService:
                     quantity=item_payload.quantity,
                     unit_price=item_payload.unit_price,
                     unit_cost=item_payload.unit_cost,
+                    cost_confirmed=item_payload.cost_confirmed,
                     line_total=line_total,
                     line_cost=line_cost,
                 )
-            )
+            self.orders.add_item(new_item)
+            if new_item not in order.items:
+                order.items.append(new_item)
         order.revenue = revenue
         order.product_cost = product_cost
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="ORDER_ITEMS_UPDATE", old_value=old_value, new_value={"item_count": len(prepared_items)})

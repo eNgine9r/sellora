@@ -2,13 +2,15 @@ from decimal import Decimal
 from types import SimpleNamespace
 from uuid import uuid4
 
+import pytest
+
 from app.models.customer import Customer
 from app.models.inventory import Inventory
 from app.models.inventory_transaction import InventoryTransactionType
 from app.models.order import OrderStatus
 from app.models.product import Product
 from app.models.product_variant import ProductVariant
-from app.schemas.order import OrderCreate, OrderItemCreate, OrderStatusUpdate, OrderUpdate
+from app.schemas.order import OrderCreate, OrderItemCreate, OrderProductCostsUpdate, OrderStatusUpdate, OrderUpdate
 from app.services.order_service import OrderService, OrderServiceError
 
 
@@ -149,6 +151,44 @@ def _create_order(service: OrderService, inventory: Inventory, customer: Custome
         ),
         actor_user_id=uuid4(),
     )
+
+
+def test_legacy_order_edit_preserves_confirmed_zero_cost() -> None:
+    service, inventory, customer = _service()
+    original = service.create(inventory.workspace_id, OrderCreate(customer_id=customer.id, items=[
+        OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=1, unit_price=50, unit_cost=0, cost_confirmed=True),
+    ]), actor_user_id=uuid4())
+    # An older client sends the same item without the new marker.
+    edited = service.update(inventory.workspace_id, original.id, OrderUpdate(items=[
+        OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=1, unit_price=50, unit_cost=0),
+    ]), actor_user_id=uuid4())
+    assert edited.items[0].cost_confirmed is True
+
+
+def test_cost_only_correction_after_shipment_never_changes_inventory() -> None:
+    service, inventory, customer = _service()
+    original = _create_order(service, inventory, customer)
+    original.status = OrderStatus.DELIVERED.value
+    item = original.items[0]
+    before_stock = (inventory.stock_quantity, inventory.reserved_quantity, len(service.inventory_service.transactions))
+    corrected = service.update_product_costs(inventory.workspace_id, original.id,
+        OrderProductCostsUpdate(items=[{"item_id": item.id, "unit_cost": "0"}]), actor_user_id=uuid4())
+    assert corrected.items[0].cost_confirmed is True
+    assert corrected.product_cost == Decimal("0")
+    assert corrected.net_profit == Decimal("80")
+    assert (inventory.stock_quantity, inventory.reserved_quantity, len(service.inventory_service.transactions)) == before_stock
+    assert service.audit_logs.records[-1]["action"] == "ORDER_PRODUCT_COSTS_CORRECTED"
+
+
+def test_cost_correction_rejects_foreign_and_duplicate_items_without_mutation() -> None:
+    service, inventory, customer = _service()
+    original = _create_order(service, inventory, customer)
+    item = original.items[0]
+    for entries in ([{"item_id": uuid4(), "unit_cost": "10"}],
+                    [{"item_id": item.id, "unit_cost": "10"}, {"item_id": item.id, "unit_cost": "20"}]):
+        with pytest.raises(OrderServiceError):
+            service.update_product_costs(inventory.workspace_id, original.id, OrderProductCostsUpdate(items=entries), uuid4())
+    assert item.unit_cost == Decimal("20")
 
 
 def test_order_creation_requires_customer_for_normal_orders() -> None:

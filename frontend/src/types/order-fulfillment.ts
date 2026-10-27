@@ -22,7 +22,7 @@ export type OrderFulfillmentPayload = {
   warehouse: string;
   warehouse_number: string | null;
   save_address_as_default: boolean;
-  items: { product_variant_id: string; quantity: number; unit_price: number; unit_cost: number }[];
+  items: { product_variant_id: string; quantity: number; unit_price: number; unit_cost: number; cost_confirmed?: boolean | null }[];
   payment_status: Exclude<PaymentStatus, "REFUNDED">;
   cod_amount: number | null;
   declared_value: number | null;
