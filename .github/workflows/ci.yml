@@ -251,6 +251,8 @@ jobs:
       - name: Production build
         working-directory: frontend
         run: npm run build
+      - name: Verify grouped mobile and desktop sidebar navigation
+        run: node frontend/scripts/grouped-sidebar-regression.mjs
       - name: Run mobile navigation and safe-area static regression
         working-directory: frontend
         run: npm run mobile:audit:static
