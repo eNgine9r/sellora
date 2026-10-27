@@ -52,6 +52,7 @@ import {
   startInstagramHistorySync,
 } from "@/services/direct";
 import { fetchInstagramStatus } from "@/services/meta-instagram";
+import { ApiError } from "@/services/api";
 import { AISuggestion } from "@/types/ai";
 import {
   DirectConversation,
@@ -428,7 +429,8 @@ function DirectPageContent() {
             confirmOrderEvidenceMutation.mutate();
           }}
           automationLoading={automationQuery.isLoading}
-          automationError={automationQuery.isError || ensureCustomerMutation.isError}
+          automationError={automationQuery.isError || (ensureCustomerMutation.isError && ensureCustomerMutation.variables === selectedConversation?.id)}
+          identityConflict={!automationQuery.data?.customer && (selectedConversation?.provider_sync_status === "CUSTOMER_IDENTITY_CONFLICT" || (ensureCustomerMutation.variables === selectedConversation?.id && ensureCustomerMutation.error instanceof ApiError && (ensureCustomerMutation.error.detail as { detail?: unknown } | null)?.detail === "DIRECT_CUSTOMER_IDENTITY_CONFLICT"))}
           canManage={canManage}
           ensuringCustomer={ensureCustomerMutation.isPending}
           onEnsureCustomer={() => {
@@ -746,6 +748,7 @@ function MessageThread({
   onConfirmOrderEvidence,
   automationLoading,
   automationError,
+  identityConflict,
   canManage,
   ensuringCustomer,
   onEnsureCustomer,
@@ -784,6 +787,7 @@ function MessageThread({
   onConfirmOrderEvidence: () => void;
   automationLoading: boolean;
   automationError: boolean;
+  identityConflict: boolean;
   canManage: boolean;
   ensuringCustomer: boolean;
   onEnsureCustomer: () => void;
@@ -847,6 +851,7 @@ function MessageThread({
         evidenceReady={!orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated}
         loading={automationLoading}
         error={automationError}
+        identityConflict={identityConflict}
         canManage={canManage}
         ensuring={ensuringCustomer}
         onEnsure={onEnsureCustomer}
@@ -859,7 +864,7 @@ function MessageThread({
         <div className="max-h-[35dvh] overflow-y-auto">
           <ParticipantProfileCard conversation={conversation} onRefresh={onRefreshProfile} refreshing={profileRefreshing} />
           <DirectLeadCard conversation={conversation} canManage={canManage} ensuring={ensuringLead} error={leadError} onEnsure={onEnsureLead} />
-          <CustomerAutomationCard conversation={conversation} automation={automation} existingOrdersCount={orderEvidence?.verified_orders.length ?? 0} evidenceReady={!orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated} loading={automationLoading} error={automationError} canManage={canManage} ensuring={ensuringCustomer} onEnsure={onEnsureCustomer} />
+          <CustomerAutomationCard conversation={conversation} automation={automation} existingOrdersCount={orderEvidence?.verified_orders.length ?? 0} evidenceReady={!orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated} loading={automationLoading} error={automationError} identityConflict={identityConflict} canManage={canManage} ensuring={ensuringCustomer} onEnsure={onEnsureCustomer} />
           <DirectOrderEvidenceCard evidence={orderEvidence} loading={orderEvidenceLoading} error={orderEvidenceError} canManage={canManage} confirming={orderEvidenceConfirming} confirmError={orderEvidenceConfirmError} onConfirm={onConfirmOrderEvidence} />
         <DirectProductProposal workspaceId={workspaceId} conversationId={conversation.id} customerId={automation?.customer?.id} canCreate={canManage && !orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated} />
         </div>
@@ -988,6 +993,7 @@ function CustomerAutomationCard({
   evidenceReady,
   loading,
   error,
+  identityConflict,
   canManage,
   ensuring,
   onEnsure,
@@ -998,10 +1004,12 @@ function CustomerAutomationCard({
   evidenceReady: boolean;
   loading: boolean;
   error: boolean;
+  identityConflict: boolean;
   canManage: boolean;
   ensuring: boolean;
   onEnsure: () => void;
 }) {
+  const { t } = useI18n();
   const customer = automation?.customer;
   const missingLabels: Record<string, string> = {
     name: "ПІБ",
@@ -1024,19 +1032,19 @@ function CustomerAutomationCard({
             <p className="mt-1 text-sm text-text-secondary">
               {customer.name}{customer.instagram_username ? ` · @${customer.instagram_username}` : ""}
             </p>
-          ) : (
+          ) : identityConflict ? null : (
             <p className="mt-1 text-sm text-text-secondary">Sellora створить prospect без телефону, а повні дані збере під час оформлення.</p>
           )}
           {automation?.missing_fields.length ? (
             <p className="mt-1 text-xs font-semibold text-amber-700">Потрібно доповнити: {automation.missing_fields.map((field) => missingLabels[field] ?? field).join(", ")}.</p>
           ) : null}
-          {error ? <p className="mt-1 text-xs font-semibold text-rose-600">Не вдалося оновити зв’язок із клієнтом. Повторіть дію.</p> : null}
+          {identityConflict ? <p className="mt-1 text-xs font-semibold text-rose-600">{t("direct.identityConflict")}</p> : error ? <p className="mt-1 text-xs font-semibold text-rose-600">Не вдалося оновити зв’язок із клієнтом. Повторіть дію.</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {!customer && canManage ? (
             <Button variant="secondary" onClick={onEnsure} disabled={ensuring}>
               {ensuring ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-              Створити prospect
+              {identityConflict ? t("direct.retryIdentityMatch") : "Створити prospect"}
             </Button>
           ) : null}
           {customer && evidenceReady && canManage ? (
