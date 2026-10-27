@@ -270,11 +270,10 @@ class InstagramInboundMessageService:
                 if state and state.customer:
                     conversation.provider_sync_status = "CUSTOMER_PROSPECT_READY"
         except DirectCustomerAutomationError as exc:
-            conversation.provider_sync_status = (
-                "CUSTOMER_IDENTITY_CONFLICT"
-                if str(exc) == "DIRECT_CUSTOMER_IDENTITY_CONFLICT"
-                else "CUSTOMER_AUTOMATION_FAILED_SAFE"
-            )
+            conversation.provider_sync_status = {
+                "DIRECT_CUSTOMER_IDENTITY_CONFLICT": "CUSTOMER_IDENTITY_CONFLICT",
+                "DIRECT_CUSTOMER_IDENTITY_BUSY": "CUSTOMER_IDENTITY_BUSY",
+            }.get(str(exc), "CUSTOMER_AUTOMATION_FAILED_SAFE")
         except Exception:
             conversation.provider_sync_status = "CUSTOMER_AUTOMATION_FAILED_SAFE"
 
