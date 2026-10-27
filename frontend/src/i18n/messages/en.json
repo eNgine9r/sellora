@@ -2385,7 +2385,18 @@
     "refreshList": "Refresh conversations",
     "aiQuick": "AI assistant",
     "identityConflict": "Instagram details conflict or match multiple customers. Review customer records before linking.",
-    "retryIdentityMatch": "Check again"
+    "retryIdentityMatch": "Check again",
+    "identityReviewPrompt": "Review each record and select a customer only when you are sure it is the same person.",
+    "identityLoading": "Finding matches…",
+    "identityLoadError": "Could not load matches.",
+    "identityNoCandidates": "No matches found. Check Instagram details and try again.",
+    "identityConfirmQuestion": "Link this conversation to the selected customer?",
+    "identityConfirm": "Yes, link",
+    "identityCancel": "Cancel",
+    "identityChoose": "Choose customer",
+    "identityMore": "Showing the first 20 matches. Review the remaining records in Customers.",
+    "identityLinkError": "Could not link the customer. Check the current details and try again.",
+    "identityOrderBlocked": "This conversation already has a linked order. Review it before changing the customer."
   },
   "instagramSettings": {
     "title": "Instagram Direct",
