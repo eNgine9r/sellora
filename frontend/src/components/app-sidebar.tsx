@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart3, Boxes, CalendarDays, ChevronDown, Megaphone, MessageCircle, NotebookText, PackageOpen, Settings, ShoppingBag, Sparkles, Truck, Users, WalletCards } from "lucide-react";
+import { BarChart3, Boxes, CalendarDays, ChevronDown, Megaphone, MessageCircle, NotebookText, PackageOpen, Settings, ShoppingBag, Sparkles, Truck, Users, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLockup } from "@/components/brand";
@@ -90,15 +90,16 @@ export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () =
   return (
     <aside className="sellora-sidebar flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-r border-border-subtle bg-sidebar text-text-primary" data-sidebar-groups>
       {showBrand ? (
-        <div className="mobile-sidebar-brand shrink-0 px-3 pb-1 pt-3 sm:px-4">
+        <div className="mobile-sidebar-brand flex shrink-0 items-center gap-2 px-3 pb-1 pt-3 sm:px-4">
           <Link
             href="/dashboard"
             onClick={onNavigate}
             aria-label={t("navigation.dashboard")}
-            className="flex min-h-[60px] min-w-0 items-center rounded-2xl border border-border-subtle bg-surface-1/75 px-3 py-2 transition hover:border-primary/20 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="flex min-h-[60px] min-w-0 flex-1 items-center rounded-2xl border border-border-subtle bg-surface-1/75 px-3 py-2 transition hover:border-primary/20 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           >
             <BrandLockup markClassName="h-8 w-8" textClassName="text-text-primary" />
           </Link>
+          {onNavigate ? <button type="button" onClick={onNavigate} aria-label={t("actions.close")} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border-subtle bg-surface-1 text-text-muted transition hover:bg-surface-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"><X className="h-4 w-4" aria-hidden="true" /></button> : null}
         </div>
       ) : null}
 
@@ -110,20 +111,25 @@ export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () =
           return (
             <section key={group.id} className={`min-w-0 ${mobileHidden ? "hidden lg:block" : ""}`} data-sidebar-section={group.id}>
               {group.id !== "main" ? <div className="mx-2 mb-2 border-t border-border-subtle/70" aria-hidden="true" /> : null}
-              <div className="mb-1 flex min-h-8 items-center justify-between px-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-text-muted">{t(group.label)}</span>
-                {group.id !== "main" && group.id !== "system" ? (
-                  <button
-                    type="button"
-                    className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring lg:hidden"
-                    aria-label={`${t(group.label)}: ${opened ? t("navigationGroups.collapse") : t("navigationGroups.expand")}`}
-                    aria-expanded={opened}
-                    aria-controls={`sidebar-group-${group.id}`}
-                    onClick={() => setExpanded((previous) => ({ ...previous, [group.id]: !previous[group.id] }))}
-                  >
-                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${opened ? "rotate-180" : ""}`} aria-hidden="true" />
-                  </button>
-                ) : null}
+              <div className="mb-1 min-w-0 px-2">
+                {group.id === "main" || group.id === "system" ? (
+                  <p className="flex min-h-8 items-center text-[10px] font-bold uppercase tracking-[0.16em] text-text-muted">{t(group.label)}</p>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="flex min-h-11 w-full items-center justify-between rounded-lg text-left text-text-muted transition hover:bg-surface-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring lg:hidden"
+                      aria-label={`${t(group.label)}: ${opened ? t("navigationGroups.collapse") : t("navigationGroups.expand")}`}
+                      aria-expanded={opened}
+                      aria-controls={`sidebar-group-${group.id}`}
+                      onClick={() => setExpanded((previous) => ({ ...previous, [group.id]: !previous[group.id] }))}
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-[0.16em]">{t(group.label)}</span>
+                      <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${opened ? "rotate-180" : ""}`} aria-hidden="true" />
+                    </button>
+                    <p className="hidden min-h-8 items-center text-[10px] font-bold uppercase tracking-[0.16em] text-text-muted lg:flex">{t(group.label)}</p>
+                  </>
+                )}
               </div>
               <div id={`sidebar-group-${group.id}`} className={`grid min-w-0 gap-1 ${opened ? "" : "hidden lg:grid"}`}>
                 {group.items.map(([href, label, Icon]) => {
