@@ -137,10 +137,13 @@ class LeadService:
         old_value = snapshot(lead)
         created_from_manual_lead = conversation is None
         if conversation:
-            from app.services.direct_customer_automation_service import DirectCustomerAutomationService
-            state = DirectCustomerAutomationService(self.db).ensure_candidate(
-                workspace_id, conversation.id, actor_user_id, commit=False,
-            )
+            from app.services.direct_customer_automation_service import DirectCustomerAutomationError, DirectCustomerAutomationService
+            try:
+                state = DirectCustomerAutomationService(self.db).ensure_candidate(
+                    workspace_id, conversation.id, actor_user_id, commit=False,
+                )
+            except DirectCustomerAutomationError as exc:
+                raise LeadServiceError(str(exc)) from exc
             customer = self.customers.get(workspace_id, state.customer.id)
             if customer is None:
                 raise LeadServiceError("Direct customer is unavailable")
