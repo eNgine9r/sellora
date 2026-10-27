@@ -3041,5 +3041,14 @@
     "desktopNextSteps": "Quick navigation",
     "desktopNextStepsHint": "Review the underlying metrics and act where needed.",
     "desktopTransparency": "How these insights work"
+  },
+  "navigationGroups": {
+    "main": "Core",
+    "operations": "Products & fulfillment",
+    "growth": "Analytics & growth",
+    "organization": "Organization",
+    "system": "System",
+    "expand": "Expand",
+    "collapse": "Collapse"
   }
 }
