@@ -2154,6 +2154,7 @@
       "cogs": "COGS",
       "ad_spend": "Advertising",
       "shipping_cost": "Shipping",
+      "other_expenses": "Other expenses",
       "manual_expenses": "Manual expenses",
       "manual_refunds": "Manual refunds",
       "manual_discounts": "Manual discounts",
