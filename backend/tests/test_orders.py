@@ -151,6 +151,18 @@ def _create_order(service: OrderService, inventory: Inventory, customer: Custome
     )
 
 
+def test_legacy_order_edit_preserves_confirmed_zero_cost() -> None:
+    service, inventory, customer = _service()
+    original = service.create(inventory.workspace_id, OrderCreate(customer_id=customer.id, items=[
+        OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=1, unit_price=50, unit_cost=0, cost_confirmed=True),
+    ]), actor_user_id=uuid4())
+    # An older client sends the same item without the new marker.
+    edited = service.update(inventory.workspace_id, original.id, OrderUpdate(items=[
+        OrderItemCreate(product_variant_id=inventory.product_variant_id, quantity=1, unit_price=50, unit_cost=0),
+    ]), actor_user_id=uuid4())
+    assert edited.items[0].cost_confirmed is True
+
+
 def test_order_creation_requires_customer_for_normal_orders() -> None:
     service, inventory, _customer = _service()
 

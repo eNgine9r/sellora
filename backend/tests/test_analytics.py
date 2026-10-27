@@ -38,6 +38,7 @@ class FakeAnalyticsRepository:
             (OrderItem(id=uuid4(), workspace_id=workspace_id, order_id=self.orders[0].id, product_variant_id=self.variant.id, sku=self.variant.sku, product_name=self.product.name, quantity=2, unit_price=Decimal("50"), unit_cost=Decimal("20"), line_total=Decimal("100"), line_cost=Decimal("40")), self.orders[0], self.variant, self.product),
             (OrderItem(id=uuid4(), workspace_id=workspace_id, order_id=self.orders[1].id, product_variant_id=self.variant.id, sku=self.variant.sku, product_name=self.product.name, quantity=1, unit_price=Decimal("50"), unit_cost=Decimal("20"), line_total=Decimal("50"), line_cost=Decimal("20")), self.orders[1], self.variant, self.product),
         ]
+        self.orders[0].items = [self.items[0][0]]
         self.customers = [
             Customer(id=uuid4(), workspace_id=workspace_id, name="Repeat", phone="1", instagram_username="repeat", total_orders=2, total_spent=Decimal("150"), created_at=yesterday),
             Customer(id=uuid4(), workspace_id=workspace_id, name="New", phone="2", instagram_username="new", total_orders=1, total_spent=Decimal("25"), created_at=today),
@@ -98,6 +99,20 @@ def test_sales_summary() -> None:
     assert summary.completed_orders == 1
     assert summary.cancelled_orders == 1
     assert summary.returned_orders == 1
+
+
+def test_missing_cost_makes_order_profit_and_period_profit_unavailable() -> None:
+    service, repo = _service()
+    repo.orders[0].items[0].unit_cost = Decimal("0")
+    repo.orders[0].items[0].cost_confirmed = None
+    summary = service.profit_summary(repo.workspace_id)
+    report = service.sales_report(repo.workspace_id, can_view_profit=True)
+    assert summary.total_revenue == Decimal("175.00")
+    assert summary.total_net_profit is None
+    assert summary.total_product_cost is None
+    assert report.net_profit is None
+    assert any(row.net_profit is None for row in report.daily_rows)
+    assert service.top_products(repo.workspace_id)[0].net_profit is None
 
 
 def test_profit_summary() -> None:

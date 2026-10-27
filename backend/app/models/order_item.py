@@ -1,7 +1,7 @@
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,6 +19,9 @@ class OrderItem(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, SoftDeleteMixin, Time
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     unit_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
+    # NULL preserves legacy ambiguity: a positive historical cost can be used,
+    # while an old zero cannot be distinguished from an omitted value.
+    cost_confirmed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     line_total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     line_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
 

@@ -10,6 +10,7 @@ import {
   cleanRequiredString,
   stripUndefinedFields,
 } from "@/lib/payload-normalizers";
+import { isConfirmedCost } from "@/features/orders/lib/fulfillment-amounts";
 import { LeadCreatePayload } from "@/services/crm";
 import { OrderCreatePayload } from "@/services/orders";
 import { ProductCreatePayload, ProductVariantCreatePayload } from "@/services/products";
@@ -118,6 +119,7 @@ export function buildOrderCreatePayload(values: RawOrderValues): OrderCreatePayl
     quantity: Math.max(1, cleanRequiredInteger(item.quantity)),
     unit_price: Math.max(0, cleanRequiredNumber(item.unit_price)),
     unit_cost: Math.max(0, cleanRequiredNumber(item.unit_cost)),
+    cost_confirmed: isConfirmedCost(item.unit_cost),
   }));
 
   return {
@@ -218,6 +220,7 @@ export function buildOrderUpdatePayload(values: RawOrderValues) {
     quantity: Math.max(1, cleanRequiredInteger(item.quantity)),
     unit_price: Math.max(0, cleanRequiredNumber(item.unit_price)),
     unit_cost: Math.max(0, cleanRequiredNumber(item.unit_cost)),
+    cost_confirmed: isConfirmedCost(item.unit_cost),
   }));
   return stripUndefinedFields({ campaign_id: cleanOptionalUuid(values.campaign_id), payment_status: cleanOptionalEnum(values.payment_status, PAYMENT_STATUSES) ?? undefined, ad_cost: cleanOptionalNumber(values.ad_cost) ?? undefined, shipping_cost: cleanOptionalNumber(values.shipping_cost) ?? undefined, cod_fee: cleanOptionalNumber(values.cod_fee) ?? undefined, other_cost: cleanOptionalNumber(values.other_cost) ?? undefined, notes: cleanOptionalString(values.notes), items });
 }

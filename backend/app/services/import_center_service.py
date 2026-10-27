@@ -818,6 +818,7 @@ class HistoricalImportService:
         estimated_revenue = Decimal("0")
         estimated_ad_cost = Decimal("0")
         estimated_profit = Decimal("0")
+        profit_incomplete = False
         customer_keys: set[str] = set()
         matched_customers = set()
         variants_missing = set()
@@ -838,27 +839,32 @@ class HistoricalImportService:
                 sku = data.get("variant_sku")
                 variant = self.lookup.find_variant(workspace_id, sku=sku)
                 if not sku:
+                    profit_incomplete = True
                     issues.append(issue(row_number, "ERROR", "variant_sku", "Product variant SKU is required."))
                     variants_missing.add(row_number)
                     continue
                 if variant is None:
+                    profit_incomplete = True
                     issues.append(issue(row_number, "ERROR", "variant_sku", "Product variant not found. Import product catalog first."))
                     variants_missing.add(row_number)
                     continue
                 qty = int(data.get("quantity") or 0)
                 if qty <= 0:
+                    profit_incomplete = True
                     issues.append(issue(row_number, "ERROR", "quantity", "Quantity must be greater than 0."))
                     continue
                 unit_price = data.get("unit_price")
                 if unit_price is None and data.get("order_total") is not None:
                     unit_price = Decimal(data["order_total"]) / Decimal(qty)
                 if unit_price is None or unit_price < 0:
+                    profit_incomplete = True
                     issues.append(issue(row_number, "ERROR", "unit_price", "Unit price is required."))
                     continue
                 unit_cost = data.get("unit_cost")
                 if unit_cost is None:
-                    unit_cost = Decimal(str(getattr(variant, "purchase_price", 0) or 0))
-                    issues.append(issue(row_number, "WARNING", "unit_cost", "Unit cost missing; using catalog cost or zero."))
+                    unit_cost = Decimal("0")
+                    profit_incomplete = True
+                    issues.append(issue(row_number, "WARNING", "unit_cost", "Unit cost is missing; profit is unavailable until it is confirmed."))
                 line_total = Decimal(unit_price) * qty
                 line_cost = Decimal(unit_cost) * qty
                 order_revenue += line_total
@@ -882,7 +888,7 @@ class HistoricalImportService:
             "ready_items": metrics["order_items_detected"],
             "estimated_revenue": estimated_revenue,
             "estimated_ad_cost": estimated_ad_cost,
-            "estimated_profit": estimated_profit,
+            "estimated_profit": None if profit_incomplete else estimated_profit,
         })
         return {"issues": issues, "metrics": dict(metrics)}
 
@@ -941,8 +947,8 @@ class HistoricalImportService:
                 variant = self.lookup.find_variant(workspace_id, sku=data.get("variant_sku"))
                 qty = int(data.get("quantity") or 0)
                 unit_price = data.get("unit_price") or ((Decimal(data["order_total"]) / Decimal(qty)) if data.get("order_total") is not None and qty > 0 else Decimal("0"))
-                unit_cost = data.get("unit_cost") if data.get("unit_cost") is not None else Decimal(str(getattr(variant, "purchase_price", 0) or 0))
-                item_payloads.append(OrderItemCreate(product_variant_id=variant.id, quantity=qty, unit_price=unit_price, unit_cost=unit_cost))
+                unit_cost = data.get("unit_cost") if data.get("unit_cost") is not None else Decimal("0")
+                item_payloads.append(OrderItemCreate(product_variant_id=variant.id, quantity=qty, unit_price=unit_price, unit_cost=unit_cost, cost_confirmed=data.get("unit_cost") is not None))
             created_at = first.get("order_date")
             payload = OrderCreate(customer_id=customer.id if customer else None, status=order_status, payment_status=payment_status, is_historical=True, items=item_payloads, ad_cost=first.get("ad_cost") or Decimal("0"), shipping_cost=first.get("shipping_cost") or Decimal("0"), cod_fee=first.get("cod_fee") or Decimal("0"), other_cost=first.get("other_cost") or Decimal("0"), notes=first.get("notes"))
             try:

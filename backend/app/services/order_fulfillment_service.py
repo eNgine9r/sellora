@@ -578,6 +578,12 @@ class OrderFulfillmentService:
     @staticmethod
     def _fingerprint(payload: OrderFulfillmentCreate) -> str:
         body = payload.model_dump(mode="json", exclude={"idempotency_key", "create_ttn"})
+        # Preserve fingerprints from before cost confirmation was introduced.
+        # Explicit true/false is retained and therefore still participates in
+        # conflict detection for new requests.
+        for item in body.get("items", []):
+            if item.get("cost_confirmed") is None:
+                item.pop("cost_confirmed", None)
         encoded = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
 

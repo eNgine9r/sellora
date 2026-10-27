@@ -118,6 +118,7 @@ class OrderService:
                     quantity=item_payload.quantity,
                     unit_price=item_payload.unit_price,
                     unit_cost=item_payload.unit_cost,
+                    cost_confirmed=item_payload.cost_confirmed,
                     line_total=line_total,
                     line_cost=line_cost,
                 )
@@ -243,6 +244,22 @@ class OrderService:
         if not historical and OrderStatus(order.status) not in {OrderStatus.NEW, OrderStatus.CONFIRMED}:
             raise OrderServiceError("Order items cannot be edited after shipment workflow has started")
 
+        # Older clients do not send the confirmation marker. Preserve a
+        # matching snapshot's explicit evidence instead of turning a confirmed
+        # zero back into an unknown value when the order is edited. If matching
+        # duplicate lines disagree, choose the conservative unknown state.
+        previous_items = list(order.items)
+        preserved_payloads = []
+        for payload in item_payloads:
+            matches = [item for item in previous_items if item.product_variant_id == payload.product_variant_id and getattr(item, "unit_cost", None) == payload.unit_cost]
+            if payload.cost_confirmed is None and matches:
+                if all(getattr(item, "cost_confirmed", None) is True for item in matches):
+                    payload = payload.model_copy(update={"cost_confirmed": True})
+                elif any(getattr(item, "cost_confirmed", None) is False for item in matches) or payload.unit_cost == 0:
+                    payload = payload.model_copy(update={"cost_confirmed": False})
+            preserved_payloads.append(payload)
+        item_payloads = preserved_payloads
+
         # Historical orders were imported without stock reservations. Correcting
         # their product/price/cost snapshots must NEVER change today's stock.
         if historical:
@@ -275,6 +292,7 @@ class OrderService:
                     quantity=payload.quantity,
                     unit_price=payload.unit_price,
                     unit_cost=payload.unit_cost,
+                    cost_confirmed=payload.cost_confirmed,
                     line_total=line_total,
                     line_cost=line_cost,
                 ))
@@ -339,6 +357,7 @@ class OrderService:
                     quantity=item_payload.quantity,
                     unit_price=item_payload.unit_price,
                     unit_cost=item_payload.unit_cost,
+                    cost_confirmed=item_payload.cost_confirmed,
                     line_total=line_total,
                     line_cost=line_cost,
                 )

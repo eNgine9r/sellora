@@ -72,33 +72,35 @@ class AnalyticsService:
     def profit_summary(self, workspace_id: UUID, start_date: date | None = None, end_date: date | None = None) -> ProfitSummaryResponse:
         orders = self._orders(workspace_id, start_date, end_date)
         total_revenue = self._sum(order.revenue for order in orders)
-        total_net_profit = self._sum(order.net_profit for order in orders)
-        margin_percent = (total_net_profit / total_revenue * Decimal("100")) if total_revenue else PERCENT_ZERO
+        complete = all(ProfitCalculationService.profit_known(order) for order in orders)
+        total_net_profit = self._sum(order.net_profit for order in orders) if complete else None
+        margin_percent = (total_net_profit / total_revenue * Decimal("100")) if total_net_profit is not None and total_revenue else (PERCENT_ZERO if complete else None)
         return ProfitSummaryResponse(
             total_revenue=total_revenue,
-            total_product_cost=self._sum(order.product_cost for order in orders),
+            total_product_cost=self._sum(order.product_cost for order in orders) if complete else None,
             total_ad_cost=self._sum(order.ad_cost for order in orders),
             total_shipping_cost=self._sum(order.shipping_cost for order in orders),
             total_cod_fee=self._sum(order.cod_fee for order in orders),
             total_other_cost=self._sum(order.other_cost for order in orders),
             total_net_profit=total_net_profit,
-            margin_percent=self._quantize(margin_percent),
+            margin_percent=self._quantize(margin_percent) if margin_percent is not None else None,
         )
 
     def sales_trend(self, workspace_id: UUID, start_date: date | None = None, end_date: date | None = None) -> list[SalesTrendItem]:
         orders = self._orders(workspace_id, start_date, end_date)
-        grouped: dict[date, dict[str, Decimal | int]] = defaultdict(lambda: {"orders_count": 0, "revenue": MONEY_ZERO, "net_profit": MONEY_ZERO})
+        grouped: dict[date, dict[str, Decimal | int]] = defaultdict(lambda: {"orders_count": 0, "revenue": MONEY_ZERO, "net_profit": MONEY_ZERO, "unknown_cost": 0})
         for order in orders:
             metric_date = self._metric_date(order).date()
             grouped[metric_date]["orders_count"] += 1
             grouped[metric_date]["revenue"] += Decimal(order.revenue or 0)
             grouped[metric_date]["net_profit"] += Decimal(order.net_profit or 0)
+            grouped[metric_date]["unknown_cost"] += int(not ProfitCalculationService.profit_known(order))
         return [
             SalesTrendItem(
                 date=day,
                 orders_count=int(values["orders_count"]),
                 revenue=self._quantize(Decimal(values["revenue"])),
-                net_profit=self._quantize(Decimal(values["net_profit"])),
+                net_profit=self._quantize(Decimal(values["net_profit"])) if not values["unknown_cost"] else None,
             )
             for day, values in sorted(grouped.items())
         ]
@@ -119,10 +121,12 @@ class AnalyticsService:
                     "quantity_sold": 0,
                     "revenue": MONEY_ZERO,
                     "net_profit": MONEY_ZERO,
+                    "unknown_cost": False,
                 }
             grouped[key]["quantity_sold"] = int(grouped[key]["quantity_sold"]) + item.quantity
             grouped[key]["revenue"] = Decimal(grouped[key]["revenue"]) + Decimal(item.line_total or 0)
             grouped[key]["net_profit"] = Decimal(grouped[key]["net_profit"]) + (Decimal(item.line_total or 0) - Decimal(item.line_cost or 0))
+            grouped[key]["unknown_cost"] = bool(grouped[key]["unknown_cost"]) or not ProfitCalculationService.item_cost_known(item)
         rows = sorted(grouped.values(), key=lambda row: (Decimal(row["revenue"]), Decimal(row["net_profit"]), int(row["quantity_sold"])), reverse=True)[:limit]
         return [
             TopProductItem(
@@ -134,7 +138,7 @@ class AnalyticsService:
                 size=row["size"],
                 quantity_sold=int(row["quantity_sold"]),
                 revenue=self._quantize(Decimal(row["revenue"])),
-                net_profit=self._quantize(Decimal(row["net_profit"])),
+                net_profit=self._quantize(Decimal(row["net_profit"])) if not row["unknown_cost"] else None,
             )
             for row in rows
         ]
@@ -200,10 +204,10 @@ class AnalyticsService:
         return DashboardAnalyticsResponse(
             today_orders=len(today_orders),
             today_revenue=self._sum(order.revenue for order in today_orders),
-            today_profit=self._sum(order.net_profit for order in today_orders),
+            today_profit=self._sum(order.net_profit for order in today_orders) if all(ProfitCalculationService.profit_known(order) for order in today_orders) else None,
             month_orders=month_total_orders,
             month_revenue=month_revenue,
-            month_profit=self._sum(order.net_profit for order in month_orders),
+            month_profit=self._sum(order.net_profit for order in month_orders) if all(ProfitCalculationService.profit_known(order) for order in month_orders) else None,
             average_order_value=self._divide(month_revenue, Decimal(month_total_orders)) if month_total_orders else MONEY_ZERO,
             low_stock_count=self.inventory_summary(workspace_id).low_stock_count,
             top_products=self.top_products(workspace_id, month_start, today, limit=5),
@@ -216,17 +220,18 @@ class AnalyticsService:
         orders = self._orders(workspace_id, start_date, end_date)
         revenue_orders = [order for order in orders if order.status in REVENUE_INCLUDED_STATUSES]
         revenue = self._sum(order.revenue for order in revenue_orders)
-        net_profit = self._sum(order.net_profit for order in revenue_orders) if can_view_profit else None
+        net_profit = self._sum(order.net_profit for order in revenue_orders) if can_view_profit and all(ProfitCalculationService.profit_known(order) for order in revenue_orders) else None
         orders_count = len(revenue_orders)
         shipped_or_delivered = sum(1 for order in orders if order.status in {OrderStatus.SHIPPED.value, OrderStatus.DELIVERED.value, OrderStatus.COMPLETED.value, OrderStatus.RETURNED.value})
         returned_orders = sum(1 for order in orders if order.status == OrderStatus.RETURNED.value)
-        grouped: dict[date, dict[str, Decimal | int]] = defaultdict(lambda: {"orders": 0, "revenue": MONEY_ZERO, "net_profit": MONEY_ZERO, "returns": 0, "cancelled": 0})
+        grouped: dict[date, dict[str, Decimal | int]] = defaultdict(lambda: {"orders": 0, "revenue": MONEY_ZERO, "net_profit": MONEY_ZERO, "unknown_cost": 0, "returns": 0, "cancelled": 0})
         for order in orders:
             day = self._metric_date(order).date()
             if order.status in REVENUE_INCLUDED_STATUSES:
                 grouped[day]["orders"] += 1
                 grouped[day]["revenue"] += Decimal(order.revenue or 0)
                 grouped[day]["net_profit"] += Decimal(order.net_profit or 0)
+                grouped[day]["unknown_cost"] += int(not ProfitCalculationService.profit_known(order))
             if order.status == OrderStatus.RETURNED.value:
                 grouped[day]["returns"] += 1
             if order.status == OrderStatus.CANCELLED.value:
@@ -246,7 +251,7 @@ class AnalyticsService:
                     date=day,
                     orders=int(values["orders"]),
                     revenue=self._quantize(Decimal(values["revenue"])),
-                    net_profit=self._quantize(Decimal(values["net_profit"])) if can_view_profit else None,
+                    net_profit=self._quantize(Decimal(values["net_profit"])) if can_view_profit and not values["unknown_cost"] else None,
                     aov=self._safe_divide(Decimal(values["revenue"]), Decimal(values["orders"])),
                     returns=int(values["returns"]),
                     cancelled=int(values["cancelled"]),
@@ -276,6 +281,7 @@ class AnalyticsService:
                     "quantity_sold": 0,
                     "revenue": MONEY_ZERO,
                     "net_profit": MONEY_ZERO,
+                    "unknown_cost": False,
                     "current_stock": inventory.stock_quantity if inventory else 0,
                     "reserved_quantity": inventory.reserved_quantity if inventory else 0,
                     "status": self._stock_status(inventory.stock_quantity if inventory else 0, inventory.minimum_quantity if inventory else 0),
@@ -283,12 +289,14 @@ class AnalyticsService:
             grouped[key]["quantity_sold"] = int(grouped[key]["quantity_sold"]) + item.quantity
             grouped[key]["revenue"] = Decimal(grouped[key]["revenue"]) + Decimal(item.line_total or 0)
             grouped[key]["net_profit"] = Decimal(grouped[key]["net_profit"]) + (Decimal(item.line_total or 0) - Decimal(item.line_cost or 0))
+            grouped[key]["unknown_cost"] = bool(grouped[key]["unknown_cost"]) or not ProfitCalculationService.item_cost_known(item)
             category_key = product.category or "other"
             if category_key not in categories:
-                categories[category_key] = {"category": product.category, "quantity_sold": 0, "revenue": MONEY_ZERO, "net_profit": MONEY_ZERO}
+                categories[category_key] = {"category": product.category, "quantity_sold": 0, "revenue": MONEY_ZERO, "net_profit": MONEY_ZERO, "unknown_cost": 0}
             categories[category_key]["quantity_sold"] = int(categories[category_key]["quantity_sold"] or 0) + item.quantity
             categories[category_key]["revenue"] = Decimal(categories[category_key]["revenue"] or 0) + Decimal(item.line_total or 0)
             categories[category_key]["net_profit"] = Decimal(categories[category_key]["net_profit"] or 0) + (Decimal(item.line_total or 0) - Decimal(item.line_cost or 0))
+            categories[category_key]["unknown_cost"] = int(bool(categories[category_key]["unknown_cost"]) or not ProfitCalculationService.item_cost_known(item))
         product_rows = [self._product_report_row(row, can_view_profit) for row in grouped.values()]
         product_rows.sort(key=lambda row: (row.revenue, row.quantity_sold), reverse=True)
         total_revenue = self._sum(row.revenue for row in product_rows)
@@ -297,7 +305,7 @@ class AnalyticsService:
                 category=values["category"],
                 quantity_sold=int(values["quantity_sold"] or 0),
                 revenue=self._quantize(Decimal(values["revenue"] or 0)),
-                net_profit=self._quantize(Decimal(values["net_profit"] or 0)) if can_view_profit else None,
+                net_profit=self._quantize(Decimal(values["net_profit"] or 0)) if can_view_profit and not values["unknown_cost"] else None,
                 revenue_share=self._safe_divide(Decimal(values["revenue"] or 0), total_revenue),
             )
             for values in categories.values()
@@ -523,7 +531,7 @@ class AnalyticsService:
             image_url=None,
             quantity_sold=int(row["quantity_sold"]),
             revenue=self._quantize(Decimal(row["revenue"])),
-            net_profit=self._quantize(Decimal(row["net_profit"])) if can_view_profit else None,
+            net_profit=self._quantize(Decimal(row["net_profit"])) if can_view_profit and not row.get("unknown_cost") else None,
             current_stock=int(row["current_stock"]),
             reserved_quantity=int(row["reserved_quantity"]),
             status=str(row["status"]),

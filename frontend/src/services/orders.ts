@@ -9,7 +9,7 @@ export type OrderCreatePayload = {
   customer_id: string | null;
   campaign_id: string | null;
   payment_status: PaymentStatus;
-  items: { product_variant_id: string; quantity: number; unit_price: number; unit_cost: number }[];
+  items: { product_variant_id: string; quantity: number; unit_price: number; unit_cost: number; cost_confirmed?: boolean | null }[];
   ad_cost: number;
   shipping_cost: number;
   cod_fee: number;

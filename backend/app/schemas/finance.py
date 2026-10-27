@@ -71,7 +71,7 @@ class FinanceAdjustmentListResponse(BaseModel):
 class FinanceBreakdownItem(BaseModel):
     key: str
     label: str
-    amount: Decimal
+    amount: Decimal | None
     direction: str
     share_of_revenue: Decimal | None = None
 
@@ -102,8 +102,8 @@ class FinancePeriodComparisonResponse(BaseModel):
 class FinanceSummaryResponse(BaseModel):
     period: FinancePeriod
     revenue: Decimal
-    cogs: Decimal
-    gross_profit: Decimal
+    cogs: Decimal | None
+    gross_profit: Decimal | None
     ad_spend: Decimal
     shipping_cost: Decimal
     discounts: Decimal
@@ -114,7 +114,7 @@ class FinanceSummaryResponse(BaseModel):
     manual_discounts: Decimal
     manual_fees: Decimal
     finance_adjustments_total: Decimal
-    net_profit: Decimal
+    net_profit: Decimal | None
     profit_margin: Decimal | None = None
     orders_count: int
     paid_orders_count: int

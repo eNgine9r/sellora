@@ -21,20 +21,20 @@ class SalesSummaryResponse(BaseModel):
 
 class ProfitSummaryResponse(BaseModel):
     total_revenue: Decimal
-    total_product_cost: Decimal
+    total_product_cost: Decimal | None
     total_ad_cost: Decimal
     total_shipping_cost: Decimal
     total_cod_fee: Decimal
     total_other_cost: Decimal
-    total_net_profit: Decimal
-    margin_percent: Decimal
+    total_net_profit: Decimal | None
+    margin_percent: Decimal | None
 
 
 class SalesTrendItem(BaseModel):
     date: date
     orders_count: int
     revenue: Decimal
-    net_profit: Decimal
+    net_profit: Decimal | None
 
 
 class TopProductItem(BaseModel):
@@ -46,7 +46,7 @@ class TopProductItem(BaseModel):
     size: str | None
     quantity_sold: int
     revenue: Decimal
-    net_profit: Decimal
+    net_profit: Decimal | None
 
 
 class TopCustomerItem(BaseModel):
@@ -90,10 +90,10 @@ class InventorySummaryResponse(BaseModel):
 class DashboardAnalyticsResponse(BaseModel):
     today_orders: int
     today_revenue: Decimal
-    today_profit: Decimal
+    today_profit: Decimal | None
     month_orders: int
     month_revenue: Decimal
-    month_profit: Decimal
+    month_profit: Decimal | None
     average_order_value: Decimal
     low_stock_count: int
     top_products: list[TopProductItem] = Field(default_factory=list)

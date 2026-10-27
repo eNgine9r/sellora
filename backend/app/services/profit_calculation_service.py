@@ -64,6 +64,26 @@ class ProfitCalculationService:
         return Decimal(value or 0).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     @classmethod
+    def item_cost_known(cls, item) -> bool:
+        confirmed = getattr(item, "cost_confirmed", None)
+        if confirmed is not None:
+            return confirmed is True
+        # Existing zero values may have been written for missing costs.
+        amount = getattr(item, "unit_cost", None)
+        if amount is None:
+            amount = getattr(item, "line_cost", None)
+        return cls.money(amount) > MONEY_ZERO
+
+    @classmethod
+    def order_cost_known(cls, order) -> bool:
+        items = list(getattr(order, "items", []) or [])
+        return bool(items) and all(cls.item_cost_known(item) for item in items)
+
+    @classmethod
+    def profit_known(cls, order) -> bool:
+        return not cls.includes_order(order) or cls.order_cost_known(order)
+
+    @classmethod
     def includes_order(cls, order: ProfitOrder) -> bool:
         status = order.status or OrderStatus.NEW.value
         payment_status = order.payment_status or PaymentStatus.PENDING.value

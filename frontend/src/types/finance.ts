@@ -50,7 +50,7 @@ export type FinanceAdjustmentList = {
 export type FinanceBreakdownItem = {
   key: string;
   label: string;
-  amount: string;
+  amount: string | null;
   direction: "income" | "expense" | "result" | string;
   share_of_revenue: string | null;
 };
@@ -76,8 +76,8 @@ export type FinancePeriodComparison = {
 export type FinanceSummary = {
   period: FinancePeriod;
   revenue: string;
-  cogs: string;
-  gross_profit: string;
+  cogs: string | null;
+  gross_profit: string | null;
   ad_spend: string;
   shipping_cost: string;
   discounts: string;
@@ -88,7 +88,7 @@ export type FinanceSummary = {
   manual_discounts: string;
   manual_fees: string;
   finance_adjustments_total: string;
-  net_profit: string;
+  net_profit: string | null;
   profit_margin: string | null;
   orders_count: number;
   paid_orders_count: number;

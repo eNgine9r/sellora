@@ -10,7 +10,7 @@ export const ANALYTICS_ORDER_STATUSES: OrderStatus[] = ["NEW", "CONFIRMED", "SHI
 export const ANALYTICS_PAYMENT_STATUSES: PaymentStatus[] = ["PENDING", "PAID", "COD", "REFUNDED"];
 export const UNAVAILABLE = "—";
 
-export type SalesReportRow = { date: string; orders: number; revenue: number; netProfit: number; aov: number | null; returns: number; cancelled: number };
+export type SalesReportRow = { date: string; orders: number; revenue: number; netProfit: number | null; aov: number | null; returns: number; cancelled: number };
 export type AnalyticsInsightType = "positive" | "warning" | "critical" | "info";
 export type AnalyticsInsight = { type: AnalyticsInsightType; titleKey: string; descriptionKey: string; sourceMetric: string; href?: string; ctaKey?: string; values?: Record<string, string | number> };
 
@@ -63,11 +63,12 @@ export function revenueOrders(orders: Order[]): Order[] {
 export function summarizeOrders(orders: Order[]) {
   const included = revenueOrders(orders);
   const revenue = included.reduce((sum, order) => sum + toFiniteNumber(order.revenue), 0);
-  const netProfit = included.reduce((sum, order) => sum + toFiniteNumber(order.net_profit), 0);
-  const productCost = included.reduce((sum, order) => sum + toFiniteNumber(order.product_cost), 0);
-  const grossProfit = revenue - productCost;
+  const costsKnown = included.every((order) => order.product_cost != null && order.net_profit != null);
+  const netProfit = costsKnown ? included.reduce((sum, order) => sum + toFiniteNumber(order.net_profit), 0) : null;
+  const productCost = costsKnown ? included.reduce((sum, order) => sum + toFiniteNumber(order.product_cost), 0) : null;
+  const grossProfit = productCost == null ? null : revenue - productCost;
   const aov = safeDivide(revenue, included.length);
-  const margin = safeDivide(netProfit * 100, revenue);
+  const margin = netProfit == null ? null : safeDivide(netProfit * 100, revenue);
   const shippedOrDelivered = orders.filter((order) => ["SHIPPED", "DELIVERED", "COMPLETED", "RETURNED"].includes(order.status)).length;
   const returnedOrders = orders.filter((order) => order.status === "RETURNED").length;
   const returnRate = safeDivide(returnedOrders * 100, shippedOrDelivered);
@@ -86,7 +87,7 @@ export function buildDailySalesRows(orders: Order[]): SalesReportRow[] {
     if (order.status === "CANCELLED") row.cancelled += 1;
     if (ANALYTICS_REVENUE_INCLUDED_STATUSES.includes(order.status)) {
       row.revenue += toFiniteNumber(order.revenue);
-      row.netProfit += toFiniteNumber(order.net_profit);
+      row.netProfit = row.netProfit == null || order.net_profit == null ? null : row.netProfit + toFiniteNumber(order.net_profit);
     }
     grouped.set(date, row);
   }

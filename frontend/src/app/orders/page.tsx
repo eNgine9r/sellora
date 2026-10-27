@@ -210,6 +210,10 @@ export default function OrdersPage() {
         const rightRevenue = Number(right.revenue ?? 0);
         const leftProfit = Number(left.net_profit ?? 0);
         const rightProfit = Number(right.net_profit ?? 0);
+        if (orderSort === "profitDesc" || orderSort === "profitAsc") {
+          if (left.net_profit == null && right.net_profit != null) return 1;
+          if (left.net_profit != null && right.net_profit == null) return -1;
+        }
         if (orderSort === "oldest") return left.created_at.localeCompare(right.created_at);
         if (orderSort === "revenueDesc") return rightRevenue - leftRevenue;
         if (orderSort === "revenueAsc") return leftRevenue - rightRevenue;

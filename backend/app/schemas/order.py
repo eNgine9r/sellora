@@ -3,7 +3,7 @@ from enum import StrEnum
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.order import OrderStatus, PaymentStatus
 
@@ -33,6 +33,13 @@ class OrderItemCreate(BaseModel):
     quantity: int = Field(gt=0)
     unit_price: Decimal = Field(ge=0)
     unit_cost: Decimal = Field(default=0, ge=0)
+    cost_confirmed: bool | None = None
+
+    @model_validator(mode="after")
+    def validate_confirmation(self):
+        if self.cost_confirmed is True and "unit_cost" not in self.model_fields_set:
+            raise ValueError("A confirmed cost must be supplied explicitly")
+        return self
 
 
 class OrderCreate(BaseModel):
@@ -76,6 +83,7 @@ class OrderItemResponse(BaseModel):
     quantity: int
     unit_price: Decimal
     unit_cost: Decimal
+    cost_confirmed: bool | None = None
     line_total: Decimal
     line_cost: Decimal
 
@@ -112,7 +120,7 @@ class OrderResponse(BaseModel):
     historical_order_value: Decimal | None = None
     historical_value_source: str | None = None
     historical_value_evidence: dict | None = None
-    product_cost: Decimal
+    product_cost: Decimal | None
     estimated_product_cost: Decimal | None = None
     estimated_cost_source: HistoricalCostSource | None = None
     estimated_cost_confidence: HistoricalCostConfidence | None = None
@@ -121,7 +129,7 @@ class OrderResponse(BaseModel):
     shipping_cost: Decimal
     cod_fee: Decimal
     other_cost: Decimal
-    net_profit: Decimal
+    net_profit: Decimal | None
     notes: str | None
     completed_at: datetime | None
     items: list[OrderItemResponse] = Field(default_factory=list)
@@ -131,8 +139,19 @@ class OrderResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    @model_validator(mode="after")
+    def hide_unconfirmed_financial_results(self):
+        # Keep underlying historical amounts intact, but do not present a
+        # calculation based on missing item costs as a confirmed result.
+        from app.services.profit_calculation_service import ProfitCalculationService
+        if not ProfitCalculationService.order_cost_known(self):
+            self.product_cost = None
+            if ProfitCalculationService.includes_order(self):
+                self.net_profit = None
+        return self
+
 
 class OrderDashboardResponse(BaseModel):
     orders_today: int
     revenue_today: Decimal
-    profit_today: Decimal
+    profit_today: Decimal | None

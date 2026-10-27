@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, time
 from uuid import UUID
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, and_, exists, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.order import Order
@@ -72,4 +72,16 @@ class OrderRepository:
             Order.deleted_at.is_(None),
             Order.created_at >= start,
         )
-        return self.db.execute(stmt).one()
+        count, revenue, profit = self.db.execute(stmt).one()
+        item_scope = (OrderItem.order_id == Order.id, OrderItem.workspace_id == workspace_id, OrderItem.deleted_at.is_(None))
+        has_item = exists(select(OrderItem.id).where(*item_scope))
+        has_unknown = exists(select(OrderItem.id).where(*item_scope, or_(
+            OrderItem.cost_confirmed.is_(False),
+            and_(OrderItem.cost_confirmed.is_(None), OrderItem.unit_cost <= 0),
+        )))
+        unknown_stmt = select(func.count(Order.id)).where(
+            Order.workspace_id == workspace_id, Order.deleted_at.is_(None), Order.created_at >= start,
+            Order.status.not_in(("CANCELLED", "RETURNED")), Order.payment_status != "REFUNDED",
+            or_(~has_item, has_unknown),
+        )
+        return count, revenue, None if self.db.scalar(unknown_stmt) else profit

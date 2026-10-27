@@ -19,6 +19,7 @@ export type OrderItem = {
   quantity: number;
   unit_price: string;
   unit_cost: string;
+  cost_confirmed?: boolean | null;
   line_total: string;
   line_cost: string;
 };
@@ -48,7 +49,7 @@ export type Order = {
   payment_status: PaymentStatus;
   is_historical: boolean;
   revenue: string;
-  product_cost: string;
+  product_cost: string | null;
   estimated_product_cost: string | null;
   estimated_cost_source: HistoricalCostSource | null;
   estimated_cost_confidence: HistoricalCostConfidence | null;
@@ -57,7 +58,7 @@ export type Order = {
   shipping_cost: string;
   cod_fee: string;
   other_cost: string;
-  net_profit: string;
+  net_profit: string | null;
   notes: string | null;
   completed_at: string | null;
   items: OrderItem[];
@@ -69,5 +70,5 @@ export type Order = {
 export type OrderDashboard = {
   orders_today: number;
   revenue_today: string;
-  profit_today: string;
+  profit_today: string | null;
 };

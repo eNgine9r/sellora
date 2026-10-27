@@ -106,7 +106,7 @@ class ImportReportResponse(BaseModel):
     ready_items: int = 0
     estimated_revenue: Decimal = Decimal("0")
     estimated_ad_cost: Decimal = Decimal("0")
-    estimated_profit: Decimal = Decimal("0")
+    estimated_profit: Decimal | None = Decimal("0")
     campaigns_detected: int = 0
     campaigns_to_create: int = 0
     campaigns_reused: int = 0

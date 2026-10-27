@@ -158,6 +158,20 @@ def test_finance_summary_warns_for_missing_product_and_shipment_costs():
     codes = {warning.code for warning in summary.data_quality_warnings}
     assert "missing_product_cost" in codes
     assert "missing_shipment_cost" in codes
+    assert summary.cogs is None
+    assert summary.gross_profit is None
+    assert summary.net_profit is None
+    assert summary.profit_margin is None
+
+
+def test_confirmed_zero_cost_is_not_missing():
+    workspace_id = uuid4()
+    free_item = SimpleNamespace(line_total=Decimal("90"), line_cost=Decimal("0"), unit_cost=Decimal("0"), cost_confirmed=True)
+    repo = FakeFinanceRepository(orders=[order(workspace_id, revenue="90.00", items=[free_item])])
+    summary = make_service(repo).summary(workspace_id)
+    assert summary.cogs == Decimal("0.00")
+    assert summary.net_profit == Decimal("90.00")
+    assert not any(warning.code == "missing_product_cost" for warning in summary.data_quality_warnings)
 
 
 def test_finance_summary_keeps_workspace_isolation_and_uses_order_allocated_ad_cost():
