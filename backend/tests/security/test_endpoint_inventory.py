@@ -64,12 +64,12 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 9,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 218,
+    "WORKSPACE_SCOPED": 220,
     "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 248
-EXPECTED_MUTATION_ROUTES = 141
+EXPECTED_TOTAL_ROUTES = 250
+EXPECTED_MUTATION_ROUTES = 142
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -82,6 +82,8 @@ EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
 EXPECTED_DIRECT_CUSTOMER_AUTOMATION_ROUTES = {
     ("GET", "/api/v1/direct/conversations/{conversation_id}/customer-automation"),
     ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/ensure"),
+    ("GET", "/api/v1/direct/conversations/{conversation_id}/customer-automation/candidates"),
+    ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/link"),
     ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/complete"),
     ("POST", "/api/v1/direct/conversations/{conversation_id}/customer-automation/finalize-order"),
 }
@@ -252,3 +254,32 @@ def test_direct_order_evidence_routes_are_explicitly_tenant_scoped() -> None:
     confirm_path = read_path + "/confirm"
     assert matches[("GET", read_path)].name == "get_direct_order_evidence"
     assert matches[("POST", confirm_path)].name == "confirm_direct_order_evidence"
+
+
+def test_direct_identity_review_routes_require_manager_in_selected_workspace() -> None:
+    from types import SimpleNamespace
+    from uuid import uuid4
+    import pytest
+    from fastapi import HTTPException
+    from app.models.role import RoleName
+
+    base = "/api/v1/direct/conversations/{conversation_id}/customer-automation"
+    targets = {("GET", base + "/candidates"), ("POST", base + "/link")}
+    routes = {(method, path): route for path, route in _api_routes() for method in route.methods}
+    workspace = uuid4()
+    def user(role, membership_workspace=workspace):
+        return SimpleNamespace(workspaces=[SimpleNamespace(
+            workspace_id=membership_workspace, role=SimpleNamespace(name=role.value),
+            workspace=SimpleNamespace(is_active=True), is_active=True,
+        )])
+    for target in targets:
+        route = routes[target]
+        guards = [dependency.call for dependency in route.dependant.dependencies if getattr(dependency.call, "__name__", "") == "guard"]
+        assert len(guards) == 1
+        guard = guards[0]
+        for denied in (user(RoleName.ANALYST), user(RoleName.OWNER, uuid4())):
+            with pytest.raises(HTTPException) as exc:
+                guard(user=denied, workspace_id=workspace)
+            assert exc.value.status_code == 403
+        for allowed in (user(RoleName.MANAGER), user(RoleName.OWNER)):
+            assert guard(user=allowed, workspace_id=workspace) is allowed
