@@ -2383,7 +2383,20 @@
     "historyUnavailable": "Недоступні повідомлення",
     "historyErrors": "Помилки",
     "refreshList": "Оновити діалоги",
-    "aiQuick": "AI-помічник"
+    "aiQuick": "AI-помічник",
+    "identityConflict": "Дані Instagram суперечливі або збігаються з кількома клієнтами. Перевірте картки клієнтів перед пов’язуванням.",
+    "retryIdentityMatch": "Перевірити повторно",
+    "identityReviewPrompt": "Перевірте картку і виберіть клієнта лише тоді, коли впевнені, що це та сама людина.",
+    "identityLoading": "Шукаємо збіги…",
+    "identityLoadError": "Не вдалося завантажити збіги.",
+    "identityNoCandidates": "Збігів не знайдено. Перевірте дані Instagram і повторіть пошук.",
+    "identityConfirmQuestion": "Пов’язати цей діалог із вибраним клієнтом?",
+    "identityConfirm": "Так, пов’язати",
+    "identityCancel": "Скасувати",
+    "identityChoose": "Обрати клієнта",
+    "identityMore": "Показано перші 20 збігів. Перевірте решту в розділі клієнтів.",
+    "identityLinkError": "Не вдалося пов’язати клієнта. Перевірте актуальні дані та спробуйте знову.",
+    "identityOrderBlocked": "До діалогу вже прив’язане замовлення. Перевірте його перед зміною клієнта."
   },
   "instagramSettings": {
     "title": "Instagram Direct",

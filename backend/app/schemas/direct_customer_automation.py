@@ -17,6 +17,17 @@ class DirectCustomerAutomationState(BaseModel):
     created_automatically: bool = False
 
 
+class DirectCustomerIdentityCandidate(BaseModel):
+    id: UUID
+    name: str
+    instagram_username: str | None = None
+    phone_last_four: str | None = None
+
+
+class DirectCustomerIdentityLinkRequest(BaseModel):
+    customer_id: UUID
+
+
 class DirectCustomerCompleteRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     phone: str = Field(min_length=1, max_length=50)

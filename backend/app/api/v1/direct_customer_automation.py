@@ -9,6 +9,8 @@ from app.models.role import RoleName
 from app.models.user import User
 from app.schemas.direct_customer_automation import (
     DirectCustomerAutomationState,
+    DirectCustomerIdentityCandidate,
+    DirectCustomerIdentityLinkRequest,
     DirectCustomerCompleteRequest,
     DirectCustomerFinalizeOrderRequest,
 )
@@ -33,6 +35,10 @@ def _http_error(exc: DirectCustomerAutomationError) -> HTTPException:
     }:
         return HTTPException(status.HTTP_404_NOT_FOUND, code)
     if code in {
+        "DIRECT_CUSTOMER_IDENTITY_CONFLICT",
+        "DIRECT_CUSTOMER_IDENTITY_BUSY",
+        "DIRECT_CUSTOMER_ALREADY_LINKED",
+        "DIRECT_CUSTOMER_CANDIDATE_CHANGED",
         "DIRECT_ORDER_REQUIRED",
         "DIRECT_CUSTOMER_WORKSPACE_MISMATCH",
         "DIRECT_ORDER_CUSTOMER_MISMATCH",
@@ -54,6 +60,33 @@ def get_direct_customer_automation(
     try:
         return DirectCustomerAutomationService(db).state(workspace_id, conversation_id)
     except DirectCustomerAutomationError as exc:
+        raise _http_error(exc) from exc
+
+
+@router.get("/conversations/{conversation_id}/customer-automation/candidates", response_model=list[DirectCustomerIdentityCandidate])
+def direct_customer_identity_candidates(
+    conversation_id: UUID,
+    workspace_id: UUID = Depends(get_workspace_id),
+    _: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return DirectCustomerAutomationService(db).identity_candidates(workspace_id, conversation_id)
+    except DirectCustomerAutomationError as exc:
+        raise _http_error(exc) from exc
+
+
+@router.post("/conversations/{conversation_id}/customer-automation/link", response_model=DirectCustomerAutomationState)
+def link_direct_customer_identity(
+    conversation_id: UUID, payload: DirectCustomerIdentityLinkRequest,
+    workspace_id: UUID = Depends(get_workspace_id),
+    user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return DirectCustomerAutomationService(db).link_identity_candidate(workspace_id, conversation_id, payload.customer_id, user.id)
+    except DirectCustomerAutomationError as exc:
+        db.rollback()
         raise _http_error(exc) from exc
 
 
