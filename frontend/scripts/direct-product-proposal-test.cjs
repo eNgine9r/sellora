@@ -1,0 +1,42 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+const fs = require('fs');
+const vm = require('vm');
+const ts = require('typescript');
+const React = require('react');
+const { renderToStaticMarkup } = require('react-dom/server');
+const assert = require('node:assert/strict');
+const messages = require('../src/i18n/messages/uk.json').directProductProposal;
+const file = fs.readFileSync('src/components/direct-product-proposal.tsx', 'utf8');
+const code = ts.transpileModule(file, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
+let selected = null, data, queried;
+const testRequire = name => {
+  if (name === 'react') return { ...React, useState: () => [selected, () => {}] };
+  if (name === 'next/link') return { __esModule: true, default: ({ href, children, ...props }) => React.createElement('a', { href, ...props }, children) };
+  if (name === '@tanstack/react-query') return { useQuery: options => { queried = options; return { data, isFetching: false, isError: false }; } };
+  if (name === '@/i18n/provider') return { useI18n: () => ({ t: key => messages[key.split('.').at(-1)] || key }) };
+  if (name === '@/services/direct') return { fetchDirectProductProposal: () => { throw Error('unexpected request'); } };
+  return require(name);
+};
+const loaded = {}; vm.runInNewContext(code, { exports: loaded, require: testRequire });
+const props = { workspaceId: 'workspace', conversationId: 'conversation', customerId: 'customer', canCreate: true };
+const render = () => renderToStaticMarkup(React.createElement(loaded.DirectProductProposal, props));
+let html = render(); assert.equal(queried.enabled, false); assert(!html.includes('TEST-SKU'));
+selected = 'conversation'; data = { conversation_id: 'another', lines: [], catalog_truncated: false, context_truncated: false };
+html = render(); assert.equal(queried.enabled, true); assert(!html.includes(messages.empty), 'other conversation data must not be shown');
+data = { conversation_id: 'conversation', analysis_state:'MISSING', catalog_truncated:false, context_truncated:false, lines:[{ id:'one', mention_text:'браслет', source:'INBOUND_PRODUCT', match_status:'AMBIGUOUS', evidence:[{message_id:'m',snippet:'хочу браслет'}], candidates_truncated:true, candidates:[{ variant_id:'v-a', product_name:'Браслет', sku:'TEST-SKU', price:'500', available_quantity:2 }]}] };
+html = render(); assert(html.includes('хочу браслет')); assert(html.includes('TEST-SKU')); assert(html.includes('variant_id=v-a')); assert(html.includes(messages.more));
+props.canCreate = false; html = render(); assert(!html.includes('variant_id=v-a'), 'read-only role must not see order action');
+data = { conversation_id:'conversation', lines:[], catalog_truncated:true, context_truncated:false }; html = render(); assert(html.includes(messages.truncated)); assert(html.includes(messages.empty));
+console.log('PASS Direct product suggestions: explicit request, conversation isolation, evidence, variant choice and truncation');
+
+const helperSrc = fs.readFileSync('src/features/orders/lib/direct-variant-prefill.ts', 'utf8');
+const helperCode = ts.transpileModule(helperSrc, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+const helper = {}; vm.runInNewContext(helperCode, { exports: helper });
+const blank = [{ key:'a', product_variant_id:'', unit_price:'', unit_cost:'', quantity:'2' }];
+const filled = helper.prefillSuggestedVariant(blank, { id:'v-a', price:'500' });
+assert.equal(filled[0].product_variant_id, 'v-a'); assert.equal(filled[0].unit_price, '500'); assert.equal(filled[0].quantity, '2'); assert.equal(filled[0].unit_cost, '');
+const chosen = [{ ...blank[0], product_variant_id:'already-chosen', unit_price:'42' }];
+assert.equal(helper.prefillSuggestedVariant(chosen, {id:'v-a',price:'500'}), chosen, 'must not replace manager choice');
+const multiple = [blank[0], {...blank[0], key:'b'}];
+assert.equal(helper.prefillSuggestedVariant(multiple, {id:'v-a',price:'500'}), multiple, 'must not modify multiple items');
+console.log('PASS order prefill: selected variant, unchanged quantity and no overwritten choices');
