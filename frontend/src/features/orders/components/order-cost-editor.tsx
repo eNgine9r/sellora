@@ -65,7 +65,7 @@ export function OrderCostEditor({ order, onSave, saving, error }: {
       {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
       <div className="flex flex-wrap gap-2">
         <button type="submit" disabled={saving} className="min-h-11 rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground disabled:opacity-50">{saving ? t("common.loading") : t("orders.costCorrection.save")}</button>
-        <button type="button" disabled={saving} className="min-h-11 rounded-xl border border-border-subtle px-4 py-2 font-bold" onClick={() => setEditing(false)}>{t("common.cancel")}</button>
+        <button type="button" disabled={saving} className="min-h-11 rounded-xl border border-border-subtle px-4 py-2 font-bold" onClick={() => setEditing(false)}>{t("actions.cancel")}</button>
       </div>
     </form> : null}
   </section>;
