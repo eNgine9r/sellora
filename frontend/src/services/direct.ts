@@ -71,3 +71,12 @@ export function prepareDirectReply(conversationId: string, messageText: string, 
 export function sendDirectReply(conversationId: string, messageText: string, idempotencyKey: string) { return apiRequest(`/direct/conversations/${conversationId}/reply/send`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify({ message_text: messageText }) }); }
 export function fetchMessageOperation(operationId: string) { return apiRequest<MessageOperation>(`/direct/message-operations/${operationId}`); }
 export function reconcileMessageOperation(operationId: string) { return apiRequest<MessageOperation>(`/direct/message-operations/${operationId}/reconcile`, { method: "POST" }); }
+export type DirectIdentityCandidate = { id: string; name: string; instagram_username: string | null; phone_last_four: string | null };
+export function fetchDirectIdentityCandidates(conversationId: string, workspaceId: string) {
+  return apiRequest<DirectIdentityCandidate[]>(`/direct/conversations/${conversationId}/customer-automation/candidates`, { headers: { "X-Workspace-ID": workspaceId } });
+}
+export function linkDirectIdentityCandidate(conversationId: string, customerId: string, workspaceId: string) {
+  return apiRequest<DirectCustomerAutomationState>(`/direct/conversations/${conversationId}/customer-automation/link`, {
+    method: "POST", headers: { "X-Workspace-ID": workspaceId }, body: JSON.stringify({ customer_id: customerId }),
+  });
+}
