@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { prefillSuggestedVariant } from "@/features/orders/lib/direct-variant-prefill";
 import { fulfillmentAmount, isConfirmedCost, isNonNegativeAmount, isPositiveWholeQuantity } from "@/features/orders/lib/fulfillment-amounts";
 import { CitySearchSelect } from "@/features/integrations/components/city-search-select";
 import { WarehouseSearchSelect } from "@/features/integrations/components/warehouse-search-select";
@@ -161,14 +162,12 @@ export function OrderFulfillmentWizard({
   }, [customers, initialCustomerId]);
 
   useEffect(() => {
-    if (!initialVariantId || initialVariantApplied.current || step !== 1) return;
+    if (!initialVariantId || initialVariantApplied.current) return;
     const variant = variants.find((row) => row.id === initialVariantId);
     if (!variant) return;
     initialVariantApplied.current = true;
-    setItems((current) => current.length === 1 && !current[0].product_variant_id
-      ? [{ ...current[0], product_variant_id: variant.id, unit_price: variant.price ?? "", unit_cost: "" }]
-      : current);
-  }, [initialVariantId, variants, step]);
+    setItems((current) => prefillSuggestedVariant(current, variant));
+  }, [initialVariantId, variants]);
 
   useEffect(() => {
     const defaultAddress = addressesQuery.data?.find((address) => address.is_default) ?? addressesQuery.data?.[0];
