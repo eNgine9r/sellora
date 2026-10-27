@@ -162,8 +162,12 @@ class DirectCustomerAutomationService:
         candidates = self.customers.list_instagram_identity_candidates(
             workspace_id, conversation.participant_scoped_id, conversation.participant_username,
         )
-        customer = next((item for item in candidates if item.id == customer_id), None)
-        if customer is None:
+        listed = any(item.id == customer_id for item in candidates)
+        customer = self.customers.get_for_update(workspace_id, customer_id) if listed else None
+        username = (conversation.participant_username or "").strip().lstrip("@").lower()
+        matches_id = bool(customer and conversation.participant_scoped_id and customer.instagram_scoped_id == conversation.participant_scoped_id)
+        matches_username = bool(customer and username and (customer.instagram_username or "").strip().lstrip("@").lower() == username)
+        if customer is None or not (matches_id or matches_username):
             raise DirectCustomerAutomationError("DIRECT_CUSTOMER_CANDIDATE_CHANGED")
         conversation.linked_customer_id = customer.id
         self.audit_logs.create(
