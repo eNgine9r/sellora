@@ -14,7 +14,7 @@ from app.models.customer import (
 from app.models.customer_address import DeliveryProvider
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
 from app.repositories.audit_log_repository import AuditLogRepository
-from app.repositories.customer_repository import CustomerRepository
+from app.repositories.customer_repository import CustomerRepository, InstagramIdentityConflict
 from app.repositories.lead_repository import LeadRepository
 from app.models.lead import LeadStatus
 from app.schemas.crm_completion import CustomerAddressCreate, CustomerAddressUpdate
@@ -64,11 +64,14 @@ class DirectCustomerAutomationService:
 
         existing = self.customers.get(workspace_id, conversation.linked_customer_id) if conversation.linked_customer_id else None
         created = False
-        customer = existing or self.customers.find_by_instagram_identity(
-            workspace_id,
-            instagram_scoped_id=conversation.participant_scoped_id,
-            instagram_username=conversation.participant_username,
-        )
+        try:
+            customer = existing or self.customers.find_by_instagram_identity(
+                workspace_id,
+                instagram_scoped_id=conversation.participant_scoped_id,
+                instagram_username=conversation.participant_username,
+            )
+        except InstagramIdentityConflict as exc:
+            raise DirectCustomerAutomationError(str(exc)) from exc
         if customer is None:
             display_name = self._display_name(conversation)
             customer = self.customers.create(
