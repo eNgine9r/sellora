@@ -16,7 +16,7 @@ class FakeDb:
     def flush(self):
         pass
 
-    def refresh(self, _model):
+    def refresh(self, _model, attribute_names=None):
         pass
 
 
@@ -44,6 +44,9 @@ class FakeCustomerRepository:
     def __init__(self):
         self.customers = []
 
+    def try_lock_direct_matching(self, workspace_id):
+        return True
+
     def get(self, workspace_id, customer_id):
         return next((item for item in self.customers if item.workspace_id == workspace_id and item.id == customer_id), None)
 
@@ -61,6 +64,13 @@ class FakeCustomerRepository:
             ),
             None,
         )
+
+    def list_instagram_identity_candidates(self, workspace_id, instagram_scoped_id, instagram_username, limit=20):
+        normalized = (instagram_username or "").strip().lstrip("@").lower()
+        return [item for item in self.customers if item.workspace_id == workspace_id and (
+            (instagram_scoped_id and item.instagram_scoped_id == instagram_scoped_id)
+            or (normalized and (item.instagram_username or "").strip().lstrip("@").lower() == normalized)
+        )][:limit]
 
     def create(self, customer):
         now = datetime.now(UTC)
@@ -211,3 +221,77 @@ def test_customer_completion_after_linked_order_saves_delivery_profile():
     assert address.nova_poshta_city_ref == "city-ref"
     assert address.nova_poshta_warehouse_ref == "warehouse-ref"
     assert address.is_default is True
+
+
+def test_busy_matching_never_creates_or_links_a_customer():
+    import pytest
+    from app.services.direct_customer_automation_service import DirectCustomerAutomationError
+
+    service, conversation, workspace_id = make_service()
+    service.customers.try_lock_direct_matching = lambda _workspace_id: False
+    with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_IDENTITY_BUSY"):
+        service.ensure_candidate(workspace_id, conversation.id, actor_user_id=uuid4())
+    assert not service.customers.customers
+    assert conversation.linked_customer_id is None
+
+
+def test_manager_links_reviewed_candidate_without_overwriting_identifiers():
+    from app.models.customer import Customer
+
+    service, conversation, workspace_id = make_service()
+    customer = service.customers.create(Customer(
+        workspace_id=workspace_id, name="Existing", instagram_username="buyer_one",
+        instagram_scoped_id="different-connection-id", phone=None,
+    ))
+    actor = uuid4()
+    candidates = service.identity_candidates(workspace_id, conversation.id)
+    assert [item.id for item in candidates] == [customer.id]
+    state = service.link_identity_candidate(workspace_id, conversation.id, customer.id, actor)
+    assert state.customer.id == customer.id
+    assert conversation.linked_customer_id == customer.id
+    assert customer.instagram_scoped_id == "different-connection-id"
+    assert service.audit_logs.records[-1]["user_id"] == actor
+    assert service.audit_logs.records[-1]["new_value"]["identity_reviewed"] is True
+
+
+def test_review_never_links_non_matching_or_other_workspace_customer():
+    import pytest
+    from app.models.customer import Customer
+    from app.services.direct_customer_automation_service import DirectCustomerAutomationError
+
+    service, conversation, workspace_id = make_service()
+    foreign = service.customers.create(Customer(workspace_id=uuid4(), name="Foreign", instagram_username="buyer_one"))
+    nonmatching = service.customers.create(Customer(workspace_id=workspace_id, name="Other", instagram_username="other"))
+    for customer in (foreign, nonmatching):
+        with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_CANDIDATE_CHANGED"):
+            service.link_identity_candidate(workspace_id, conversation.id, customer.id, uuid4())
+    assert conversation.linked_customer_id is None
+
+
+def test_review_never_replaces_existing_link_or_linked_order():
+    import pytest
+    from app.models.customer import Customer
+    from app.services.direct_customer_automation_service import DirectCustomerAutomationError
+
+    service, conversation, workspace_id = make_service()
+    customer = service.customers.create(Customer(workspace_id=workspace_id, name="Existing", instagram_username="buyer_one"))
+    for field in ("linked_customer_id", "linked_order_id"):
+        setattr(conversation, field, uuid4())
+        with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_ALREADY_LINKED"):
+            service.link_identity_candidate(workspace_id, conversation.id, customer.id, uuid4())
+        setattr(conversation, field, None)
+
+
+def test_cross_connection_scoped_identity_requires_review():
+    import pytest
+    from app.models.customer import Customer
+    from app.services.direct_customer_automation_service import DirectCustomerAutomationError
+
+    service, conversation, workspace_id = make_service()
+    conversation.instagram_connection_id = uuid4()
+    customer = service.customers.create(Customer(workspace_id=workspace_id, name="Existing", instagram_username="buyer_one", instagram_scoped_id="igs-user-1", source_direct_conversation_id=uuid4()))
+    with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_IDENTITY_CONFLICT"):
+        service.ensure_candidate(workspace_id, conversation.id, uuid4())
+    assert conversation.linked_customer_id is None
+    assert len(service.customers.customers) == 1
+    assert service.customers.customers[0] is customer
