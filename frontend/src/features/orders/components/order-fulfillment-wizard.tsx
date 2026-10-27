@@ -42,6 +42,7 @@ export function OrderFulfillmentWizard({
   currencyCode,
   showProfit,
   initialCustomerId,
+  initialVariantId,
   sourceDirectConversationId,
   onSuccess,
 }: {
@@ -54,12 +55,14 @@ export function OrderFulfillmentWizard({
   currencyCode: string;
   showProfit: boolean;
   initialCustomerId?: string | null;
+  initialVariantId?: string | null;
   sourceDirectConversationId?: string | null;
   onSuccess: (result: OrderFulfillmentResult) => void;
 }) {
   const { t, formatStatus } = useI18n();
   const submitLock = useRef(false);
   const initialCustomerApplied = useRef(false);
+  const initialVariantApplied = useRef(false);
   const idempotencyKey = useRef(newKey());
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<"existing" | "new">("existing");
@@ -139,6 +142,7 @@ export function OrderFulfillmentWizard({
     idempotencyKey.current = newKey();
     submitLock.current = false;
     initialCustomerApplied.current = false;
+    initialVariantApplied.current = false;
     setResult(null);
     setAutomationWarning(null);
   }, [workspaceId]);
@@ -155,6 +159,16 @@ export function OrderFulfillmentWizard({
     setRecipientPhone(customer.phone || "");
     setAddressId("");
   }, [customers, initialCustomerId]);
+
+  useEffect(() => {
+    if (!initialVariantId || initialVariantApplied.current || step !== 1) return;
+    const variant = variants.find((row) => row.id === initialVariantId);
+    if (!variant) return;
+    initialVariantApplied.current = true;
+    setItems((current) => current.length === 1 && !current[0].product_variant_id
+      ? [{ ...current[0], product_variant_id: variant.id, unit_price: variant.price ?? "", unit_cost: "" }]
+      : current);
+  }, [initialVariantId, variants, step]);
 
   useEffect(() => {
     const defaultAddress = addressesQuery.data?.find((address) => address.is_default) ?? addressesQuery.data?.[0];
