@@ -84,7 +84,13 @@ class DirectCustomerAutomationService:
         if not existing and customer is not None and connection_id:
             source_id = customer.source_direct_conversation_id
             source = self.conversations.get(workspace_id, source_id) if source_id else None
-            if not source or source.instagram_connection_id != connection_id:
+            if (
+                not source
+                or source.instagram_connection_id != connection_id
+                or not customer.instagram_scoped_id
+                or source.participant_scoped_id != customer.instagram_scoped_id
+                or conversation.participant_scoped_id != customer.instagram_scoped_id
+            ):
                 raise DirectCustomerAutomationError("DIRECT_CUSTOMER_IDENTITY_CONFLICT")
         if not existing and customer is None and connection_id and not (conversation.participant_scoped_id or (conversation.participant_username or "").strip().lstrip("@")):
             raise DirectCustomerAutomationError("DIRECT_CUSTOMER_IDENTITY_CONFLICT")
