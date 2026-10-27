@@ -2248,6 +2248,8 @@
     }
   },
   "fulfillment": {
+    "selectRecipientCityFirst": "Select the recipient city first.",
+    "profitUnavailable": "Profit is unavailable: product costs are not included yet.",
     "productSearch": "Find a product",
     "productSearchHint": "Name, SKU, color or size",
     "productSearchEmpty": "No matches. Try another name or SKU.",

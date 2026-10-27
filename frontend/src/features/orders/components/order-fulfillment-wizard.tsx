@@ -78,8 +78,8 @@ export function OrderFulfillmentWizard({
   const [saveAddress, setSaveAddress] = useState(true);
   const [items, setItems] = useState<WizardItem[]>([emptyItem()]);
   const [paymentStatus, setPaymentStatus] = useState<"PENDING" | "PAID" | "COD">("COD");
-  const [codAmount, setCodAmount] = useState("");
-  const [declaredValue, setDeclaredValue] = useState("");
+  const [codOverride, setCodOverride] = useState<string | null>(null);
+  const [declaredOverride, setDeclaredOverride] = useState<string | null>(null);
   const [campaignId, setCampaignId] = useState("");
   const [shippingCost, setShippingCost] = useState("0");
   const [adCost, setAdCost] = useState("0");
@@ -177,15 +177,10 @@ export function OrderFulfillmentWizard({
   const total = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
   const normalizedPhone = normalizeUaPhonePreview(recipientPhone);
   const normalizedCustomerPhone = normalizeUaPhonePreview(customerPhone);
-  const costs = Number(shippingCost || 0) + Number(adCost || 0) + Number(codFee || 0) + Number(otherCost || 0);
+  const codAmount = paymentStatus === "COD" ? codOverride ?? String(total || "") : "0";
+  const declaredValue = declaredOverride ?? String(total || "");
   const canCreateTtn = readinessQuery.data?.provider_writes_enabled === true;
   const writeBlockers = readinessQuery.data?.write_blockers ?? [];
-
-  useEffect(() => {
-    if (paymentStatus === "COD") setCodAmount(String(total || ""));
-    else setCodAmount("0");
-    setDeclaredValue((current) => !current || Number(current) === 0 ? String(total || "") : current);
-  }, [paymentStatus, total]);
 
   function selectCustomer(customer: Customer) {
     setCustomerId(customer.id);
@@ -328,7 +323,7 @@ export function OrderFulfillmentWizard({
             <label className="grid gap-1 text-sm font-semibold">{t("fulfillment.recipientName")}<input className={inputClass} value={recipientName} onChange={(event) => setRecipientName(event.target.value)} /></label>
             <label className="grid gap-1 text-sm font-semibold">{t("customers.phone")}<input className={inputClass} inputMode="tel" value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} /><span className={`text-xs ${normalizedPhone ? "text-emerald-600" : "text-text-muted"}`}>{normalizedPhone ? `${t("fulfillment.normalized")}: ${normalizedPhone}` : t("fulfillment.phoneHint")}</span></label>
             <CitySearchSelect workspaceId={workspaceId} query={city} label={t("fulfillment.city")} onQuery={(value) => { setCity(value); setCityRef(""); setWarehouse(""); setWarehouseRef(""); setWarehouseNumber(""); }} onSelect={(item) => { setCity(item.description); setCityRef(item.ref); setWarehouse(""); setWarehouseRef(""); setWarehouseNumber(""); }} />
-            <WarehouseSearchSelect workspaceId={workspaceId} cityRef={cityRef} query={warehouse} label={t("fulfillment.warehouse")} onQuery={(value) => { setWarehouse(value); setWarehouseRef(""); }} onSelect={(item) => { setWarehouse(item.description); setWarehouseRef(item.ref); setWarehouseNumber(item.number || ""); }} />
+            <WarehouseSearchSelect workspaceId={workspaceId} cityRef={cityRef} query={warehouse} label={t("fulfillment.warehouse")} cityFirstHint={t("fulfillment.selectRecipientCityFirst")} onQuery={(value) => { setWarehouse(value); setWarehouseRef(""); }} onSelect={(item) => { setWarehouse(item.description); setWarehouseRef(item.ref); setWarehouseNumber(item.number || ""); }} />
             <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2"><input checked={saveAddress} type="checkbox" onChange={(event) => setSaveAddress(event.target.checked)} />{t("fulfillment.saveDefault")}</label>
           </section>
         </> : null}
@@ -359,15 +354,15 @@ export function OrderFulfillmentWizard({
           </section>
           <section className="grid gap-3 rounded-2xl border border-border-subtle p-3 sm:grid-cols-3">
             <label className="grid gap-1 text-sm font-semibold">{t("tables.payment")}<select className={inputClass} value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value as typeof paymentStatus)}>{(["COD", "PAID", "PENDING"] as const).map((value) => <option key={value} value={value}>{formatStatus("payment", value)}</option>)}</select></label>
-            {paymentStatus === "COD" ? <label className="grid gap-1 text-sm font-semibold">{t("fulfillment.codAmount")}<input className={inputClass} min="0" type="number" value={codAmount} onChange={(event) => setCodAmount(event.target.value)} /></label> : null}
-            <label className="grid gap-1 text-sm font-semibold">{t("fulfillment.declaredValue")}<input className={inputClass} min="0" type="number" value={declaredValue} onChange={(event) => setDeclaredValue(event.target.value)} /></label>
+            {paymentStatus === "COD" ? <label className="grid gap-1 text-sm font-semibold">{t("fulfillment.codAmount")}<input className={inputClass} min="0" type="number" value={codAmount} onChange={(event) => setCodOverride(event.target.value)} /></label> : null}
+            <label className="grid gap-1 text-sm font-semibold">{t("fulfillment.declaredValue")}<input className={inputClass} min="0" type="number" value={declaredValue} onChange={(event) => setDeclaredOverride(event.target.value)} /></label>
           </section>
           <details className="rounded-2xl border border-border-subtle p-3" open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}><summary className="cursor-pointer font-black">{t("fulfillment.additionalDetails")}</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="grid gap-1 text-sm font-semibold">{t("orders.campaignLabel")}<select className={inputClass} value={campaignId} onChange={(event) => setCampaignId(event.target.value)}><option value="">{t("orders.noCampaign")}</option>{campaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}</select></label>{[[t("orders.shipping"), shippingCost, setShippingCost], [t("orders.adCost"), adCost, setAdCost], [t("orders.codFee"), codFee, setCodFee], [t("orders.otherCost"), otherCost, setOtherCost]].map(([label, value, setter]) => <label className="grid gap-1 text-sm font-semibold" key={String(label)}>{String(label)}<input className={inputClass} min="0" type="number" value={String(value)} onChange={(event) => (setter as (value: string) => void)(event.target.value)} /></label>)}<label className="grid gap-1 text-sm font-semibold sm:col-span-2">{t("orders.notes")}<textarea className={inputClass} value={notes} onChange={(event) => setNotes(event.target.value)} /></label></div></details>
         </> : null}
 
         {step === 3 ? <section className="grid gap-4">
-          <div className="grid gap-3 rounded-2xl border border-border-subtle p-4 sm:grid-cols-2"><div><span className="text-xs text-text-muted">{t("orders.customerSelector")}</span><strong className="block">{selectedCustomer?.name || customerName}</strong><span className="text-sm text-text-secondary">{normalizedPhone}</span></div><div><span className="text-xs text-text-muted">{t("fulfillment.delivery")}</span><strong className="block">{city}</strong><span className="text-sm text-text-secondary">{warehouse}</span></div><div><span className="text-xs text-text-muted">{t("orders.items")}</span><strong className="block">{items.length}</strong></div><div><span className="text-xs text-text-muted">{t("tables.payment")}</span><strong className="block">{formatStatus("payment", paymentStatus)}</strong></div></div>
-          <div className="rounded-2xl bg-surface-2 p-4"><div className="flex items-center justify-between text-lg"><span>{t("fulfillment.total")}</span><strong>{formatMoney(total, currencyCode)}</strong></div>{paymentStatus === "COD" ? <div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("fulfillment.codAmount")}</span><span>{formatMoney(codAmount || total, currencyCode)}</span></div> : null}{showProfit ? <div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("orders.estimatedProfit")}</span><span>{formatMoney(total - costs, currencyCode)}</span></div> : null}</div>
+          <div className="grid gap-3 rounded-2xl border border-border-subtle p-4 sm:grid-cols-2"><div><span className="text-xs text-text-muted">{t("orders.customerSelector")}</span><strong className="block">{selectedCustomer?.name || customerName}</strong><span className="text-sm text-text-secondary">{normalizedPhone}</span></div><div><span className="text-xs text-text-muted">{t("fulfillment.delivery")}</span><strong className="block">{city}</strong><span className="text-sm text-text-secondary">{warehouse}</span></div><div className="sm:col-span-2"><span className="text-xs text-text-muted">{t("orders.items")}</span><ul className="mt-1 grid gap-2">{items.map((item) => { const variant = variants.find((row) => row.id === item.product_variant_id); return <li key={item.key} className="break-words text-sm"><strong>{[variant && productById.get(variant.product_id)?.name, variant?.color, variant?.size, variant?.sku].filter(Boolean).join(" · ")}</strong><span className="block text-text-secondary">{item.quantity} × {formatMoney(item.unit_price, currencyCode)}</span></li>; })}</ul></div><div><span className="text-xs text-text-muted">{t("tables.payment")}</span><strong className="block">{formatStatus("payment", paymentStatus)}</strong></div></div>
+          <div className="rounded-2xl bg-surface-2 p-4"><div className="flex items-center justify-between text-lg"><span>{t("fulfillment.total")}</span><strong>{formatMoney(total, currencyCode)}</strong></div>{paymentStatus === "COD" ? <div className="mt-2 flex justify-between text-sm text-text-secondary"><span>{t("fulfillment.codAmount")}</span><span>{formatMoney(codAmount || total, currencyCode)}</span></div> : null}{showProfit ? <p className="mt-2 text-sm text-text-secondary">{t("fulfillment.profitUnavailable")}</p> : null}</div>
           {readinessQuery.isLoading ? <div className="rounded-xl border border-blue-300 bg-blue-50 p-3 text-sm font-semibold text-blue-900 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-100">{t("fulfillment.readinessLoading")}</div> : null}
           {readinessQuery.isError ? <div className="grid gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100" role="alert"><strong>{t("fulfillment.readinessLoadFailed")}</strong><Link className="w-fit font-black underline underline-offset-4" href="/settings/integrations">{t("fulfillment.openIntegrationSettings")}</Link></div> : null}
           {!readinessQuery.isLoading && !readinessQuery.isError && !canCreateTtn ? <div className="grid gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100"><strong>{t("fulfillment.readinessTitle")}</strong><p>{t("fulfillment.readinessHelp")}</p>{writeBlockers.length ? <ul className="list-disc space-y-1 pl-5 font-semibold">{writeBlockers.map((blocker) => <li key={blocker}>{t(`fulfillment.blockers.${blocker}`)}</li>)}</ul> : null}<Link className="w-fit font-black underline underline-offset-4" href="/settings/integrations">{t("fulfillment.openIntegrationSettings")}</Link></div> : null}
@@ -375,10 +370,12 @@ export function OrderFulfillmentWizard({
         </section> : null}
       </div>
 
-      {error ? <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-semibold text-danger" role="alert">{error}</p> : null}
-      <footer className="sticky bottom-0 grid gap-2 border-t border-border-subtle bg-surface-1 pt-3 sm:flex sm:justify-between">
+      <footer className="sticky bottom-0 grid gap-2 border-t border-border-subtle bg-surface-1 pt-3">
+        {error ? <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-semibold text-danger" role="alert">{error}</p> : null}
+        <div className="grid gap-2 sm:flex sm:justify-between">
         <button className="min-h-11 rounded-xl border border-border-subtle px-4 font-bold disabled:opacity-40" disabled={step === 1 || mutation.isPending} type="button" onClick={() => goTo(step - 1)}>{t("fulfillment.back")}</button>
         {step < 3 ? <button className="min-h-11 rounded-xl bg-primary px-5 font-bold text-primary-foreground" type="button" onClick={() => goTo(step + 1)}>{t("fulfillment.continue")}</button> : <div className="grid gap-2 sm:grid-cols-2"><button className="min-h-11 rounded-xl border border-border-subtle px-4 font-bold disabled:opacity-50" disabled={mutation.isPending} type="button" onClick={() => submit(false)}>{t("fulfillment.createWithoutTtn")}</button><button className="min-h-11 rounded-xl bg-primary px-5 font-bold text-primary-foreground disabled:opacity-50" disabled={!canCreateTtn || mutation.isPending || submitLock.current} type="button" onClick={() => submit(true)}>{mutation.isPending ? t("fulfillment.creating") : t("fulfillment.createOrderAndTtn")}</button></div>}
+        </div>
       </footer>
     </div>
   );
