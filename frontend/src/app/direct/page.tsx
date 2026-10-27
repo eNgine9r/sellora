@@ -30,6 +30,7 @@ import { Button, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspa
 import { useDirectLive } from "@/components/direct-live-provider";
 import { DirectOrderEvidenceCard } from "@/components/direct-order-evidence-card";
 import { DirectProductProposal } from "@/components/direct-product-proposal";
+import { DirectIdentityReview } from "@/components/direct-identity-review";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
@@ -1039,6 +1040,7 @@ function CustomerAutomationCard({
             <p className="mt-1 text-xs font-semibold text-amber-700">Потрібно доповнити: {automation.missing_fields.map((field) => missingLabels[field] ?? field).join(", ")}.</p>
           ) : null}
           {identityConflict ? <p className="mt-1 text-xs font-semibold text-rose-600">{t("direct.identityConflict")}</p> : error ? <p className="mt-1 text-xs font-semibold text-rose-600">Не вдалося оновити зв’язок із клієнтом. Повторіть дію.</p> : null}
+          {identityConflict && canManage ? <DirectIdentityReview key={conversation.id} conversationId={conversation.id} hasOrder={Boolean(conversation.linked_order_id)} /> : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {!customer && canManage ? (
