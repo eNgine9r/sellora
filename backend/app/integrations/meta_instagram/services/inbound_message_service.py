@@ -24,7 +24,7 @@ from app.models.meta_instagram import (
     MetaWebhookEventStatus,
 )
 from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
-from app.services.direct_customer_automation_service import DirectCustomerAutomationService
+from app.services.direct_customer_automation_service import DirectCustomerAutomationError, DirectCustomerAutomationService
 from app.services.direct_lead_service import DirectLeadService
 from app.ai.services.direct_order_intent_service import detect_direct_order_intent
 
@@ -269,6 +269,12 @@ class InstagramInboundMessageService:
                 )
                 if state and state.customer:
                     conversation.provider_sync_status = "CUSTOMER_PROSPECT_READY"
+        except DirectCustomerAutomationError as exc:
+            conversation.provider_sync_status = (
+                "CUSTOMER_IDENTITY_CONFLICT"
+                if str(exc) == "DIRECT_CUSTOMER_IDENTITY_CONFLICT"
+                else "CUSTOMER_AUTOMATION_FAILED_SAFE"
+            )
         except Exception:
             conversation.provider_sync_status = "CUSTOMER_AUTOMATION_FAILED_SAFE"
 
