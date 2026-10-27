@@ -2383,7 +2383,9 @@
     "historyUnavailable": "Недоступні повідомлення",
     "historyErrors": "Помилки",
     "refreshList": "Оновити діалоги",
-    "aiQuick": "AI-помічник"
+    "aiQuick": "AI-помічник",
+    "identityConflict": "Дані Instagram суперечливі або збігаються з кількома клієнтами. Перевірте картки клієнтів перед пов’язуванням.",
+    "retryIdentityMatch": "Перевірити повторно"
   },
   "instagramSettings": {
     "title": "Instagram Direct",
