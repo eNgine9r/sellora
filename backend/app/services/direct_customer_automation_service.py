@@ -78,6 +78,19 @@ class DirectCustomerAutomationService:
             )
         except InstagramIdentityConflict as exc:
             raise DirectCustomerAutomationError(str(exc)) from exc
+        if not existing and customer is not None:
+            customer_id = customer.id
+            customer = self.customers.get_for_update(workspace_id, customer_id)
+            try:
+                current_match = self.customers.find_by_instagram_identity(
+                    workspace_id,
+                    instagram_scoped_id=conversation.participant_scoped_id,
+                    instagram_username=conversation.participant_username,
+                )
+            except InstagramIdentityConflict as exc:
+                raise DirectCustomerAutomationError(str(exc)) from exc
+            if customer is None or current_match is None or current_match.id != customer_id:
+                raise DirectCustomerAutomationError("DIRECT_CUSTOMER_IDENTITY_CONFLICT")
         # Provider IDs are scoped to an Instagram connection. Without a
         # known same-connection source, a match requires manager review.
         connection_id = getattr(conversation, "instagram_connection_id", None)
