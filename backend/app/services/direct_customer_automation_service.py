@@ -12,7 +12,7 @@ from app.models.customer import (
     CustomerSource,
 )
 from app.models.customer_address import DeliveryProvider
-from app.repositories.ai_direct_repository import DirectConversationRepository, DirectMessageRepository
+from app.repositories.ai_direct_repository import DirectConversationBusy, DirectConversationRepository, DirectMessageRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.customer_repository import CustomerRepository, InstagramIdentityConflict
 from app.repositories.lead_repository import LeadRepository
@@ -65,9 +65,9 @@ class DirectCustomerAutomationService:
 
         if not self.customers.try_lock_direct_matching(workspace_id):
             raise DirectCustomerAutomationError("DIRECT_CUSTOMER_IDENTITY_BUSY")
-        # The conversation may have been linked since it was first read.
-        self.db.flush()
-        self.db.refresh(conversation, attribute_names=["linked_customer_id"])
+        # Lock and refresh the identity and association after acquiring the
+        # workspace guard. Never wait while other webhook locks may be held.
+        conversation = self._lock_conversation(workspace_id, conversation_id)
         existing = self.customers.get(workspace_id, conversation.linked_customer_id) if conversation.linked_customer_id else None
         created = False
         try:
@@ -155,8 +155,7 @@ class DirectCustomerAutomationService:
         conversation = self._conversation(workspace_id, conversation_id)
         if not self.customers.try_lock_direct_matching(workspace_id):
             raise DirectCustomerAutomationError("DIRECT_CUSTOMER_IDENTITY_BUSY")
-        self.db.flush()
-        self.db.refresh(conversation, attribute_names=["linked_customer_id", "linked_order_id"])
+        conversation = self._lock_conversation(workspace_id, conversation_id)
         if conversation.linked_customer_id or conversation.linked_order_id:
             raise DirectCustomerAutomationError("DIRECT_CUSTOMER_ALREADY_LINKED")
         candidates = self.customers.list_instagram_identity_candidates(
@@ -304,6 +303,15 @@ class DirectCustomerAutomationService:
             new_value=snapshot(customer),
         )
         self.db.flush()
+
+    def _lock_conversation(self, workspace_id: UUID, conversation_id: UUID):
+        try:
+            conversation = self.conversations.get_for_update_nowait(workspace_id, conversation_id)
+        except DirectConversationBusy as exc:
+            raise DirectCustomerAutomationError("DIRECT_CUSTOMER_IDENTITY_BUSY") from exc
+        if conversation is None:
+            raise DirectCustomerAutomationError("DIRECT_CONVERSATION_NOT_FOUND")
+        return conversation
 
     def _conversation(self, workspace_id: UUID, conversation_id: UUID):
         conversation = self.conversations.get(workspace_id, conversation_id)
