@@ -388,3 +388,16 @@ def test_automatic_match_rechecks_customer_after_locking():
     with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_IDENTITY_CONFLICT"):
         service.ensure_candidate(workspace_id, conversation.id, uuid4())
     assert conversation.linked_customer_id is None
+
+
+def test_missing_linked_customer_is_not_silently_replaced():
+    import pytest
+    from app.services.direct_customer_automation_service import DirectCustomerAutomationError
+
+    service, conversation, workspace_id = make_service()
+    original_id = uuid4()
+    conversation.linked_customer_id = original_id
+    with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_NOT_FOUND"):
+        service.ensure_candidate(workspace_id, conversation.id, uuid4())
+    assert conversation.linked_customer_id == original_id
+    assert not service.customers.customers
