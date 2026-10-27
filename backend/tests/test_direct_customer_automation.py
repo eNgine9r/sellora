@@ -24,6 +24,9 @@ class FakeConversationRepository:
     def __init__(self, conversation):
         self.conversation = conversation
 
+    def get_for_update_nowait(self, workspace_id, conversation_id):
+        return self.get(workspace_id, conversation_id)
+
     def get(self, workspace_id, conversation_id):
         if self.conversation.workspace_id == workspace_id and self.conversation.id == conversation_id:
             return self.conversation
