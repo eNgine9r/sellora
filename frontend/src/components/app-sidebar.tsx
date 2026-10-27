@@ -131,7 +131,7 @@ export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () =
                   </>
                 )}
               </div>
-              <div id={`sidebar-group-${group.id}`} className={`grid min-w-0 gap-1 ${opened ? "" : "hidden lg:grid"}`}>
+              <div id={`sidebar-group-${group.id}`} className={`min-w-0 gap-1 ${opened ? "grid" : "hidden lg:grid"}`}>
                 {group.items.map(([href, label, Icon]) => {
                   const active = isActiveNav(pathname, href);
                   return (
