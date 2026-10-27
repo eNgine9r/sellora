@@ -372,3 +372,19 @@ def test_busy_conversation_never_creates_or_links_a_customer():
         service.ensure_candidate(workspace_id, conversation.id, uuid4())
     assert not service.customers.customers
     assert conversation.linked_customer_id is None
+
+
+def test_automatic_match_rechecks_customer_after_locking():
+    import pytest
+    from app.models.customer import Customer
+    from app.services.direct_customer_automation_service import DirectCustomerAutomationError
+
+    service, conversation, workspace_id = make_service()
+    customer = service.customers.create(Customer(workspace_id=workspace_id, name="Existing", instagram_username="buyer_one"))
+    def changed_after_lookup(_workspace_id, _customer_id):
+        customer.instagram_username = "different_username"
+        return customer
+    service.customers.get_for_update = changed_after_lookup
+    with pytest.raises(DirectCustomerAutomationError, match="DIRECT_CUSTOMER_IDENTITY_CONFLICT"):
+        service.ensure_candidate(workspace_id, conversation.id, uuid4())
+    assert conversation.linked_customer_id is None
