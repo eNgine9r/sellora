@@ -7,11 +7,13 @@ import {
   DirectCustomerFinalizeOrderPayload,
   DirectLiveSummary,
   DirectOrderEvidence,
+  DirectProductProposal,
   DirectMessage,
   InstagramHistorySync,
   MessageOperation,
 } from "@/types/direct";
 
+export function fetchDirectProductProposal(conversationId: string) { return apiRequest<DirectProductProposal>(`/direct/conversations/${conversationId}/order-proposal`); }
 export function fetchDirectConversations() { return apiRequest<DirectConversation[]>("/direct/conversations"); }
 export function ensureDirectLead(conversationId: string) {
   return apiRequest<DirectConversation>(`/direct/conversations/${conversationId}/lead/ensure`, { method: "POST" });
