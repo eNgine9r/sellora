@@ -29,6 +29,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Button, WorkspaceHeader, WorkspacePage } from "@/components/crm-workspace";
 import { useDirectLive } from "@/components/direct-live-provider";
 import { DirectOrderEvidenceCard } from "@/components/direct-order-evidence-card";
+import { DirectProductProposal } from "@/components/direct-product-proposal";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
@@ -413,6 +414,7 @@ function DirectPageContent() {
           onBack={handleBackToInbox}
           onOpenAiPanel={() => setAiPanelOpen(true)}
           conversation={selectedConversation}
+          workspaceId={workspaceId ?? ""}
           automation={automationQuery.data}
           orderEvidence={orderEvidenceQuery.data}
           orderEvidenceLoading={orderEvidenceQuery.isLoading}
@@ -734,6 +736,7 @@ type PrepareResult = { ready: boolean; blockers: string[]; warnings: string[]; m
 
 function MessageThread({
   conversation,
+  workspaceId,
   automation,
   orderEvidence,
   orderEvidenceLoading,
@@ -771,6 +774,7 @@ function MessageThread({
   onBack: () => void;
   onOpenAiPanel: () => void;
   conversation?: DirectConversation | null;
+  workspaceId: string;
   automation?: DirectCustomerAutomationState;
   orderEvidence?: DirectOrderEvidence;
   orderEvidenceLoading: boolean;
@@ -848,6 +852,7 @@ function MessageThread({
         onEnsure={onEnsureCustomer}
         />
         <DirectOrderEvidenceCard evidence={orderEvidence} loading={orderEvidenceLoading} error={orderEvidenceError} canManage={canManage} confirming={orderEvidenceConfirming} confirmError={orderEvidenceConfirmError} onConfirm={onConfirmOrderEvidence} />
+        <DirectProductProposal workspaceId={workspaceId} conversationId={conversation.id} customerId={automation?.customer?.id} canCreate={canManage && !orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated} />
       </div>
       <details className="shrink-0 border-b border-border-subtle lg:hidden" data-direct-mobile-details>
         <summary className="cursor-pointer px-4 py-2 text-xs font-bold text-text-secondary">Деталі клієнта та замовлення</summary>
@@ -856,6 +861,7 @@ function MessageThread({
           <DirectLeadCard conversation={conversation} canManage={canManage} ensuring={ensuringLead} error={leadError} onEnsure={onEnsureLead} />
           <CustomerAutomationCard conversation={conversation} automation={automation} existingOrdersCount={orderEvidence?.verified_orders.length ?? 0} evidenceReady={!orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated} loading={automationLoading} error={automationError} canManage={canManage} ensuring={ensuringCustomer} onEnsure={onEnsureCustomer} />
           <DirectOrderEvidenceCard evidence={orderEvidence} loading={orderEvidenceLoading} error={orderEvidenceError} canManage={canManage} confirming={orderEvidenceConfirming} confirmError={orderEvidenceConfirmError} onConfirm={onConfirmOrderEvidence} />
+        <DirectProductProposal workspaceId={workspaceId} conversationId={conversation.id} customerId={automation?.customer?.id} canCreate={canManage && !orderEvidenceLoading && !orderEvidenceError && !orderEvidence?.scan_truncated} />
         </div>
       </details>
       <div ref={scrollContainer} className="sellora-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto p-3 lg:p-4" data-direct-live-thread>

@@ -245,6 +245,9 @@ jobs:
       - name: Verify fulfillment amount and quantity behavior
         working-directory: frontend
         run: node scripts/fulfillment-amounts-test.mjs
+      - name: Verify Direct product suggestion boundaries
+        working-directory: frontend
+        run: node scripts/direct-product-proposal-test.cjs
       - name: Typecheck
         working-directory: frontend
         run: npm run typecheck

@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { prefillSuggestedVariant } from "@/features/orders/lib/direct-variant-prefill";
 import { fulfillmentAmount, isConfirmedCost, isNonNegativeAmount, isPositiveWholeQuantity } from "@/features/orders/lib/fulfillment-amounts";
 import { CitySearchSelect } from "@/features/integrations/components/city-search-select";
 import { WarehouseSearchSelect } from "@/features/integrations/components/warehouse-search-select";
@@ -42,6 +43,7 @@ export function OrderFulfillmentWizard({
   currencyCode,
   showProfit,
   initialCustomerId,
+  initialVariantId,
   sourceDirectConversationId,
   onSuccess,
 }: {
@@ -54,12 +56,14 @@ export function OrderFulfillmentWizard({
   currencyCode: string;
   showProfit: boolean;
   initialCustomerId?: string | null;
+  initialVariantId?: string | null;
   sourceDirectConversationId?: string | null;
   onSuccess: (result: OrderFulfillmentResult) => void;
 }) {
   const { t, formatStatus } = useI18n();
   const submitLock = useRef(false);
   const initialCustomerApplied = useRef(false);
+  const initialVariantApplied = useRef(false);
   const idempotencyKey = useRef(newKey());
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<"existing" | "new">("existing");
@@ -139,6 +143,7 @@ export function OrderFulfillmentWizard({
     idempotencyKey.current = newKey();
     submitLock.current = false;
     initialCustomerApplied.current = false;
+    initialVariantApplied.current = false;
     setResult(null);
     setAutomationWarning(null);
   }, [workspaceId]);
@@ -155,6 +160,14 @@ export function OrderFulfillmentWizard({
     setRecipientPhone(customer.phone || "");
     setAddressId("");
   }, [customers, initialCustomerId]);
+
+  useEffect(() => {
+    if (!initialVariantId || initialVariantApplied.current) return;
+    const variant = variants.find((row) => row.id === initialVariantId);
+    if (!variant) return;
+    initialVariantApplied.current = true;
+    setItems((current) => prefillSuggestedVariant(current, variant));
+  }, [initialVariantId, variants]);
 
   useEffect(() => {
     const defaultAddress = addressesQuery.data?.find((address) => address.is_default) ?? addressesQuery.data?.[0];

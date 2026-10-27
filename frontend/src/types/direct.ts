@@ -214,3 +214,19 @@ export type MessageOperation = {
   blind_retry_blocked: boolean;
   last_error_code?: string | null;
 };
+export type DirectProductProposal = {
+  conversation_id: string;
+  analysis_state: "MISSING" | "COMPLETED" | "STALE" | "FAILED" | "MALFORMED" | "PENDING";
+  catalog_truncated: boolean;
+  context_truncated: boolean;
+  lines: Array<{
+    id: string;
+    mention_text: string;
+    source: "ANALYSIS_CONTEXT" | "INBOUND_SKU" | "INBOUND_PRODUCT";
+    evidence: Array<{ message_id: string; snippet: string }>;
+    match_status: "MATCHED" | "AMBIGUOUS" | "NOT_FOUND";
+    matched_by: string | null;
+    candidates_truncated: boolean;
+    candidates: Array<{ product_id: string; variant_id: string; product_name: string; sku: string; color: string | null; size: string | null; price: string | null; available_quantity: number | null }>;
+  }>;
+};
