@@ -1107,7 +1107,7 @@ function ParticipantProfileCard({ conversation, onRefresh, refreshing }: { conve
             {conversation.participant_is_business_follow_user === true ? <span className="rounded-full bg-violet-500/15 px-2 py-1 text-primary">Магазин підписаний</span> : null}
           </div>
         </div>
-        {conversation.channel === "INSTAGRAM" ? <Button className="w-full sm:w-auto" variant="secondary" onClick={onRefresh} disabled={refreshing}>{refreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4" />}{profileReady ? "Оновити профіль" : "Завантажити профіль"}</Button> : null}
+        {conversation.channel === "INSTAGRAM" ? <Button className="w-full" variant="secondary" onClick={onRefresh} disabled={refreshing}>{refreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4" />}{profileReady ? "Оновити профіль" : "Завантажити профіль"}</Button> : null}
       </div>
       <p className="mt-3 text-sm text-text-secondary">{conversation.channel === "INSTAGRAM" ? "Instagram" : "Тестовий діалог"} · {conversation.messaging_window_expires_at ? `вікно до ${conversation.messaging_window_expires_at}` : "відправлення недоступне без активного messaging window"}</p>
       {conversation.channel === "INSTAGRAM" && !profileReady ? <p className="mt-2 rounded-2xl bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-700">{conversation.participant_profile_status === "RETRY_PENDING" ? "Meta тимчасово не відповідає. Дані профілю буде оновлено повторно." : conversation.participant_profile_status === "UNAVAILABLE" ? "Meta не надала дані профілю. Повідомлення й відповіді продовжують працювати з безпечним fallback." : "Завантажуємо дозволену Meta інформацію про потенційного клієнта."}</p> : null}
