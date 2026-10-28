@@ -1,11 +1,8 @@
 name: Deploy Sellora Backend Staging
 
+# Legacy Render staging is no longer the primary backend. Deploy only by an
+# explicit manual action; merging an NP fix must not deploy an obsolete target.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/render-staging-deploy.yml"
   workflow_dispatch:
 
 permissions:
