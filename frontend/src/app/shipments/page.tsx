@@ -10,6 +10,7 @@ import { clampPage, PAGE_SIZE_OPTIONS, paginateItems, PaginationControls } from 
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { Button, CompactSummary, EntitySidePanel, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
 import { ShipmentDetails } from "@/features/shipments/components/shipment-details";
+import { NovaPoshtaExternalInbox } from "@/features/shipments/components/nova-poshta-external-inbox";
 import { ShipmentForm } from "@/features/shipments/components/shipment-form";
 import { ShipmentTable } from "@/features/shipments/components/shipment-table";
 import { useAuth } from "@/hooks/use-auth";
@@ -121,6 +122,7 @@ export default function ShipmentsPage() {
     <WorkspacePage>
         <WorkspaceHeader title={t("shipments.title")} description={t("shipments.subtitle")} actions={canEdit ? <Button onClick={() => setIsCreateOpen(true)}>{t("shipments.create")}</Button> : undefined} />
         <CompactSummary layout="five-balanced" items={[{ label: t("shipments.summary.all"), value: allShipments }, { label: t("shipments.summary.ready"), value: readyShipments }, { label: t("shipments.inTransit"), value: summaryQuery.data?.in_transit_count ?? 0 }, { label: t("shipments.summary.delivered"), value: deliveredShipments || (summaryQuery.data?.delivered_today ?? 0) }, { label: t("shipments.summary.problems"), value: problemShipments || (summaryQuery.data?.returned_this_month ?? 0) }]} />
+        <NovaPoshtaExternalInbox workspaceId={workspaceId} role={currentWorkspace?.role} />
         <FilterBar>
           <SearchInput value={search} onChange={setSearch} placeholder={t("shipments.searchPlaceholder")} />
           <select className="min-h-10 w-full min-w-0 max-w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" value={status} onChange={(event) => setStatus(event.target.value as ShipmentStatus | "")}>{STATUSES.map((item) => <option key={item || "all"} value={item}>{item ? formatStatus("shipment", item) : t("common.allStatuses")}</option>)}</select>

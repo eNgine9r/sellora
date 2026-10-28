@@ -978,6 +978,18 @@
     "updateError": "Unable to save inventory changes. Please try again."
   },
   "shipments": {
+    "externalInboxTitle": "TTNs from Nova Poshta account",
+    "externalInboxDescription": "Provider documents not yet linked to Sellora orders. These are not confirmed sales.",
+    "externalScanning": "Scanning…",
+    "externalScan": "Import new TTNs",
+    "externalLoading": "Loading documents…",
+    "externalLoadError": "Unable to load external shipments.",
+    "externalScanError": "Unable to import TTNs from Nova Poshta.",
+    "externalScanned": "Discovered",
+    "externalUnmatched": "No linked order",
+    "externalConflicts": "Needs review",
+    "externalEmpty": "No unlinked TTNs yet. If you shipped parcels recently, select Import new TTNs.",
+    "externalUnknownStatus": "Status unavailable",
     "title": "Shipments",
     "subtitle": "Manage TTNs, cities, warehouses, COD, and delivery statuses.",
     "create": "Create shipment",
