@@ -9,6 +9,8 @@ import secrets
 from datetime import UTC, datetime
 from decimal import Decimal
 
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 
@@ -32,7 +34,7 @@ assert os.getenv("META_INSTAGRAM_WEBHOOK_WORKER_ENABLED") == "false"
 password = secrets.token_urlsafe(24)
 with SessionLocal() as db:
     assert db.scalar(text("SELECT count(*) FROM workspaces")) == 0, "Database is not empty"
-    assert db.scalar(text("SELECT version_num FROM alembic_version")) == "202610270049"
+    assert db.scalar(text("SELECT version_num FROM alembic_version")) == ScriptDirectory.from_config(Config("alembic.ini")).get_current_head()
     ws = Workspace(name="Isolated sale QA", slug="isolated-sale-qa")
     other = Workspace(name="Other tenant QA", slug="other-sale-qa")
     users = [User(email=f"sale-{role.lower()}@example.com", password_hash=hash_password(password),

@@ -323,7 +323,7 @@ class NovaPoshtaSettingsService:
             return NovaPoshtaTestConnectionResponse(success=False, message="Nova Poshta sender settings failed validation.", status=IntegrationStatus.ERROR, errors=[validation_error])
         connection.status = IntegrationStatus.CONNECTED.value
         verified_at = datetime.now(UTC)
-        connection.last_sync_at = verified_at
+        # A successful key check is not a delivery status synchronization.
         connection.provider_connection_verified_at = verified_at
         self.audit_logs.create(
             workspace_id=workspace_id,

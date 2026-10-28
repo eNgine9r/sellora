@@ -47,3 +47,38 @@ export async function changeShipmentStatus(workspaceId: string, shipmentId: stri
 export async function deleteShipment(workspaceId: string, shipmentId: string): Promise<void> {
   return apiRequest<void>(`/shipments/${shipmentId}`, { method: "DELETE", headers: workspaceHeaders(workspaceId) });
 }
+
+export type ExternalNovaPoshtaDocument = {
+  id: string;
+  tracking_number: string;
+  provider_status: string | null;
+  match_state: "UNMATCHED" | "LINKED" | "CONFLICT";
+  matched_shipment_id: string | null;
+  last_seen_at: string;
+};
+export type ExternalNovaPoshtaScanResult = {
+  scanned: number; unmatched: number; linked: number; conflicts: number; dry_run: boolean;
+};
+
+export async function fetchExternalNovaPoshtaDocuments(
+  workspaceId: string,
+  matchState: "UNMATCHED" | "CONFLICT",
+): Promise<ExternalNovaPoshtaDocument[]> {
+  return apiRequest<ExternalNovaPoshtaDocument[]>(
+    "/integrations/nova-poshta/external-documents?match_state=" + matchState,
+    { headers: workspaceHeaders(workspaceId) },
+  );
+}
+
+export async function scanExternalNovaPoshtaDocuments(
+  workspaceId: string, fromDate: string, toDate: string,
+): Promise<ExternalNovaPoshtaScanResult> {
+  return apiRequest<ExternalNovaPoshtaScanResult>(
+    "/integrations/nova-poshta/external-documents/scan",
+    {
+      method: "POST",
+      headers: workspaceHeaders(workspaceId),
+      body: JSON.stringify({ from_date: fromDate, to_date: toDate, dry_run: false }),
+    },
+  );
+}

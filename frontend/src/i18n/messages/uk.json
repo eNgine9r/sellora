@@ -978,6 +978,18 @@
     "updateError": "Не вдалося зберегти зміни складу. Спробуйте ще раз."
   },
   "shipments": {
+    "externalInboxTitle": "ТТН із кабінету Нової Пошти",
+    "externalInboxDescription": "Накладні, які поки не пов’язані із замовленнями Sellora. Це не підтверджені продажі.",
+    "externalScanning": "Сканування…",
+    "externalScan": "Завантажити нові ТТН",
+    "externalLoading": "Завантажуємо накладні…",
+    "externalLoadError": "Не вдалося отримати список ТТН.",
+    "externalScanError": "Не вдалося завантажити ТТН із Нової Пошти.",
+    "externalScanned": "Знайдено",
+    "externalUnmatched": "Без замовлення",
+    "externalConflicts": "Потрібна перевірка",
+    "externalEmpty": "Неприв’язаних ТТН ще немає. Якщо ви вже відправляли посилки, натисніть «Завантажити нові ТТН».",
+    "externalUnknownStatus": "Статус не визначено",
     "title": "Відправлення",
     "subtitle": "Керуйте TTN, містами, складами, COD та статусами доставки.",
     "create": "Створити відправлення",

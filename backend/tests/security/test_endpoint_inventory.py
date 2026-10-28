@@ -44,6 +44,7 @@ OWNER_ONLY_ENDPOINTS = {
     ("GET", "/api/v1/integrations/meta-ads/accounts"),
     ("POST", "/api/v1/integrations/meta-ads/account"),
     ("POST", "/api/v1/integrations/meta-ads/sync"),
+    ("POST", "/api/v1/integrations/nova-poshta/external-documents/scan"),
     ("POST", "/api/v1/workspace-users"),
     ("PUT", "/api/v1/workspace-users/{user_id}/role"),
     ("PATCH", "/api/v1/workspace-users/{user_id}/deactivate"),
@@ -64,12 +65,12 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 9,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 220,
+    "WORKSPACE_SCOPED": 222,
     "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 250
-EXPECTED_MUTATION_ROUTES = 142
+EXPECTED_TOTAL_ROUTES = 252
+EXPECTED_MUTATION_ROUTES = 143
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),

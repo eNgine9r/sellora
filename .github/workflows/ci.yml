@@ -74,6 +74,7 @@ jobs:
             tests/test_crm_completion.py \
             tests/test_instagram_customer_identity.py \
             tests/test_nova_poshta.py \
+            tests/integrations/nova_poshta/test_external_inbox.py \
             tests/test_sprint_8f_foundation_migration.py \
             tests/test_order_fulfillment.py \
             tests/test_order_fulfillment_workflow.py \

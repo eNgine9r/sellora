@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 import json
 import re
 from typing import Any
@@ -294,6 +294,39 @@ class NovaPoshtaClient:
                 ambiguous=True,
             )
         return matches[0] if matches else None
+
+    def list_internet_documents(
+        self, date_from: date | datetime,
+        date_to: date | datetime, *, page: int = 1, limit: int = 100,
+    ) -> list[NovaPoshtaDocumentResult]:
+        """Read sender-account documents; bounded pagination, no provider mutation."""
+        if page < 1 or page > 1000 or limit < 1 or limit > 100:
+            raise ValueError("NOVA_POSHTA_LIST_PAGE_INVALID")
+        body = self._call(
+            "InternetDocument", "getDocumentList",
+            {
+                "DateTimeFrom": date_from.strftime("%d.%m.%Y"),
+                "DateTimeTo": date_to.strftime("%d.%m.%Y"),
+                "Page": str(page), "Limit": str(limit), "GetFullList": "0",
+            },
+        )
+        rows = body.get("data")
+        if not isinstance(rows, list):
+            raise NovaPoshtaClientError("Unexpected list response", code="NOVA_POSHTA_LIST_FORMAT_INVALID")
+        result: list[NovaPoshtaDocumentResult] = []
+        for item in rows:
+            if not isinstance(item, dict):
+                raise NovaPoshtaClientError("Unexpected list item", code="NOVA_POSHTA_LIST_FORMAT_INVALID")
+            number = str(item.get("IntDocNumber") or item.get("Number") or "").strip()
+            # Never persist other identifiers or raw private recipient data.
+            if not re.fullmatch(r"20\d{12}", number):
+                raise NovaPoshtaClientError("Invalid TTN in provider listing", code="NOVA_POSHTA_LIST_NUMBER_INVALID")
+            result.append(NovaPoshtaDocumentResult(
+                tracking_number=number,
+                document_ref=str(item.get("Ref") or "")[:120],
+                status=(str(item.get("StateName") or item.get("Status") or "").strip()[:255] or None),
+            ))
+        return result
 
     def get_document_tracking(self, tracking_number: str) -> NovaPoshtaTrackingResult | None:
         body = self._call(
