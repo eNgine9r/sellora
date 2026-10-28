@@ -149,3 +149,43 @@ def search_sender_contacts(
         return NovaPoshtaDirectoryService(db).search_sender_contacts(workspace_id, sender_ref, limit)
     except NovaPoshtaServiceError as exc:
         raise _bad_request(exc)
+
+
+# External TTNs are not orders. Keep them in a separate read-only-to-provider inbox.
+from datetime import date
+from app.schemas.nova_poshta_external import (
+    NovaPoshtaExternalDocumentResponse, NovaPoshtaExternalScanRequest,
+)
+from app.services.nova_poshta_external_inbox_service import NovaPoshtaExternalInboxService
+
+
+@router.get(
+    "/external-documents", response_model=list[NovaPoshtaExternalDocumentResponse],
+    dependencies=[Depends(require_min_role(RoleName.MANAGER))],
+)
+def list_external_documents(
+    workspace_id: UUID = Depends(get_workspace_id),
+    match_state: str | None = Query(default=None, pattern="^(UNMATCHED|LINKED|CONFLICT)$"),
+    db: Session = Depends(get_db),
+):
+    return NovaPoshtaExternalInboxService(db).list(workspace_id, state=match_state)
+
+
+@router.post("/external-documents/scan")
+def scan_external_documents(
+    payload: NovaPoshtaExternalScanRequest,
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.OWNER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return NovaPoshtaExternalInboxService(db).collect(
+            workspace_id, payload.from_date, payload.to_date, dry_run=payload.dry_run
+        )
+    except (ValueError, NovaPoshtaServiceError) as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    except Exception:
+        db.rollback()
+        # Third-party errors must never expose provider response or credentials.
+        raise HTTPException(status_code=502, detail="NOVA_POSHTA_SCAN_PROVIDER_FAILED") from None
