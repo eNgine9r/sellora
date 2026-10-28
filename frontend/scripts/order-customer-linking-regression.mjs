@@ -19,6 +19,8 @@ function assertNoMarker(path, marker, label = marker) {
 
 const orderForm = "frontend/src/features/orders/components/order-form.tsx";
 const ordersPage = "frontend/src/app/orders/page.tsx";
+const fulfillmentWizard = "frontend/src/features/orders/components/order-fulfillment-wizard.tsx";
+const fulfillmentService = "backend/app/services/order_fulfillment_service.py";
 const orderDetails = "frontend/src/features/orders/components/order-details.tsx";
 const shipmentForm = "frontend/src/features/shipments/components/shipment-form.tsx";
 const payloadBuilders = "frontend/src/lib/payload-builders.ts";
@@ -45,7 +47,14 @@ assertMarker(orderForm, "customers.quickCreate");
 assertMarker(orderForm, "customers.quickCreateError");
 assertMarker(orderForm, "orders.customerRequired");
 assertMarker(ordersPage, "fetchCustomers(workspaceId)");
-assertMarker(ordersPage, "createCustomerMutation");
+assertMarker(ordersPage, "<OrderFulfillmentWizard");
+assertMarker(fulfillmentWizard, 'createOrderFulfillment(workspaceId, payload)');
+assertMarker(fulfillmentWizard, 'customer_id: mode === "existing" ? customerId : null');
+assertMarker(fulfillmentWizard, 'customer_name: mode === "new" ? customerName.trim() : null');
+assertMarker(fulfillmentWizard, 'customer_phone: mode === "new"');
+assertMarker(fulfillmentService, 'customer = self.customers.create(');
+assertMarker(fulfillmentService, 'name=(payload.customer_name or "").strip()');
+assertMarker(fulfillmentService, 'phone=payload.customer_phone or payload.recipient_phone');
 assertMarker(ordersPage, "customer_name");
 assertMarker(ordersPage, "customer_instagram_username");
 
