@@ -1097,17 +1097,17 @@ function ParticipantProfileCard({ conversation, onRefresh, refreshing }: { conve
         <ParticipantAvatar conversation={conversation} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-lg font-black">{conversation.participant_display_name ?? "Instagram customer"}</h2>
+            <h2 className="break-words text-lg font-black">{conversation.participant_display_name ?? "Instagram customer"}</h2>
             {conversation.participant_is_verified_user ? <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-1 text-xs font-bold text-sky-600"><BadgeCheck className="h-3.5 w-3.5" />Verified</span> : null}
           </div>
-          <p className="text-sm text-text-secondary">{conversation.participant_username ? `@${conversation.participant_username}` : "Username поки недоступний"}</p>
+          <p className="break-all text-sm text-text-secondary">{conversation.participant_username ? `@${conversation.participant_username}` : "Username поки недоступний"}</p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-text-secondary">
             {followers ? <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-1"><Users className="h-3.5 w-3.5" />{followers} підписників</span> : null}
             {conversation.participant_is_user_follow_business === true ? <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-700">Підписаний на магазин</span> : null}
             {conversation.participant_is_business_follow_user === true ? <span className="rounded-full bg-violet-500/15 px-2 py-1 text-primary">Магазин підписаний</span> : null}
           </div>
         </div>
-        {conversation.channel === "INSTAGRAM" ? <Button variant="secondary" onClick={onRefresh} disabled={refreshing}>{refreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4" />}{profileReady ? "Оновити профіль" : "Завантажити профіль"}</Button> : null}
+        {conversation.channel === "INSTAGRAM" ? <Button className="w-full sm:w-auto" variant="secondary" onClick={onRefresh} disabled={refreshing}>{refreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4" />}{profileReady ? "Оновити профіль" : "Завантажити профіль"}</Button> : null}
       </div>
       <p className="mt-3 text-sm text-text-secondary">{conversation.channel === "INSTAGRAM" ? "Instagram" : "Тестовий діалог"} · {conversation.messaging_window_expires_at ? `вікно до ${conversation.messaging_window_expires_at}` : "відправлення недоступне без активного messaging window"}</p>
       {conversation.channel === "INSTAGRAM" && !profileReady ? <p className="mt-2 rounded-2xl bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-700">{conversation.participant_profile_status === "RETRY_PENDING" ? "Meta тимчасово не відповідає. Дані профілю буде оновлено повторно." : conversation.participant_profile_status === "UNAVAILABLE" ? "Meta не надала дані профілю. Повідомлення й відповіді продовжують працювати з безпечним fallback." : "Завантажуємо дозволену Meta інформацію про потенційного клієнта."}</p> : null}
