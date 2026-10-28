@@ -44,7 +44,7 @@ export function NovaPoshtaExternalInbox({
   const scan = useMutation({
     mutationFn: () => scanExternalNovaPoshtaDocuments(
       workspaceId,
-      kyivDate(Date.now() - 2 * 86_400_000),
+      kyivDate(Date.now() - 6 * 86_400_000),
       kyivDate(Date.now()),
     ),
     onSuccess: (result) => {
