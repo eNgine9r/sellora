@@ -39,6 +39,26 @@ services:
       postgres:
         condition: service_healthy
 
+  # Opt-in worker. Disabled unless selected via --profile np-sync, and both
+  # feature flags are explicitly enabled. Uses only provider read endpoints.
+  np-sync:
+    profiles: ["np-sync"]
+    build:
+      context: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sellora:sellora@postgres:5432/sellora}
+      SECRET_KEY: ${SECRET_KEY:-local-development-secret}
+      JWT_SECRET: ${JWT_SECRET:-local-development-jwt-secret}
+      SELLORA_NP_EXTERNAL_SYNC_ENABLED: ${SELLORA_NP_EXTERNAL_SYNC_ENABLED:-false}
+      SELLORA_NP_TRACKING_SYNC_ENABLED: ${SELLORA_NP_TRACKING_SYNC_ENABLED:-false}
+    command: ["sh", "scripts/np_sync_loop.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
   frontend:
     build:
       context: ./frontend
