@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from app.integrations.nova_poshta_client import NovaPoshtaClient, NovaPoshtaClientError
 from app.models.integration_connection import IntegrationStatus
@@ -10,6 +11,7 @@ from app.repositories.nova_poshta_external_repository import NovaPoshtaExternalR
 from app.services.nova_poshta_service import NovaPoshtaSettingsService, NovaPoshtaServiceError
 
 MAX_DAYS = 7
+UKRAINE_TZ = ZoneInfo("Europe/Kyiv")
 PAGE_SIZE = 100
 MAX_PAGES_PER_DAY = 10
 
@@ -25,7 +27,7 @@ class NovaPoshtaExternalInboxService:
         return self.repo.list_for_workspace(workspace_id, state=state)
 
     def collect(self, workspace_id: UUID, from_date: date, to_date: date, *, dry_run: bool = False) -> dict:
-        if from_date > to_date or (to_date - from_date).days >= MAX_DAYS or to_date > datetime.now(UTC).date():
+        if from_date > to_date or (to_date - from_date).days >= MAX_DAYS or to_date > datetime.now(UKRAINE_TZ).date():
             raise ValueError("NOVA_POSHTA_SCAN_RANGE_INVALID")
         connection, key = self.settings._require_connection(workspace_id)
         if connection.status != IntegrationStatus.CONNECTED.value:

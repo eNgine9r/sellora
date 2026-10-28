@@ -6,7 +6,8 @@ Requires SELLORA_NP_EXTERNAL_SYNC_ENABLED=true; --dry-run performs no provider c
 import argparse
 import logging
 import os
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 
@@ -36,7 +37,7 @@ def run_once(*, dry_run: bool = False):
             stats["workspaces"] = len(workspaces)
             if dry_run:
                 return stats
-            today = datetime.now(UTC).date()
+            today = datetime.now(ZoneInfo("Europe/Kyiv")).date()
             # An overlapping 3-day window safely captures delayed provider documents.
             for workspace_id in workspaces:
                 with SessionLocal() as db:

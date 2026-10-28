@@ -297,7 +297,7 @@ class NovaPoshtaClient:
 
     def list_internet_documents(
         self, date_from: date | datetime,
-        date_to: datetime | __import__("datetime").date, *, page: int = 1, limit: int = 100,
+        date_to: date | datetime, *, page: int = 1, limit: int = 100,
     ) -> list[NovaPoshtaDocumentResult]:
         """Read sender-account documents; bounded pagination, no provider mutation."""
         if page < 1 or page > 1000 or limit < 1 or limit > 100:
