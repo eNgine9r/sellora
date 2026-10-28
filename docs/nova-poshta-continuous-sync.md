@@ -14,3 +14,5 @@ The import is provider-read-only. Only workspace-scoped inbox records are added.
 5. Monitor `NP_EXTERNAL_INBOX_SUMMARY` and `NP_TRACKING_SUMMARY`. A successful API key check MUST NOT be displayed as a new delivery status sync.
 
 **Limits:** The existing tracking worker processes 10 shipments/run. The initial 266 pending TTNs therefore need many runs, with rate limits. Inbox items without an exact existing shipment remain `UNMATCHED`, not synthetic sales. No carrier TTN is created or cancelled.
+
+**Frontend release safety:** `NEXT_PUBLIC_NP_EXTERNAL_INBOX_ENABLED=false` by default. Enable only after backend deploy, additive migration and read-only provider smoke test, then rebuild/redeploy frontend. Until then, the existing Shipments screen is unchanged.

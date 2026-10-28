@@ -27,7 +27,7 @@ export function NovaPoshtaExternalInbox({
   const { t } = useI18n();
   const client = useQueryClient();
   const [lastScan, setLastScan] = useState<ExternalNovaPoshtaScanResult | null>(null);
-  const visible = role === "OWNER" || role === "MANAGER";
+  const visible = process.env.NEXT_PUBLIC_NP_EXTERNAL_INBOX_ENABLED === "true" && (role === "OWNER" || role === "MANAGER");
   const key = ["np-external-inbox", workspaceId];
   const query = useQuery({
     queryKey: key,
