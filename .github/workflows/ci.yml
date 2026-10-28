@@ -255,6 +255,9 @@ jobs:
       - name: Verify Direct product suggestion boundaries
         working-directory: frontend
         run: node scripts/direct-product-proposal-test.cjs
+      - name: Verify Direct identity review
+        working-directory: frontend
+        run: node scripts/direct-identity-review-test.cjs
       - name: Typecheck
         working-directory: frontend
         run: npm run typecheck
