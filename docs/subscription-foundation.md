@@ -31,8 +31,15 @@ An empty-table downgrade is supported; a populated table blocks destructive roll
 
 Do not migrate production or enable payments as part of this PR. A later release
 requires the usual backup, migration gate, pinned image, readiness and rollback
-verification; deployments using a non-owner database role also need an explicit
-least-privilege backend grant. Existing access and legacy plan labels are preserved.
+verification; deployments using a non-owner database role also need explicit
+least-privilege table permission and a reviewed RLS access path. A bare `SELECT`
+grant does not bypass RLS. Prove persisted managed-term visibility under the actual
+app role in a disposable environment. Existing access and legacy plan labels are
+preserved.
+
+The [Raspberry release overlay](operations/subscription-foundation-release.md)
+documents the existing guarded handoff, migration prerequisites, RLS role check
+and a GET-only subscription canary. It does not authorize or perform deployment.
 
 ## Next package
 
