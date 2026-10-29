@@ -232,6 +232,22 @@ jobs:
           alembic upgrade head
           PYTHONPATH=. python scripts/verify_sale_api_canary.py
 
+      - name: Verify workspace subscriptions on disposable PostgreSQL
+        env:
+          SELLORA_SUBSCRIPTIONS_DISPOSABLE_CANARY: "YES"
+        run: |
+          python - <<'PYTHON'
+          import os
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.environ["DATABASE_URL"], isolation_level="AUTOCOMMIT")
+          with engine.connect() as connection:
+              connection.execute(text("CREATE DATABASE sellora_subscriptions_canary_isolated"))
+          engine.dispose()
+          PYTHON
+          export DATABASE_URL=postgresql+psycopg://sellora:sellora@localhost:5432/sellora_subscriptions_canary_isolated
+          alembic upgrade head
+          python -m pytest -q tests/subscriptions
+
   frontend-production:
     name: frontend-production
     runs-on: ubuntu-24.04
