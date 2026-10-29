@@ -272,7 +272,6 @@ jobs:
       SELLORA_DIRECT_CONFLICT_MANIFEST: /tmp/sellora-direct-client-conflict.json
       PYTHONPATH: .
       NO_PROXY: 127.0.0.1,localhost
-      no_proxy: 127.0.0.1,localhost
       META_INSTAGRAM_WEBHOOK_WORKER_ENABLED: "false"
       META_INSTAGRAM_WEBHOOK_PROCESSING_ENABLED: "false"
       META_INSTAGRAM_SEND_ENABLED: "false"
