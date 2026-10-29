@@ -7,7 +7,7 @@ accepted live rollout command.** Production remains on the original image/schema
 until the missing native facts and backup proof are reviewed and pinned.
 
 In the reviewed checkout, from an interactive terminal as the native configuration
-owner (UID 1000), run only this concrete discovery command:
+owner (UID 1000), the regular preflight command is:
 
 ```sh
 python3 deploy/raspberry/sellora_s8_subscription_release.py --preflight
@@ -15,8 +15,9 @@ python3 deploy/raspberry/sellora_s8_subscription_release.py --preflight
 
 It performs no systemctl stop/start, configuration writes, container creation or
 migration. It reads only the fixed release/configuration paths, image/container
-metadata, schema/role flags, loopback health endpoints and the known user service
-`sellora-api-watchdog.service`. Its `TriggeredBy` fact is reported without guessing
+metadata, schema/role flags, loopback health endpoints and the expected service
+`sellora-api-watchdog.service` in the currently configured user manager. Its
+`TriggeredBy` fact is reported without guessing
 or querying an unverified timer. Output omits environment values, database URLs,
 tokens and response bodies. Exit 1 with `PREFLIGHT_BLOCKED` is expected while pins
 are incomplete; other failures have bounded check codes.
@@ -26,10 +27,32 @@ the failing path, octal mode (for example `0664`), UID and GID. It reports no fi
 contents or subprocess error text. The permission guard still blocks both preflight
 and apply; the helper never changes file permissions.
 
+After `unit_not_loaded_or_recognized`, the user/system service context remains
+unverified. The next native-owner diagnostic is:
+
+```sh
+python3 deploy/raspberry/sellora_s8_subscription_release.py --inspect-services
+```
+
+This separate read-only mode uses only `systemctl list-unit-files`,
+`list-units --all` and `show` against both user and system managers. It includes the
+fixed expected watchdog service and at most 16 discovered names per manager,
+strictly filtered to `sellora*watchdog*` / `sellora*backup*` services and timers.
+One JSON reports explicit scopes, names, allowlisted unit metadata and bounded
+query failure codes; it excludes stderr, logs, contents, ExecStart and Environment.
+Values over 2048 characters are omitted and their field names recorded. No files,
+Docker, database, or unit lifecycle operations are used. Missing units/managers
+remain observations, and successful collection does not approve a rollout.
+
+Inspection cannot be combined with preflight/apply and does not alter their fixed
+user-manager assumptions, pins or guards. The historical S2 helper contains no
+systemctl operations and establishes neither namespace. Review actual native
+facts before any future release change; this mode does not fix service configuration.
+
 This command belongs in the owner's native session. A remote-control policy denied
 access to the watchdog service and protected configuration writes; do not use this
 helper through that tool or substitute another interface to bypass the boundary.
-No sudo, system unit operation, permission change or policy change is included.
+No sudo, system unit lifecycle operation, permission change or policy change is included.
 
 ## Unresolved facts
 

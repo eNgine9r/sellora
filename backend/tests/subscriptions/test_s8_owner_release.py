@@ -325,3 +325,122 @@ def test_native_owner_and_no_symlink_guards(target, monkeypatch):
     target.env.symlink_to(actual)
     with pytest.raises(release.ReleaseError, match="symlink_or_relative_path"):
         release.preflight()
+
+
+@pytest.fixture
+def service_inventory(monkeypatch):
+    monkeypatch.setattr(release, "OWNER_UID", os.getuid())
+    monkeypatch.setattr(release.os, "isatty", lambda fd: True)
+    state = SimpleNamespace(calls=[], failure=None, many=False, show_failure=False, oversized=False)
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Inspection attempted a non-inventory operation")
+    for name in ("preflight", "apply", "regular_file", "atomic_write", "save_configs", "container", "schema"):
+        monkeypatch.setattr(release, name, forbidden)
+    def run(args, **kwargs):
+        state.calls.append(args)
+        assert args[0] == "systemctl" and args[1] in {"--user", "--system"}
+        assert args[2] in {"list-unit-files", "list-units", "show"}
+        assert "--no-ask-password" in args
+        assert kwargs["stderr"] == release.subprocess.DEVNULL
+        scope, action = args[1], args[2]
+        if scope == "--user" and action == "list-unit-files" and state.failure:
+            if state.failure == "unavailable":
+                raise OSError("synthetic-secret")
+            if state.failure == "timeout":
+                raise release.subprocess.TimeoutExpired(args, 5, stderr="synthetic-secret")
+            return SimpleNamespace(returncode=1, stdout="synthetic-secret", stderr="synthetic-secret")
+        if action == "list-unit-files":
+            names = ([f"sellora-backup-{index:03}.timer enabled" for index in range(30)] if state.many else [
+                release.SERVICE_UNIT + " enabled", "sellora-api-watchdog.timer enabled",
+                "sellora-db-backup.service static", "unrelated-backup.service enabled",
+                "../sellora-watchdog.service enabled", "sellora-watchdog.service;bad enabled",
+                "sellora-other.service enabled", "sellora-watchdog.service/invalid enabled",
+            ])
+            return SimpleNamespace(returncode=0, stdout="\n".join(names), stderr="")
+        if action == "list-units":
+            assert "--all" in args
+            return SimpleNamespace(returncode=0, stdout="sellora-api-watchdog@synthetic.service loaded inactive dead\nsellora-api-watchdog.timer loaded active waiting", stderr="")
+        assert args[-1].startswith("sellora") and args[-1].endswith((".service", ".timer"))
+        assert "--property=" + ",".join(release.INSPECT_PROPERTIES) in args
+        extra = "\nDropInPaths=" + "x" * 2049 if state.oversized else ""
+        return SimpleNamespace(returncode=4 if state.show_failure and scope == "--user" else 0,
+            stdout=f"Id={args[-1]}\nLoadState={'not-found' if scope == '--user' else 'loaded'}\nActiveState=inactive\nFragmentPath=/synthetic/unit\nUser=synthetic\nGroup=synthetic\nResult=success\nExecMainStatus=0\nEnvironment=synthetic-secret\nExecStart=synthetic-secret" + extra, stderr="")
+    monkeypatch.setattr(release.subprocess, "run", run)
+    return state
+
+
+def test_native_service_inspection_reports_both_scopes_without_approving_or_mutating(service_inventory, capsys):
+    before = release.TIMER_UNIT, dict(release.UNIT_PINS), release.LOCK_VERIFIED
+    assert release.main(["--inspect-services"]) == 0
+    output = capsys.readouterr()
+    assert output.err == "" and len(output.out.splitlines()) == 1 and "synthetic-secret" not in output.out
+    result = json.loads(output.out)
+    assert result["result"] == "SERVICE_INSPECTION" and result["diagnostic_only"] is True
+    assert [scope["scope"] for scope in result["scopes"]] == ["user", "system"]
+    for scope in result["scopes"]:
+        assert scope["known_units"] == [release.SERVICE_UNIT]
+        assert scope["discovered_units"] == ["sellora-api-watchdog.timer", "sellora-api-watchdog@synthetic.service", "sellora-db-backup.service"]
+        assert scope["units"][0]["fields"]["LoadState"] == ("not-found" if scope["scope"] == "user" else "loaded")
+        assert all(set(unit["fields"]) <= set(release.INSPECT_PROPERTIES) for unit in scope["units"])
+    assert (release.TIMER_UNIT, release.UNIT_PINS, release.LOCK_VERIFIED) == before
+
+
+@pytest.mark.parametrize("failure,code", [("failed", "query_failed"), ("unavailable", "query_unavailable"), ("timeout", "query_timeout")])
+def test_service_inspection_query_failures_are_bounded_observations(service_inventory, capsys, failure, code):
+    service_inventory.failure = failure
+    assert release.main(["--inspect-services"]) == 0
+    output = capsys.readouterr().out
+    result = json.loads(output)
+    assert result["scopes"][0]["queries"]["list-unit-files"]["code"] == code
+    assert result["scopes"][1]["queries"]["list-unit-files"]["code"] == "ok"
+    assert "synthetic-secret" not in output
+
+
+def test_service_discovery_is_filtered_deduplicated_and_bounded(service_inventory, capsys):
+    service_inventory.many = True
+    assert release.main(["--inspect-services"]) == 0
+    for scope in json.loads(capsys.readouterr().out)["scopes"]:
+        assert len(scope["discovered_units"]) == release.INSPECT_UNIT_LIMIT and scope["discovery_truncated"] is True
+        assert len(scope["units"]) == release.INSPECT_UNIT_LIMIT + 1
+    assert len([call for call in service_inventory.calls if call[2] == "show"]) == 2 * (release.INSPECT_UNIT_LIMIT + 1)
+
+
+def test_inspection_preserves_not_found_metadata_on_failed_show(service_inventory, capsys):
+    service_inventory.show_failure = True
+    assert release.main(["--inspect-services"]) == 0
+    unit = json.loads(capsys.readouterr().out)["scopes"][0]["units"][0]
+    assert unit["query"] == {"code": "query_failed", "exit_code": 4}
+    assert unit["fields"]["LoadState"] == "not-found"
+
+
+def test_inspection_omits_oversized_values(service_inventory, capsys):
+    service_inventory.oversized = True
+    assert release.main(["--inspect-services"]) == 0
+    for scope in json.loads(capsys.readouterr().out)["scopes"]:
+        for unit in scope["units"]:
+            assert "DropInPaths" not in unit["fields"] and unit["oversized_fields"] == ["DropInPaths"]
+
+
+@pytest.mark.parametrize("action,unit", [("restart", release.SERVICE_UNIT), ("show", "unrelated.service")])
+def test_inventory_query_rejects_mutation_or_unrelated_names(service_inventory, action, unit):
+    with pytest.raises(release.ReleaseError):
+        release._inspect_query("user", action, unit)
+    assert service_inventory.calls == []
+
+
+@pytest.mark.parametrize("guard", ["uid", "tty"])
+def test_service_inspection_retains_native_owner_guard(service_inventory, monkeypatch, capsys, guard):
+    if guard == "uid":
+        monkeypatch.setattr(release, "OWNER_UID", os.getuid() + 1)
+    else:
+        monkeypatch.setattr(release.os, "isatty", lambda fd: False)
+    assert release.main(["--inspect-services"]) == 1
+    assert json.loads(capsys.readouterr().out)["check"] == "native_owner_terminal_required"
+    assert service_inventory.calls == []
+
+
+@pytest.mark.parametrize("other", ["--apply", "--preflight"])
+def test_service_inspection_cannot_be_combined_with_rollout_modes(service_inventory, other):
+    with pytest.raises(SystemExit) as exc:
+        release.main(["--inspect-services", other])
+    assert exc.value.code == 2 and service_inventory.calls == []
