@@ -14,6 +14,13 @@ spec = importlib.util.spec_from_file_location("s8_source_review", SCRIPT)
 review = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(review)
 
+OBSERVED_SOURCE_PATHS = {
+    "sellora-runtime-health-watchdog.service": "/home/btcradar/.local/lib/sellora/api_watchdog.py",
+    "sellora-db-backup.service": "/home/btcradar/runtime/sellora/protected-backups/backup-sellora.sh",
+    "sellora-offhost-encrypted-backup.service": "/home/btcradar/runtime/sellora/protected-backups/push-to-nexolab.sh",
+    "sellora-google-drive-backup.service": "/home/btcradar/runtime/sellora/protected-backups/upload-to-google-drive.sh",
+}
+
 
 @pytest.fixture
 def native(tmp_path, monkeypatch):
@@ -238,3 +245,127 @@ def test_output_failure_removes_only_our_new_partial_file(native, monkeypatch, c
     assert "SYNTHETIC" not in output
     assert list(home.glob("sellora-s8-source-review-*/review.md")) == []
     assert {path: path.read_bytes() for path in units.iterdir()} == before
+
+
+@pytest.fixture
+def observed_native(native, monkeypatch):
+    home, units, _ = native
+    paths = {unit: home / Path(path).relative_to("/home/btcradar") for unit, path in OBSERVED_SOURCE_PATHS.items()}
+    monkeypatch.setattr(review, "OBSERVED_SOURCE_PATHS", paths, raising=False)
+    for unit, path in paths.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("#!/usr/bin/python3\nraise RuntimeError('DO NOT EXECUTE ACTUAL-PATH FIXTURE')\n" if path.suffix == ".py"
+                        else "#!/bin/bash\necho DO-NOT-EXECUTE-ACTUAL-PATH-FIXTURE\n")
+        interpreter = "/usr/bin/python3" if path.suffix == ".py" else "/bin/bash"
+        (units / unit).write_text(f"[Service]\nExecStart={interpreter} {path}\n")
+    monkeypatch.setattr(review, "WATCHDOG_HASHES", {
+        unit: hashlib.sha256((units / unit).read_bytes()).hexdigest() for unit in review.WATCHDOG_HASHES
+    })
+    return home, units, paths
+
+
+def test_observed_defaults_are_exact_file_allowlist():
+    assert {unit: str(path) for unit, path in review.OBSERVED_SOURCE_PATHS.items()} == OBSERVED_SOURCE_PATHS
+
+
+def test_four_literal_observed_sources_are_collected_without_scanning_or_execution(observed_native, monkeypatch, capsys):
+    _, units, paths = observed_native
+    seen, original = [], review.read_source
+    def read(path, limit):
+        seen.append(path)
+        return original(path, limit)
+    monkeypatch.setattr(review, "read_source", read)
+    before = {path: path.read_bytes() for path in paths.values()}
+    code, result, output = invoke(capsys)
+    actual_scripts = {Path(item["path"]) for item in result["files"] if item["kind"] == "script"}
+    assert code == 0 and actual_scripts == set(paths.values())
+    assert set(seen) == {units / name for name in review.UNIT_NAMES} | set(paths.values())
+    assert result["collection_summary"] == {"units_collected": 8, "scripts_collected": 4,
+                                             "observed_sources_expected": 4, "observed_sources_collected": 4}
+    assert "DO-NOT-EXECUTE" not in output and "DO NOT EXECUTE" not in output
+    assert not any(item["code"].startswith("observed_source") for item in result["unresolved_dependencies"])
+    assert result["review_required"] is True
+    assert {path: path.read_bytes() for path in paths.values()} == before
+
+
+@pytest.mark.parametrize("wrapper", [
+    "/bin/bash -lc 'exec /usr/bin/bash {path}'",
+    "/bin/sh -c '{path}; printf SYNTHETIC_PRIVATE_ARGUMENT'",
+    "/usr/bin/env bash {path}",
+    '/bin/bash -c \'exec "{path}"\'',
+    "/bin/bash -c '{path}>/dev/null'",
+    "/bin/bash -c '{path}</dev/null'",
+])
+def test_exact_observed_tokens_in_wrappers_are_collected_but_invocation_remains_unreviewed(observed_native, capsys, wrapper):
+    _, units, paths = observed_native
+    unit = "sellora-offhost-encrypted-backup.service"
+    (units / unit).write_text("[Service]\nExecStart=" + wrapper.format(path=paths[unit]) + "\n")
+    code, result, output = invoke(capsys)
+    assert code == 0 and {Path(item["path"]) for item in result["files"] if item["kind"] == "script"} == set(paths.values())
+    assert any(item.get("path") == str(units / unit) and item["code"] == "unsupported_invocation"
+               for item in result["unresolved_dependencies"])
+    metadata = next(item for item in result["files"] if item["path"] == str(units / unit))
+    assert metadata["redactions"] == [{"line": 2, "end_line": 2, "directive": "ExecStart"}]
+    assert "SYNTHETIC_PRIVATE_ARGUMENT" not in Path(result["artifact_path"]).read_text() + output
+
+
+@pytest.mark.parametrize("interpreter", ["/bin/bash", "/usr/bin/bash", "/bin/sh", "/usr/bin/sh"])
+def test_plain_shell_interpreter_and_exact_script_is_supported(observed_native, capsys, interpreter):
+    _, units, paths = observed_native
+    unit = "sellora-db-backup.service"
+    (units / unit).write_text(f"[Service]\nExecStart={interpreter} {paths[unit]}\n")
+    _, result, _ = invoke(capsys)
+    assert not any(item.get("path") == str(units / unit) and item["code"] == "unsupported_invocation"
+                   for item in result["unresolved_dependencies"])
+
+
+def test_dynamic_source_and_neighbor_credentials_are_not_read_and_coverage_reports_omission(observed_native, capsys):
+    _, units, paths = observed_native
+    unit = "sellora-offhost-encrypted-backup.service"
+    neighbor = paths[unit].with_name("credential.env")
+    neighbor.write_text("SYNTHETIC_PRIVATE_CREDENTIAL_FILE")
+    (units / unit).write_text(f'[Service]\nExecStart=/bin/bash -c \'"$SCRIPT" --credential {neighbor}\'\n')
+    _, result, output = invoke(capsys)
+    assert result["collection_summary"]["observed_sources_collected"] == 3
+    assert {"unit": unit, "path": str(paths[unit]), "code": "observed_source_not_collected"} in result["unresolved_dependencies"]
+    assert str(neighbor) not in [item["path"] for item in result["files"]]
+    assert "SYNTHETIC_PRIVATE_CREDENTIAL_FILE" not in Path(result["artifact_path"]).read_text() + output
+
+
+def test_observed_allowlist_does_not_admit_neighbors_or_secret_artifacts(observed_native):
+    _, _, paths = observed_native
+    for path in paths.values():
+        for name in ("neighbor.sh", "credentials.env", "key.pem", "latest.pgdump.enc", "receipt.json", "backup.log"):
+            with pytest.raises(review.ReviewError, match="source_path_not_allowed"):
+                review.read_source(path.with_name(name), 100)
+
+
+def test_plain_script_with_extra_secret_arguments_is_collected_but_arguments_hidden(observed_native, capsys):
+    _, units, paths = observed_native
+    unit = "sellora-db-backup.service"
+    (units / unit).write_text(f"[Service]\nExecStart=/bin/bash {paths[unit]} --key SYNTHETIC_PRIVATE_ARG\n")
+    _, result, output = invoke(capsys)
+    assert result["collection_summary"]["observed_sources_collected"] == 4
+    assert "SYNTHETIC_PRIVATE_ARG" not in Path(result["artifact_path"]).read_text() + output
+    assert any(item["code"] == "unsupported_invocation" and item.get("path") == str(units / unit)
+               for item in result["unresolved_dependencies"])
+
+
+def test_lexical_budget_reports_incomplete_without_interpreting_dynamic_value(observed_native, capsys):
+    _, units, paths = observed_native
+    unit = "sellora-offhost-encrypted-backup.service"
+    (units / unit).write_text("[Service]\nExecStart=/bin/bash -c '" + "word " * 130 + str(paths[unit]) + "'\n")
+    _, result, _ = invoke(capsys)
+    assert any(item["code"] == "lexical_source_discovery_incomplete" for item in result["unresolved_dependencies"])
+    assert {"unit": unit, "path": str(paths[unit]), "code": "observed_source_not_collected"} in result["unresolved_dependencies"]
+
+
+def test_observed_protected_directory_symlink_is_not_followed(observed_native, capsys):
+    _, _, paths = observed_native
+    folder = paths["sellora-db-backup.service"].parent
+    actual = folder.with_name("actual-private-inputs")
+    folder.rename(actual)
+    folder.symlink_to(actual, target_is_directory=True)
+    _, result, _ = invoke(capsys)
+    assert result["collection_summary"]["observed_sources_collected"] == 1
+    assert sum(item["code"] == "source_unavailable_or_unsafe" for item in result["unresolved_dependencies"]) == 3
