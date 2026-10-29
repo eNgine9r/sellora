@@ -41,6 +41,11 @@ LOCK_FILE = PLAN_FILE.with_suffix(".lock")
 COMPOSE_DIR = Path("/home/btcradar/commander-workspaces/sellora-migration/repo/deploy/raspberry")
 CONTAINER = "sellora-rpi-backend-1"
 SERVICE_UNIT = "sellora-api-watchdog.service"
+INSPECT_PROPERTIES = ("Id", "LoadState", "ActiveState", "FragmentPath", "TriggeredBy", "Triggers", "DropInPaths",
+                      "NeedDaemonReload", "UnitFileState", "User", "Group", "Result", "ExecMainStatus", "LastTriggerUSec")
+INSPECT_PATTERNS = ("sellora*watchdog*.service", "sellora*watchdog*.timer", "sellora*backup*.service", "sellora*backup*.timer")
+INSPECT_UNIT_LIMIT = 16  # Discovered units per manager, plus the fixed expected service.
+INSPECT_NAME = re.compile(r"sellora[A-Za-z0-9_.@:-]*(?:watchdog|backup)[A-Za-z0-9_.@:-]*\.(?:service|timer)", re.ASCII)
 # Unknown runtime facts remain unset. Native preflight may observe them; it does
 # not turn observations into trusted apply pins or guess a timer name/path.
 TIMER_UNIT: str | None = None
@@ -131,6 +136,57 @@ def unit_state(name: str) -> dict[str, str]:
     regular_file(fragment, owner=None)
     state["sha256"] = digest(fragment)
     return state
+
+
+def _inspect_query(scope: str, action: str, unit: str | None = None) -> tuple[str, dict]:
+    require(scope in {"user", "system"}, "inspection_scope_not_allowed")
+    if action == "show":
+        require(isinstance(unit, str) and len(unit) <= 255 and INSPECT_NAME.fullmatch(unit) is not None, "inspection_unit_not_allowed")
+        arguments = ("show", "--no-ask-password", "--no-pager", "--property=" + ",".join(INSPECT_PROPERTIES), unit)
+    else:
+        require(action in {"list-unit-files", "list-units"}, "inspection_query_not_allowed")
+        arguments = (action, "--no-ask-password", "--no-legend", "--no-pager", "--plain", *(("--all",) if action == "list-units" else ()), *INSPECT_PATTERNS)
+    clean = {key: value for key, value in os.environ.items() if not key.startswith(("SELLORA_", "COMPOSE_"))}
+    try:
+        result = subprocess.run(("systemctl", "--" + scope, *arguments), stdout=subprocess.PIPE,
+                                stderr=subprocess.DEVNULL, text=True, env=clean, timeout=5, check=False)
+    except subprocess.TimeoutExpired:
+        return "", {"code": "query_timeout"}
+    except (OSError, subprocess.SubprocessError):
+        return "", {"code": "query_unavailable"}
+    return result.stdout, {"code": "ok" if result.returncode == 0 else "query_failed", "exit_code": result.returncode}
+
+
+def inspect_services() -> dict:
+    require(os.getuid() == OWNER_UID and os.isatty(0), "native_owner_terminal_required")
+    scopes = []
+    for scope in ("user", "system"):
+        discovered, queries = set(), {}
+        for action in ("list-unit-files", "list-units"):
+            raw, query = _inspect_query(scope, action)
+            queries[action] = query
+            if query["code"] == "ok":
+                for line in raw.splitlines():
+                    parts = line.split()
+                    name = parts[0] if parts else ""
+                    if len(name) <= 255 and INSPECT_NAME.fullmatch(name) and name != SERVICE_UNIT:
+                        discovered.add(name)
+        names = sorted(discovered)[:INSPECT_UNIT_LIMIT]
+        units = []
+        for name in (SERVICE_UNIT, *names):
+            raw, query = _inspect_query(scope, "show", name)
+            fields, oversized = {}, []
+            for line in raw.splitlines():
+                key, separator, value = line.partition("=")
+                if separator and key in INSPECT_PROPERTIES:
+                    if len(value) <= 2048:
+                        fields[key] = value
+                    else:
+                        oversized.append(key)
+            units.append({"unit": name, "query": query, "fields": fields, "oversized_fields": sorted(set(oversized))})
+        scopes.append({"scope": scope, "known_units": [SERVICE_UNIT], "discovered_units": names,
+                       "discovery_truncated": len(discovered) > INSPECT_UNIT_LIMIT, "queries": queries, "units": units})
+    return {"result": "SERVICE_INSPECTION", "diagnostic_only": True, "scopes": scopes}
 
 
 def image(tag: str, expected_id: str, source: str) -> None:
@@ -395,6 +451,7 @@ def main(argv: list[str] | None = None) -> int:
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--preflight", action="store_true")
     group.add_argument("--apply", action="store_true")
+    group.add_argument("--inspect-services", action="store_true")
     args = parser.parse_args(argv)
     handlers = {}
     def interrupt(signum, frame):
@@ -402,14 +459,17 @@ def main(argv: list[str] | None = None) -> int:
     try:
         for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
             handlers[signum] = signal.signal(signum, interrupt)
-        snapshot = preflight()
-        if args.apply:
-            result = apply(snapshot)
+        if args.inspect_services:
+            result = inspect_services()
         else:
-            result = {"result": "PREFLIGHT_BLOCKED" if snapshot["missing"] else "PREFLIGHT_PASS",
-                      "missing": snapshot["missing"], "observed_timers": snapshot["observed_timers"],
-                      "units": {name: {key: state[key] for key in ("Id", "ActiveState", "FragmentPath", "sha256", "DropInPaths", "NeedDaemonReload")}
-                                for name, state in snapshot["units"].items()}}
+            snapshot = preflight()
+            if args.apply:
+                result = apply(snapshot)
+            else:
+                result = {"result": "PREFLIGHT_BLOCKED" if snapshot["missing"] else "PREFLIGHT_PASS",
+                          "missing": snapshot["missing"], "observed_timers": snapshot["observed_timers"],
+                          "units": {name: {key: state[key] for key in ("Id", "ActiveState", "FragmentPath", "sha256", "DropInPaths", "NeedDaemonReload")}
+                                    for name, state in snapshot["units"].items()}}
     except KeyboardInterrupt:
         result = {"result": "FAILED", "check": "interrupted"}
     except ReleaseError as exc:
