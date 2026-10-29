@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:e2e:direct-identity": "playwright test --config=playwright.direct-client-conflict.config.ts",
     "mobile:audit:static": "node scripts/mobile-ui-static-regression.mjs"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
