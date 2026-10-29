@@ -73,6 +73,15 @@ class ReleaseError(Exception):
     """Only static bounded codes may enter operator output."""
 
 
+class UnsafeFilePermissions(ReleaseError):
+    def __init__(self, path: Path, info: os.stat_result) -> None:
+        super().__init__("unsafe_file_permissions")
+        self.file_metadata = {
+            "path": str(path), "mode": f"{stat.S_IMODE(info.st_mode):04o}",
+            "uid": info.st_uid, "gid": info.st_gid,
+        }
+
+
 def require(condition: bool, code: str) -> None:
     if not condition:
         raise ReleaseError(code)
@@ -98,7 +107,8 @@ def regular_file(path: Path, *, owner: int | None = -1, private: bool = False) -
         raise ReleaseError("required_file_missing") from None
     require(stat.S_ISREG(info.st_mode), "not_regular_file")
     require(owner is None or info.st_uid == owner, "file_owner_mismatch")
-    require(not info.st_mode & (0o077 if private else 0o022), "unsafe_file_permissions")
+    if info.st_mode & (0o077 if private else 0o022):
+        raise UnsafeFilePermissions(path, info)
 
 
 def digest(path: Path) -> str:
@@ -404,6 +414,8 @@ def main(argv: list[str] | None = None) -> int:
         result = {"result": "FAILED", "check": "interrupted"}
     except ReleaseError as exc:
         result = {"result": "FAILED", "check": str(exc)}
+        if isinstance(exc, UnsafeFilePermissions):
+            result["file"] = exc.file_metadata
     except Exception:
         result = {"result": "FAILED", "check": "unexpected_error"}
     finally:
