@@ -310,12 +310,13 @@ jobs:
       - name: Run real Direct identity browser API PostgreSQL coverage
         working-directory: frontend
         run: npm run test:e2e:direct-identity
-      - name: Retain synthetic browser failure evidence
-        if: failure()
+      - name: Retain synthetic browser evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: direct-client-conflict-browser-results
           path: frontend/.direct-client-conflict-results/
+          include-hidden-files: true
           retention-days: 7
       - name: Remove private synthetic credential manifest
         if: always()

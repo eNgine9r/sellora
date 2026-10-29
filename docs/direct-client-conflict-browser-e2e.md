@@ -45,7 +45,10 @@ API; no token is forged and no dependency override is installed. External proces
 and sending are disabled, provider upstreams point at a closed loopback port, browser
 network access is restricted to the local frontend, and API responses are never mocked.
 Traces are disabled to avoid retaining synthetic login tokens; failure screenshots and
-the explicit-confirmation screenshot contain synthetic UI data only.
+the explicit-confirmation screenshot contain synthetic UI data only. Sanitized navigation
+evidence records only paths, elapsed times and authentication status codes, never bodies,
+query strings, headers, cookies or generated credentials. Local server stdout exposes
+Next compilation timing and loopback API request status for diagnosis.
 
 ## Run and assess
 
@@ -53,7 +56,9 @@ The `direct-client-conflict-e2e` CI job provisions PostgreSQL 16, installs the e
 Playwright dev dependency and Chromium, migrates the empty database, seeds it and runs
 `npm run test:e2e:direct-identity` from `frontend`. The database and servers are local
 to that job; this does not deploy or contact staging/production. Existing CI checks
-remain unchanged. Failure artifacts are retained for seven days.
+remain unchanged. Synthetic result artifacts, including successful confirmation evidence,
+are retained for seven days. Upload explicitly includes the hidden test-results directory;
+the private manifest is outside that directory and is excluded.
 
 For local use, provide a fresh loopback PostgreSQL database with the exact name above,
 set `DATABASE_URL`, `SELLORA_DIRECT_CONFLICT_E2E=YES`, a private absolute

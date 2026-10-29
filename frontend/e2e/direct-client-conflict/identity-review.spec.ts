@@ -20,6 +20,8 @@ type Manifest = {
   login: { email: string; password: string };
   cases: Record<string, Case>;
 };
+type NavigationObservation = { elapsed_ms: number; kind: string; path: string; status?: number };
+const navigationEvidence = new WeakMap<Page, NavigationObservation[]>();
 
 function fixture() {
   const file = process.env.SELLORA_DIRECT_CONFLICT_MANIFEST;
@@ -79,12 +81,32 @@ async function browserApi(page: Page, token: string, workspaceId: string, apiPat
   }, { token, workspaceId, apiPath, customerId });
 }
 
-test.beforeEach(async ({ context }) => {
+test.beforeEach(async ({ context, page }) => {
+  const started = Date.now();
+  const observations: NavigationObservation[] = [];
+  navigationEvidence.set(page, observations);
+  page.on("framenavigated", frame => {
+    if (frame === page.mainFrame()) observations.push({ elapsed_ms: Date.now() - started, kind: "navigation", path: new URL(frame.url()).pathname });
+  });
+  page.on("response", response => {
+    const url = new URL(response.url());
+    if (url.pathname.startsWith("/api/v1/auth/")) observations.push({ elapsed_ms: Date.now() - started, kind: "auth-response", path: url.pathname, status: response.status() });
+  });
   // Abort external network access only; no API response is mocked or fulfilled.
   await context.route("**/*", route => {
     const url = new URL(route.request().url());
     return url.origin === "http://127.0.0.1:3100" ? route.continue() : route.abort("blockedbyclient");
   });
+});
+
+test.afterEach(async ({ page }, info) => {
+  // Paths, elapsed times and status codes only: no request/response bodies,
+  // query strings, Authorization headers, cookies or generated credentials.
+  const evidence = { project: info.project.name, final_path: new URL(page.url()).pathname,
+    observations: navigationEvidence.get(page) ?? [] };
+  await info.attach("auth-navigation", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
+  console.log("Direct E2E navigation evidence: " + JSON.stringify(evidence));
+  navigationEvidence.delete(page);
 });
 
 test("explicit selection and confirmation persist the chosen customer", async ({ page }, info) => {

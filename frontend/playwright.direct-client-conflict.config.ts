@@ -35,6 +35,7 @@ export default defineConfig({
       cwd: path.resolve(__dirname, "../backend"),
       url: "http://127.0.0.1:8100/health",
       reuseExistingServer: false,
+      stdout: "pipe",
       timeout: 30_000,
       env: {
         ENVIRONMENT: "development",
@@ -59,6 +60,7 @@ export default defineConfig({
       command: "node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3100",
       url: "http://127.0.0.1:3100/login",
       reuseExistingServer: false,
+      stdout: "pipe",
       timeout: 120_000,
       env: {
         NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED: "true",
