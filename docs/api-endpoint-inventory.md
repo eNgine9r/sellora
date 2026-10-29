@@ -42,4 +42,12 @@
 
 The OAuth GET redirect does not exchange or disclose a token. The authenticated OWNER POST consumes durable, workspace/user-scoped state once. Daily USD/UAH conversion uses the existing manual sync endpoint; it adds no public endpoints.
 
-Inventory reconciled to 230 routes and 133 mutation routes: 7 public routes, 6 authenticated global routes, 202 workspace routes and 15 feature-gated routes. The session login/refresh/logout endpoints are public authentication mechanisms with existing origin/session controls; upgrade and logout-all require authentication. Public classification is method-sensitive for Meta OAuth callback.
+Inventory reconciled to 253 routes and 143 mutation routes: 9 public routes, 6 authenticated global routes, 223 workspace routes and 15 feature-gated routes. The session login/refresh/logout endpoints are public authentication mechanisms with existing origin/session controls; upgrade and logout-all require authentication. Public classification is method-sensitive for Meta OAuth callback.
+
+
+## S8.1 — workspace subscription term
+
+- OWNER, workspace-scoped: `GET /api/v1/workspaces/current/subscription`.
+- Selected by `X-Workspace-ID`; active membership and OWNER role are enforced by both route and service.
+- Read-only, `Cache-Control: no-store`; no provider callbacks, public writes or CRM access enforcement are added.
+- See `docs/subscription-foundation.md` for unmanaged legacy workspaces and term boundaries.

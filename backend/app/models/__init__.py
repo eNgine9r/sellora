@@ -40,8 +40,11 @@ from app.models.workspace_memo import WorkspaceMemo
 from app.models.workspace_user import WorkspaceUser
 from app.models.meta_ad_connection import MetaAdConnection, MetaAdConnectionStatus
 
+from app.models.workspace_subscription import WorkspaceSubscription, SubscriptionStatus
+
 __all__ = ["FinanceAdjustment", "FinanceAdjustmentCategory", "FinanceAdjustmentSource", "FinanceAdjustmentType", "AdCampaign", "AdCampaignBudgetType", "AdCampaignObjective", "AdCampaignPlatform", "AdCampaignStatus", "AdMetric", "MetaAdConnection", "MetaAdConnectionStatus", "Attachment", "AttachmentEntityType", "AuditLog", "Customer", "CustomerAddress", "DeliveryProvider", "CustomerNote", "CustomerTag", "Tag", "Lead", "LeadSource", "Inventory", "InventoryTransaction", "InventoryTransactionType", "ImportJob", "ImportJobLog", "ImportJobLogStatus", "ImportJobStatus", "IntegrationConnection", "IntegrationCredential", "IntegrationProvider", "IntegrationStatus", "LeadStatus", "NovaPoshtaOperation", "NovaPoshtaOperationState", "NovaPoshtaOperationType", "Order", "OrderItem", "OrderStatus", "OrderStatusHistory", "PaymentStatus", "PilotFeedback", "PilotFeedbackCategory", "PilotFeedbackStatus", "Product", "ProductImage", "ProductVariant", "Role", "RoleName", "Shipment", "ShipmentCarrier", "ShipmentStatus", "User", "Workspace", "WorkspaceUser"]
 __all__ += ["OrderFulfillment", "OrderFulfillmentResultCode", "OrderFulfillmentState", "OrderFulfillmentOperationType"]
 __all__ += ["InstagramParticipantProfile", "InstagramParticipantProfileStatus"]
 __all__ += ["WorkspaceMemo"]
 __all__ += ["InstagramHistorySync", "InstagramHistorySyncStatus", "InstagramHistorySyncCancelRequest", "InstagramMessageState"]
+__all__ += ["WorkspaceSubscription", "SubscriptionStatus"]

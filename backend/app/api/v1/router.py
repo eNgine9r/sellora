@@ -1,3 +1,4 @@
+from app.api.v1.subscriptions import router as subscriptions_router
 from app.api.v1.advertising import router as advertising_router
 from fastapi import APIRouter
 from app.api.v1.ai import router as ai_router
@@ -68,3 +69,5 @@ api_router.include_router(attachments_router)
 api_router.include_router(workspaces_router)
 api_router.include_router(workspace_users_router)
 api_router.include_router(workspace_memos_router)
+
+api_router.include_router(subscriptions_router)
