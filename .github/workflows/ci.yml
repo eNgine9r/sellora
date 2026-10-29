@@ -359,6 +359,9 @@ jobs:
       - name: Verify Direct identity review
         working-directory: frontend
         run: node scripts/direct-identity-review-test.cjs
+      - name: Verify auth bootstrap ordering and stale-operation guards
+        working-directory: frontend
+        run: npm run test:auth-bootstrap
       - name: Typecheck
         working-directory: frontend
         run: npm run typecheck
