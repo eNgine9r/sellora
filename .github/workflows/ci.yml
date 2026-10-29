@@ -269,7 +269,7 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://sellora:sellora@127.0.0.1:5432/sellora_direct_client_conflict_e2e_isolated
       SELLORA_DIRECT_CONFLICT_E2E: "YES"
-      SELLORA_DIRECT_CONFLICT_MANIFEST: ${{ runner.temp }}/direct-client-conflict.json
+      SELLORA_DIRECT_CONFLICT_MANIFEST: /tmp/sellora-direct-client-conflict.json
       PYTHONPATH: .
       NO_PROXY: 127.0.0.1,localhost
       no_proxy: 127.0.0.1,localhost
