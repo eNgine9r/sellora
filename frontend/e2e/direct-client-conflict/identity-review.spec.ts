@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import uk from "../../src/i18n/messages/uk.json";
@@ -104,7 +104,9 @@ test.afterEach(async ({ page }, info) => {
   // query strings, Authorization headers, cookies or generated credentials.
   const evidence = { project: info.project.name, final_path: new URL(page.url()).pathname,
     observations: navigationEvidence.get(page) ?? [] };
-  await info.attach("auth-navigation", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
+  const evidencePath = info.outputPath("auth-navigation.json");
+  writeFileSync(evidencePath, JSON.stringify(evidence, null, 2));
+  await info.attach("auth-navigation", { path: evidencePath, contentType: "application/json" });
   console.log("Direct E2E navigation evidence: " + JSON.stringify(evidence));
   navigationEvidence.delete(page);
 });
@@ -121,7 +123,9 @@ test("explicit selection and confirmation persist the chosen customer", async ({
   await expect(selected.getByRole("button", { name: uk.direct.identityConfirm, exact: true })).toBeEnabled();
   expect(linkRequests).toBe(0);
   verifyCommittedState(caseName, "unbound");
-  await info.attach("explicit-customer-confirmation", { body: await page.screenshot(), contentType: "image/png" });
+  const confirmationPath = info.outputPath("explicit-customer-confirmation.png");
+  await page.screenshot({ path: confirmationPath });
+  await info.attach("explicit-customer-confirmation", { path: confirmationPath, contentType: "image/png" });
   const linked = page.waitForResponse(response => response.url().endsWith(`/conversations/${scenario.conversation_id}/customer-automation/link`));
   await selected.getByRole("button", { name: uk.direct.identityConfirm, exact: true }).click();
   const response = await linked;

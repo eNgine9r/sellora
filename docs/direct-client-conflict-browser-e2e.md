@@ -48,24 +48,37 @@ Traces are disabled to avoid retaining synthetic login tokens; failure screensho
 the explicit-confirmation screenshot contain synthetic UI data only. Sanitized navigation
 evidence records only paths, elapsed times and authentication status codes, never bodies,
 query strings, headers, cookies or generated credentials. Local server stdout exposes
-Next compilation timing and loopback API request status for diagnosis.
+Next startup timing and loopback API request status for diagnosis. Evidence is written
+to explicit files, so retaining it does not depend on a reporter saving body attachments.
 
 ## Run and assess
 
 The `direct-client-conflict-e2e` CI job provisions PostgreSQL 16, installs the exact
-Playwright dev dependency and Chromium, migrates the empty database, seeds it and runs
+Playwright dev dependency and Chromium, prebuilds the production frontend with the same
+cookie-session/API-proxy settings used at startup, migrates the empty database, seeds it and runs
 `npm run test:e2e:direct-identity` from `frontend`. The database and servers are local
 to that job; this does not deploy or contact staging/production. Existing CI checks
 remain unchanged. Synthetic result artifacts, including successful confirmation evidence,
-are retained for seven days. Upload explicitly includes the hidden test-results directory;
-the private manifest is outside that directory and is excluded.
+are retained for seven days. Upload explicitly allows PNGs and sanitized navigation JSON
+inside the hidden results directory. Playwright error-context text can contain synthetic
+password input values and is excluded, as are traces and the private fixture manifest.
+
+The production build/start mode keeps dev-server compilation and hot-reload routing out
+of the browser cases. It does not remove login/redirect assertions or establish the cause
+of an observed development-mode navigation stall: in the diagnostic run, login and
+`/auth/me` succeeded within 1.6 seconds and dashboard compilation took 3.7 seconds, yet
+the first browser stayed on `/login` until the 60-second timeout. Production-mode results
+must be evaluated separately; a mode switch is not an authentication fix.
 
 For local use, provide a fresh loopback PostgreSQL database with the exact name above,
 set `DATABASE_URL`, `SELLORA_DIRECT_CONFLICT_E2E=YES`, a private absolute
 `SELLORA_DIRECT_CONFLICT_MANIFEST` path, `PYTHONPATH=.` and every flag listed in the CLI's
 `DISABLED_FEATURES` to `false`. From `backend`, migrate to head, then run
 `python scripts/direct_client_conflict_e2e.py seed --manifest "$SELLORA_DIRECT_CONFLICT_MANIFEST"`.
-From `frontend`, run `npm ci`, `npx playwright install --with-deps chromium`, then
+From `frontend`, run `npm ci`, `npx playwright install --with-deps chromium`, then build
+with `NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED=true`,
+`SELLORA_API_UPSTREAM_URL=http://127.0.0.1:8100/api/v1`,
+`NEXT_PUBLIC_API_BASE_URL=/api/v1`, `NEXT_TELEMETRY_DISABLED=1` and `npm run build`. Run
 `npm run test:e2e:direct-identity`. Remove the private manifest when finished and discard
 the disposable database. Reruns require a fresh database and manifest; there are no
 automatic retries against already mutated cases.

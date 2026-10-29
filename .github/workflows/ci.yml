@@ -302,6 +302,14 @@ jobs:
       - name: Install isolated Chromium runtime
         working-directory: frontend
         run: npx playwright install --with-deps chromium
+      - name: Build production frontend for isolated browser coverage
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_COOKIE_SESSION_AUTH_ENABLED: "true"
+          SELLORA_API_UPSTREAM_URL: http://127.0.0.1:8100/api/v1
+          NEXT_PUBLIC_API_BASE_URL: /api/v1
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
       - name: Migrate and seed empty disposable Direct database
         working-directory: backend
         run: |
@@ -315,7 +323,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: direct-client-conflict-browser-results
-          path: frontend/.direct-client-conflict-results/
+          path: |
+            frontend/.direct-client-conflict-results/**/*.png
+            frontend/.direct-client-conflict-results/**/auth-navigation.json
           include-hidden-files: true
           retention-days: 7
       - name: Remove private synthetic credential manifest
