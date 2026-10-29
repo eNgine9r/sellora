@@ -4,6 +4,10 @@ This is a migration and verification overlay for the existing Raspberry release
 path. It does not deploy, create subscriptions, activate billing or enforce plans.
 The first rollout expects existing workspaces to remain `UNMANAGED`.
 
+For the combined 049 → 052 release, use the newer
+[native owner handoff](s8-owner-release-handoff.md). Its unresolved owner-only gates
+remain release blockers; the historical 051-only sequence below is not that rollout.
+
 ## Existing release path and prerequisites
 
 The prior guarded handoff is
