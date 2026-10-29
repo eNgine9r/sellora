@@ -144,6 +144,33 @@ def test_default_preflight_has_no_mutations(target, capsys):
     assert not any("stop" in args or "up" in args or "upgrade" in args for args in target.calls)
 
 
+@pytest.mark.parametrize("kind", ["compose.yaml", "no-memcg.yaml", "unit", "private_evidence"])
+@pytest.mark.parametrize("args", [[], ["--preflight"], ["--apply"]])
+def test_unsafe_permissions_report_only_file_metadata_without_mutation(target, capsys, kind, args):
+    if kind == "unit":
+        path = Path(target.units[release.SERVICE_UNIT]["FragmentPath"])
+    elif kind == "private_evidence":
+        path = target.evidence
+    else:
+        path = release.COMPOSE_DIR / kind
+    path.chmod(0o640 if kind == "private_evidence" else 0o664)
+    before = (path.read_bytes(), path.stat(), target.env.read_bytes(), target.plan.read_bytes())
+    assert release.main(args) == 1
+    output = capsys.readouterr().out
+    assert json.loads(output) == {
+        "result": "FAILED", "check": "unsafe_file_permissions",
+        "file": {"path": str(path), "mode": "0640" if kind == "private_evidence" else "0664",
+                 "uid": before[1].st_uid, "gid": before[1].st_gid},
+    }
+    assert "synthetic-secret" not in output and "synthetic unit fixture" not in output
+    after = path.stat()
+    assert (path.read_bytes(), after.st_mode, after.st_uid, after.st_gid) == (
+        before[0], before[1].st_mode, before[1].st_uid, before[1].st_gid,
+    )
+    assert (target.env.read_bytes(), target.plan.read_bytes()) == before[2:]
+    assert not any("stop" in call or "start" in call or "up" in call or "upgrade" in call for call in target.calls)
+
+
 def test_unknown_timer_is_observed_but_never_guessed_or_applied(target, monkeypatch, capsys):
     monkeypatch.setattr(release, "TIMER_UNIT", None)
     assert release.main(["--preflight"]) == 1

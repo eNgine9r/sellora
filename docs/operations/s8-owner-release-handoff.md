@@ -21,6 +21,11 @@ or querying an unverified timer. Output omits environment values, database URLs,
 tokens and response bodies. Exit 1 with `PREFLIGHT_BLOCKED` is expected while pins
 are incomplete; other failures have bounded check codes.
 
+An `unsafe_file_permissions` failure also reports a `file` object containing only
+the failing path, octal mode (for example `0664`), UID and GID. It reports no file
+contents or subprocess error text. The permission guard still blocks both preflight
+and apply; the helper never changes file permissions.
+
 This command belongs in the owner's native session. A remote-control policy denied
 access to the watchdog service and protected configuration writes; do not use this
 helper through that tool or substitute another interface to bypass the boundary.
