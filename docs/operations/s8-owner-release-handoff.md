@@ -65,7 +65,8 @@ Inspection cannot be combined with preflight/apply and does not alter their fixe
 user-manager pins or guards. The historical S2 helper contains no systemctl
 operations and establishes neither namespace. Source observations from either
 mode do not fix service configuration or approve a rollout. Following the reviewed
-native identity facts above, the next owner command is `--preflight`.
+native identity facts above, `--preflight` reports the remaining source, lock and
+backup gates. Once those are the only blockers, use the source handoff below.
 
 This command belongs in the owner's native session. A remote-control policy denied
 access to the watchdog service and protected configuration writes; do not use this
@@ -74,10 +75,12 @@ No sudo, system unit lifecycle operation, permission change or policy change is 
 
 ## Unresolved facts
 
-- Both unit source checksums and reviewed fragment contents, drop-in paths and
-  loaded source state. The native inspection reported matching fragment filenames,
-  no drop-ins and `NeedDaemonReload=no`, but collected no source hashes or contents.
-  Drop-ins or `NeedDaemonReload` block apply until reviewed.
+- Reviewed unit fragment contents and invoked source. The owner's subsequent
+  native preflight collected both original unit hashes, confirmed matching fragment
+  filenames, no drop-ins and `NeedDaemonReload=no`. Those original hashes bind the
+  collector below, but remain observations until actual source review; the release
+  helper's `UNIT_PINS` is still empty. Drop-ins or `NeedDaemonReload` block apply
+  until reviewed.
 - Actual shared watchdog lock/source behavior. The historical lock path remains
   unverified; `LOCK_VERIFIED` is false.
 - An owner-approved encrypted backup creator and restore-verification mechanism,
@@ -89,6 +92,57 @@ false `BACKUP_MECHANISM_VERIFIED` and the lock-verification gate.
 Native observations do not automatically promote themselves into trusted pins.
 After reviewing those facts, update the fixed pins through normal code review and
 rerun the fake-runner suite before considering the explicit `--apply` mode.
+
+## Next: owner-controlled source review
+
+The source/lock/backup gates cannot be resolved by pinning observed hashes or
+successful timer results. In the reviewed checkout, the next native owner step is:
+
+```sh
+python3 deploy/raspberry/sellora_s8_source_review.py --prepare
+```
+
+This separate UID-1000/TTY-only utility reads exactly the eight known watchdog,
+DB-backup, offhost-encrypted-backup and Google Drive backup service/timer files in
+`/home/btcradar/.config/systemd/user`. The two watchdog original SHA-256s must match
+the hashes supplied by the owner's native preflight. These checks bind collection
+to those observed originals; they do not approve their behavior or populate the
+release helper's `UNIT_PINS`.
+
+Only static absolute script tokens on `ExecStart`, `ExecStartPre` and `ExecStartPost`
+can add files: a `sellora`-prefixed basename directly in
+`/home/btcradar/.local/bin`, ending in `.py`/`.sh` or extensionless with an explicitly
+recognized text shebang. It performs no directory scan or transitive source
+discovery, follows no symlinks (including ancestors), reads no binary or credential,
+environment, state, log or archive files, and executes no collected source. Limits
+are eight unit files at 16 KiB each, sixteen direct scripts at 128 KiB each and
+512 KiB total original bytes. Missing/unsupported direct inputs are recorded as
+omissions; a changed or unreadable required watchdog original fails collection.
+Inline, shell or dynamic commands outside the supported direct forms remain
+explicitly incomplete. Other dependencies and drop-ins remain uncollected.
+
+It writes only one local Markdown draft at
+`/home/btcradar/sellora-s8-source-review-<unique>/review.md`, directory `0700`, file
+`0600`. JSON stdout contains its path, source metadata/original hashes, redaction
+locations, omissions and `review_required=true`, never raw source or exception
+text. No upload, source execution, service/Docker/database operation, protected
+configuration update, backup production or release approval occurs.
+
+**The owner must inspect and edit that exact draft locally before explicitly
+attaching it in chat.** Unit Environment/credential directives (including
+continuations), other sensitive directive values and unsupported Exec command
+values are omitted. Obvious script credential assignments receive conservative
+redaction; ambiguous multiline assignments omit the remainder. This is not
+comprehensive sanitization: source/comments may still contain inline secrets.
+Remove them before attachment and identify all manual redactions. Redactions that
+affect lock, command, encryption or restore behavior leave that gate unresolved.
+Original hashes identify original bytes, not edited/redacted copies.
+
+Do not run this utility through NEXUS, auto-upload the draft, copy it into a project
+path for remote reading, or read it back through another automated interface. The
+owner-controlled attachment is the deliberate handoff. After actual source review,
+a narrowly reviewed native producer/isolated-restore adapter can establish fresh
+encrypted backup evidence. No evidence receipt or verified flag is created here.
 
 The evidence gate defines only an input receipt, not a backup producer: owner-only
 JSON and an owner-only nonempty encrypted artifact whose SHA-256 matches the
