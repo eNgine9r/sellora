@@ -40,15 +40,17 @@ PLAN_FILE = Path("/home/btcradar/.local/state/sellora/api-watchdog.json")
 LOCK_FILE = PLAN_FILE.with_suffix(".lock")
 COMPOSE_DIR = Path("/home/btcradar/commander-workspaces/sellora-migration/repo/deploy/raspberry")
 CONTAINER = "sellora-rpi-backend-1"
-SERVICE_UNIT = "sellora-api-watchdog.service"
+# Names and user-manager scope were observed in the owner's native inspection.
+# Source hashes, shared-lock behavior and backup proof remain separate gates.
+SERVICE_UNIT = "sellora-runtime-health-watchdog.service"
 INSPECT_PROPERTIES = ("Id", "LoadState", "ActiveState", "FragmentPath", "TriggeredBy", "Triggers", "DropInPaths",
                       "NeedDaemonReload", "UnitFileState", "User", "Group", "Result", "ExecMainStatus", "LastTriggerUSec")
 INSPECT_PATTERNS = ("sellora*watchdog*.service", "sellora*watchdog*.timer", "sellora*backup*.service", "sellora*backup*.timer")
 INSPECT_UNIT_LIMIT = 16  # Discovered units per manager, plus the fixed expected service.
 INSPECT_NAME = re.compile(r"sellora[A-Za-z0-9_.@:-]*(?:watchdog|backup)[A-Za-z0-9_.@:-]*\.(?:service|timer)", re.ASCII)
-# Unknown runtime facts remain unset. Native preflight may observe them; it does
-# not turn observations into trusted apply pins or guess a timer name/path.
-TIMER_UNIT: str | None = None
+# Remaining runtime facts stay unset. Native preflight may observe them; it does
+# not turn source observations into trusted apply pins.
+TIMER_UNIT: str | None = "sellora-runtime-health-watchdog.timer"
 UNIT_PINS: dict[str, tuple[str, str]] = {}  # unit -> (FragmentPath, SHA-256)
 LOCK_VERIFIED = False
 # Parent verified exact Pi images: bridge049/052, candidate052, matching PG17
@@ -124,13 +126,14 @@ def digest(path: Path) -> str:
     return result.hexdigest()
 
 
-def unit_state(name: str) -> dict[str, str]:
+def unit_state(name: str, *, require_stable: bool = True) -> dict[str, str]:
     require(name == SERVICE_UNIT or TIMER_UNIT is not None and name == TIMER_UNIT, "unrecognized_unit")
     raw = command("systemctl", "--user", "show", "--no-pager",
-                  "--property=Id,LoadState,ActiveState,FragmentPath,TriggeredBy,DropInPaths,NeedDaemonReload", name)
+                  "--property=Id,LoadState,ActiveState,FragmentPath,TriggeredBy,Triggers,DropInPaths,NeedDaemonReload", name)
     state = dict(line.split("=", 1) for line in raw.splitlines() if "=" in line)
     require(state.get("Id") == name and state.get("LoadState") == "loaded", "unit_not_loaded_or_recognized")
-    require(state.get("ActiveState") in {"active", "inactive"}, "unit_not_stable")
+    if require_stable:
+        require(state.get("ActiveState") in {"active", "inactive"}, "unit_not_stable")
     fragment = Path(state.get("FragmentPath", ""))
     require(fragment.name == name, "unit_fragment_mismatch")
     regular_file(fragment, owner=None)
@@ -299,7 +302,9 @@ def preflight() -> dict:
     current, service = container(), compose_config()
     require(service.get("image") == CURRENT_TAG, "compose_image_drift")
     same_environment(service, current)
-    units = {SERVICE_UNIT: unit_state(SERVICE_UNIT)}
+    # A timer-driven service can be activating during an otherwise useful
+    # read-only snapshot. Report all gates, but never admit it to apply.
+    units = {SERVICE_UNIT: unit_state(SERVICE_UNIT, require_stable=False)}
     observed_timers = units[SERVICE_UNIT].get("TriggeredBy", "").split()
     require(all(re.fullmatch(r"[A-Za-z0-9_.@:-]+\.timer", value) for value in observed_timers), "unrecognized_trigger")
     missing = []
@@ -307,8 +312,11 @@ def preflight() -> dict:
         missing.append("watchdog_timer_pin")
     else:
         require(observed_timers == [TIMER_UNIT], "watchdog_trigger_drift")
-        units[TIMER_UNIT] = unit_state(TIMER_UNIT)
+        units[TIMER_UNIT] = unit_state(TIMER_UNIT, require_stable=False)
+        require(units[TIMER_UNIT].get("Triggers", "").split() == [SERVICE_UNIT], "watchdog_target_drift")
     for name, state in units.items():
+        if state.get("ActiveState") not in {"active", "inactive"}:
+            missing.append("watchdog_unit_stability")
         if UNIT_PINS.get(name) != (state["FragmentPath"], state["sha256"]):
             missing.append("watchdog_unit_source_pin")
         if state.get("DropInPaths", ""):
@@ -468,7 +476,7 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 result = {"result": "PREFLIGHT_BLOCKED" if snapshot["missing"] else "PREFLIGHT_PASS",
                           "missing": snapshot["missing"], "observed_timers": snapshot["observed_timers"],
-                          "units": {name: {key: state[key] for key in ("Id", "ActiveState", "FragmentPath", "sha256", "DropInPaths", "NeedDaemonReload")}
+                          "units": {name: {key: state.get(key, "") for key in ("Id", "LoadState", "ActiveState", "FragmentPath", "sha256", "TriggeredBy", "Triggers", "DropInPaths", "NeedDaemonReload")}
                                     for name, state in snapshot["units"].items()}}
     except KeyboardInterrupt:
         result = {"result": "FAILED", "check": "interrupted"}

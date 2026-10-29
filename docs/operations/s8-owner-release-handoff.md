@@ -16,19 +16,36 @@ python3 deploy/raspberry/sellora_s8_subscription_release.py --preflight
 It performs no systemctl stop/start, configuration writes, container creation or
 migration. It reads only the fixed release/configuration paths, image/container
 metadata, schema/role flags, loopback health endpoints and the expected service
-`sellora-api-watchdog.service` in the currently configured user manager. Its
-`TriggeredBy` fact is reported without guessing
-or querying an unverified timer. Output omits environment values, database URLs,
+`sellora-runtime-health-watchdog.service` and timer
+`sellora-runtime-health-watchdog.timer` in the user manager. Their names and scope
+come from the owner's native inspection on 29 October 2026. The old assumed
+`sellora-api-watchdog.service` was not found. The service's `TriggeredBy` and timer's
+`Triggers` must identify each other exactly. Output omits environment values, database URLs,
 tokens and response bodies. Exit 1 with `PREFLIGHT_BLOCKED` is expected while pins
 are incomplete; other failures have bounded check codes.
+
+That inspection observed the watchdog service as `activating`, its timer as active,
+and three backup timers (`sellora-db-backup`, `sellora-google-drive-backup`,
+`sellora-offhost-encrypted-backup`) as active. Their services were inactive with
+successful last results. These are observations, not proof of shared-lock behavior,
+backup encryption, freshness or a verified restore. System `list-unit-files` failed,
+so the system-manager discovery must not be described as exhaustive.
+
+Read-only preflight collects both watchdog fragment paths/SHA-256s and the remaining
+gates even when a unit is `activating`, `deactivating`, `failed`, or otherwise outside
+`active`/`inactive`. It adds `watchdog_unit_stability` to `missing` and reports the
+observed state. `--apply` rejects any missing gate before lifecycle operations;
+its post-stop/start state checks remain strict. Unit identity, loaded state,
+fragment paths and permissions still fail closed. Preflight does not wait for,
+stop or otherwise alter a running watchdog.
 
 An `unsafe_file_permissions` failure also reports a `file` object containing only
 the failing path, octal mode (for example `0664`), UID and GID. It reports no file
 contents or subprocess error text. The permission guard still blocks both preflight
 and apply; the helper never changes file permissions.
 
-After `unit_not_loaded_or_recognized`, the user/system service context remains
-unverified. The next native-owner diagnostic is:
+The separate service inventory remains available for future identity/context
+investigation:
 
 ```sh
 python3 deploy/raspberry/sellora_s8_subscription_release.py --inspect-services
@@ -45,9 +62,10 @@ Docker, database, or unit lifecycle operations are used. Missing units/managers
 remain observations, and successful collection does not approve a rollout.
 
 Inspection cannot be combined with preflight/apply and does not alter their fixed
-user-manager assumptions, pins or guards. The historical S2 helper contains no
-systemctl operations and establishes neither namespace. Review actual native
-facts before any future release change; this mode does not fix service configuration.
+user-manager pins or guards. The historical S2 helper contains no systemctl
+operations and establishes neither namespace. Source observations from either
+mode do not fix service configuration or approve a rollout. Following the reviewed
+native identity facts above, the next owner command is `--preflight`.
 
 This command belongs in the owner's native session. A remote-control policy denied
 access to the watchdog service and protected configuration writes; do not use this
@@ -56,16 +74,18 @@ No sudo, system unit lifecycle operation, permission change or policy change is 
 
 ## Unresolved facts
 
-- Actual timer identity, both unit fragment paths/checksums, drop-in paths and loaded
-  source state. Drop-ins or `NeedDaemonReload` block apply until reviewed.
+- Both unit source checksums and reviewed fragment contents, drop-in paths and
+  loaded source state. The native inspection reported matching fragment filenames,
+  no drop-ins and `NeedDaemonReload=no`, but collected no source hashes or contents.
+  Drop-ins or `NeedDaemonReload` block apply until reviewed.
 - Actual shared watchdog lock/source behavior. The historical lock path remains
   unverified; `LOCK_VERIFIED` is false.
 - An owner-approved encrypted backup creator and restore-verification mechanism,
   plus the private evidence location. None was found in the repository or historical
   helper. No backup/encryption/restore procedure is invented here.
 
-The apply path remains blocked by unset `TIMER_UNIT`, `UNIT_PINS`,
-`BACKUP_EVIDENCE_FILE`, `BACKUP_MECHANISM_VERIFIED` and the lock-verification gate.
+The apply path remains blocked by empty `UNIT_PINS`, unset `BACKUP_EVIDENCE_FILE`,
+false `BACKUP_MECHANISM_VERIFIED` and the lock-verification gate.
 Native observations do not automatically promote themselves into trusted pins.
 After reviewing those facts, update the fixed pins through normal code review and
 rerun the fake-runner suite before considering the explicit `--apply` mode.

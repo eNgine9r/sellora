@@ -37,6 +37,7 @@ def target(tmp_path, monkeypatch):
         fragment.write_text("synthetic unit fixture\n")
         units[name] = {"Id": name, "LoadState": "loaded", "ActiveState": "active" if name == release.TIMER_UNIT else "inactive",
                        "FragmentPath": str(fragment), "TriggeredBy": release.TIMER_UNIT if name == release.SERVICE_UNIT else "",
+                       "Triggers": release.SERVICE_UNIT if name == release.TIMER_UNIT else "",
                        "DropInPaths": "", "NeedDaemonReload": "no"}
         pins[name] = (str(fragment), release.digest(fragment))
     monkeypatch.setattr(release, "UNIT_PINS", pins)
@@ -195,6 +196,81 @@ def test_unloaded_or_unknown_unit_prevents_mutation(target, change):
     with pytest.raises(release.ReleaseError, match="unit_not_loaded_or_recognized"):
         release.preflight()
     assert not any("stop" in args for args in target.calls)
+
+
+def test_native_watchdog_defaults_match_owner_observation():
+    assert release.SERVICE_UNIT == "sellora-runtime-health-watchdog.service"
+    assert release.TIMER_UNIT == "sellora-runtime-health-watchdog.timer"
+    assert release.UNIT_PINS == {} and release.LOCK_VERIFIED is False
+    assert release.BACKUP_MECHANISM_VERIFIED is False and release.BACKUP_EVIDENCE_FILE is None
+
+
+@pytest.fixture
+def observed_native_target(target, tmp_path, monkeypatch):
+    """Literal native identities ensure the old, invented unit name cannot pass."""
+    service, timer = "sellora-runtime-health-watchdog.service", "sellora-runtime-health-watchdog.timer"
+    target.units.clear()
+    pins = {}
+    for name in (service, timer):
+        fragment = tmp_path / name
+        fragment.write_text("synthetic native-name unit; no deployed source\n")
+        target.units[name] = {"Id": name, "LoadState": "loaded", "ActiveState": "inactive" if name == service else "active",
+                              "FragmentPath": str(fragment), "TriggeredBy": timer if name == service else "",
+                              "Triggers": service if name == timer else "", "DropInPaths": "", "NeedDaemonReload": "no"}
+        pins[name] = (str(fragment), release.digest(fragment))
+    monkeypatch.setattr(release, "TIMER_UNIT", timer)
+    monkeypatch.setattr(release, "UNIT_PINS", pins)
+    return target
+
+
+def test_preflight_queries_literal_native_watchdog_pair(observed_native_target, capsys):
+    assert release.main(["--preflight"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["result"] == "PREFLIGHT_PASS"
+    assert result["observed_timers"] == ["sellora-runtime-health-watchdog.timer"]
+    assert set(result["units"]) == {"sellora-runtime-health-watchdog.service", "sellora-runtime-health-watchdog.timer"}
+    calls = [call for call in observed_native_target.calls if call[:3] == ("systemctl", "--user", "show")]
+    assert [call[-1] for call in calls] == ["sellora-runtime-health-watchdog.service", "sellora-runtime-health-watchdog.timer"]
+
+
+@pytest.mark.parametrize("name,state", [
+    ("sellora-runtime-health-watchdog.service", "activating"),
+    ("sellora-runtime-health-watchdog.service", "deactivating"),
+    ("sellora-runtime-health-watchdog.service", "failed"),
+    ("sellora-runtime-health-watchdog.timer", "activating"),
+])
+def test_transient_preflight_reports_all_gates_and_blocks_apply(observed_native_target, monkeypatch, capsys, name, state):
+    observed_native_target.units[name]["ActiveState"] = state
+    for key, value in {"UNIT_PINS": {}, "LOCK_VERIFIED": False, "BACKUP_MECHANISM_VERIFIED": False,
+                       "BACKUP_EVIDENCE_FILE": None}.items():
+        monkeypatch.setattr(release, key, value)
+    before = observed_native_target.env.read_bytes(), observed_native_target.plan.read_bytes()
+    for args in (["--preflight"], ["--apply"]):
+        assert release.main(args) == 1
+        result = json.loads(capsys.readouterr().out)
+        if args == ["--preflight"]:
+            assert result["result"] == "PREFLIGHT_BLOCKED"
+            assert set(result["missing"]) == {"watchdog_unit_stability", "watchdog_unit_source_pin", "watchdog_lock_verification",
+                                              "backup_mechanism_verification", "encrypted_backup_restore_evidence"}
+            assert result["units"][name]["ActiveState"] == state
+            for unit, metadata in result["units"].items():
+                assert metadata["FragmentPath"] == observed_native_target.units[unit]["FragmentPath"]
+                assert metadata["sha256"] == release.digest(Path(metadata["FragmentPath"]))
+            assert result["units"]["sellora-runtime-health-watchdog.timer"]["Triggers"] == "sellora-runtime-health-watchdog.service"
+        else:
+            assert result == {"result": "FAILED", "check": "unresolved_preflight_gates"}
+    assert (observed_native_target.env.read_bytes(), observed_native_target.plan.read_bytes()) == before
+    assert not any("stop" in call or "start" in call or "up" in call or "upgrade" in call for call in observed_native_target.calls)
+    with pytest.raises(release.ReleaseError, match="unit_not_stable"):
+        release.unit_state(name)
+
+
+@pytest.mark.parametrize("triggers", ["", "sellora-api-watchdog.service", "sellora-runtime-health-watchdog.service unrelated.service"])
+def test_timer_must_reciprocally_trigger_only_verified_service(target, triggers):
+    target.units[release.TIMER_UNIT]["Triggers"] = triggers
+    with pytest.raises(release.ReleaseError, match="watchdog_target_drift"):
+        release.preflight()
+    assert not any("stop" in args or "start" in args or "up" in args for args in target.calls)
 
 
 def test_unit_overrides_or_stale_loaded_source_block_apply(target):
