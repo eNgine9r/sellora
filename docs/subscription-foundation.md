@@ -43,10 +43,12 @@ and a GET-only subscription canary. It does not authorize or perform deployment.
 
 ## Next package
 
-S8.2 requires approved pricing, quotas, currency, trial and cancellation/refund terms,
-plus a merchant account. It adds verified and idempotent payment events, checkout,
-renewal/cancellation operations and history. A status row is not a payment ledger;
-payment evidence and audit events must precede exposed write operations or enforcement.
+[S8.2a](subscription-payment-event-receipts.md) adds an internal immutable event
+receipt ledger only. It does not implement PSP authentication, checkout or billing
+policy. Public payment integration still requires approved pricing, quotas, currency,
+trial and cancellation/refund terms, plus a merchant account. A status row is not a
+payment ledger; verified payment evidence and audit events must precede exposed write
+operations or enforcement.
 
 The authoritative development queue and historical evidence remain in
 [Sellora-Development-Plan.md](https://chatgpt.com/library?file_id=libfile_25c9acecc95481919bc4373b85682f57&account_id=personal).
