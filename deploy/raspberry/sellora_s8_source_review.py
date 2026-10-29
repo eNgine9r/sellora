@@ -20,6 +20,14 @@ OWNER_UID = 1000
 OWNER_HOME = Path("/home/btcradar")
 UNIT_DIR = OWNER_HOME / ".config/systemd/user"
 SCRIPT_DIR = OWNER_HOME / ".local/bin"
+# Exact source locations supplied by the owner. This does not allow directory
+# traversal/scanning or neighboring credential, archive or state files.
+OBSERVED_SOURCE_PATHS = {
+    "sellora-runtime-health-watchdog.service": OWNER_HOME / ".local/lib/sellora/api_watchdog.py",
+    "sellora-db-backup.service": OWNER_HOME / "runtime/sellora/protected-backups/backup-sellora.sh",
+    "sellora-offhost-encrypted-backup.service": OWNER_HOME / "runtime/sellora/protected-backups/push-to-nexolab.sh",
+    "sellora-google-drive-backup.service": OWNER_HOME / "runtime/sellora/protected-backups/upload-to-google-drive.sh",
+}
 UNIT_NAMES = tuple(prefix + suffix for prefix in (
     "sellora-runtime-health-watchdog", "sellora-db-backup",
     "sellora-offhost-encrypted-backup", "sellora-google-drive-backup",
@@ -91,9 +99,36 @@ def read_source(path: Path, limit: int) -> tuple[str, dict]:
 
 def script_token(token: str) -> Path | None:
     path = Path(token)
+    if path in OBSERVED_SOURCE_PATHS.values():
+        return path
     if not path.is_absolute() or path.parent != SCRIPT_DIR or SCRIPT_NAME.fullmatch(path.name) is None:
         return None
     return path if path.suffix in {".py", ".sh", ""} else None
+
+
+def observed_references(value: str) -> tuple[set[Path], bool]:
+    """Lex quoted wrapper text only; never expand/evaluate a shell expression."""
+    pending, references, budget, complete = [(value, 0)], set(), 128, True
+    while pending:
+        expression, depth = pending.pop()
+        lexer = shlex.shlex(expression, posix=True, punctuation_chars=True)
+        lexer.whitespace_split, lexer.commenters = True, ""
+        try:
+            for token in lexer:
+                budget -= 1
+                if budget < 0:
+                    return references, False
+                path = Path(token)
+                if path in OBSERVED_SOURCE_PATHS.values():
+                    references.add(path)
+                if token != expression and any(char.isspace() or char in "\"'();<>|&" for char in token):
+                    if depth < 2:
+                        pending.append((token, depth + 1))
+                    else:
+                        complete = False
+        except ValueError:
+            complete = False
+    return references, complete
 
 
 def unit_copy(text: str) -> tuple[str, set[Path], list[dict], list[dict]]:
@@ -118,10 +153,16 @@ def unit_copy(text: str) -> tuple[str, set[Path], list[dict], list[dict]]:
             except ValueError:
                 tokens = []
             references = {path for token in tokens if (path := script_token(token)) is not None}
+            observed, complete = observed_references(value)
+            references.update(observed)
+            if not complete:
+                unresolved.append({"line": start + 1, "code": "lexical_source_discovery_incomplete"})
             scripts.update(references)
             supported = len(tokens) == 1 and script_token(tokens[0]) is not None
             supported |= (len(tokens) in {2, 3} and tokens[0] in {"/usr/bin/python3", "/usr/bin/python"}
                           and script_token(tokens[-1]) is not None and (len(tokens) == 2 or tokens[1] == "-u"))
+            supported |= (len(tokens) == 2 and tokens[0] in {"/bin/bash", "/usr/bin/bash", "/bin/sh", "/usr/bin/sh"}
+                          and script_token(tokens[1]) is not None)
             if not supported:
                 redact = True
                 unresolved.append({"line": start + 1, "code": "unsupported_invocation"})
@@ -173,6 +214,9 @@ def prepare() -> dict:
                 copy, references, redactions, issues = unit_copy(text)
                 scripts.update(references)
                 unresolved.extend(dict(issue, path=str(path)) for issue in issues)
+                expected = OBSERVED_SOURCE_PATHS.get(path.name)
+                if expected is not None and expected not in references:
+                    unresolved.append({"unit": path.name, "path": str(expected), "code": "observed_source_reference_not_found"})
                 if path.suffix == ".service" and not references:
                     unresolved.append({"path": str(path), "code": "no_eligible_direct_script_reference"})
             else:
@@ -196,6 +240,13 @@ def prepare() -> dict:
     require(len(scripts) <= SCRIPT_COUNT_LIMIT, "source_count_limit")
     for path in sorted(scripts):
         collect(path, SCRIPT_LIMIT, "script")
+    collected = {Path(item["path"]) for item in files if item["kind"] == "script"}
+    for unit, path in OBSERVED_SOURCE_PATHS.items():
+        if path not in collected:
+            unresolved.append({"unit": unit, "path": str(path), "code": "observed_source_not_collected"})
+    summary = {"units_collected": sum(item["kind"] == "unit" for item in files), "scripts_collected": len(collected),
+               "observed_sources_expected": len(OBSERVED_SOURCE_PATHS),
+               "observed_sources_collected": sum(path in collected for path in OBSERVED_SOURCE_PATHS.values())}
     unresolved.append({"code": "transitive_dependencies_not_collected"})
     unresolved.append({"code": "dropins_environment_credentials_state_logs_and_backup_data_not_collected"})
     header = ("# Sellora source review — OWNER REVIEW DRAFT\n\n"
@@ -203,12 +254,14 @@ def prepare() -> dict:
               "Remove credentials before attachment and identify every redaction. Automatic redaction is conservative, "
               "not comprehensive sanitization. Redactions affecting lock, commands, encryption or restore behavior "
               "leave the corresponding release gate unresolved.\n\n"
-              "Only eight fixed user-unit files and directly referenced eligible scripts are collected. "
+              "Only eight fixed user-unit files and eligible script references are collected. "
+              "Four owner-observed source paths are explicitly allowlisted, not their directories. "
               "Transitive dependencies and drop-ins are not collected. No source is executed; no source or backup "
               "mechanism is approved by this draft. Original hashes identify original bytes, not the edited copies.\n\n"
               "## Collection metadata and omissions\n\n" +
               "\n".join("    " + line for line in json.dumps(
-                  {"files": files, "unresolved_dependencies": unresolved}, ensure_ascii=False, indent=2).splitlines()) + "\n\n")
+                  {"collection_summary": summary, "files": files, "unresolved_dependencies": unresolved},
+                  ensure_ascii=False, indent=2).splitlines()) + "\n\n")
     draft = (header + "\n".join(sections)).encode("utf-8")
     require(len(draft) <= TOTAL_LIMIT * 3, "draft_size_limit")
     home = directory_fd(OWNER_HOME)
@@ -234,7 +287,7 @@ def prepare() -> dict:
     finally:
         os.close(home)
     return {"result": "SOURCE_REVIEW_DRAFT", "artifact_path": str(OWNER_HOME / name / "review.md"),
-            "review_required": True, "files": files, "unresolved_dependencies": unresolved}
+            "review_required": True, "collection_summary": summary, "files": files, "unresolved_dependencies": unresolved}
 
 
 def main(argv: list[str] | None = None) -> int:

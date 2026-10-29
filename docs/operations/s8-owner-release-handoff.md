@@ -109,13 +109,32 @@ the hashes supplied by the owner's native preflight. These checks bind collectio
 to those observed originals; they do not approve their behavior or populate the
 release helper's `UNIT_PINS`.
 
-Only static absolute script tokens on `ExecStart`, `ExecStartPre` and `ExecStartPost`
-can add files: a `sellora`-prefixed basename directly in
-`/home/btcradar/.local/bin`, ending in `.py`/`.sh` or extensionless with an explicitly
-recognized text shebang. It performs no directory scan or transitive source
+Static absolute script tokens on `ExecStart`, `ExecStartPre` and `ExecStartPost`
+can add files. The owner identified these four actual sources after the initial
+`.local/bin`-only collector produced eight units and zero scripts:
+
+| Service | Exact additional source path |
+| --- | --- |
+| `sellora-runtime-health-watchdog.service` | `/home/btcradar/.local/lib/sellora/api_watchdog.py` |
+| `sellora-db-backup.service` | `/home/btcradar/runtime/sellora/protected-backups/backup-sellora.sh` |
+| `sellora-offhost-encrypted-backup.service` | `/home/btcradar/runtime/sellora/protected-backups/push-to-nexolab.sh` |
+| `sellora-google-drive-backup.service` | `/home/btcradar/runtime/sellora/protected-backups/upload-to-google-drive.sh` |
+
+The additional allowlist covers only those exact files, never their directories
+or neighboring keys, credentials, archives, receipts or logs. The original rule
+also remains: a `sellora`-prefixed basename directly in `.local/bin`, ending in
+`.py`/`.sh` or extensionless with an explicitly recognized text shebang.
+Bounded lexical tokenization can recognize the four exact observed paths inside
+quoted wrapper text (128 tokens, two nested levels); it performs no shell expansion
+or evaluation. Plain direct Python and sh/bash interpreter-plus-script forms are
+recognized. Arbitrary arguments, inline/shell wrappers and dynamic invocations
+remain redacted and explicitly incomplete even if an exact source reference was
+collected. Discovery is not proof of the invocation's behavior.
+
+It performs no directory scan or transitive source
 discovery, follows no symlinks (including ancestors), reads no binary or credential,
 environment, state, log or archive files, and executes no collected source. Limits
-are eight unit files at 16 KiB each, sixteen direct scripts at 128 KiB each and
+are eight unit files at 16 KiB each, sixteen referenced scripts at 128 KiB each and
 512 KiB total original bytes. Missing/unsupported direct inputs are recorded as
 omissions; a changed or unreadable required watchdog original fails collection.
 Inline, shell or dynamic commands outside the supported direct forms remain
@@ -124,9 +143,15 @@ explicitly incomplete. Other dependencies and drop-ins remain uncollected.
 It writes only one local Markdown draft at
 `/home/btcradar/sellora-s8-source-review-<unique>/review.md`, directory `0700`, file
 `0600`. JSON stdout contains its path, source metadata/original hashes, redaction
-locations, omissions and `review_required=true`, never raw source or exception
+locations, omissions, `collection_summary` counts and `review_required=true`, never raw source or exception
 text. No upload, source execution, service/Docker/database operation, protected
 configuration update, backup production or release approval occurs.
+
+Check the summary's collected-unit/script counts and observed-source coverage;
+the four observed sources are expected. Every uncollected observed path is listed
+explicitly. Missing, dynamic or unsupported inputs keep review incomplete. The
+next command remains `--prepare`, followed by the exact Markdown attachment below;
+JSON metadata alone does not provide the source needed for review.
 
 **The owner must inspect and edit that exact draft locally before explicitly
 attaching it in chat.** Unit Environment/credential directives (including
