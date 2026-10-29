@@ -68,16 +68,24 @@ function isBrowser() {
   return typeof window !== "undefined";
 }
 
-async function fetchWithAuthTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+async function consumeAuthResponse<T>(input: RequestInfo | URL, init: RequestInit | undefined, consume: (response: Response) => Promise<T>): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
   try {
-    return await fetch(input, { ...init, signal: controller.signal });
-  } catch {
-    throw new AuthNetworkError();
+    const response = await fetch(input, { ...init, signal: controller.signal }).catch(() => { throw new AuthNetworkError(); });
+    try {
+      return await consume(response);
+    } catch (error) {
+      if (controller.signal.aborted) throw new AuthNetworkError();
+      throw error;
+    }
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+async function fetchWithAuthTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return consumeAuthResponse(input, init, async response => response);
 }
 
 export const authStorage = {
@@ -189,11 +197,12 @@ export async function loginWithPassword(email: string, password: string): Promis
 }
 
 async function requestSessionRefresh(attempt = 0): Promise<TokenPair> {
-  const response = await fetchWithAuthTimeout(`${API_BASE_URL}/auth/session/refresh`, {
+  // Bootstrap draining must be bounded through JSON consumption, not just headers.
+  const { response, result } = await consumeAuthResponse(`${API_BASE_URL}/auth/session/refresh`, {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-  });
+  }, async response => ({ response, result: response.ok ? await response.json() : null }));
   if (response.status === 409 && attempt === 0) {
     // Another tab rotated the cookie; allow its Set-Cookie response to settle.
     await new Promise((resolve) => setTimeout(resolve, 350));
@@ -201,8 +210,7 @@ async function requestSessionRefresh(attempt = 0): Promise<TokenPair> {
   }
   if (response.status === 401) throw new SecureSessionExpiredError();
   if (!response.ok) throw new AuthNetworkError();
-  const result = await response.json() as { access_token: string };
-  return { access_token: result.access_token, refresh_token: "", token_type: "bearer" };
+  return { access_token: (result as { access_token: string }).access_token, refresh_token: "", token_type: "bearer" };
 }
 
 export function refreshCookieSession(): Promise<TokenPair> {
@@ -254,13 +262,12 @@ export async function refreshAccessToken(refreshToken: string): Promise<TokenPai
 }
 
 export async function fetchCurrentUser(accessToken: string): Promise<CurrentUser> {
-  const response = await fetchWithAuthTimeout(`${API_BASE_URL}/auth/me`, {
+  return consumeAuthResponse(`${API_BASE_URL}/auth/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
+  }, async response => {
+    if (!response.ok) throw new Error("Unable to load current user");
+    return response.json() as Promise<CurrentUser>;
   });
-  if (!response.ok) {
-    throw new Error("Unable to load current user");
-  }
-  return response.json() as Promise<CurrentUser>;
 }
 
 export function firstAvailableWorkspace(user: CurrentUser): WorkspaceMembership | null {

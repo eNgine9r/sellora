@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:auth-bootstrap": "node scripts/auth-bootstrap-race-test.cjs",
     "test:e2e:direct-identity": "playwright test --config=playwright.direct-client-conflict.config.ts",
     "mobile:audit:static": "node scripts/mobile-ui-static-regression.mjs"
   },

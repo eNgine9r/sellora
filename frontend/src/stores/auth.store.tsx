@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { normalizeWorkspaceId } from "@/lib/workspace";
 import { COOKIE_SESSION_AUTH_ENABLED, authStorage, fetchCurrentUser, firstAvailableWorkspace, loginWithPassword, refreshAccessToken, refreshCookieSession, revokeCookieSession } from "@/services/auth.service";
@@ -24,6 +24,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const authGeneration = useRef(0);
+  const bootstrapPending = useRef<Promise<void>>(Promise.resolve());
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null);
@@ -49,19 +51,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reloadCurrentUser = useCallback(async () => {
+    const generation = authGeneration.current;
+    const isCurrent = () => generation === authGeneration.current;
     const accessToken = authStorage.getAccessToken();
     if (COOKIE_SESSION_AUTH_ENABLED) {
       if (accessToken) {
         try {
-          applyUser(await fetchCurrentUser(accessToken));
+          const user = await fetchCurrentUser(accessToken);
+          if (isCurrent()) applyUser(user);
           return;
         } catch {
+          if (!isCurrent()) return;
           // Recover from an expired short-lived access token using the cookie.
         }
       }
       const tokens = await refreshCookieSession();
+      if (!isCurrent()) return;
       authStorage.setTokens(tokens);
-      applyUser(await fetchCurrentUser(tokens.access_token));
+      const user = await fetchCurrentUser(tokens.access_token);
+      if (isCurrent()) applyUser(user);
       return;
     }
     if (!accessToken) {
@@ -70,35 +78,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const user = await fetchCurrentUser(accessToken);
-      applyUser(user);
+      if (isCurrent()) applyUser(user);
     } catch {
+      if (!isCurrent()) return;
       const refreshToken = authStorage.getRefreshToken();
       if (!refreshToken) {
         throw new Error("Session expired");
       }
       const tokens = await refreshAccessToken(refreshToken);
+      if (!isCurrent()) return;
       authStorage.setTokens(tokens);
       const user = await fetchCurrentUser(tokens.access_token);
-      applyUser(user);
+      if (isCurrent()) applyUser(user);
     }
   }, [applyUser]);
 
   useEffect(() => {
+    // An explicit action may precede the initial passive effect.
+    if (authGeneration.current !== 0) return;
+    const generation = authGeneration.current;
+    const restoreFailed = () => {
+      if (generation !== authGeneration.current) return;
+      authStorage.clear();
+      queryClient.clear();
+      setCurrentUser(null);
+      setCurrentWorkspaceId(null);
+      setStatus("unauthenticated");
+    };
     if (COOKIE_SESSION_AUTH_ENABLED) {
       // Resume an existing server-side session. The prior JWT migration
       // endpoint has been retired after owner acceptance.
-      void (async () => {
-        try {
-          await reloadCurrentUser();
-          return;
-        } catch {
-          authStorage.clear();
-          queryClient.clear();
-          setCurrentUser(null);
-          setCurrentWorkspaceId(null);
-          setStatus("unauthenticated");
-        }
+      const pending = (async () => {
+        try { await reloadCurrentUser(); }
+        catch { restoreFailed(); }
       })();
+      // Track every initial attempt, including StrictMode's effect replay.
+      // Draining transport also orders old Set-Cookie before a new login/logout.
+      bootstrapPending.current = Promise.all([bootstrapPending.current, pending]).then(() => undefined);
       return;
     }
     const storedUser = authStorage.getCurrentUser();
@@ -111,29 +127,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCurrentWorkspaceId(normalizedWorkspaceId);
       setStatus("authenticated");
       if (!normalizedWorkspaceId) setError("У вас ще немає робочого простору. Створіть перший магазин, щоб почати роботу в Sellora.");
-      void reloadCurrentUser().catch(() => {
-        authStorage.clear();
-        queryClient.clear();
-        setCurrentUser(null);
-        setCurrentWorkspaceId(null);
-        setStatus("unauthenticated");
-      });
+      void reloadCurrentUser().catch(restoreFailed);
       return;
     }
     setStatus("unauthenticated");
   }, [queryClient, reloadCurrentUser]);
 
   const login = useCallback(async (email: string, password: string) => {
+    const generation = ++authGeneration.current;
     setError(null);
-    const tokens = await loginWithPassword(email, password);
-    authStorage.setTokens(tokens);
-    const user = await fetchCurrentUser(tokens.access_token);
-    applyUser(user);
+    try {
+      if (COOKIE_SESSION_AUTH_ENABLED) await bootstrapPending.current;
+      if (generation !== authGeneration.current) return;
+      const tokens = await loginWithPassword(email, password);
+      if (generation !== authGeneration.current) return;
+      const user = await fetchCurrentUser(tokens.access_token);
+      if (generation === authGeneration.current) {
+        // Keep the previous client actor/credentials together if user verification fails.
+        authStorage.setTokens(tokens);
+        applyUser(user);
+      }
+    } catch (error) {
+      if (generation === authGeneration.current) {
+        setStatus(current => generation === authGeneration.current && current === "loading" ? "unauthenticated" : current);
+      }
+      throw error;
+    }
   }, [applyUser]);
 
   const logout = useCallback(async () => {
+    const generation = ++authGeneration.current;
+    if (COOKIE_SESSION_AUTH_ENABLED) await bootstrapPending.current;
+    if (generation !== authGeneration.current) return;
     // Do not report successful logout before the server revokes the cookie.
     if (COOKIE_SESSION_AUTH_ENABLED) await revokeCookieSession();
+    if (generation !== authGeneration.current) return;
     authStorage.clear();
     queryClient.clear();
     setCurrentUser(null);
