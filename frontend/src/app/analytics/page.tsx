@@ -47,21 +47,21 @@ export default function AnalyticsPage() {
   const [inventoryPage, setInventoryPage] = useState(1);
   const [inventoryPageSize, setInventoryPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
 
-  const salesReport = useQuery({ queryKey: ["analytics-sales-report", workspaceId, startDate, endDate], queryFn: () => fetchSalesReport(workspaceId, undefined, startDate, endDate), enabled });
-  const advertisingReport = useQuery({ queryKey: ["analytics-advertising-report", workspaceId, startDate, endDate], queryFn: () => fetchAdvertisingReport(workspaceId, undefined, startDate, endDate), enabled });
+  const salesReport = useQuery({ queryKey: ["analytics-sales-report", workspaceId, startDate, endDate], queryFn: () => fetchSalesReport(workspaceId, undefined, startDate, endDate), enabled, refetchInterval: 60_000 });
+  const advertisingReport = useQuery({ queryKey: ["analytics-advertising-report", workspaceId, startDate, endDate], queryFn: () => fetchAdvertisingReport(workspaceId, undefined, startDate, endDate), enabled, refetchInterval: 60_000 });
   const inventoryReport = useQuery({ queryKey: ["analytics-inventory-report", workspaceId, startDate, endDate], queryFn: () => fetchInventoryReport(workspaceId, undefined, startDate, endDate), enabled });
-  const backendInsights = useQuery({ queryKey: ["analytics-business-insights", workspaceId, startDate, endDate], queryFn: () => fetchBusinessInsights(workspaceId, undefined, startDate, endDate), enabled });
-  const sales = useQuery({ queryKey: ["analytics-sales", workspaceId, startDate, endDate], queryFn: () => fetchSalesSummary(workspaceId, undefined, startDate, endDate), enabled });
+  const backendInsights = useQuery({ queryKey: ["analytics-business-insights", workspaceId, startDate, endDate], queryFn: () => fetchBusinessInsights(workspaceId, undefined, startDate, endDate), enabled, refetchInterval: 60_000 });
+  const sales = useQuery({ queryKey: ["analytics-sales", workspaceId, startDate, endDate], queryFn: () => fetchSalesSummary(workspaceId, undefined, startDate, endDate), enabled, refetchInterval: 60_000 });
   const profit = useQuery({ queryKey: ["analytics-profit", workspaceId, startDate, endDate], queryFn: () => fetchProfitSummary(workspaceId, undefined, startDate, endDate), enabled: enabled && canSeeProfit });
   const reportedProfit = salesReport.data ? salesReport.data.net_profit : profit.data?.total_net_profit;
   const topProducts = useQuery({ queryKey: ["analytics-products", workspaceId, startDate, endDate], queryFn: () => fetchTopProducts(workspaceId, undefined, startDate, endDate, 12), enabled: enabled && canSeeProfit });
   const customersSummary = useQuery({ queryKey: ["analytics-customers-summary", workspaceId, startDate, endDate], queryFn: () => fetchCustomersSummary(workspaceId, undefined, startDate, endDate), enabled });
   const inventorySummary = useQuery({ queryKey: ["analytics-inventory-summary", workspaceId], queryFn: () => fetchInventorySummary(workspaceId, undefined), enabled });
-  const advertising = useQuery({ queryKey: ["analytics-advertising-summary", workspaceId, startDate, endDate], queryFn: () => fetchAdvertisingSummary(workspaceId, undefined, startDate, endDate), enabled });
+  const advertising = useQuery({ queryKey: ["analytics-advertising-summary", workspaceId, startDate, endDate], queryFn: () => fetchAdvertisingSummary(workspaceId, undefined, startDate, endDate), enabled, refetchInterval: 60_000 });
   const campaignPerformance = useQuery({ queryKey: ["analytics-campaign-performance", workspaceId, startDate, endDate], queryFn: () => fetchCampaignPerformance(workspaceId, undefined, startDate, endDate, 12), enabled });
   const advertisingTrend = useQuery({ queryKey: ["analytics-advertising-trend", workspaceId, startDate, endDate], queryFn: () => fetchAdvertisingTrend(workspaceId, undefined, startDate, endDate), enabled });
-  const orders = useQuery({ queryKey: ["analytics-orders", workspaceId], queryFn: () => fetchOrders(workspaceId, ""), enabled });
-  const leads = useQuery({ queryKey: ["analytics-leads", workspaceId], queryFn: () => fetchLeads(workspaceId, {}), enabled });
+  const orders = useQuery({ queryKey: ["analytics-orders", workspaceId], queryFn: () => fetchOrders(workspaceId, ""), enabled, refetchInterval: 60_000 });
+  const leads = useQuery({ queryKey: ["analytics-leads", workspaceId], queryFn: () => fetchLeads(workspaceId, {}), enabled, refetchInterval: 60_000 });
   const customers = useQuery({ queryKey: ["analytics-customers", workspaceId], queryFn: () => fetchCustomers(workspaceId), enabled });
   const products = useQuery({ queryKey: ["analytics-product-catalog", workspaceId], queryFn: () => fetchProducts(workspaceId), enabled });
   const variants = useQuery({ queryKey: ["analytics-variants", workspaceId], queryFn: () => fetchProductVariants(workspaceId, undefined, undefined), enabled });
