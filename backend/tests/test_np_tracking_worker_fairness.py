@@ -75,6 +75,6 @@ def test_provider_code_3_has_daily_cooldown_in_candidate_sql():
     assert module.pending_tracking_ids(db, now=datetime.now(UTC)) == []
     sql = str(db.statement.compile(dialect=postgresql.dialect()))
     assert 'last_not_found' in sql
-    assert 'provider_status_code' in sql
+    assert 'provider_status_code' in db.statement.compile(dialect=postgresql.dialect()).params.values()
     assert 'new_value' in sql
     assert module.NOT_FOUND_RETRY_INTERVAL.total_seconds() == 24 * 3600
