@@ -51,11 +51,13 @@ export default function CustomersPage() {
     queryKey: ["customers", workspaceId],
     queryFn: () => fetchCustomers(workspaceId, undefined, undefined),
     enabled,
+    refetchInterval: 60_000,
   });
   const customerOrdersQuery = useQuery({
     queryKey: ["customer-orders", workspaceId, selectedId],
     queryFn: () => fetchCustomerOrders(workspaceId, selectedId),
     enabled: enabled && Boolean(selectedId),
+    refetchInterval: 60_000,
   });
   const tagsQuery = useQuery({
     queryKey: ["tags", workspaceId],
