@@ -62,17 +62,17 @@ export default function DashboardPage() {
   const previousTo = previousRange.date_to || undefined;
 
   const codLedger = useQuery({ queryKey: ["cod-reconciliation", workspaceId, dateFrom, dateTo], queryFn: () => fetchCodLedger(dateFrom, dateTo), enabled });
-  const backendDashboard = useQuery({ queryKey: ["dashboard-backend-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchDashboardSummary(workspaceId, undefined, dateFrom, dateTo), enabled });
+  const backendDashboard = useQuery({ queryKey: ["dashboard-backend-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchDashboardSummary(workspaceId, undefined, dateFrom, dateTo), enabled, refetchInterval: 60_000 });
   const previousBackendDashboard = useQuery({ queryKey: ["dashboard-backend-summary-previous", workspaceId, previousFrom, previousTo], queryFn: () => fetchDashboardSummary(workspaceId, undefined, previousFrom, previousTo), enabled: enabled && Boolean(previousFrom && previousTo) });
-  const salesSummary = useQuery({ queryKey: ["dashboard-sales-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchSalesSummary(workspaceId, undefined, dateFrom, dateTo), enabled });
-  const profitSummary = useQuery({ queryKey: ["dashboard-profit-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchProfitSummary(workspaceId, undefined, dateFrom, dateTo), enabled: enabled && canSeeProfit });
+  const salesSummary = useQuery({ queryKey: ["dashboard-sales-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchSalesSummary(workspaceId, undefined, dateFrom, dateTo), enabled, refetchInterval: 60_000 });
+  const profitSummary = useQuery({ queryKey: ["dashboard-profit-summary", workspaceId, dateFrom, dateTo], queryFn: () => fetchProfitSummary(workspaceId, undefined, dateFrom, dateTo), enabled: enabled && canSeeProfit, refetchInterval: 60_000 });
   const previousProfitSummary = useQuery({ queryKey: ["dashboard-profit-summary-previous", workspaceId, previousFrom, previousTo], queryFn: () => fetchProfitSummary(workspaceId, undefined, previousFrom, previousTo), enabled: enabled && canSeeProfit && Boolean(previousFrom && previousTo) });
   const salesTrend = useQuery({ queryKey: ["dashboard-sales-trend", workspaceId, dateFrom, dateTo], queryFn: () => fetchSalesTrend(workspaceId, undefined, dateFrom, dateTo), enabled: enabled && canSeeProfit });
   const topProducts = useQuery({ queryKey: ["dashboard-top-products", workspaceId, dateFrom, dateTo], queryFn: () => fetchTopProducts(workspaceId, undefined, dateFrom, dateTo, 8), enabled: enabled && canSeeProfit });
-  const advertising = useQuery({ queryKey: ["dashboard-advertising", workspaceId, dateFrom, dateTo], queryFn: () => fetchAdvertisingSummary(workspaceId, undefined, dateFrom, dateTo), enabled });
+  const advertising = useQuery({ queryKey: ["dashboard-advertising", workspaceId, dateFrom, dateTo], queryFn: () => fetchAdvertisingSummary(workspaceId, undefined, dateFrom, dateTo), enabled, refetchInterval: 60_000 });
   const previousAdvertising = useQuery({ queryKey: ["dashboard-advertising-previous", workspaceId, previousFrom, previousTo], queryFn: () => fetchAdvertisingSummary(workspaceId, undefined, previousFrom, previousTo), enabled: enabled && Boolean(previousFrom && previousTo) });
-  const orders = useQuery({ queryKey: ["dashboard-orders", workspaceId], queryFn: () => fetchOrders(workspaceId, ""), enabled });
-  const leads = useQuery({ queryKey: ["dashboard-leads", workspaceId], queryFn: () => fetchLeads(workspaceId, {}), enabled });
+  const orders = useQuery({ queryKey: ["dashboard-orders", workspaceId], queryFn: () => fetchOrders(workspaceId, ""), enabled, refetchInterval: 60_000 });
+  const leads = useQuery({ queryKey: ["dashboard-leads", workspaceId], queryFn: () => fetchLeads(workspaceId, {}), enabled, refetchInterval: 60_000 });
   const inventory = useQuery({ queryKey: ["dashboard-inventory", workspaceId], queryFn: () => fetchInventorySummary(workspaceId), enabled });
   const products = useQuery({ queryKey: ["dashboard-products", workspaceId], queryFn: () => fetchProducts(workspaceId), enabled });
   const onboarding = useQuery({ queryKey: ["onboarding-status", workspaceId], queryFn: () => fetchOnboardingStatus(workspaceId), enabled });

@@ -27,7 +27,7 @@ export function NovaPoshtaExternalInbox({
   const { t } = useI18n();
   const client = useQueryClient();
   const [lastScan, setLastScan] = useState<ExternalNovaPoshtaScanResult | null>(null);
-  const visible = process.env.NEXT_PUBLIC_NP_EXTERNAL_INBOX_ENABLED === "true" && (role === "OWNER" || role === "MANAGER");
+  const visible = role === "OWNER" || role === "MANAGER";
   const key = ["np-external-inbox", workspaceId];
   const query = useQuery({
     queryKey: key,
@@ -40,11 +40,12 @@ export function NovaPoshtaExternalInbox({
     },
     enabled: visible && Boolean(workspaceId),
     staleTime: 60_000,
+    refetchInterval: 60_000,
   });
   const scan = useMutation({
     mutationFn: () => scanExternalNovaPoshtaDocuments(
       workspaceId,
-      kyivDate(Date.now() - 6 * 86_400_000),
+      kyivDate(Date.now()),
       kyivDate(Date.now()),
     ),
     onSuccess: (result) => {

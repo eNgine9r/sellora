@@ -96,11 +96,13 @@ export default function OrdersPage() {
     queryKey: ["orders", workspaceId, status],
     queryFn: () => fetchOrders(workspaceId, status),
     enabled,
+    refetchInterval: 45_000,
   });
   const dashboardQuery = useQuery({
     queryKey: ["orders-dashboard", workspaceId],
     queryFn: () => fetchOrderDashboard(workspaceId),
     enabled,
+    refetchInterval: 45_000,
   });
   const variantsQuery = useQuery({
     queryKey: ["product-variants", workspaceId],
