@@ -12,9 +12,10 @@ import logging
 import os
 from uuid import UUID
 
-from sqlalchemy import or_, select, text
+from sqlalchemy import String, and_, cast, func, or_, select, text
 
 from app.database.session import SessionLocal, engine
+from app.models.audit_log import AuditLog
 from app.models.integration_connection import IntegrationConnection, IntegrationProvider, IntegrationStatus
 from app.models.shipment import Shipment, ShipmentCarrier, ShipmentStatus
 from app.models.workspace import Workspace
@@ -34,6 +35,26 @@ def enabled() -> bool:
 
 def pending_tracking_ids(db, *, now: datetime, limit: int = BATCH_LIMIT) -> list[tuple[UUID, UUID]]:
     """Find recently active, nonterminal, provider-backed TTNs in connected workspaces."""
+    # Fair scheduling: provider code 3 (number not found) is unverified,
+    # so nova_poshta_synced_at stays NULL; never re-check the same 10 indefinitely.
+    # Audit attempts are already written by the provider service, including
+    # failures; use them as a read-only retry ledger across restarts.
+    attempts = (
+        select(
+            AuditLog.workspace_id.label("workspace_id"),
+            AuditLog.entity_id.label("entity_id"),
+            func.max(AuditLog.created_at).label("last_attempt"),
+        )
+        .where(
+            AuditLog.entity_type == "Shipment",
+            AuditLog.action.in_(
+                ["NOVA_POSHTA_STATUS_SYNCED", "NOVA_POSHTA_STATUS_UNVERIFIED",
+                 "NOVA_POSHTA_STATUS_UNAVAILABLE", "NOVA_POSHTA_ERROR"]
+            ),
+        )
+        .group_by(AuditLog.workspace_id, AuditLog.entity_id)
+        .subquery()
+    )
     stmt = (
         select(Shipment.workspace_id, Shipment.id)
         .join(
@@ -48,6 +69,13 @@ def pending_tracking_ids(db, *, now: datetime, limit: int = BATCH_LIMIT) -> list
             & (IntegrationConnection.status == IntegrationStatus.CONNECTED.value)
             & (IntegrationConnection.deleted_at.is_(None)),
         )
+        .outerjoin(
+            attempts,
+            and_(
+                attempts.c.workspace_id == Shipment.workspace_id,
+                attempts.c.entity_id == cast(Shipment.id, String),
+            ),
+        )
         .where(
             Shipment.deleted_at.is_(None),
             Shipment.carrier == ShipmentCarrier.NOVA_POSHTA.value,
@@ -58,11 +86,19 @@ def pending_tracking_ids(db, *, now: datetime, limit: int = BATCH_LIMIT) -> list
             ]),
             Shipment.updated_at >= now - MAX_AGE,
             or_(
+                attempts.c.last_attempt.is_(None),
+                attempts.c.last_attempt <= now - MIN_INTERVAL,
+            ),
+            or_(
                 Shipment.nova_poshta_synced_at.is_(None),
                 Shipment.nova_poshta_synced_at <= now - MIN_INTERVAL,
             ),
         )
-        .order_by(Shipment.nova_poshta_synced_at.asc().nullsfirst(), Shipment.updated_at.asc())
+        .order_by(
+            attempts.c.last_attempt.asc().nullsfirst(),
+            Shipment.nova_poshta_synced_at.asc().nullsfirst(),
+            Shipment.updated_at.asc(),
+        )
         .limit(min(max(limit, 1), BATCH_LIMIT))
     )
     return list(db.execute(stmt).all())
@@ -72,7 +108,7 @@ def run_once(*, dry_run: bool = False) -> dict[str, int | bool]:
     if not dry_run and not enabled():
         raise RuntimeError("Background tracking is not enabled")
     counters: dict[str, int | bool] = {
-        "eligible": 0, "checked": 0, "synced": 0, "failed": 0, "dry_run": dry_run, "locked": False,
+        "eligible": 0, "checked": 0, "synced": 0, "unverified": 0, "failed": 0, "dry_run": dry_run, "locked": False,
     }
     # Keep an advisory session lock for the entire run. Always release.
     with engine.connect() as lock_connection:
@@ -113,8 +149,10 @@ def run_once(*, dry_run: bool = False) -> dict[str, int | bool]:
                             continue
                         counters["checked"] = int(counters["checked"]) + 1
                         result = NovaPoshtaProviderShipmentService(db).sync_status(workspace_id, shipment_id, None)
-                        if result.success:
+                        if result.success and result.synced_at is not None and not result.manual_review_required:
                             counters["synced"] = int(counters["synced"]) + 1
+                        elif result.success and result.manual_review_required:
+                            counters["unverified"] = int(counters["unverified"]) + 1
                         else:
                             counters["failed"] = int(counters["failed"]) + 1
                     except Exception as exc:
