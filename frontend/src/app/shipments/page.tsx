@@ -49,9 +49,9 @@ export default function ShipmentsPage() {
   const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
   const [archivingShipment, setArchivingShipment] = useState<Shipment | null>(null);
 
-  const shipmentsQuery = useQuery({ queryKey: ["shipments", workspaceId, status, search], queryFn: () => fetchShipments(workspaceId, status, search), enabled });
-  const summaryQuery = useQuery({ queryKey: ["shipments-summary", workspaceId], queryFn: () => fetchShipmentSummary(workspaceId), enabled });
-  const ordersQuery = useQuery({ queryKey: ["orders", workspaceId, "shipment-select"], queryFn: () => fetchOrders(workspaceId, ""), enabled });
+  const shipmentsQuery = useQuery({ queryKey: ["shipments", workspaceId, status, search], queryFn: () => fetchShipments(workspaceId, status, search), enabled, refetchInterval: 45_000 });
+  const summaryQuery = useQuery({ queryKey: ["shipments-summary", workspaceId], queryFn: () => fetchShipmentSummary(workspaceId), enabled, refetchInterval: 45_000 });
+  const ordersQuery = useQuery({ queryKey: ["orders", workspaceId, "shipment-select"], queryFn: () => fetchOrders(workspaceId, ""), enabled, refetchInterval: 45_000 });
   const invalidateShipmentState = () => {
     queryClient.invalidateQueries({ queryKey: ["shipments", workspaceId] });
     queryClient.invalidateQueries({ queryKey: ["shipments-summary", workspaceId] });
