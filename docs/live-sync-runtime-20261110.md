@@ -31,3 +31,7 @@ SELECT count(*), max(nova_poshta_synced_at) FROM shipments WHERE deleted_at IS N
 ## Meta Ads incremental reporting
 
 The Your Jewelry advertising connection is read-only at Meta, with persisted reporting rows in Sellora. Live host timer `sellora-meta-ads-sync.timer` runs four-hourly and uses `backend/app/services/meta_ads_incremental_worker.py` to update the last three calendar days with NBU USD→UAH conversion. It does not generate sales or payments. Initial history from 2026-10-25 through 2026-11-10 was synchronized after checking the token and workspace currency. Validate `meta_ad_connections.last_synced_at` and `ad_metrics.metric_date`, not only timer success.
+
+## Provider code 3 retry policy
+
+For existing TTNs whose Nova Poshta tracking endpoint returns status code `3`, retain the shipment's existing state, report it as unverified, and wait at least 24 hours before another status check. Other eligible tracking candidates maintain the 20-minute minimum retry window. Prioritize TTNs never attempted; never synthesize carrier delivery events.
