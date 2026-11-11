@@ -27,6 +27,7 @@ def test_unique_outbound_tracking_links_exactly_one_conversation():
         "direct_match_state": "MATCHED",
         "direct_conversation_id": conversation,
         "direct_customer_linked": True,
+        "direct_customer_id": db.matches[0][2],
         "direct_order_linked": False,
     }
     sql = str(db.statement.compile(dialect=postgresql.dialect()))
@@ -75,6 +76,7 @@ def test_response_keeps_carrier_and_direct_matching_as_separate_dimensions():
                 "direct_match_state": "MATCHED",
                 "direct_conversation_id": conversation,
                 "direct_customer_linked": True,
+                "direct_customer_id": uuid4(),
                 "direct_order_linked": False,
             }
         },

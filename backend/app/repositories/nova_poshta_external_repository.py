@@ -117,19 +117,20 @@ class NovaPoshtaExternalRepository:
             )
             .distinct()
         )
-        conversations: dict[UUID, dict[UUID, tuple[bool, bool]]] = defaultdict(dict)
+        conversations: dict[UUID, dict[UUID, tuple[UUID | None, bool]]] = defaultdict(dict)
         for document_id, conversation_id, customer_id, order_id in self.db.execute(query).all():
-            conversations[document_id][conversation_id] = (customer_id is not None, order_id is not None)
+            conversations[document_id][conversation_id] = (customer_id, order_id is not None)
         result = {}
         for document_id, matches in conversations.items():
             if len(matches) != 1:
                 result[document_id] = {"direct_match_state": "AMBIGUOUS"}
                 continue
-            conversation_id, (has_customer, has_order) = next(iter(matches.items()))
+            conversation_id, (customer_id, has_order) = next(iter(matches.items()))
             result[document_id] = {
                 "direct_match_state": "MATCHED",
                 "direct_conversation_id": conversation_id,
-                "direct_customer_linked": has_customer,
+                "direct_customer_linked": customer_id is not None,
+                "direct_customer_id": customer_id,
                 "direct_order_linked": has_order,
             }
         return result

@@ -982,6 +982,7 @@
     "externalDirectHasCustomer": "Клієнта знайдено · оформіть замовлення в Direct",
     "externalDirectNeedsCustomer": "Спершу підтвердіть клієнта в Direct",
     "externalOpenDirect": "Відкрити діалог",
+    "externalCreateOrder": "Оформити замовлення",
     "externalDirectAmbiguous": "Кілька діалогів з цією ТТН — перевірте вручну",
     "externalDirectMissing": "Поки немає підтвердженого діалогу Direct",
     "externalReviewTitle": "ТТН без замовлень у CRM",

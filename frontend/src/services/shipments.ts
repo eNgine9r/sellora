@@ -57,6 +57,7 @@ export type ExternalNovaPoshtaDocument = {
   direct_match_state: "NONE" | "MATCHED" | "AMBIGUOUS";
   direct_conversation_id: string | null;
   direct_customer_linked: boolean;
+  direct_customer_id: string | null;
   direct_order_linked: boolean;
   last_seen_at: string;
 };

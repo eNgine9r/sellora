@@ -97,9 +97,19 @@ export function NovaPoshtaExternalInbox({
               {item.direct_conversation_id ? (
                 <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
                   <span className="text-xs text-text-muted">{item.direct_customer_linked ? t("shipments.externalDirectHasCustomer") : t("shipments.externalDirectNeedsCustomer")}</span>
-                  <Link className="rounded-lg border border-input-border px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10" href={`/direct?conversation=${encodeURIComponent(item.direct_conversation_id)}`}>
-                    {t("shipments.externalOpenDirect")}
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {item.direct_customer_id && !item.direct_order_linked ? (
+                      <Link
+                        className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary-hover"
+                        href={`/orders?create=1&customer_id=${encodeURIComponent(item.direct_customer_id)}&direct_conversation_id=${encodeURIComponent(item.direct_conversation_id)}`}
+                      >
+                        {t("shipments.externalCreateOrder")}
+                      </Link>
+                    ) : null}
+                    <Link className="rounded-lg border border-input-border px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10" href={`/direct?conversation=${encodeURIComponent(item.direct_conversation_id)}`}>
+                      {t("shipments.externalOpenDirect")}
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 <span className="w-full text-xs text-text-muted">

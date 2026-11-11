@@ -24,4 +24,5 @@ class NovaPoshtaExternalDocumentResponse(BaseModel):
     direct_match_state: Literal["NONE", "MATCHED", "AMBIGUOUS"] = "NONE"
     direct_conversation_id: UUID | None = None
     direct_customer_linked: bool = False
+    direct_customer_id: UUID | None = None
     direct_order_linked: bool = False
