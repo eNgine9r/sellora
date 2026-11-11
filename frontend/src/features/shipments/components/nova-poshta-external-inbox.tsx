@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import Link from "next/link";
 import { useI18n } from "@/i18n/provider";
 import { safeApiErrorMessage } from "@/services/api";
 import {
@@ -93,6 +94,18 @@ export function NovaPoshtaExternalInbox({
               <span className="text-xs font-semibold text-amber-500">
                 {item.match_state === "CONFLICT" ? t("shipments.externalConflicts") : t("shipments.externalUnmatched")}
               </span>
+              {item.direct_conversation_id ? (
+                <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
+                  <span className="text-xs text-text-muted">{item.direct_customer_linked ? t("shipments.externalDirectHasCustomer") : t("shipments.externalDirectNeedsCustomer")}</span>
+                  <Link className="rounded-lg border border-input-border px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10" href={`/direct?conversation=${encodeURIComponent(item.direct_conversation_id)}`}>
+                    {t("shipments.externalOpenDirect")}
+                  </Link>
+                </div>
+              ) : (
+                <span className="w-full text-xs text-text-muted">
+                  {item.direct_match_state === "AMBIGUOUS" ? t("shipments.externalDirectAmbiguous") : t("shipments.externalDirectMissing")}
+                </span>
+              )
             </div>
           ))}
         </div>
