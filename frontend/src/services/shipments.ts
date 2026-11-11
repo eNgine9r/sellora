@@ -54,6 +54,10 @@ export type ExternalNovaPoshtaDocument = {
   provider_status: string | null;
   match_state: "UNMATCHED" | "LINKED" | "CONFLICT";
   matched_shipment_id: string | null;
+  direct_match_state: "NONE" | "MATCHED" | "AMBIGUOUS";
+  direct_conversation_id: string | null;
+  direct_customer_linked: boolean;
+  direct_order_linked: boolean;
   last_seen_at: string;
 };
 export type ExternalNovaPoshtaScanResult = {

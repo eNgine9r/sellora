@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import Link from "next/link";
 import { useI18n } from "@/i18n/provider";
 import { safeApiErrorMessage } from "@/services/api";
 import {
@@ -85,14 +86,26 @@ export function NovaPoshtaExternalInbox({
         <p className="text-sm text-text-muted">{t("shipments.externalEmpty")}</p>
       ) : null}
       {query.data && query.data.length > 0 ? (
-        <div className="grid gap-2">
-          {query.data.slice(0, 12).map((item) => (
+        <div className="grid max-h-[30rem] gap-2 overflow-y-auto pr-1">
+          {query.data.map((item) => (
             <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border p-3">
               <span className="font-mono text-sm font-semibold text-text-primary">{item.tracking_number}</span>
               <span className="text-xs text-text-muted">{item.provider_status ?? t("shipments.externalUnknownStatus")}</span>
               <span className="text-xs font-semibold text-amber-500">
                 {item.match_state === "CONFLICT" ? t("shipments.externalConflicts") : t("shipments.externalUnmatched")}
               </span>
+              {item.direct_conversation_id ? (
+                <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
+                  <span className="text-xs text-text-muted">{item.direct_customer_linked ? t("shipments.externalDirectHasCustomer") : t("shipments.externalDirectNeedsCustomer")}</span>
+                  <Link className="rounded-lg border border-input-border px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10" href={`/direct?conversation=${encodeURIComponent(item.direct_conversation_id)}`}>
+                    {t("shipments.externalOpenDirect")}
+                  </Link>
+                </div>
+              ) : (
+                <span className="w-full text-xs text-text-muted">
+                  {item.direct_match_state === "AMBIGUOUS" ? t("shipments.externalDirectAmbiguous") : t("shipments.externalDirectMissing")}
+                </span>
+              )}
             </div>
           ))}
         </div>

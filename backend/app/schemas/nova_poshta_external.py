@@ -1,6 +1,7 @@
 """Minimal, workspace-isolated representation of outside carrier documents."""
 from datetime import date, datetime
 from uuid import UUID
+from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 
@@ -20,3 +21,7 @@ class NovaPoshtaExternalDocumentResponse(BaseModel):
     matched_shipment_id: UUID | None
     first_seen_at: datetime
     last_seen_at: datetime
+    direct_match_state: Literal["NONE", "MATCHED", "AMBIGUOUS"] = "NONE"
+    direct_conversation_id: UUID | None = None
+    direct_customer_linked: bool = False
+    direct_order_linked: bool = False
