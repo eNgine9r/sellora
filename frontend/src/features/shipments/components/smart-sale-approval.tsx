@@ -29,6 +29,7 @@ const labels = {
     catalogLoading: "Завантажуємо каталог…",
     customer: "Клієнт із переписки Direct",
     unsupported: "Не знайдено однозначної переписки; звірте ТТН у Direct",
+    singleItem: "Це швидке оформлення підтримує один товар. Якщо в посилці кілька позицій, створіть звичайне замовлення.",
     reasons: {
       EXTERNAL_TTN_CONFLICT: "ТТН має конфлікт прив’язки",
       EXTERNAL_TTN_ALREADY_LINKED: "ТТН уже прив’язана",
@@ -58,6 +59,7 @@ const labels = {
     catalogLoading: "Loading catalog…",
     customer: "Customer from Direct conversation",
     unsupported: "No unique Direct conversation; verify the TTN in Direct",
+    singleItem: "Quick confirmation supports one item only. For multi-item packages, use standard order creation.",
     reasons: {
       EXTERNAL_TTN_CONFLICT: "TTN has a linking conflict",
       EXTERNAL_TTN_ALREADY_LINKED: "TTN already linked",
@@ -156,9 +158,10 @@ export function SmartSaleApproval({ workspaceId, candidate }: {
     </div> : null}
     {candidate.conversation_id && manual ? <div className="grid gap-2">
       <p className="text-xs text-text-muted">{t.missing}</p>
+      <p className="text-xs font-medium text-amber-700">{t.singleItem}</p>
       <label className="grid gap-1 text-xs font-semibold">{t.search}
         <input type="search" className="min-h-11 rounded-lg border border-input-border bg-input-background px-3 text-sm"
-          value={search} onChange={e => setSearch(e.target.value)} />
+          value={search} onChange={e => { setSearch(e.target.value); setVariantId(""); setPrice(""); }} />
       </label>
       {catalog.isLoading ? <p className="text-xs text-text-muted">{t.catalogLoading}</p> : null}
       {catalog.isError ? <p role="alert" className="text-xs text-red-500">{safeApiErrorMessage(catalog.error)}</p> : null}
