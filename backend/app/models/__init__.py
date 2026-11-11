@@ -1,3 +1,4 @@
+from app.models.manual_payment_confirmation import ManualPaymentConfirmation, ManualPaymentMethod
 from app.models.bank_payment_evidence import BankPaymentEvidence, BankPaymentRail, BankPaymentKind, BankPaymentOrigin
 from app.models.nova_poshta_external_document import NovaPoshtaExternalDocument
 from app.models.direct_order_shipment_link import DirectOrderShipmentLink
@@ -53,3 +54,5 @@ __all__ += ["WorkspaceSubscription", "SubscriptionStatus"]
 __all__ += ["SubscriptionPaymentEventReceipt"]
 
 __all__ += ["BankPaymentEvidence", "BankPaymentRail", "BankPaymentKind", "BankPaymentOrigin"]
+
+__all__ += ["ManualPaymentConfirmation", "ManualPaymentMethod"]
