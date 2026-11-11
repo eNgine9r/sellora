@@ -86,8 +86,8 @@ export function NovaPoshtaExternalInbox({
         <p className="text-sm text-text-muted">{t("shipments.externalEmpty")}</p>
       ) : null}
       {query.data && query.data.length > 0 ? (
-        <div className="grid gap-2">
-          {query.data.slice(0, 12).map((item) => (
+        <div className="grid max-h-[30rem] gap-2 overflow-y-auto pr-1">
+          {query.data.map((item) => (
             <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border p-3">
               <span className="font-mono text-sm font-semibold text-text-primary">{item.tracking_number}</span>
               <span className="text-xs text-text-muted">{item.provider_status ?? t("shipments.externalUnknownStatus")}</span>
