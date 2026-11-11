@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ActivityFeed, DashboardActivity } from "@/features/dashboard/components/activity-feed";
@@ -26,6 +27,7 @@ import { fetchOnboardingStatus } from "@/services/onboarding";
 import { fetchOrders } from "@/services/orders";
 import { fetchProducts } from "@/services/products";
 import { fetchCodLedger } from "@/services/cod-reconciliation";
+import { fetchExternalNovaPoshtaDocuments } from "@/services/shipments";
 import { TopProduct } from "@/types/analytics";
 import { Lead } from "@/types/crm";
 import { OrderStatus } from "@/types/orders";
@@ -56,6 +58,7 @@ export default function DashboardPage() {
   const currencyCode = currentWorkspace?.currency_code ?? "UAH";
   const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const canSeeProfit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "ANALYST";
+  const canReviewExternalTtn = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
   const dateFrom = range.date_from || undefined;
   const dateTo = range.date_to || undefined;
   const previousFrom = previousRange.date_from || undefined;
@@ -76,6 +79,19 @@ export default function DashboardPage() {
   const inventory = useQuery({ queryKey: ["dashboard-inventory", workspaceId], queryFn: () => fetchInventorySummary(workspaceId), enabled });
   const products = useQuery({ queryKey: ["dashboard-products", workspaceId], queryFn: () => fetchProducts(workspaceId), enabled });
   const onboarding = useQuery({ queryKey: ["onboarding-status", workspaceId], queryFn: () => fetchOnboardingStatus(workspaceId), enabled });
+  const externalTtns = useQuery({
+    queryKey: ["np-external-inbox", workspaceId],
+    queryFn: async () => {
+      const [unmatched, conflicts] = await Promise.all([
+        fetchExternalNovaPoshtaDocuments(workspaceId, "UNMATCHED"),
+        fetchExternalNovaPoshtaDocuments(workspaceId, "CONFLICT"),
+      ]);
+      return [...conflicts, ...unmatched];
+    },
+    enabled: enabled && canReviewExternalTtn,
+    refetchInterval: 60_000,
+    staleTime: 60_000,
+  });
 
   const currentOrders = useMemo(() => (orders.data ?? []).filter((order) => isInDateRange(order.created_at, range)), [orders.data, range]);
   const currentLeads = useMemo(() => (leads.data ?? []).filter((lead: Lead) => isInDateRange(lead.created_at, range)), [leads.data, range]);
@@ -153,6 +169,17 @@ export default function DashboardPage() {
           <DashboardMetricCard label={t("dashboard.kpis.roas")} value={hasAdvertisingData ? roas : "—"} helper={hasAdvertisingData ? selectedPeriodLabel : t("dashboard.kpiHelpers.roasMissing")} trend={adSpend > 0 ? formatDeltaPercent(toFiniteNumber(backendDashboard.data?.advertising.roas ?? advertising.data?.roas), toFiniteNumber(previousBackendDashboard.data?.advertising.roas ?? previousAdvertising.data?.roas)) : undefined} unavailable={!hasAdvertisingData} explanation={t("dashboard.tooltips.roas")} />
         </section>
 
+        {canReviewExternalTtn && (externalTtns.data?.length || externalTtns.isError) ? (
+          <section data-dashboard-np-unmatched className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface-1 p-4">
+            <div className="min-w-0">
+              <p className="font-semibold text-text-primary">{t("shipments.externalReviewTitle")}: {externalTtns.data?.length ?? "—"}</p>
+              <p className="mt-1 text-sm text-text-muted">{t("shipments.externalReviewDescription")}</p>
+            </div>
+            <Link href="/shipments" className="rounded-xl border border-input-border px-4 py-2 text-sm font-semibold text-primary">
+              {t("shipments.externalReviewAction")}
+            </Link>
+          </section>
+        ) : null}
         {codLedger.data ? <section className="grid gap-2 sm:grid-cols-2" aria-label={t("dashboard.codReconciliation.title")} data-dashboard-cod-payments="true">
           <div className="min-w-0 rounded-xl border border-border-subtle bg-surface-1 p-3">
             <p className="text-xs font-medium text-text-secondary">{t("dashboard.codReconciliation.received")}</p>
