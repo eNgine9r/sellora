@@ -47,9 +47,9 @@ function minorFromUah(value: string): number {
   const amount = value.trim();
   if (!/^(?:0|[1-9]\d{0,11})(?:[.,]\d{1,2})?$/.test(amount)) throw new Error("Invalid UAH amount");
   const [whole, fraction = ""] = amount.replace(",", ".").split(".");
-  const minor = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
-  if (minor <= 0n || minor >= 100_000_000_000_000n) throw new Error("Amount out of range");
-  return Number(minor);
+  const minor = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+  if (!Number.isSafeInteger(minor) || minor <= 0 || minor >= 100_000_000_000_000) throw new Error("Amount out of range");
+  return minor;
 }
 
 function reference(value: string | undefined, min: number, max: number): string | null {
