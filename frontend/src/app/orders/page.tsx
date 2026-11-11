@@ -20,6 +20,7 @@ import {
 import { Button, CompactSummary, EntitySidePanel, MetricCard, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
 import { OrderDetails } from "@/features/orders/components/order-details";
+import { ManualPaymentVerificationCard } from "@/features/orders/components/manual-payment-verification-card";
 import { OrderForm } from "@/features/orders/components/order-form";
 import { OrderFulfillmentWizard } from "@/features/orders/components/order-fulfillment-wizard";
 import { OrderTable } from "@/features/orders/components/order-table";
@@ -351,6 +352,16 @@ export default function OrdersPage() {
               onSaveProductCosts={currentWorkspace?.role === "OWNER" ? async (payload) => { await productCostsMutation.mutateAsync({ orderId: selectedOrder.id, payload }); } : undefined}
               productCostsSaving={productCostsMutation.isPending}
               productCostsError={productCostsMutation.isError ? safeApiErrorMessage(productCostsMutation.error, t("orders.costCorrection.invalid")) : null}
+            />
+            <ManualPaymentVerificationCard
+              key={selectedOrder.id}
+              order={selectedOrder}
+              workspaceId={workspaceId}
+              canEdit={canEdit}
+              onPaid={() => {
+                setSelectedOrder(current => current?.id === selectedOrder.id ? { ...current, payment_status: "PAID" } : current);
+                invalidateOrderState();
+              }}
             />
           </EntitySidePanel>
         ) : null}

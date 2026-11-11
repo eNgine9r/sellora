@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models.customer import Customer
 from app.models.inventory_transaction import InventoryTransactionType
-from app.models.order import Order, OrderStatus
+from app.models.order import Order, OrderStatus, PaymentStatus
 from app.models.order_item import OrderItem
 from app.models.order_status_history import OrderStatusHistory
 from app.models.product_variant import ProductVariant
@@ -142,6 +142,22 @@ class OrderService:
         if order is None:
             return None
         old_value = snapshot(order)
+        if "payment_status" in payload.model_fields_set:
+            # A generic order edit is NOT sufficient to attest actual receipt
+            # and bank arrival. Use the dedicated double-check workflow.
+            if payload.payment_status == PaymentStatus.PAID and order.payment_status != PaymentStatus.PAID.value:
+                raise OrderServiceError("Use manual payment verification to confirm an existing order as PAID")
+            if order.payment_status == PaymentStatus.PAID.value and payload.payment_status != PaymentStatus.PAID:
+                from app.models.manual_payment_confirmation import ManualPaymentConfirmation
+                from sqlalchemy import select
+                verified = self.db.scalar(
+                    select(ManualPaymentConfirmation.id).where(
+                        ManualPaymentConfirmation.workspace_id == workspace_id,
+                        ManualPaymentConfirmation.order_id == order_id,
+                    )
+                )
+                if verified is not None:
+                    raise OrderServiceError("Verified payment is immutable; record a reviewed refund/correction first")
         if "customer_id" in payload.model_fields_set:
             if payload.customer_id is None:
                 raise OrderServiceError("Customer is required to update an order")

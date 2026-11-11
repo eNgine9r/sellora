@@ -588,7 +588,9 @@ export function OrderForm({
             })
           }
         >
-          {(["PENDING", "PAID", "COD", "REFUNDED"] as const).map((status) => (
+          {(["PENDING", "PAID", "COD", "REFUNDED"] as const)
+            .filter((status) => status !== "PAID" || !initialOrder || initialOrder.payment_status === "PAID")
+            .map((status) => (
             <option key={status} value={status}>
               {formatStatus("payment", status)}
             </option>

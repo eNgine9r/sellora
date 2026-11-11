@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.dependencies.rbac import get_workspace_id, require_min_role, require_roles
 from app.models.order import OrderStatus
+from app.schemas.manual_payment_confirmation import ManualPaymentConfirmRequest, ManualPaymentConfirmationResponse, OrderManualPaymentResult
+from app.services.manual_payment_confirmation_service import ManualPaymentConfirmationService, ManualPaymentError
 from app.models.role import RoleName
 from app.models.user import User
 from app.schemas.order import HistoricalEstimatedCostUpsert, OrderCreate, OrderDashboardResponse, OrderProductCostsUpdate, OrderResponse, OrderStatusUpdate, OrderUpdate
@@ -134,6 +136,40 @@ def change_order_status(order_id: UUID, payload: OrderStatusUpdate, workspace_id
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order
+
+
+@router.get("/{order_id}/manual-payment", response_model=ManualPaymentConfirmationResponse | None)
+def get_manual_payment(
+    order_id: UUID,
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    service = ManualPaymentConfirmationService(db)
+    if OrderService(db).get(workspace_id, order_id) is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    row = service.get(workspace_id, order_id)
+    return service.response(row) if row is not None else None
+
+
+@router.post("/{order_id}/manual-payment/confirm", response_model=OrderManualPaymentResult)
+def confirm_manual_payment(
+    order_id: UUID,
+    payload: ManualPaymentConfirmRequest,
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return ManualPaymentConfirmationService(db).confirm(workspace_id, order_id, payload, current_user.id)
+    except ManualPaymentError as exc:
+        db.rollback()
+        if str(exc) == "ORDER_NOT_FOUND":
+            raise HTTPException(status_code=404, detail="Order not found") from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="BANK_TRANSACTION_OR_ORDER_ALREADY_CONFIRMED") from exc
 
 
 @router.get("/{order_id}/shipment", response_model=ShipmentResponse | None, dependencies=[Depends(require_min_role(RoleName.ANALYST))])
