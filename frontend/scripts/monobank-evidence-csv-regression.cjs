@@ -11,9 +11,9 @@ const { outputText, diagnostics } = ts.transpileModule(source, {
   reportDiagnostics: true,
 });
 assert.equal(diagnostics?.filter(d => d.category === ts.DiagnosticCategory.Error).length, 0);
-const exports = {};
-vm.runInNewContext(outputText, { exports, require }, { timeout: 1500 });
-const parse = exports.parseBankEvidenceCsv;
+const moduleExports = {};
+vm.runInNewContext(outputText, { exports: moduleExports, require }, { timeout: 1500 });
+const parse = moduleExports.parseBankEvidenceCsv;
 const H = "provider_account_id,external_reference,rail,kind,amount_uah,occurred_at,is_hold,invoice_id,order_number";
 const row = "mono-acc-01,tx-001,BANK_IBAN,CUSTOMER_PAYMENT,749.50,2026-11-11T08:00:00Z,false,,SL-1042";
 
