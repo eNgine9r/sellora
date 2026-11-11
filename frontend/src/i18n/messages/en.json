@@ -982,6 +982,7 @@
     "externalDirectHasCustomer": "Customer linked · complete the order in Direct",
     "externalDirectNeedsCustomer": "Confirm the customer in Direct first",
     "externalOpenDirect": "Open conversation",
+    "externalCreateOrder": "Create order",
     "externalDirectAmbiguous": "Multiple conversations share this TTN — review required",
     "externalDirectMissing": "No confirmed Direct conversation yet",
     "externalReviewTitle": "TTNs without CRM orders",
