@@ -168,7 +168,7 @@ def list_external_documents(
     match_state: str | None = Query(default=None, pattern="^(UNMATCHED|LINKED|CONFLICT)$"),
     db: Session = Depends(get_db),
 ):
-    return NovaPoshtaExternalInboxService(db).list(workspace_id, state=match_state)
+    return NovaPoshtaExternalInboxService(db).list_with_direct_evidence(workspace_id, state=match_state)
 
 
 @router.post("/external-documents/scan")
