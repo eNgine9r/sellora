@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { MonobankEvidenceImport } from "@/features/finance/components/monobank-evidence-import";
 import { useAuth } from "@/hooks/use-auth";
 import { useI18n } from "@/i18n/provider";
 import { formatMoney } from "@/lib/currency";
@@ -85,6 +86,7 @@ export function MonobankEvidenceSection() {
       <span className="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 text-xs font-semibold text-text-secondary">{text.disconnected}</span>
     </div>
     <p className="mt-3 text-xs text-text-secondary">{text.guard}</p>
+    <MonobankEvidenceImport />
     {ledger.isPending ? <div className="mt-4 h-16 animate-pulse rounded-xl bg-surface-2" aria-label="Loading bank evidence" /> : null}
     {ledger.isError ? <p role="alert" className="mt-3 text-sm text-danger">{safeApiErrorMessage(ledger.error)}</p> : null}
     {ledger.data?.rows.length === 0 ? <p className="mt-4 rounded-xl border border-dashed border-border-subtle p-4 text-sm text-text-secondary">{text.empty}</p> : null}
