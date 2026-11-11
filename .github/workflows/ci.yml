@@ -365,6 +365,9 @@ jobs:
       - name: Typecheck
         working-directory: frontend
         run: npm run typecheck
+      - name: Monobank CSV security regression
+        working-directory: frontend
+        run: node scripts/monobank-evidence-csv-regression.cjs
       - name: Lint
         working-directory: frontend
         run: npm run lint

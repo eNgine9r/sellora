@@ -1,0 +1,1 @@
+provider_account_id,external_reference,rail,kind,amount_uah,occurred_at,is_hold,invoice_id,order_number
