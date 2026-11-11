@@ -1,11 +1,13 @@
 """All data access for the workspace-isolated Nova Poshta external inbox."""
 from datetime import datetime
+from collections import defaultdict
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from app.models.ai_direct import DirectConversation, DirectMessage
 from app.models.integration_connection import IntegrationConnection, IntegrationProvider, IntegrationStatus
 from app.models.nova_poshta_external_document import NovaPoshtaExternalDocument
 from app.models.shipment import Shipment, ShipmentCarrier
@@ -72,3 +74,62 @@ class NovaPoshtaExternalRepository:
         if state:
             stmt = stmt.where(NovaPoshtaExternalDocument.match_state == state)
         return list(self.db.scalars(stmt.order_by(NovaPoshtaExternalDocument.last_seen_at.desc()).limit(min(limit, 100))).all())
+
+    def direct_evidence_by_document(self, workspace_id: UUID, document_ids: list[UUID]) -> dict[UUID, dict]:
+        """Find the unique Instagram thread where this sender-owned TTN was sent.
+
+        Read-only: a matching outbound tracking number is delivery evidence,
+        never an order, a payment, or confirmation of purchased products.
+        Tenant scope is enforced at each join; ambiguous threads stay unlinked.
+        """
+        if not document_ids:
+            return {}
+        query = (
+            select(
+                NovaPoshtaExternalDocument.id,
+                DirectConversation.id,
+                DirectConversation.linked_customer_id,
+                DirectConversation.linked_order_id,
+            )
+            .join(
+                DirectMessage,
+                and_(
+                    DirectMessage.workspace_id == NovaPoshtaExternalDocument.workspace_id,
+                    DirectMessage.deleted_at.is_(None),
+                    DirectMessage.is_synthetic.is_(False),
+                    DirectMessage.direction == "OUTBOUND",
+                    DirectMessage.text.contains(NovaPoshtaExternalDocument.tracking_number),
+                ),
+            )
+            .join(
+                DirectConversation,
+                and_(
+                    DirectConversation.id == DirectMessage.conversation_id,
+                    DirectConversation.workspace_id == NovaPoshtaExternalDocument.workspace_id,
+                    DirectConversation.deleted_at.is_(None),
+                    DirectConversation.channel == "INSTAGRAM",
+                ),
+            )
+            .where(
+                NovaPoshtaExternalDocument.workspace_id == workspace_id,
+                NovaPoshtaExternalDocument.id.in_(document_ids),
+                NovaPoshtaExternalDocument.deleted_at.is_(None),
+            )
+            .distinct()
+        )
+        conversations: dict[UUID, dict[UUID, tuple[bool, bool]]] = defaultdict(dict)
+        for document_id, conversation_id, customer_id, order_id in self.db.execute(query).all():
+            conversations[document_id][conversation_id] = (customer_id is not None, order_id is not None)
+        result = {}
+        for document_id, matches in conversations.items():
+            if len(matches) != 1:
+                result[document_id] = {"direct_match_state": "AMBIGUOUS"}
+                continue
+            conversation_id, (has_customer, has_order) = next(iter(matches.items()))
+            result[document_id] = {
+                "direct_match_state": "MATCHED",
+                "direct_conversation_id": conversation_id,
+                "direct_customer_linked": has_customer,
+                "direct_order_linked": has_order,
+            }
+        return result
