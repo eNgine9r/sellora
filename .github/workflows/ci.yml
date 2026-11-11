@@ -301,7 +301,10 @@ jobs:
         run: npm ci
       - name: Install isolated Chromium runtime
         working-directory: frontend
-        run: npx playwright install --with-deps chromium
+        # Ubuntu hosted runners already carry Chromium's OS libraries.
+        # Avoid downloading apt mirror packages in this CI step: an upstream
+        # DNS outage must not prevent testing product code.
+        run: npx playwright install chromium
       - name: Build production frontend for isolated browser coverage
         working-directory: frontend
         env:

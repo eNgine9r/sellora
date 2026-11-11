@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/i18n/provider";
+import { SmartSaleApproval } from "@/features/shipments/components/smart-sale-approval";
+import { getSmartSaleCandidates } from "@/services/smart-sale";
 import { safeApiErrorMessage } from "@/services/api";
 import {
   fetchExternalNovaPoshtaDocuments,
@@ -43,6 +45,13 @@ export function NovaPoshtaExternalInbox({
     staleTime: 60_000,
     refetchInterval: 60_000,
   });
+  const sales = useQuery({
+    queryKey: ["smart-sale-candidates", workspaceId],
+    queryFn: () => getSmartSaleCandidates(workspaceId),
+    enabled: visible && Boolean(workspaceId),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
   const scan = useMutation({
     mutationFn: () => scanExternalNovaPoshtaDocuments(
       workspaceId,
@@ -57,7 +66,7 @@ export function NovaPoshtaExternalInbox({
 
   if (!visible) return null;
   return (
-    <section className="grid min-w-0 gap-3 rounded-2xl border border-border bg-surface p-4">
+    <section id="smart-sale-inbox" className="grid min-w-0 scroll-mt-24 gap-3 rounded-2xl border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-base font-bold text-text-primary">{t("shipments.externalInboxTitle")}</h2>
@@ -74,6 +83,12 @@ export function NovaPoshtaExternalInbox({
           </button>
         ) : null}
       </div>
+      {sales.data?.some((candidate) => Boolean(candidate.conversation_id)) ? (
+        <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-800 dark:text-amber-200">
+          Відправлення для перевірки продажу: {sales.data.filter((candidate) => Boolean(candidate.conversation_id)).length}
+        </p>
+      ) : null}
+      {sales.isError ? <p className="text-xs text-red-500" role="alert">{safeApiErrorMessage(sales.error)}</p> : null}
       {query.isLoading ? <p className="text-sm text-text-muted">{t("shipments.externalLoading")}</p> : null}
       {query.isError ? <p role="alert" className="text-sm text-red-500">{safeApiErrorMessage(query.error, t("shipments.externalLoadError"))}</p> : null}
       {scan.isError ? <p role="alert" className="text-sm text-red-500">{safeApiErrorMessage(scan.error, t("shipments.externalScanError"))}</p> : null}
@@ -94,11 +109,20 @@ export function NovaPoshtaExternalInbox({
               <span className="text-xs font-semibold text-amber-500">
                 {item.match_state === "CONFLICT" ? t("shipments.externalConflicts") : t("shipments.externalUnmatched")}
               </span>
+              {sales.data?.find((candidate) => candidate.document_id === item.id) ? (
+                <div className="w-full border-t border-border pt-2">
+                  <SmartSaleApproval
+                    key={item.id}
+                    workspaceId={workspaceId}
+                    candidate={sales.data.find((candidate) => candidate.document_id === item.id)!}
+                  />
+                </div>
+              ) : null}
               {item.direct_conversation_id ? (
                 <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
                   <span className="text-xs text-text-muted">{item.direct_customer_linked ? t("shipments.externalDirectHasCustomer") : t("shipments.externalDirectNeedsCustomer")}</span>
                   <div className="flex flex-wrap items-center gap-2">
-                    {item.direct_customer_id && !item.direct_order_linked ? (
+                    {item.direct_customer_id && !item.direct_order_linked && !sales.data?.some((candidate) => candidate.document_id === item.id && candidate.state === "READY_FOR_REVIEW") ? (
                       <Link
                         className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary-hover"
                         href={`/orders?create=1&customer_id=${encodeURIComponent(item.direct_customer_id)}&direct_conversation_id=${encodeURIComponent(item.direct_conversation_id)}`}

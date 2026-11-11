@@ -3,6 +3,8 @@
 import { Bell, Menu, Plus, Search, ShoppingBag } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getSmartSaleCandidates } from "@/services/smart-sale";
 import { BrandIcon } from "@/components/brand";
 import { DirectLiveEvent } from "@/types/direct";
 import { useDirectLive } from "@/components/direct-live-provider";
@@ -41,6 +43,16 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, m
   const createOrder = () => router.push("/orders");
   const { summary, isLive, isError, permission, requestBrowserNotifications, openConversation } = useDirectLive();
   const unreadTotal = summary?.unread_total ?? 0;
+  const canReviewSales = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
+  const sales = useQuery({
+    queryKey: ["smart-sale-candidates", currentWorkspaceId],
+    queryFn: () => getSmartSaleCandidates(currentWorkspaceId!),
+    enabled: canReviewSales && Boolean(currentWorkspaceId),
+    refetchInterval: 60_000,
+    staleTime: 60_000,
+  });
+  const saleCandidates = (sales.data ?? []).filter(item => !!item.conversation_id && item.state !== "CONFIRMED");
+  const bellCount = unreadTotal + saleCandidates.length;
 
   const openNotification = (event: DirectLiveEvent) => {
     setNotificationsOpen(false);
@@ -73,14 +85,27 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, m
         <div className="relative hidden md:block">
           <IconButton aria-label={t("topbar.notifications")} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((value) => !value)} data-direct-notification-bell>
             <Bell className="h-5 w-5" />
-            {unreadTotal > 0 ? <span className="absolute -right-1.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[0.65rem] font-black text-white">{unreadTotal > 99 ? "99+" : unreadTotal}</span> : null}
+            {bellCount > 0 ? <span className="absolute -right-1.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[0.65rem] font-black text-white">{bellCount > 99 ? "99+" : bellCount}</span> : null}
           </IconButton>
           {notificationsOpen ? (
             <div className="absolute right-0 top-12 z-[70] w-[min(92vw,420px)] overflow-hidden rounded-3xl border border-border-subtle bg-surface-1 shadow-2xl" data-direct-notification-center>
               <div className="flex items-start justify-between gap-3 border-b border-border-subtle p-4">
-                <div><p className="font-black">Сповіщення Direct</p><p className={`mt-1 text-xs font-semibold ${isError ? "text-rose-600" : isLive ? "text-emerald-600" : "text-amber-600"}`}>{isError ? "Live-зʼєднання тимчасово недоступне" : isLive ? "Live-оновлення активні" : "Підключення до live-оновлень…"}</p></div>
+                <div><p className="font-black">Сповіщення Sellora</p><p className={`mt-1 text-xs font-semibold ${isError ? "text-rose-600" : isLive ? "text-emerald-600" : "text-amber-600"}`}>{isError ? "Live-зʼєднання тимчасово недоступне" : isLive ? "Live-оновлення активні" : "Підключення до live-оновлень…"}</p></div>
                 {summary?.order_intent_count ? <span className="rounded-full bg-amber-500/15 px-2 py-1 text-xs font-black text-amber-700">Замовлення: {summary.order_intent_count}</span> : null}
               </div>
+              {saleCandidates.length > 0 ? (
+                <div className="border-b border-border-subtle p-3">
+                  <p className="mb-2 text-xs font-bold text-amber-700">Відправлення на перевірку продажу: {saleCandidates.length}</p>
+                  {saleCandidates.slice(0, 5).map((sale) => (
+                    <button key={sale.document_id} type="button"
+                      onClick={() => { setNotificationsOpen(false); router.push("/shipments#smart-sale-inbox"); }}
+                      className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-2 text-left text-sm transition hover:bg-surface-hover">
+                      <span className="truncate">ТТН {sale.tracking_masked} · {sale.customer_instagram ? `@${sale.customer_instagram.replace(/^@/, "")}` : "покупець"}</span>
+                      <span className="text-xs font-semibold text-primary">Перевірити</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               {permission === "default" ? <div className="border-b border-border-subtle p-3"><button type="button" onClick={() => void requestBrowserNotifications()} className="min-h-11 w-full rounded-2xl bg-primary/15 px-3 text-sm font-black text-primary hover:bg-primary/20">Увімкнути системні сповіщення</button></div> : null}
               <div className="max-h-[420px] overflow-y-auto p-2">
                 {(summary?.events ?? []).length === 0 ? <p className="p-4 text-center text-sm text-text-muted">Нових непрочитаних повідомлень немає.</p> : (summary?.events ?? []).slice(0, 10).map((event) => (
@@ -94,6 +119,14 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, m
           ) : null}
         </div>
 
+        {canReviewSales && saleCandidates.length > 0 ? (
+          <button type="button" onClick={() => router.push("/shipments#smart-sale-inbox")}
+            aria-label={`Відправлення на перевірку продажу: ${saleCandidates.length}`}
+            className="relative grid min-h-11 min-w-11 place-items-center rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-700 md:hidden">
+            <Bell className="h-5 w-5" />
+            <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-amber-500 px-1 text-[0.65rem] font-bold text-white">{saleCandidates.length}</span>
+          </button>
+        ) : null}
         <IconButton variant="brand" onClick={createOrder} aria-label={t("topbar.createOrder")}><Plus className="h-5 w-5" /></IconButton>
         <ProfileMenu currentUser={currentUser} currentWorkspace={currentWorkspace} currentWorkspaceId={currentWorkspaceId} memberships={validMemberships} onLogout={onLogout} onSwitchWorkspace={onSwitchWorkspace} onWorkspaceCreated={onWorkspaceCreated} />
       </div>
