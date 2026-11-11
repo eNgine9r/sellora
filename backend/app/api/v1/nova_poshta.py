@@ -189,3 +189,40 @@ def scan_external_documents(
         db.rollback()
         # Third-party errors must never expose provider response or credentials.
         raise HTTPException(status_code=502, detail="NOVA_POSHTA_SCAN_PROVIDER_FAILED") from None
+
+
+# Human-approved sale capture from a unique Direct ↔ external TTN match.
+# This never sends anything to Instagram or creates a second carrier document.
+from sqlalchemy.exc import IntegrityError
+from app.schemas.smart_sale import SmartSaleCandidate, SmartSaleConfirmRequest, SmartSaleConfirmResult
+from app.services.smart_sale_confirmation_service import SmartSaleConfirmationService, SmartSaleError
+
+
+@router.get("/external-documents/sale-candidates", response_model=list[SmartSaleCandidate])
+def list_external_sale_candidates(
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    return SmartSaleConfirmationService(db).list(workspace_id)
+
+
+@router.post("/external-documents/{document_id}/confirm-sale", response_model=SmartSaleConfirmResult)
+def confirm_external_ttn_sale(
+    document_id: UUID,
+    payload: SmartSaleConfirmRequest,
+    workspace_id: UUID = Depends(get_workspace_id),
+    current_user: User = Depends(require_min_role(RoleName.MANAGER)),
+    db: Session = Depends(get_db),
+):
+    try:
+        return SmartSaleConfirmationService(db).confirm(
+            workspace_id, document_id, payload, current_user.id,
+        )
+    except SmartSaleError as exc:
+        db.rollback()
+        code = 404 if str(exc) == "EXTERNAL_TTN_NOT_FOUND" else 409
+        raise HTTPException(status_code=code, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="SALE_ALREADY_RECORDED_OR_STALE") from exc
