@@ -105,7 +105,7 @@ export function NovaPoshtaExternalInbox({
                 <span className="w-full text-xs text-text-muted">
                   {item.direct_match_state === "AMBIGUOUS" ? t("shipments.externalDirectAmbiguous") : t("shipments.externalDirectMissing")}
                 </span>
-              )
+              )}
             </div>
           ))}
         </div>
