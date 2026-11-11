@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from app.integrations.nova_poshta_client import NovaPoshtaClient, NovaPoshtaClientError
 from app.models.integration_connection import IntegrationStatus
 from app.repositories.nova_poshta_external_repository import NovaPoshtaExternalRepository
+from app.schemas.nova_poshta_external import NovaPoshtaExternalDocumentResponse
 from app.services.nova_poshta_service import NovaPoshtaSettingsService, NovaPoshtaServiceError
 
 MAX_DAYS = 7
@@ -25,6 +26,18 @@ class NovaPoshtaExternalInboxService:
 
     def list(self, workspace_id: UUID, *, state: str | None = None):
         return self.repo.list_for_workspace(workspace_id, state=state)
+
+    def list_with_direct_evidence(self, workspace_id: UUID, *, state: str | None = None) -> list[dict]:
+        """Return safe, workspace-scoped navigation evidence for external TTNs."""
+        documents = self.repo.list_for_workspace(workspace_id, state=state)
+        evidence = self.repo.direct_evidence_by_document(workspace_id, [doc.id for doc in documents])
+        return [
+            {
+                **NovaPoshtaExternalDocumentResponse.model_validate(doc).model_dump(),
+                **evidence.get(doc.id, {}),
+            }
+            for doc in documents
+        ]
 
     def collect(self, workspace_id: UUID, from_date: date, to_date: date, *, dry_run: bool = False) -> dict:
         if from_date > to_date or (to_date - from_date).days >= MAX_DAYS or to_date > datetime.now(UKRAINE_TZ).date():
