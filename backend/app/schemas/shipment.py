@@ -116,6 +116,12 @@ class ShipmentSummaryResponse(BaseModel):
     arrived_count: int
     delivered_today: int
     returned_this_month: int
+    crm_total_count: int = 0
+    crm_ready_count: int = 0
+    crm_delivered_count: int = 0
+    crm_problem_count: int = 0
+    provider_tracking_checked_at: datetime | None = None
+    provider_pending_count: int = 0
 
 
 class ShipmentTrackingEvent(BaseModel):

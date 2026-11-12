@@ -10,6 +10,8 @@ from app.models.integration_connection import IntegrationStatus
 from app.repositories.nova_poshta_external_repository import NovaPoshtaExternalRepository
 from app.schemas.nova_poshta_external import NovaPoshtaExternalDocumentResponse
 from app.services.nova_poshta_service import NovaPoshtaSettingsService, NovaPoshtaServiceError
+from app.models.shipment import ShipmentStatus
+from app.services.nova_poshta_tracking import normalize_tracking_status, should_apply_tracking_status
 
 MAX_DAYS = 7
 UKRAINE_TZ = ZoneInfo("Europe/Kyiv")
@@ -38,6 +40,44 @@ class NovaPoshtaExternalInboxService:
             }
             for doc in documents
         ]
+
+    def refresh_tracking(self, workspace_id: UUID, *, limit: int = 12) -> dict[str, int]:
+        """Bounded provider-read-only checks; only external TTN evidence is updated.
+
+        Never creates orders, edits payments, or changes inventory. Runs on the
+        existing 15-minute external-inbox cadence, not for every browser request.
+        """
+        _, key = self.settings._require_connection(workspace_id)
+        client = self.client_factory(key)
+        now = datetime.now(UTC)
+        candidates = self.repo.tracking_candidates(workspace_id, now=now, limit=limit)
+        counts = {"eligible": len(candidates), "checked": 0, "changed": 0, "unverified": 0, "failed": 0}
+        for doc in candidates:
+            try:
+                result = client.get_document_tracking(doc.tracking_number)
+                incoming = normalize_tracking_status(result.code, result.status) if result else None
+                doc.provider_tracking_checked_at = datetime.now(UTC)
+                counts["checked"] += 1
+                if incoming is None:
+                    counts["unverified"] += 1
+                else:
+                    previous = ShipmentStatus(doc.provider_normalized_status) if doc.provider_normalized_status else None
+                    if previous is None or incoming == previous or should_apply_tracking_status(previous, incoming):
+                        if doc.provider_normalized_status != incoming.value:
+                            counts["changed"] += 1
+                        doc.provider_normalized_status = incoming.value
+                        if result and result.status:
+                            doc.provider_status = result.status[:255]
+                self.db.commit()
+            except NovaPoshtaClientError as exc:
+                self.db.rollback()
+                counts["failed"] += 1
+                if "many requests" in str(getattr(exc, "code", "")).lower():
+                    break  # Respect provider cooldown; do not retry aggressively.
+            except Exception:
+                self.db.rollback()
+                counts["failed"] += 1
+        return counts
 
     def collect(self, workspace_id: UUID, from_date: date, to_date: date, *, dry_run: bool = False) -> dict:
         if from_date > to_date or (to_date - from_date).days >= MAX_DAYS or to_date > datetime.now(UKRAINE_TZ).date():

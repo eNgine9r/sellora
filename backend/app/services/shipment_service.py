@@ -18,6 +18,7 @@ from app.repositories.shipment_repository import ShipmentRepository
 from app.schemas.order import OrderStatusUpdate
 from app.schemas.shipment import ShipmentCreate, ShipmentResponse, ShipmentSummaryResponse, ShipmentUpdate, ShipmentTrackingEvent
 from app.services.business_utils import snapshot
+from app.services.shipment_live_summary import shipment_live_counts
 from app.services.order_service import OrderService, OrderServiceError
 
 
@@ -209,8 +210,21 @@ class ShipmentService:
         return events
 
     def summary(self, workspace_id: UUID) -> ShipmentSummaryResponse:
-        in_transit, arrived, delivered_today, returned_this_month = self.shipments.summary_counts(workspace_id)
-        return ShipmentSummaryResponse(in_transit_count=in_transit, arrived_count=arrived, delivered_today=delivered_today, returned_this_month=returned_this_month)
+        # Historical counters retain their original meaning for existing clients.
+        _, _, delivered_today, returned_this_month = self.shipments.summary_counts(workspace_id)
+        live = shipment_live_counts(self.db, workspace_id)
+        return ShipmentSummaryResponse(
+            in_transit_count=live.in_transit_count,
+            arrived_count=live.arrived_count,
+            delivered_today=delivered_today,
+            returned_this_month=returned_this_month,
+            crm_total_count=live.crm_total_count,
+            crm_ready_count=live.crm_ready_count,
+            crm_delivered_count=live.crm_delivered_count,
+            crm_problem_count=live.crm_problem_count,
+            provider_tracking_checked_at=live.provider_tracking_checked_at,
+            provider_pending_count=live.provider_pending_count,
+        )
 
     def _validated_customer_id(self, workspace_id: UUID, customer_id: UUID | None, order_customer_id: UUID | None) -> UUID:
         selected_customer_id = customer_id or order_customer_id

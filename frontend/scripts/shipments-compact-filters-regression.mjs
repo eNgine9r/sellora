@@ -17,8 +17,8 @@ const requireMarker = (content, needle) => { if (!content.includes(needle)) fail
   "setShipmentSort", "advancedFilterCount", "hasActiveFilters",
   "const resetFilters = () =>", "setPage(1)",
   'queryKey: ["shipments", workspaceId, "", ""]',
-  "const allShipments = overview.length", "const hasAnyShipments = (overviewQuery.data?.length",
-  "overviewQuery.isPending", "summaryQuery.data?.in_transit_count",
+  "const allShipments = summary?.crm_total_count", "const hasAnyShipments = (shipmentsQuery.data?.length",
+  "summaryQuery.isPending", "summary?.in_transit_count",
   "t(\"shipments.summary.ready\")", "t(\"shipments.summary.delivered\")",
   "<ShipmentTable", "<PaginationControls", "shipments-pagination-section",
 ].forEach(marker => requireMarker(page, marker));
@@ -35,6 +35,17 @@ const requireMarker = (content, needle) => { if (!content.includes(needle)) fail
   'text-[11px] leading-4', 'px-3 py-2',
 ].forEach(marker => requireMarker(table, marker));
 if (table.includes('mt-3 grid gap-1 text-sm text-text-secondary')) failures.push("Oversized mobile shipment details remain on cards");
+
+[
+  "data-shipment-provider-freshness",
+  "provider_pending_count",
+  'refetchInterval: 30_000',
+  'refetchOnWindowFocus: "always"',
+  "const matchesStatus",
+  "crm_delivered_count",
+].forEach(marker => requireMarker(page, marker));
+if (page.includes('queryKey: ["shipments", workspaceId, status, search]')) failures.push("Search triggers network per keystroke");
+if (page.includes("overviewQuery")) failures.push("Expensive full duplicate shipment query remains");
 
 const summary = page.substring(page.indexOf("data-shipments-compact-summary"), page.indexOf("data-shipments-compact-filters"));
 if (summary.includes("five-balanced")) failures.push("Old five balanced oversized KPI grid used");

@@ -66,4 +66,10 @@ export type ShipmentSummary = {
   arrived_count: number;
   delivered_today: number;
   returned_this_month: number;
+  crm_total_count: number;
+  crm_ready_count: number;
+  crm_delivered_count: number;
+  crm_problem_count: number;
+  provider_tracking_checked_at: string | null;
+  provider_pending_count: number;
 };
