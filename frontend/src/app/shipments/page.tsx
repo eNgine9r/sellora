@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
@@ -43,6 +43,7 @@ export default function ShipmentsPage() {
   const [search, setSearch] = useState("");
   const [shipmentSort, setShipmentSort] = useState("newest");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const filterMenuRef = useRef<HTMLDivElement | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
@@ -123,6 +124,22 @@ export default function ShipmentsPage() {
     setInitialOrderId(undefined);
   }, [workspaceId]);
 
+  useEffect(() => {
+    if (!showAdvancedFilters) return;
+    const dismissOutside = (event: PointerEvent) => {
+      if (!filterMenuRef.current?.contains(event.target as Node)) setShowAdvancedFilters(false);
+    };
+    const dismissEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowAdvancedFilters(false);
+    };
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("keydown", dismissEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      document.removeEventListener("keydown", dismissEscape);
+    };
+  }, [showAdvancedFilters]);
+
   const overview = overviewQuery.data ?? [];
   const allShipments = overview.length;
   const readyShipments = overview.filter((shipment) => shipment.status === "DRAFT" || shipment.status === "CREATED").length;
@@ -135,6 +152,7 @@ export default function ShipmentsPage() {
     setCarrier("");
     setTtnFilter("");
     setShipmentSort("newest");
+    setShowAdvancedFilters(false);
     setPage(1);
   };
 
@@ -142,79 +160,77 @@ export default function ShipmentsPage() {
     <WorkspacePage>
         <WorkspaceHeader title={t("shipments.title")} description={t("shipments.subtitle")} actions={canEdit ? <Button onClick={() => setIsCreateOpen(true)}>{t("shipments.create")}</Button> : undefined} />
         <section aria-label={t("shipments.summary.all")} data-shipments-compact-summary
-          className="grid min-w-0 grid-cols-2 gap-2 md:grid-cols-4">
+          className="grid min-w-0 grid-cols-2 gap-px overflow-hidden rounded-xl border border-border-subtle bg-surface-2 md:grid-cols-4">
           {([
             [t("shipments.summary.all"), allShipments],
             [t("shipments.summary.ready"), readyShipments],
             [t("shipments.inTransit"), summaryQuery.data?.in_transit_count ?? 0],
             [t("shipments.summary.delivered"), deliveredShipments],
           ] as const).map(([label, value]) => (
-            <div key={label} className="flex min-h-[72px] min-w-0 flex-col justify-center rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 sm:px-4">
-              <span className="truncate text-xs font-medium text-text-secondary">{label}</span>
-              <span className="mt-0.5 text-xl font-bold tabular-nums text-text-primary">{overviewQuery.isPending ? "—" : value}</span>
+            <div key={label} className="flex min-h-[56px] min-w-0 items-center justify-between gap-2 bg-surface-1 px-3 py-2">
+              <span className="min-w-0 truncate text-xs font-medium text-text-secondary">{label}</span>
+              <span className="shrink-0 text-lg font-bold tabular-nums text-text-primary">{overviewQuery.isPending ? "—" : value}</span>
             </div>
           ))}
         </section>
         <NovaPoshtaExternalInbox key={workspaceId} workspaceId={workspaceId} role={currentWorkspace?.role} mode="summary" />
         <section aria-label={t("filters.sort")} data-shipments-compact-filters
-          className="grid min-w-0 gap-2 rounded-xl border border-border-subtle bg-surface-1 p-2.5 sm:p-3">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="min-w-0 flex-1">
-              <SearchInput value={search} onChange={setSearch} placeholder={t("shipments.searchPlaceholder")} />
-            </div>
-            <div className="flex min-w-0 items-center gap-2">
-              <select aria-label={t("common.allStatuses")}
-                className="min-h-11 min-w-0 flex-1 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:w-44 sm:flex-none"
-                value={status} onChange={(event) => setStatus(event.target.value as ShipmentStatus | "")}>
-                {STATUSES.map((item) => <option key={item || "all"} value={item}>{item ? formatStatus("shipment", item) : t("common.allStatuses")}</option>)}
-              </select>
-              <button type="button" aria-controls="shipments-advanced-filters" aria-expanded={showAdvancedFilters}
-                onClick={() => setShowAdvancedFilters((expanded) => !expanded)}
-                className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${showAdvancedFilters || advancedFilterCount ? "border-primary bg-primary/10 text-primary" : "border-border-subtle text-text-secondary hover:bg-surface-hover"}`}>
-                <SlidersHorizontal aria-hidden="true" className="h-4 w-4"/>
-                {locale === "en" ? "Filters" : "Фільтри"}
-                {advancedFilterCount ? <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-white" aria-label={`${advancedFilterCount} active`}>{advancedFilterCount}</span> : null}
-                <ChevronDown aria-hidden="true" className={`h-3.5 w-3.5 transition-transform ${showAdvancedFilters ? "rotate-180" : ""}`}/>
-              </button>
-              {hasActiveFilters ? <button type="button" onClick={resetFilters}
-                aria-label={t("filters.reset")} title={t("filters.reset")}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border-subtle text-text-secondary transition hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-focus-ring">
-                <RotateCcw aria-hidden="true" className="h-4 w-4"/>
-              </button> : null}
-            </div>
+          className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="min-w-[12rem] flex-[1_1_18rem]">
+            <SearchInput value={search} onChange={setSearch} placeholder={t("shipments.searchPlaceholder")} />
           </div>
-          {showAdvancedFilters ? <div id="shipments-advanced-filters" data-shipments-advanced-filters
-            className="grid min-w-0 gap-2 border-t border-border-subtle pt-3 sm:grid-cols-3">
-            <label className="grid min-w-0 gap-1 text-xs font-medium text-text-secondary">
-              {t("shipments.allCarriers")}
-              <select className="min-h-11 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary"
-                value={carrier} onChange={(event) => setCarrier(event.target.value as ShipmentCarrier | "")}>
-                {CARRIERS.map((item) => <option key={item || "all"} value={item}>{item || t("shipments.allCarriers")}</option>)}
-              </select>
-            </label>
-            <label className="grid min-w-0 gap-1 text-xs font-medium text-text-secondary">
-              {t("shipments.allTtnStates")}
-              <select className="min-h-11 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary"
-                value={ttnFilter} onChange={(event) => setTtnFilter(event.target.value as TtnFilter)}>
-                <option value="">{t("shipments.allTtnStates")}</option>
-                <option value="hasTtn">{t("shipments.hasTtn")}</option>
-                <option value="missingTtn">{t("shipments.missingTtn")}</option>
-                <option value="needsAction">{t("shipments.needsAction")}</option>
-              </select>
-            </label>
-            <label className="grid min-w-0 gap-1 text-xs font-medium text-text-secondary">
-              {t("filters.sort")}
-              <SortSelect value={shipmentSort} onChange={setShipmentSort} options={[
-                { value: "newest", label: t("sort.newest") },
-                { value: "oldest", label: t("sort.oldest") },
-                { value: "status", label: t("tables.status") },
-                { value: "updatedDesc", label: t("shipments.updatedRecently") },
-              ]}/>
-            </label>
-          </div> : null}
-          {issueShipments > 0 ? <p className="text-xs text-text-secondary" data-shipments-issue-count>
-            {t("shipments.summary.problems")}: <span className="font-semibold tabular-nums text-text-primary">{issueShipments}</span>
-          </p> : null}
+          <select aria-label={t("common.allStatuses")}
+            className="min-h-10 w-[min(46vw,176px)] rounded-lg border border-input-border bg-input-background px-2.5 text-sm font-medium text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:w-44"
+            value={status} onChange={(event) => setStatus(event.target.value as ShipmentStatus | "")}>
+            {STATUSES.map((item) => <option key={item || "all"} value={item}>{item ? formatStatus("shipment", item) : t("common.allStatuses")}</option>)}
+          </select>
+          <div className="relative shrink-0" ref={filterMenuRef}>
+            <button type="button" aria-controls="shipments-advanced-filters" aria-expanded={showAdvancedFilters}
+              onClick={() => setShowAdvancedFilters((expanded) => !expanded)}
+              className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${showAdvancedFilters || advancedFilterCount ? "border-primary bg-primary/10 text-primary" : "border-border-subtle bg-surface-1 text-text-secondary hover:bg-surface-hover"}`}>
+              <SlidersHorizontal aria-hidden="true" className="h-4 w-4"/>
+              {locale === "en" ? "Filters" : "Фільтри"}
+              {advancedFilterCount ? <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{advancedFilterCount}</span> : null}
+              <ChevronDown aria-hidden="true" className={`h-3.5 w-3.5 transition-transform ${showAdvancedFilters ? "rotate-180" : ""}`}/>
+            </button>
+            {showAdvancedFilters ? <div id="shipments-advanced-filters" data-shipments-advanced-filters
+              className="absolute right-0 top-[calc(100%+8px)] z-30 grid w-[min(90vw,360px)] min-w-0 gap-3 rounded-xl border border-border-subtle bg-surface-1 p-3 shadow-xl">
+              <label className="grid min-w-0 gap-1 text-xs font-medium text-text-secondary">
+                {t("shipments.allCarriers")}
+                <select className="min-h-10 w-full min-w-0 rounded-lg border border-input-border bg-input-background px-3 text-sm text-text-primary"
+                  value={carrier} onChange={(event) => setCarrier(event.target.value as ShipmentCarrier | "")}>
+                  {CARRIERS.map((item) => <option key={item || "all"} value={item}>{item || t("shipments.allCarriers")}</option>)}
+                </select>
+              </label>
+              <label className="grid min-w-0 gap-1 text-xs font-medium text-text-secondary">
+                {t("shipments.allTtnStates")}
+                <select className="min-h-10 w-full min-w-0 rounded-lg border border-input-border bg-input-background px-3 text-sm text-text-primary"
+                  value={ttnFilter} onChange={(event) => setTtnFilter(event.target.value as TtnFilter)}>
+                  <option value="">{t("shipments.allTtnStates")}</option>
+                  <option value="hasTtn">{t("shipments.hasTtn")}</option>
+                  <option value="missingTtn">{t("shipments.missingTtn")}</option>
+                  <option value="needsAction">{t("shipments.needsAction")}</option>
+                </select>
+              </label>
+              <label className="grid min-w-0 gap-1 text-xs font-medium text-text-secondary">
+                {t("filters.sort")}
+                <SortSelect value={shipmentSort} onChange={setShipmentSort} options={[
+                  { value: "newest", label: t("sort.newest") },
+                  { value: "oldest", label: t("sort.oldest") },
+                  { value: "status", label: t("tables.status") },
+                  { value: "updatedDesc", label: t("shipments.updatedRecently") },
+                ]}/>
+              </label>
+            </div> : null}
+          </div>
+          {hasActiveFilters ? <button type="button" onClick={resetFilters}
+            aria-label={t("filters.reset")} title={t("filters.reset")}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary transition hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-focus-ring">
+            <RotateCcw aria-hidden="true" className="h-4 w-4"/>
+          </button> : null}
+          {issueShipments > 0 ? <span className="ml-auto text-xs text-text-muted" data-shipments-issue-count>
+            {t("shipments.summary.problems")}: <strong className="font-semibold tabular-nums text-text-secondary">{issueShipments}</strong>
+          </span> : null}
         </section>
         <WorkspaceSplitView panelOpen={Boolean(selectedShipment)} panel={selectedShipment ? <EntitySidePanel open={Boolean(selectedShipment)} title={selectedShipment.nova_poshta_document_number ?? selectedShipment.tracking_number ?? t("shipments.draftShipment")} description={`${t("shipments.carrier")}: ${selectedShipment.carrier}`} onClose={() => setSelectedShipment(null)} footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingShipment(selectedShipment)}>{t("shipments.edit")}</Button><Button variant="danger" onClick={() => setArchivingShipment(selectedShipment)}>{t("shipments.archive")}</Button></div> : undefined}><ShipmentDetails shipment={selectedShipment} workspaceId={workspaceId} onStatusChange={(nextStatus) => statusMutation.mutate({ shipmentId: selectedShipment.id, nextStatus })} /></EntitySidePanel> : null}>
           {shipmentsQuery.isLoading ? <LoadingSkeleton rows={5} title={t("shipments.pagination.loading")} /> : null}

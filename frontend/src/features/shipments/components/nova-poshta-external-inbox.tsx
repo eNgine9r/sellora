@@ -188,10 +188,10 @@ export function NovaPoshtaExternalInbox({
   if (mode === "summary") {
     return <section id="smart-sale-inbox"
       data-smart-sale-queue-mode="summary"
-      className="flex min-w-0 scroll-mt-24 flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface px-3 py-3 sm:px-4">
+      className="flex min-w-0 scroll-mt-24 flex-wrap items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface-1/60 px-3 py-2">
       <div className="min-w-0 flex-1">
-        <h2 className="text-sm font-bold text-text-primary">{t.summary}</h2>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
+        <h2 className="text-xs font-semibold text-text-primary">{t.summary}</h2>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-text-secondary">
           <span><strong className="font-bold tabular-nums text-text-primary">{sales.isLoading ? "—" : counts.total}</strong> {t.total.toLowerCase()}</span>
           {counts.priced > 0 ? <span><strong className="font-bold tabular-nums text-text-primary">{counts.priced}</strong> {t.priced.toLowerCase()}</span> : null}
           {counts.unmatched > 0 ? <span><strong className="font-bold tabular-nums text-text-primary">{counts.unmatched}</strong> {t.unmatched.toLowerCase()}</span> : null}
@@ -199,12 +199,12 @@ export function NovaPoshtaExternalInbox({
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         <Link href="/shipments/confirmations"
-          className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-white transition hover:bg-primary-hover sm:px-4 sm:text-sm">
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle px-3 text-xs font-semibold text-text-secondary transition hover:bg-surface-hover">
           {t.open}<ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Link>
         {role === "OWNER" ? <button type="button" disabled={scan.isPending}
           onClick={() => scan.mutate()} aria-label={t.refresh} title={t.refresh}
-          className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-border-subtle text-text-secondary transition hover:bg-surface-hover disabled:opacity-40">
+          className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-border-subtle text-text-secondary transition hover:bg-surface-hover disabled:opacity-40">
           <RefreshCw aria-hidden="true" className={`h-4 w-4 ${scan.isPending ? "animate-spin" : ""}`}/>
         </button> : null}
       </div>
