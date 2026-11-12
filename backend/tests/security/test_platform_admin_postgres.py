@@ -16,7 +16,12 @@ from app.core.config import get_settings
 from app.database.session import get_db
 from app.main import app
 from app.models.audit_log import AuditLog
+from app.models.customer import Customer
 from app.models.platform_admin import PlatformAuditEvent, PlatformGrant, PlatformRole
+from app.models.order import Order
+from app.models.product import Product
+from app.models.product_usage import DROPPED_EVENTS, ProductUsageDaily, ProductUsageEvent, UsageEvent, UsageSource
+from app.models.product_variant import ProductVariant
 from app.models.role import Role
 from app.models.user import User
 from app.models.workspace import Workspace
@@ -24,6 +29,14 @@ from app.models.workspace_subscription import WorkspaceSubscription
 from app.models.workspace_user import WorkspaceUser
 from app.repositories.audit_log_repository import DEMO_WORKSPACE_CREATE_ACTION
 from app.services.platform_grant_service import PlatformGrantService
+from app.repositories.product_usage_repository import ProductUsageRepository
+from app.schemas.order import OrderCreate, OrderItemCreate
+from app.schemas.product import ProductCreate
+from app.schemas.workspace import WorkspaceCreate
+from app.services.order_service import OrderService
+from app.services.product_service import ProductService
+from app.services.product_usage_service import ProductUsageService, ProductUsageWriter
+from app.services.workspace_service import WorkspaceService
 
 pytestmark = pytest.mark.skipif(
     os.getenv("SELLORA_PLATFORM_ADMIN_DISPOSABLE_CANARY") != "YES",
@@ -217,3 +230,137 @@ def test_grant_lifecycle_and_audit_immutability(db):
     with pytest.raises(Exception, match="append-only"):
         with db.begin_nested():
             db.execute(text("DELETE FROM public.platform_audit_events"))
+
+
+@pytest.fixture
+def capture_enabled(monkeypatch):
+    now = datetime.now(UTC)
+    monkeypatch.setattr(get_settings(), "product_usage_capture_enabled", True)
+    monkeypatch.setattr(get_settings(), "product_usage_coverage_from", now - timedelta(days=45))
+    return now
+
+
+def test_product_usage_crm_producers_record_milestones_and_exclude_demo_and_imports(db, capture_enabled):
+    owner = add_user(db)
+    if db.scalar(select(Role.id).where(Role.name == "OWNER")) is None:
+        db.add(Role(name="OWNER"))
+        db.flush()
+    workspace_id = WorkspaceService(db).create_workspace(
+        WorkspaceCreate(name="Usage shop", slug=f"usage-{uuid4().hex}"), owner.id,
+    ).workspace_id
+    demo = add_workspace(db, "Demo excluded from usage", demo=True)
+    product_service = ProductService(db)
+    first = product_service.create_product(workspace_id, ProductCreate(name="First product"), owner.id)
+    product_service.create_product(workspace_id, ProductCreate(name="Second product"), owner.id)
+    product_service.create_product(demo.id, ProductCreate(name="Synthetic demo"), owner.id)
+    variant = ProductVariant(workspace_id=workspace_id, product_id=first.id, sku="SA3-TEST")
+    customer = Customer(workspace_id=workspace_id, name="Synthetic buyer")
+    db.add_all([variant, customer])
+    db.flush()
+    payload = OrderCreate(
+        customer_id=customer.id,
+        items=[OrderItemCreate(product_variant_id=variant.id, quantity=1, unit_price=10)],
+    )
+    order_service = OrderService(db)
+    order_service.create(workspace_id, payload.model_copy(update={"is_historical": True}), owner.id, affect_inventory=False)
+    order = order_service.create(workspace_id, payload, owner.id, affect_inventory=False)
+    order_service.create(workspace_id, payload, owner.id, affect_inventory=False)
+    writer = ProductUsageWriter(db)
+    writer.order_created(workspace_id, order.id)
+    writer.integration_used(workspace_id, UsageSource.NOVA_POSHTA)
+    writer.integration_used(workspace_id, UsageSource.NOVA_POSHTA)
+    writer.integration_used(workspace_id, UsageSource.META_ADS)
+    db.commit()
+
+    report = ProductUsageService(db).get_report(7, workspace_id=workspace_id)
+    assert report.coverage == "complete"
+    assert report.totals.model_dump() == {
+        "active_workspaces": 1, "active_workspace_days": 1, "activated_workspaces": 1,
+        "first_products": 1, "first_orders": 1, "orders_created": 2, "integration_days": 2,
+    }
+    events = db.scalars(select(ProductUsageEvent).where(ProductUsageEvent.workspace_id == workspace_id)).all()
+    assert len(events) == 7
+    assert all(event.source_key != customer.id.hex for event in events)
+    assert not db.scalar(select(ProductUsageEvent.id).where(ProductUsageEvent.workspace_id == demo.id))
+    assert ProductUsageService(db).get_report(7, workspace_id=demo.id).totals is None
+
+    with db.begin_nested() as operation:
+        pending = order_service.create(workspace_id, payload, owner.id, affect_inventory=False, commit=False)
+        pending_id = pending.id
+        assert db.scalar(select(ProductUsageEvent.id).where(ProductUsageEvent.source_key == pending_id.hex))
+        operation.rollback()
+    assert db.get(Order, pending_id) is None
+    assert not db.scalar(select(ProductUsageEvent.id).where(ProductUsageEvent.source_key == pending_id.hex))
+    assert ProductUsageService(db).get_report(7, workspace_id=workspace_id).totals.orders_created == 2
+
+
+def test_product_usage_failure_does_not_block_product_commit(db, capture_enabled, monkeypatch):
+    workspace = add_workspace(db, "Usage failure shop")
+    increment = ProductUsageRepository.increment_daily
+
+    def fail_aggregate(self, workspace_id, day, event):
+        if event != DROPPED_EVENTS:
+            self.db.execute(text("SELECT 1 / 0"))
+        return increment(self, workspace_id, day, event)
+
+    monkeypatch.setattr(ProductUsageRepository, "increment_daily", fail_aggregate)
+    product = ProductService(db).create_product(workspace.id, ProductCreate(name="Committed product"), None)
+    assert db.get(Product, product.id).name == "Committed product"
+    assert not db.scalar(select(ProductUsageEvent.id).where(ProductUsageEvent.workspace_id == workspace.id))
+    report = ProductUsageService(db).get_report(7, workspace_id=workspace.id)
+    assert report.coverage == "partial" and report.dropped_operations == 1
+    assert report.totals.active_workspaces == 0
+
+
+def test_product_usage_windows_and_workspace_boundaries(client, db, capture_enabled, monkeypatch):
+    now = capture_enabled
+    admin = add_user(db, PlatformRole.ADMIN)
+    owner = add_user(db)
+    first = add_workspace(db, "Usage first shop")
+    second = add_workspace(db, "Usage second shop")
+    add_member(db, first, owner, "OWNER")
+    repo = ProductUsageRepository(db)
+    for workspace_id, ages in ((first.id, (0, 6, 7, 29, 30)), (second.id, (0, 8))):
+        for age in ages:
+            repo.record(workspace_id, UsageEvent.ORDER_CREATED, UsageSource.ORDERS, uuid4().hex, now - timedelta(days=age))
+    repo.record(first.id, UsageEvent.FIRST_PRODUCT, UsageSource.CATALOG, first.id.hex, now)
+    db.commit()
+
+    auth = login(client, admin)
+    summary_url = f"{PREFIX}/activity/summary"
+    first_url = f"{PREFIX}/workspaces/{first.id}/activity"
+    second_url = f"{PREFIX}/workspaces/{second.id}/activity"
+    overall = client.get(summary_url, params={"days": 7}, headers=auth).json()
+    assert overall["coverage"] == "complete"
+    assert overall["totals"]["active_workspaces"] == 2
+    assert overall["totals"]["active_workspace_days"] == 3
+    assert overall["totals"]["orders_created"] == 3
+    assert client.get(first_url, params={"days": 30}, headers={**auth, "X-Workspace-ID": str(second.id)}).json()["totals"]["orders_created"] == 4
+    assert client.get(second_url, headers=auth).json()["totals"]["first_products"] == 0
+    assert client.get(first_url, headers=auth).json()["totals"]["orders_created"] == 2
+    assert client.get(summary_url, params={"days": 8}, headers=auth).status_code == 422
+    assert client.get(f"{PREFIX}/workspaces/{uuid4()}/activity", headers=auth).status_code == 404
+    assert client.get(first_url, headers=login(client, owner)).status_code == 403
+    assert client.get(summary_url, headers=login(client, add_user(db, PlatformRole.AUDITOR))).status_code == 403
+    assert client.get(summary_url, headers=login(client, add_user(db, PlatformRole.SUPPORT))).status_code == 200
+
+    monkeypatch.setattr(get_settings(), "product_usage_coverage_from", now - timedelta(days=3))
+    partial = ProductUsageService(db).get_report(7, workspace_id=first.id, now=now)
+    assert partial.coverage == "partial" and partial.totals.orders_created == 1
+    monkeypatch.setattr(get_settings(), "product_usage_capture_enabled", False)
+    before = db.scalar(select(ProductUsageDaily.event_count).where(
+        ProductUsageDaily.workspace_id == first.id, ProductUsageDaily.day == now.date(),
+        ProductUsageDaily.event_type == UsageEvent.ORDER_CREATED,
+    ))
+    ProductUsageWriter(db).order_created(first.id, uuid4())
+    assert db.scalar(select(ProductUsageDaily.event_count).where(
+        ProductUsageDaily.workspace_id == first.id, ProductUsageDaily.day == now.date(),
+        ProductUsageDaily.event_type == UsageEvent.ORDER_CREATED,
+    )) == before
+    unavailable = client.get(summary_url, headers=auth).json()
+    assert unavailable["coverage"] == "unavailable" and unavailable["totals"] is None
+    assert db.execute(text("""
+        SELECT count(*) FROM pg_class WHERE oid IN (
+            'public.product_usage_events'::regclass, 'public.product_usage_daily'::regclass
+        ) AND relrowsecurity
+    """)).scalar_one() == 2

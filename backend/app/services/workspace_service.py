@@ -23,6 +23,7 @@ from app.repositories.audit_log_repository import AuditLogRepository, DEMO_WORKS
 from app.repositories.user_repository import UserRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.schemas.workspace import WorkspaceCreate, WorkspaceSettingsUpdate, WorkspaceUserCreate
+from app.services.product_usage_service import ProductUsageWriter
 from app.services.business_utils import snapshot
 
 DUPLICATE_USER_MESSAGE = "Користувач уже доданий до команди."
@@ -60,6 +61,7 @@ class WorkspaceService:
         try:
             workspace = self.workspaces.create_workspace(name=payload.name.strip(), slug=payload.slug, currency_code=payload.currency_code.value, timezone=payload.timezone)
             membership = self.workspaces.add_membership(workspace_id=workspace.id, user_id=actor_user_id, role=RoleName.OWNER)
+            ProductUsageWriter(self.db).workspace_activated(workspace.id)
             self.db.commit()
             return membership
         except Exception:

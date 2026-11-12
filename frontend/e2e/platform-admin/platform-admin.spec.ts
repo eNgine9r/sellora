@@ -24,6 +24,12 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
   await expect(page.getByTestId("total_workspaces")).toHaveText(String(summary.total_workspaces));
   await expect(page.getByTestId("workspaces_with_current_term")).toHaveText(String(summary.workspaces_with_current_term));
   expect(summary.workspaces_with_current_term).toBeGreaterThan(0);
+  const activityOrders = page.getByTestId("activity-orders_created");
+  await expect(activityOrders).toHaveText("1");
+  await page.getByRole("button", { name: "30 днів", exact: true }).click();
+  await expect(activityOrders).toHaveText("2");
+  await expect(page.getByRole("button", { name: "30 днів", exact: true })).toHaveAttribute("aria-pressed", "true");
+
 
   await page.getByRole("textbox", { name: "Пошук" }).fill("QA Platform Shop");
   await page.getByRole("button", { name: "Застосувати" }).click();
@@ -41,7 +47,10 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
   await expect(profile.getByText("qa-pilot")).toBeVisible();
   await expect(profile.getByText("Початок періоду (UTC)")).toBeVisible();
   await expect(profile.getByText("Активні учасники команди")).toBeVisible();
-  await expect(profile.getByText("1", { exact: true })).toBeVisible();
+  await expect(profile.getByText("Активні учасники команди").locator("xpath=following-sibling::dd[1]")).toHaveText("1");
+  await expect(profile.getByTestId("activity-orders_created")).toHaveText("1");
+  await profile.getByRole("button", { name: "30 днів", exact: true }).click();
+  await expect(profile.getByTestId("activity-orders_created")).toHaveText("1");
   await expect(profile.getByText(/@example\.com/)).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(profile).toHaveCount(0);

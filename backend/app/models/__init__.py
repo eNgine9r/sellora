@@ -60,3 +60,7 @@ __all__ += ["ManualPaymentConfirmation", "ManualPaymentMethod"]
 from app.models.platform_admin import PlatformAuditEvent, PlatformGrant
 
 __all__ += ["PlatformAuditEvent", "PlatformGrant"]
+
+from app.models.product_usage import ProductUsageDaily, ProductUsageEvent
+
+__all__ += ["ProductUsageDaily", "ProductUsageEvent"]

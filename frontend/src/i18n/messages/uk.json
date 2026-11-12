@@ -3233,5 +3233,26 @@
         "description": "Закрийте профіль і оновіть реєстр."
       }
     }
+  },
+  "platformActivity": {
+    "title": "Активність у Sellora",
+    "period": "Період активності",
+    "days7": "7 днів",
+    "days30": "30 днів",
+    "loading": "Завантажуємо активність…",
+    "range": "{from} – {to} · UTC",
+    "partial": "Часткові дані",
+    "partialDescription": "Показано лише зафіксовану активність за доступну частину періоду.",
+    "unavailable": "Дані недоступні",
+    "unavailableDescription": "За цей період немає підтвердженого покриття телеметрією.",
+    "metrics": {
+      "active_workspaces": "Активні магазини",
+      "active_workspace_days": "Дні активності",
+      "activated_workspaces": "Активовані магазини",
+      "first_products": "Перші товари",
+      "first_orders": "Перші замовлення",
+      "orders_created": "Створені замовлення",
+      "integration_days": "Дні використання інтеграцій"
+    }
   }
 }

@@ -11,6 +11,8 @@ from app.integrations.meta_instagram.exceptions import MetaInstagramError
 from app.integrations.meta_instagram.repositories.connection_repository import InstagramConnectionRepository
 from app.integrations.meta_instagram.services.oauth_service import InstagramOAuthService
 from app.models.meta_instagram import InstagramConnection, InstagramConnectionStatus
+from app.models.product_usage import UsageSource
+from app.services.product_usage_service import ProductUsageWriter
 
 
 class InstagramConnectionService:
@@ -232,7 +234,10 @@ class InstagramConnectionService:
         connection.access_token_nonce = nonce
         connection.access_token_key_version = version
         await self._activate_webhook_subscription(connection, token)
-        return connection, connection.status == InstagramConnectionStatus.CONNECTED.value
+        connected = connection.status == InstagramConnectionStatus.CONNECTED.value
+        if connected:
+            ProductUsageWriter(self.db).integration_used(workspace_id, UsageSource.INSTAGRAM)
+        return connection, connected
 
     async def subscribe_webhooks(self, workspace_id: UUID) -> InstagramConnection:
         connection = self.repo.get_active(workspace_id)

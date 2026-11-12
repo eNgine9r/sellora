@@ -10,6 +10,11 @@ export default defineConfig({
   outputDir: "./test-results/platform-admin",
   webServer: servers.map((server) => ({
     ...server,
-    env: { ...server.env, SELLORA_PLATFORM_ADMIN_ENABLED: "true" },
+    env: {
+      ...server.env,
+      SELLORA_PLATFORM_ADMIN_ENABLED: "true",
+      SELLORA_PRODUCT_USAGE_CAPTURE_ENABLED: "true",
+      SELLORA_PRODUCT_USAGE_COVERAGE_FROM: "2020-01-01T00:00:00Z",
+    },
   })),
 });

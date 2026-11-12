@@ -13,6 +13,7 @@ from app.repositories.inventory_repository import InventoryRepository, Inventory
 from app.repositories.product_repository import ProductRepository, ProductVariantRepository
 from app.schemas.product import ProductCreate, ProductImageCreate, ProductUpdate, ProductVariantCreate, ProductVariantUpdate
 from app.services.business_utils import snapshot
+from app.services.product_usage_service import ProductUsageWriter
 
 
 class ProductServiceError(ValueError):
@@ -47,6 +48,7 @@ class ProductService:
             action="CREATE",
             new_value=snapshot(product),
         )
+        ProductUsageWriter(self.db).product_created(workspace_id, product.id)
         self.db.commit()
         self.db.refresh(product)
         return product

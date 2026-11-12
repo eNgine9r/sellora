@@ -13,6 +13,8 @@ from app.integrations.meta_ads.live_reader import MetaAdsLiveReader, account_id
 from app.integrations.meta_ads.live_read_only_client import MetaReadOnlyClientError
 from app.integrations.meta_ads.token_crypto import decrypt_token, MetaTokenCryptoError
 from app.services.meta_ads_connection_service import MetaAdsConnectionService, MetaAdsConnectionServiceError, error
+from app.models.product_usage import UsageSource
+from app.services.product_usage_service import ProductUsageWriter
 
 
 class MetaAdsLiveSyncService(MetaAdsConnectionService):
@@ -138,6 +140,7 @@ class MetaAdsLiveSyncService(MetaAdsConnectionService):
             c.last_synced_at = datetime.now(UTC)
             c.last_error_code = c.last_error_message = None
             self.repository.audit(workspace_id, user_id, "meta_ads_sync_succeeded", c, result)
+            ProductUsageWriter(self.db).integration_used(workspace_id, UsageSource.META_ADS)
             self.db.commit()
             return {**result, "status": "SUCCEEDED", "date_from": date_from, "date_to": date_to,
                     "currency": selected.currency, "spend_currency": target_currency,
