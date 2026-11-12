@@ -6,11 +6,11 @@ SA.1 adds an isolated read-only backend for the Platform Admin Center. SA.0 was 
 | --- | --- | --- |
 | `/me` | `platform.access` | `operator_id`, `role`, `capabilities` |
 | `/summary` | `workspaces.read` | `as_of`, `total_workspaces`, `enabled_workspaces`, `demo_workspaces`, `workspaces_with_current_term` |
-| `/workspaces` | `workspaces.read` | `items`, `next_cursor`, `as_of` |
+| `/workspaces` | `workspaces.read` | First page with optional `active`, `demo` and `limit` |
 | `/workspaces/{workspace_id}` | `workspaces.read` | Registry metadata, subscription, currency, timezone, `active_member_count` |
 | `/workspaces/{workspace_id}/subscription` | `subscriptions.read` | Existing subscription status projection for the specified workspace |
 
-Use `q`, `active`, `demo`, `limit` and `cursor` for server-side filtering and pagination. Omit the filter to include all values. A cursor belongs to the filter values that generated it. Reset pagination when filters change. The API orders rows by descending creation time and workspace ID.
+Use the read-only `POST /api/v1/platform-admin/workspaces/search` with `workspaces.read` and a JSON body containing optional `q`, `active`, `demo`, `limit` and `cursor`. It returns `items`, `next_cursor` and `as_of`. Search text and cursors belong in the body. A cursor belongs to the filter values that generated it. Reset pagination when filters change or when switching from the old directory contract. Rows are ordered by descending creation time and workspace ID.
 
 The dashboard summary counts workspaces from the registry at `as_of`. Enabled means the workspace is enabled in settings. Current term means a stored `ACTIVE` or `TRIALING` term covers `as_of` under the half-open UTC interval. Demo and term counts can overlap the enabled count. Member count includes active, non-deleted memberships belonging to active user accounts. [Response schemas](../../../backend/app/schemas/platform_admin.py)
 

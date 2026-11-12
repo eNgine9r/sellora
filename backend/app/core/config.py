@@ -1,7 +1,11 @@
 from functools import lru_cache
 
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+_JWT_PLACEHOLDERS = frozenset({"change-me", "change-me-too", "replace-with-a-long-random-jwt-secret"})
+_JWT_HMAC_MIN_BYTES = {"HS256": 32, "HS384": 48, "HS512": 64}
 
 
 class Settings(BaseSettings):
@@ -90,7 +94,21 @@ class Settings(BaseSettings):
     initial_workspace_name: str = Field(default="Sellora Workspace", alias="INITIAL_WORKSPACE_NAME")
     initial_workspace_slug: str = Field(default="sellora", alias="INITIAL_WORKSPACE_SLUG")
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", populate_by_name=True, extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", populate_by_name=True, extra="ignore",
+        hide_input_in_errors=True,
+    )
+
+    @model_validator(mode="after")
+    def validate_platform_admin_signing_key(self) -> "Settings":
+        if self.platform_admin_enabled:
+            minimum_bytes = _JWT_HMAC_MIN_BYTES.get(self.jwt_algorithm)
+            if minimum_bytes is None:
+                raise ValueError("Platform Admin requires a supported HMAC JWT algorithm")
+            key = self.jwt_secret.strip()
+            if key.lower() in _JWT_PLACEHOLDERS or len(key.encode("utf-8")) < minimum_bytes:
+                raise ValueError(f"Platform Admin requires a non-placeholder JWT_SECRET of at least {minimum_bytes} bytes")
+        return self
 
 
 @lru_cache

@@ -6,6 +6,7 @@ import time
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
@@ -13,6 +14,7 @@ from app.core.config import get_settings
 from app.core.runtime_health import LOOP_STATE, monitor_event_loop, worker_snapshot, db_snapshot, runtime_pressure
 from app.database.session import engine, DB_POOL_SIZE, DB_POOL_MAX_OVERFLOW, DB_POOL_WAIT_SECONDS
 from app.integrations.meta_instagram.runtime_worker import run_instagram_webhook_worker, webhook_worker_enabled
+from app.middleware.platform_search_privacy import PlatformSearchPrivacyMiddleware, platform_validation_error
 
 settings = get_settings()
 PROCESS_STARTED_AT = datetime.now(UTC).isoformat()
@@ -158,6 +160,15 @@ async def request_timing(request, call_next):
                            "status_code": response.status_code,
                            "completed_at": datetime.now(UTC).isoformat()}
     return response
+
+
+platform_directory_path = f"{settings.api_v1_prefix}/platform-admin/workspaces"
+app.add_middleware(PlatformSearchPrivacyMiddleware, directory_path=platform_directory_path)
+
+
+@app.exception_handler(RequestValidationError)
+async def safe_validation_error(request: Request, exc: RequestValidationError):
+    return await platform_validation_error(request, exc, directory_path=platform_directory_path)
 
 
 # Keep Ads OAuth code/state out of Uvicorn access logs, including validation errors.

@@ -1,14 +1,22 @@
 from collections.abc import Callable
-from typing import Literal, TypeVar
+from typing import Annotated, Literal, TypeVar
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.dependencies.platform_admin import require_platform_permission
-from app.schemas.platform_admin import PlatformIdentity, PlatformSummary, PlatformWorkspaceDetail, PlatformWorkspacePage
+from app.schemas.platform_admin import (
+    PlatformIdentity,
+    PlatformSummary,
+    PlatformWorkspaceDetail,
+    PlatformWorkspaceListParams,
+    PlatformWorkspacePage,
+    PlatformWorkspaceRequestError,
+    PlatformWorkspaceSearchParams,
+)
 from app.schemas.product_usage import ProductUsageReport
 from app.schemas.subscription import SubscriptionStatusResponse
 from app.services.platform_admin_service import InvalidPlatformCursor, PlatformAuditService, PlatformWorkspaceService
@@ -25,6 +33,7 @@ WORKSPACE_ACTIVITY = "READ_WORKSPACE_ACTIVITY"
 WORKSPACES = "LIST_WORKSPACES"
 WORKSPACE = "READ_WORKSPACE"
 SUBSCRIPTION = "READ_SUBSCRIPTION"
+WORKSPACE_REQUEST_ERRORS = {422: {"model": PlatformWorkspaceRequestError}}
 
 
 def _audited_read(
@@ -62,19 +71,30 @@ def get_platform_summary(
     return _audited_read(db, actor, SUMMARY, PlatformWorkspaceService(db).get_summary)
 
 
-@router.get("/workspaces", response_model=PlatformWorkspacePage)
+@router.get("/workspaces", response_model=PlatformWorkspacePage, responses=WORKSPACE_REQUEST_ERRORS)
 def list_platform_workspaces(
+    params: Annotated[PlatformWorkspaceListParams, Query()],
     actor: PlatformIdentity = Depends(require_platform_permission("workspaces.read", WORKSPACES)),
     db: Session = Depends(get_db),
-    q: str | None = Query(default=None, max_length=120),
-    active: bool | None = None,
-    demo: bool | None = None,
-    cursor: str | None = Query(default=None, min_length=1, max_length=900),
-    limit: int = Query(default=50, ge=1, le=100),
 ) -> PlatformWorkspacePage:
     service = PlatformWorkspaceService(db)
     return _audited_read(db, actor, WORKSPACES, lambda: service.list_workspaces(
-        search=q, active=active, demo=demo, cursor=cursor, limit=limit
+        search=None, active=params.active, demo=params.demo, cursor=None, limit=params.limit,
+    ))
+
+
+@router.post("/workspaces/search", response_model=PlatformWorkspacePage, responses=WORKSPACE_REQUEST_ERRORS)
+def search_platform_workspaces(
+    params: PlatformWorkspaceSearchParams,
+    request: Request,
+    actor: PlatformIdentity = Depends(require_platform_permission("workspaces.read", WORKSPACES)),
+    db: Session = Depends(get_db),
+) -> PlatformWorkspacePage:
+    if request.query_params:
+        raise HTTPException(status_code=422, detail="Workspace search accepts filters in the request body")
+    service = PlatformWorkspaceService(db)
+    return _audited_read(db, actor, WORKSPACES, lambda: service.list_workspaces(
+        search=params.q, active=params.active, demo=params.demo, cursor=params.cursor, limit=params.limit,
     ))
 
 

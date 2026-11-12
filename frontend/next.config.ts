@@ -30,13 +30,24 @@ const upstream = apiUpstream();
 const upstreamConfig: NextConfig = upstream
   ? {
       env: { NEXT_PUBLIC_API_BASE_URL: API_PATH },
+      // Next's automatic slash redirect carries the query into Location before rewrites.
+      skipTrailingSlashRedirect: true,
+      async redirects() {
+        return [{
+          source: "/:path((?!api/v1/platform-admin/workspaces(?:/search)?/$)[^/]+(?:/[^/]+)*)/",
+          destination: "/:path",
+          permanent: true,
+        }];
+      },
       async rewrites() {
-        return [
-          {
-            source: API_PATH + "/:path*",
-            destination: upstream + "/:path*",
-          },
-        ];
+        return {
+          beforeFiles: ["/platform-admin/workspaces", "/platform-admin/workspaces/search"].map((path) => ({
+            source: API_PATH + path + "/",
+            destination: upstream + path,
+          })),
+          afterFiles: [{ source: API_PATH + "/:path*", destination: upstream + "/:path*" }],
+          fallback: [],
+        };
       },
       async headers() {
         return [

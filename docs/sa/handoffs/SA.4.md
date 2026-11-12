@@ -1,0 +1,30 @@
+# SA.4 — Security, QA & Release Readiness
+
+Це початковий аудит стану `main` на `a8e5ff2`. Підсумки виправлень і поточні умови релізу наведено в [SA.4 remediation](SA.4-remediation.md) та [handoff SA.5](SA.5.md).
+
+**Рішення щодо staging — NO-GO.** Перевірки функціональності пройшли. Дві перевірки безпеки дали негативний результат, а роль БД фактичного staging runtime ще потребує верифікації. SA.5 та staging release заблоковані до повторної перевірки задач нижче.
+
+Аудитовано `main` на [`a8e5ff2`](https://github.com/eNgine9r/sellora/commit/a8e5ff229774774c36c5734dab380646b352bae0). [SA.1 #413](https://github.com/eNgine9r/sellora/pull/413), [SA.2 #414](https://github.com/eNgine9r/sellora/pull/414) і [SA.3 #415](https://github.com/eNgine9r/sellora/pull/415) злиті. Огляд охопив їхні зміни та потрібні залежності автентифікації, tenant RBAC, API, PostgreSQL, платіжних читань і frontend transport. Runtime-перевірки виконані на ізольованих даних.
+
+## Результати перевірок
+
+| Сценарій | Результат та evidence |
+| --- | --- |
+| Platform RBAC, tenant OWNER, cross-tenant | **PASS.** У локальному API всі 7 platform GET повернули `401` без сесії, `403` для tenant OWNER і `200` для призначеного адміністратора. Підміна `X-Workspace-ID` не змінила platform scope. Tenant OWNER отримав `403` при запиті підписки чужого workspace. PostgreSQL-тести також охопили MANAGER, ANALYST, SUPPORT, AUDITOR, legacy upgrade, відкликання сесій і grants. |
+| Чутливі дані в API та аналітиці | **PASS для проєкцій і cache headers.** Схеми обмежують відповіді метаданими й агрегатами. Фікстури з двома workspace підтвердили ізоляцію activity та відсутність ідентифікатора покупця в телеметрії. API повертав `private, no-store` у перевірених відповідях `200/401/403`. |
+| Чутливі дані в журналах | **FAIL.** Синтетичний пошуковий маркер з успішного platform GET збережено в access log локального Uvicorn. Див. SA4-02. |
+| Безпечна конфігурація JWT | **FAIL.** Ізольований тест налаштувань прийняв увімкнений Platform Admin у production-профілі без заданого ключа. Див. SA4-01. |
+| Підписки та billing | **PASS.** Для platform і tenant read підтверджено `enforcement_enabled=false`. Subscription read path повернув `405` для POST, а шлях команд відсутній. Синтетичні записи підписки й платіжної квитанції зберегли свої ідентифікатори та контрольні поля після читань. |
+| Міграції та ізоляція БД | **PASS в ізольованій PostgreSQL 16.** Upgrade `202611120055 → 202611120057` з наявною сесією, підпискою і квитанцією зберіг записи. Старій сесії не присвоєно password provenance. Всі 4 нові таблиці мають RLS, а прямі grants клієнтських ролей відкликані. Downgrade з даними відхилено, head залишився `202611120057`. Фактичний доступ staging app role — **NOT_RUN**. Див. SA4-03. |
+| CRM та відмовостійкість телеметрії | **PASS.** 190 профільних тестів в ізольованій PostgreSQL/тестовому середовищі. Окремий повний backend run — 1103 passed, 50 skipped за умовами suite. Перевірено, що збій запису агрегату відкочує телеметрію та залишає створений товар, а rollback зовнішньої транзакції прибирає подію і добовий відлік. |
+| Frontend | **PASS.** Production build пройшов локально й у CI. На злитому SHA пройшли 4 Playwright-сценарії desktop/mobile з реальним API та PostgreSQL. Покрито вхід, відмову tenant OWNER, KPI, 7/30 днів, пошук, пагінацію, профіль і відновлення після помилки. [Злитий CI run](https://github.com/eNgine9r/sellora/actions/runs/43216857872) · [Браузерний job](https://github.com/eNgine9r/sellora/actions/runs/43216857872/job/131178187699) |
+
+## Задачі на виправлення
+
+| ID | Severity | Спостереження | Умова закриття |
+| --- | --- | --- | --- |
+| SA4-01 | **High**, умовний ризик конфігурації | Увімкнення Platform Admin у production-профілі не вимагає явно заданого безпечного JWT-ключа. Резервний ключ приймається в тесті налаштувань і використовується спільним модулем підпису. Password-session та grant перевірки пройшли. Значення ключа у staging чи production не перевірялось. [Налаштування](../../../backend/app/core/config.py#L13) · [JWT](../../../backend/app/auth/jwt.py#L12) | Закрити запуск privileged режиму за відсутнього або резервного ключа. Додати тести відмови для обох випадків і успішного запуску з належною конфігурацією. |
+| SA4-02 | **Medium**, підтверджений | Uvicorn зберігає query string для пошуку магазинів. Підписаний cursor також містить значення фільтрів у кодуванні, яке не забезпечує конфіденційність. У реальному пошуку рядок може містити контактні або інші чутливі дані. [Пошук](../../../backend/app/api/v1/platform_admin.py#L66) · [Cursor](../../../backend/app/services/platform_admin_service.py#L34) · [Entrypoint](../../../backend/render-start.sh#L21) | Вилучити пошукові значення й cursor з access logs, включно з proxy та помилками. Підтвердити, що пошук і пагінація працюють, а синтетичний маркер відсутній у логах і несподіваних відповідях помилки. [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html) |
+| SA4-03 | **Medium**, непідтверджена готовність staging | Ізольована non-owner роль без bypass бачить нуль рядків platform grants, daily usage та підписок навіть з `SELECT`. Успіх під локальним owner не підтверджує доступ під staging app role. Наслідок для невідповідної ролі — відмова оператору або неповний звіт. [Міграція grants](../../../backend/alembic/versions/202611120056_platform_admin.py#L45) · [Міграція usage](../../../backend/alembic/versions/202611120057_product_usage.py#L42) | Відтворити права staging app role на ізольованій PostgreSQL. Довести доступ до призначеного grant, керованої підписки й добових агрегатів, успішний audit insert і відмову клієнтським ролям. За розбіжності узгодити вузький доступ і повторити тест. [PostgreSQL RLS](https://www.postgresql.org/docs/16/ddl-rowsecurity.html) |
+
+Повторний висновок GO можливий після підтвердження SA4-01–SA4-03 і повторення відповідних критичних сценаріїв. Staging runtime, його секрети й точні права підключення залишаються поза наведеним evidence.

@@ -89,11 +89,17 @@ export const platformAdminApi = {
   },
   detail: (id: string, signal: AbortSignal) => read<PlatformWorkspaceDetail>(`workspaces/${encodeURIComponent(id)}`, signal),
   workspaces(filters: WorkspaceFilters, cursor: string | null, signal: AbortSignal) {
-    const params = new URLSearchParams({ limit: "20" });
-    if (filters.search) params.set("q", filters.search);
-    if (filters.active) params.set("active", filters.active);
-    if (filters.demo) params.set("demo", filters.demo);
-    if (cursor) params.set("cursor", cursor);
-    return read<WorkspacePage>(`workspaces?${params}`, signal);
+    return apiRequest<WorkspacePage>("/platform-admin/workspaces/search", {
+      method: "POST",
+      signal,
+      cache: "no-store",
+      body: JSON.stringify({
+        limit: 20,
+        q: filters.search || undefined,
+        active: filters.active ? filters.active === "true" : undefined,
+        demo: filters.demo ? filters.demo === "true" : undefined,
+        cursor: cursor || undefined,
+      }),
+    });
   },
 };
