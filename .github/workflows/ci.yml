@@ -353,6 +353,8 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+      - name: Verify Smart Sale compact queue and guarded confirmation UX
+        run: node frontend/scripts/smart-sale-compact-ux-regression.mjs
       - name: Verify fulfillment amount and quantity behavior
         working-directory: frontend
         run: node scripts/fulfillment-amounts-test.mjs

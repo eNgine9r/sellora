@@ -68,3 +68,34 @@ development. The existing manual product picker is intentionally preserved.
 
 No new database tables/migrations, no banking API, no messaging to Instagram,
 no release test that modifies customer sales.
+
+## Compact confirmation queue UX (12.11.2026)
+
+- Full manager workflow is at `/shipments/confirmations`, including per-TTN
+  deep links `?document=<id>` from the notification bell.
+- `/shipments` keeps a summary (counts and one link). Prior deep links to
+  `/shipments#smart-sale-inbox` still land on the summary.
+- A single responsive queue lists only shipment/customer/status. Exactly **one**
+  `SmartSaleApproval` review panel is rendered for the selected TTN, not one
+  full form for every external Nova Poshta document. The queue uses the page
+  scrollbar; product suggestions may independently scroll only while the
+  dropdown is open.
+- Filters: all, price hints, ready (catalog item/variant identified), unmatched
+  Direct. Search covers exact TTN, Instagram username and shipment status.
+- Product selection combines search by product name, SKU, color or size and
+  offers thumbnail/catalog price/available stock. Matching unit prices move
+  results up but never silently select any variant.
+- Draft search/product/quantity/unit-price is preserved per document while
+  the manager switches between shipments. Confirmation invalidates existing
+  React Query caches and advances to the next visible record, with a link to
+  the created order.
+- Owner/manager-only functionality retains the existing server RBAC and
+  immutable guardrails. Manager's click **manually attests actual receipt and
+  bank arrival**; no monobank credential, AI guess, bank-side verification,
+  refund or outgoing Direct message is introduced.
+- CI regression `frontend/scripts/smart-sale-compact-ux-regression.mjs` checks
+  the layout, workflow wiring and absence of the prior nested 30rem card list.
+
+UX constraints: visual/browser verification of an authenticated owner session
+is a separate acceptance step; public SSR or unauthenticated HTTP 200 do not
+prove the private flow is usable.

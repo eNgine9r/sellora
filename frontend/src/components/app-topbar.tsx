@@ -98,7 +98,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, m
                   <p className="mb-2 text-xs font-bold text-amber-700">Відправлення на перевірку продажу: {saleCandidates.length}</p>
                   {saleCandidates.slice(0, 5).map((sale) => (
                     <button key={sale.document_id} type="button"
-                      onClick={() => { setNotificationsOpen(false); router.push("/shipments#smart-sale-inbox"); }}
+                      onClick={() => { setNotificationsOpen(false); router.push(`/shipments/confirmations?document=${encodeURIComponent(sale.document_id)}`); }}
                       className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-2 text-left text-sm transition hover:bg-surface-hover">
                       <span className="truncate">ТТН {sale.tracking_masked} · {sale.customer_instagram ? `@${sale.customer_instagram.replace(/^@/, "")}` : "покупець"}</span>
                       <span className="text-xs font-semibold text-primary">Перевірити</span>
@@ -120,7 +120,7 @@ export function AppTopbar({ currentUser, currentWorkspace, currentWorkspaceId, m
         </div>
 
         {canReviewSales && saleCandidates.length > 0 ? (
-          <button type="button" onClick={() => router.push("/shipments#smart-sale-inbox")}
+          <button type="button" onClick={() => router.push("/shipments/confirmations")}
             aria-label={`Відправлення на перевірку продажу: ${saleCandidates.length}`}
             className="relative grid min-h-11 min-w-11 place-items-center rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-700 md:hidden">
             <Bell className="h-5 w-5" />
