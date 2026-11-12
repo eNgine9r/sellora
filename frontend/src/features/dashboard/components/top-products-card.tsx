@@ -11,18 +11,18 @@ export function TopProductsCard({ products, currencyCode = "UAH", showProfit = f
   const topProducts = products.slice(0, 5);
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-[20px] border border-slate-100 bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none sm:p-5">
-      <h2 className="break-words text-lg font-black text-slate-950 dark:text-white">{t("dashboard.topProducts.title")}</h2>
-      <p className="break-words text-sm text-slate-500 dark:text-slate-400">{t("dashboard.topProducts.subtitle")}</p>
-      <div className="mt-4 grid min-w-0 gap-3">
+    <section className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface-1 p-3 sm:p-4">
+      <h2 className="break-words text-sm font-semibold text-text-primary sm:text-base">{t("dashboard.topProducts.title")}</h2>
+      <p className="break-words text-xs text-text-secondary">{t("dashboard.topProducts.subtitle")}</p>
+      <div className="mt-3 grid min-w-0 gap-1.5">
         {topProducts.map((product, index) => (
-          <div key={`${product.product_id}-${product.variant_id}`} className="flex min-w-0 items-center justify-between gap-3 overflow-hidden rounded-2xl bg-slate-50 p-3 transition hover:bg-violet-50/70 dark:bg-white/[0.05] dark:hover:bg-violet-400/10">
-            {product.imageUrl ? <RemoteImage className="h-11 w-11 shrink-0 rounded-xl" src={product.imageUrl} alt={product.product_name} /> : <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-xs font-black text-slate-400 dark:bg-white/10">{index + 1}</span>}
+          <div key={`${product.product_id}-${product.variant_id}`} className="flex min-w-0 items-center justify-between gap-3 overflow-hidden rounded-lg bg-surface-2 px-2.5 py-2 transition hover:bg-surface-hover">
+            {product.imageUrl ? <RemoteImage className="h-9 w-9 shrink-0 rounded-lg" src={product.imageUrl} alt={product.product_name} /> : <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-surface-3 text-xs font-semibold text-text-secondary">{index + 1}</span>}
             <div className="min-w-0 flex-1 overflow-hidden">
-              <p className="truncate font-bold text-slate-900 dark:text-white">#{index + 1} {product.product_name}</p>
-              <p className="truncate text-sm text-slate-500 dark:text-slate-400">{product.variant_sku} · {product.categoryLabel ?? t("categories.other")} · {product.quantity_sold} {t("dashboard.topProducts.sold")}</p>
+              <p className="truncate text-xs font-semibold text-text-primary sm:text-sm">#{index + 1} {product.product_name}</p>
+              <p className="truncate text-xs text-text-secondary">{product.variant_sku} · {product.categoryLabel ?? t("categories.other")} · {product.quantity_sold} {t("dashboard.topProducts.sold")}</p>
             </div>
-            <div className="shrink-0 text-right"><strong className="block whitespace-nowrap text-sm text-violet-700 dark:text-violet-200">{formatMoney(product.revenue, currencyCode)}</strong>{showProfit ? <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-200">{formatMoney(product.net_profit, currencyCode)}</span> : null}</div>
+            <div className="shrink-0 text-right"><strong className="block whitespace-nowrap text-xs text-primary">{formatMoney(product.revenue, currencyCode)}</strong>{showProfit ? <span className="text-[11px] text-text-muted">{formatMoney(product.net_profit, currencyCode)}</span> : null}</div>
           </div>
         ))}
         {topProducts.length === 0 ? <EmptyState title={t("dashboard.emptyStates.noTopProducts")} description={t("dashboard.emptyStates.noTopProductsDescription")} /> : null}
