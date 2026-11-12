@@ -185,18 +185,42 @@ export function NovaPoshtaExternalInbox({
   };
 
   if (!visible) return null;
+  if (mode === "summary") {
+    return <section id="smart-sale-inbox"
+      data-smart-sale-queue-mode="summary"
+      className="flex min-w-0 scroll-mt-24 flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface px-3 py-3 sm:px-4">
+      <div className="min-w-0 flex-1">
+        <h2 className="text-sm font-bold text-text-primary">{t.summary}</h2>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
+          <span><strong className="font-bold tabular-nums text-text-primary">{sales.isLoading ? "—" : counts.total}</strong> {t.total.toLowerCase()}</span>
+          {counts.priced > 0 ? <span><strong className="font-bold tabular-nums text-text-primary">{counts.priced}</strong> {t.priced.toLowerCase()}</span> : null}
+          {counts.unmatched > 0 ? <span><strong className="font-bold tabular-nums text-text-primary">{counts.unmatched}</strong> {t.unmatched.toLowerCase()}</span> : null}
+        </div>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <Link href="/shipments/confirmations"
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-white transition hover:bg-primary-hover sm:px-4 sm:text-sm">
+          {t.open}<ArrowRight aria-hidden="true" className="h-4 w-4" />
+        </Link>
+        {role === "OWNER" ? <button type="button" disabled={scan.isPending}
+          onClick={() => scan.mutate()} aria-label={t.refresh} title={t.refresh}
+          className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-border-subtle text-text-secondary transition hover:bg-surface-hover disabled:opacity-40">
+          <RefreshCw aria-hidden="true" className={`h-4 w-4 ${scan.isPending ? "animate-spin" : ""}`}/>
+        </button> : null}
+      </div>
+      {sales.isError || scan.isError ? <p role="alert" className="w-full text-xs text-red-500">
+        {safeApiErrorMessage(sales.error || scan.error)}
+      </p> : null}
+      {lastScan ? <p role="status" className="w-full text-xs text-text-secondary">{t.scan}: {lastScan.scanned}</p> : null}
+    </section>;
+  }
   return <section id="smart-sale-inbox" className="grid min-w-0 scroll-mt-24 gap-4 rounded-2xl border border-border-subtle bg-surface p-3 sm:p-4" data-smart-sale-queue-mode={mode}>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="text-base font-bold text-text-primary">{mode === "summary" ? t.summary : t.title}</h2>
-        <p className="mt-1 text-xs text-text-secondary">{mode === "summary" ? t.summaryDescription : t.subtitle}</p>
+        <h2 className="text-base font-bold text-text-primary">{t.title}</h2>
+        <p className="mt-1 text-xs text-text-secondary">{t.subtitle}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {mode === "summary" ? <Link
-          href="/shipments/confirmations"
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white transition hover:bg-primary-hover">
-          {t.open} <ArrowRight aria-hidden="true" className="h-4 w-4" />
-        </Link> : null}
         {role === "OWNER" ? <button type="button" disabled={scan.isPending}
           onClick={() => scan.mutate()}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-input-border px-3 text-sm font-semibold text-text-primary transition hover:bg-surface-hover disabled:opacity-40">

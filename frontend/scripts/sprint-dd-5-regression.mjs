@@ -17,7 +17,7 @@ check("/shipments uses route-level WorkspaceSplitView", shipmentsPage.includes("
 check("inventory uses embedded EntitySidePanel", inventoryPage.includes("<EntitySidePanel") && inventoryPage.indexOf("<EntitySidePanel") < inventoryPage.indexOf("<InventoryTable"));
 check("shipments uses embedded EntitySidePanel", shipmentsPage.includes("<EntitySidePanel") && shipmentsPage.indexOf("<EntitySidePanel") < shipmentsPage.indexOf("<ShipmentTable"));
 check("Inventory five-card summary is explicit", inventoryPage.includes("<CompactSummary layout=\"five-balanced\""));
-check("Shipments five-card summary is explicit", shipmentsPage.includes("<CompactSummary layout=\"five-balanced\""));
+check("Shipments dashboard summary is compact and responsive", shipmentsPage.includes("data-shipments-compact-summary") && shipmentsPage.includes("md:grid-cols-4"));
 check("Inventory separates physical reserved available", inventoryPage.includes("stock_quantity") && inventoryPage.includes("reserved_quantity") && inventoryPage.includes("availableQuantity"));
 check("Inventory table exposes selected state", inventoryTable.includes("selectedInventoryId") && inventoryTable.includes("bg-surface-selected"));
 check("Shipment table exposes selected state", shipmentTable.includes("selectedShipmentId") && shipmentTable.includes("bg-surface-selected"));
