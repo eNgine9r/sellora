@@ -47,6 +47,29 @@ type PlatformSummary = {
   workspaces_with_current_term: number;
 };
 
+export type UsageDays = 7 | 30;
+
+type ProductUsageTotals = {
+  active_workspaces: number;
+  active_workspace_days: number;
+  activated_workspaces: number;
+  first_products: number;
+  first_orders: number;
+  orders_created: number;
+  integration_days: number;
+};
+
+type ProductUsageReport = {
+  days: UsageDays;
+  from_day: string;
+  to_day: string;
+  as_of: string;
+  coverage_from: string | null;
+  coverage: "complete" | "partial" | "unavailable";
+  dropped_operations: number | null;
+  totals: ProductUsageTotals | null;
+};
+
 export type WorkspaceFilters = {
   search: string;
   active: "" | "true" | "false";
@@ -60,6 +83,10 @@ function read<T>(path: string, signal: AbortSignal) {
 export const platformAdminApi = {
   identity: (signal: AbortSignal) => read<PlatformIdentity>("me", signal),
   summary: (signal: AbortSignal) => read<PlatformSummary>("summary", signal),
+  activity(days: UsageDays, workspaceId: string | undefined, signal: AbortSignal) {
+    const path = workspaceId ? `workspaces/${encodeURIComponent(workspaceId)}/activity` : "activity/summary";
+    return read<ProductUsageReport>(`${path}?days=${days}`, signal);
+  },
   detail: (id: string, signal: AbortSignal) => read<PlatformWorkspaceDetail>(`workspaces/${encodeURIComponent(id)}`, signal),
   workspaces(filters: WorkspaceFilters, cursor: string | null, signal: AbortSignal) {
     const params = new URLSearchParams({ limit: "20" });

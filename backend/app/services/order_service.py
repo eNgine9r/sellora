@@ -20,6 +20,7 @@ from app.schemas.inventory import InventoryTransactionCreate
 from app.schemas.order import HistoricalCostConfidence, HistoricalCostSource, HistoricalEstimatedCostUpsert, OrderCreate, OrderDashboardResponse, OrderProductCostsUpdate, OrderStatusUpdate, OrderUpdate
 from app.services.business_utils import snapshot
 from app.services.inventory_service import InventoryService, InventoryServiceError
+from app.services.product_usage_service import ProductUsageWriter
 from app.services.profit_calculation_service import ProfitCalculationService
 
 
@@ -130,6 +131,8 @@ class OrderService:
         self._recalculate_profit(order)
         self._add_status_history(order, None, OrderStatus(initial_status), actor_user_id, "Order created")
         self.audit_logs.create(workspace_id=workspace_id, user_id=actor_user_id, entity_type="Order", entity_id=order.id, action="CREATE", new_value=snapshot(order))
+        if not order.is_historical:
+            ProductUsageWriter(self.db).order_created(workspace_id, order.id)
         if commit:
             self.db.commit()
             self.db.refresh(order)

@@ -2,6 +2,7 @@
 
 import os
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
@@ -10,12 +11,14 @@ from app.auth.password import hash_password
 from app.database.session import SessionLocal
 from app.models.audit_log import AuditLog
 from app.models.platform_admin import PlatformGrant, PlatformRole
+from app.models.product_usage import UsageEvent, UsageSource
 from app.models.role import Role, RoleName
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_subscription import WorkspaceSubscription
 from app.models.workspace_user import WorkspaceUser
 from app.repositories.audit_log_repository import DEMO_WORKSPACE_CREATE_ACTION
+from app.repositories.product_usage_repository import ProductUsageRepository
 
 
 def main() -> None:
@@ -50,6 +53,10 @@ def main() -> None:
             workspace_id=workspaces[-1].id, plan_code="qa-pilot", status="ACTIVE",
             current_period_start=now - timedelta(days=1), current_period_end=now + timedelta(days=14),
         ))
+        usage = ProductUsageRepository(db)
+        for workspace, occurred_at in ((workspaces[-1], now), (workspaces[-2], now - timedelta(days=12))):
+            usage.record(workspace.id, UsageEvent.ORDER_CREATED, UsageSource.ORDERS, uuid4().hex, occurred_at)
+
 
 
 if __name__ == "__main__":

@@ -4,10 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, ChevronLeft, ChevronRight, CircleCheck, CreditCard, FlaskConical, Search, Store } from "lucide-react";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Drawer } from "@/components/ui/overlay";
-import { Button, Card, DataTable, EmptyState, ErrorState, FormField, Input, LoadingSkeleton, PageHeader, Select, StatusBadge } from "@/components/ui/primitives";
+import { Button, Card, DataTable, EmptyState, FormField, Input, LoadingSkeleton, PageHeader, Select, StatusBadge } from "@/components/ui/primitives";
 import { useI18n } from "@/i18n/provider";
 import { ApiError } from "@/services/api";
 import { platformAdminApi, type PlatformWorkspace, type SubscriptionStatus, type WorkspaceFilters } from "@/services/platform-admin";
+
+import { PlatformActivity } from "./platform-activity";
+import { accessDenied, PlatformProblem } from "./platform-feedback";
 
 const defaultFilters: WorkspaceFilters = { search: "", active: "", demo: "" };
 const metrics = [
@@ -21,20 +24,6 @@ const subscriptionTones: Record<SubscriptionStatus, "neutral" | "warning" | "inf
   UNMANAGED: "neutral", PENDING: "warning", TRIALING: "info", ACTIVE: "success",
   PAST_DUE: "danger", CANCELED: "neutral", EXPIRED: "neutral",
 };
-
-function accessDenied(error: unknown) {
-  return error instanceof ApiError && (error.status === 401 || error.status === 403);
-}
-
-export function PlatformProblem({ message, retry }: { message: "forbidden" | "unavailable" | "error" | "notFound"; retry?: () => void }) {
-  const { t } = useI18n();
-  return (
-    <div className="grid gap-3" role="alert">
-      <ErrorState title={t(`platformAdmin.feedback.${message}.title`)} description={t(`platformAdmin.feedback.${message}.description`)} />
-      {retry ? <Button variant="secondary" className="justify-self-start" onClick={retry}>{t("actions.retry")}</Button> : null}
-    </div>
-  );
-}
 
 function SubscriptionBadge({ status }: { status: SubscriptionStatus }) {
   const { t } = useI18n();
@@ -113,7 +102,7 @@ function WorkspaceDirectory({ items, onSelect }: { items: PlatformWorkspace[]; o
   );
 }
 
-function WorkspaceProfile({ id, operatorId, onClose, recheckAccess }: { id: string; operatorId: string; onClose: () => void; recheckAccess: () => void }) {
+function WorkspaceProfile({ id, operatorId, onClose, recheckAccess, showActivity }: { id: string; operatorId: string; onClose: () => void; recheckAccess: () => void; showActivity: boolean }) {
   const { t, locale } = useI18n();
   const detail = useQuery({
     queryKey: ["platform-admin", operatorId, "workspace", id],
@@ -154,13 +143,14 @@ function WorkspaceProfile({ id, operatorId, onClose, recheckAccess }: { id: stri
             </dl>
             {workspace.subscription.cancel_at_period_end ? <p className="mt-4 text-sm text-[var(--warning-foreground)]">{t("platformAdmin.cancelAtEnd")}</p> : null}
           </Card>
+          {showActivity ? <PlatformActivity operatorId={operatorId} workspaceId={id} recheckAccess={recheckAccess} /> : null}
         </div>
       ) : null}
     </Drawer>
   );
 }
 
-export function PlatformDashboard({ operatorId, recheckAccess }: { operatorId: string; recheckAccess: () => void }) {
+export function PlatformDashboard({ operatorId, recheckAccess, showActivity }: { operatorId: string; recheckAccess: () => void; showActivity: boolean }) {
   const { t, locale } = useI18n();
   const [filters, setFilters] = useState(defaultFilters);
   const [draft, setDraft] = useState(defaultFilters);
@@ -224,6 +214,7 @@ export function PlatformDashboard({ operatorId, recheckAccess }: { operatorId: s
         ) : null}
       </section>
 
+      {showActivity ? <PlatformActivity operatorId={operatorId} recheckAccess={recheckAccess} /> : null}
       <section className="grid min-w-0 gap-4" aria-labelledby="platform-directory">
         <h2 id="platform-directory" className="text-xl font-black tracking-tight">{t("platformAdmin.directory")}</h2>
         <form onSubmit={applyFilters} className="grid items-end gap-3 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_1fr_1fr_auto]">
@@ -268,7 +259,7 @@ export function PlatformDashboard({ operatorId, recheckAccess }: { operatorId: s
           </nav>
         ) : null}
       </section>
-      {selected ? <WorkspaceProfile key={selected} id={selected} operatorId={operatorId} onClose={closeProfile} recheckAccess={recheckAccess} /> : null}
+      {selected ? <WorkspaceProfile key={selected} id={selected} operatorId={operatorId} onClose={closeProfile} recheckAccess={recheckAccess} showActivity={showActivity} /> : null}
     </div>
   );
 }

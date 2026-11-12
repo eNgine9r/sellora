@@ -10,7 +10,8 @@ import { useI18n } from "@/i18n/provider";
 import { ApiError } from "@/services/api";
 import { COOKIE_SESSION_AUTH_ENABLED } from "@/services/auth.service";
 import { platformAdminApi } from "@/services/platform-admin";
-import { PlatformDashboard, PlatformProblem } from "./platform-dashboard";
+import { PlatformDashboard } from "./platform-dashboard";
+import { PlatformProblem } from "./platform-feedback";
 
 function PlatformSignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const { t } = useI18n();
@@ -93,7 +94,7 @@ export default function PlatformAdminPage() {
   } else if (!role || !operatorId || !identity.data?.capabilities.includes("workspaces.read")) {
     content = <PlatformProblem message="forbidden" />;
   } else {
-    content = <PlatformDashboard key={operatorId} operatorId={operatorId} recheckAccess={recheckAccess} />;
+    content = <PlatformDashboard key={operatorId} operatorId={operatorId} recheckAccess={recheckAccess} showActivity={identity.data.capabilities.includes("activity.read")} />;
   }
 
   return (

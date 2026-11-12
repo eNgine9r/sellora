@@ -17,8 +17,8 @@ from app.schemas.subscription import SubscriptionStatusResponse
 from app.services.subscription_service import describe_subscription
 
 CAPABILITIES = {
-    PlatformRole.ADMIN: ("platform.access", "workspaces.read", "subscriptions.read"),
-    PlatformRole.SUPPORT: ("platform.access", "workspaces.read", "subscriptions.read"),
+    PlatformRole.ADMIN: ("platform.access", "workspaces.read", "subscriptions.read", "activity.read"),
+    PlatformRole.SUPPORT: ("platform.access", "workspaces.read", "subscriptions.read", "activity.read"),
     PlatformRole.AUDITOR: ("platform.access",),
 }
 

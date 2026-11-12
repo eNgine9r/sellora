@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import TypeVar
+from typing import Literal, TypeVar
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -9,14 +9,19 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.dependencies.platform_admin import require_platform_permission
 from app.schemas.platform_admin import PlatformIdentity, PlatformSummary, PlatformWorkspaceDetail, PlatformWorkspacePage
+from app.schemas.product_usage import ProductUsageReport
 from app.schemas.subscription import SubscriptionStatusResponse
 from app.services.platform_admin_service import InvalidPlatformCursor, PlatformAuditService, PlatformWorkspaceService
+
+from app.services.product_usage_service import ProductUsageService
 
 router = APIRouter(prefix="/platform-admin", tags=["Platform Admin"])
 Result = TypeVar("Result")
 
 ME = "READ_PLATFORM_IDENTITY"
 SUMMARY = "READ_PLATFORM_SUMMARY"
+ACTIVITY_SUMMARY = "READ_ACTIVITY_SUMMARY"
+WORKSPACE_ACTIVITY = "READ_WORKSPACE_ACTIVITY"
 WORKSPACES = "LIST_WORKSPACES"
 WORKSPACE = "READ_WORKSPACE"
 SUBSCRIPTION = "READ_SUBSCRIPTION"
@@ -91,3 +96,28 @@ def get_platform_subscription(
 ) -> SubscriptionStatusResponse:
     service = PlatformWorkspaceService(db)
     return _audited_read(db, actor, SUBSCRIPTION, lambda: service.get_subscription(workspace_id), workspace_id)
+
+
+@router.get("/activity/summary", response_model=ProductUsageReport)
+def get_platform_activity(
+    actor: PlatformIdentity = Depends(require_platform_permission("activity.read", ACTIVITY_SUMMARY)),
+    db: Session = Depends(get_db),
+    days: Literal["7", "30"] = "7",
+) -> ProductUsageReport:
+    period = 7 if days == "7" else 30
+    return _audited_read(db, actor, ACTIVITY_SUMMARY, lambda: ProductUsageService(db).get_report(period))
+
+
+@router.get("/workspaces/{workspace_id}/activity", response_model=ProductUsageReport)
+def get_workspace_activity(
+    workspace_id: UUID,
+    actor: PlatformIdentity = Depends(require_platform_permission("activity.read", WORKSPACE_ACTIVITY)),
+    db: Session = Depends(get_db),
+    days: Literal["7", "30"] = "7",
+) -> ProductUsageReport:
+    period = 7 if days == "7" else 30
+    return _audited_read(
+        db, actor, WORKSPACE_ACTIVITY,
+        lambda: ProductUsageService(db).get_report(period, workspace_id=workspace_id),
+        workspace_id,
+    )

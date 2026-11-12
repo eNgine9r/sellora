@@ -70,10 +70,10 @@ EXPECTED_PRIMARY_COUNTS = {
     "AUTHENTICATED_GLOBAL": 6,
     "WORKSPACE_SCOPED": 231,
     "FEATURE_GATED": 15,
-    "PLATFORM_ADMIN": 5,
+    "PLATFORM_ADMIN": 7,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 266
+EXPECTED_TOTAL_ROUTES = 268
 EXPECTED_MUTATION_ROUTES = 147
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
@@ -303,6 +303,8 @@ def test_platform_admin_routes_require_their_own_capabilities() -> None:
     expected = {
         "/me": "platform.access",
         "/summary": "workspaces.read",
+        "/activity/summary": "activity.read",
+        "/workspaces/{workspace_id}/activity": "activity.read",
         "/workspaces": "workspaces.read",
         "/workspaces/{workspace_id}": "workspaces.read",
         "/workspaces/{workspace_id}/subscription": "subscriptions.read",

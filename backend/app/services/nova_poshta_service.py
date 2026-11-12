@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.models.order import OrderStatus
 from app.schemas.order import OrderStatusUpdate
 from app.services.order_service import OrderService, OrderServiceError
+from app.services.product_usage_service import ProductUsageWriter
 from app.services.nova_poshta_tracking import normalize_tracking_status, should_apply_tracking_status
 
 from app.core.config import get_settings
@@ -26,6 +27,7 @@ from app.models.nova_poshta_operation import (
     NovaPoshtaOperationState,
     NovaPoshtaOperationType,
 )
+from app.models.product_usage import UsageSource
 from app.models.shipment import ShipmentCarrier, ShipmentStatus
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.integration_repository import IntegrationConnectionRepository, IntegrationCredentialRepository
@@ -964,6 +966,8 @@ class NovaPoshtaShipmentService:
                 "payment_unchanged": True,
             },
         )
+        if normalized is not None and actor_user_id is not None:
+            ProductUsageWriter(self.db).integration_used(workspace_id, UsageSource.NOVA_POSHTA)
         self.db.commit()
         return NovaPoshtaStatusResponse(
             success=True,

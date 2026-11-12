@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AwareDatetime, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = Field(default=30, alias="JWT_EXPIRE_MINUTES")
     refresh_token_expire_days: int = Field(default=7, alias="REFRESH_TOKEN_EXPIRE_DAYS")
     cookie_sessions_enabled: bool = Field(default=False, alias="SELLORA_COOKIE_SESSIONS_ENABLED")
+    product_usage_capture_enabled: bool = Field(default=False, alias="SELLORA_PRODUCT_USAGE_CAPTURE_ENABLED")
+    product_usage_coverage_from: AwareDatetime | None = Field(default=None, alias="SELLORA_PRODUCT_USAGE_COVERAGE_FROM")
     platform_admin_enabled: bool = Field(default=False, alias="SELLORA_PLATFORM_ADMIN_ENABLED")
     legacy_auth_enabled: bool = Field(default=True, alias="SELLORA_LEGACY_AUTH_ENABLED")
     login_rate_limit_enabled: bool = Field(default=False, alias="SELLORA_LOGIN_RATE_LIMIT_ENABLED")

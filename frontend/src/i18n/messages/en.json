@@ -3233,5 +3233,26 @@
         "description": "Close the profile and refresh the directory."
       }
     }
+  },
+  "platformActivity": {
+    "title": "Sellora usage",
+    "period": "Usage period",
+    "days7": "7 days",
+    "days30": "30 days",
+    "loading": "Loading usage…",
+    "range": "{from} – {to} · UTC",
+    "partial": "Partial data",
+    "partialDescription": "Counts reflect recorded usage in the covered portion of the period.",
+    "unavailable": "Data unavailable",
+    "unavailableDescription": "This period has no confirmed telemetry coverage.",
+    "metrics": {
+      "active_workspaces": "Active workspaces",
+      "active_workspace_days": "Active days",
+      "activated_workspaces": "Activated workspaces",
+      "first_products": "First products",
+      "first_orders": "First orders",
+      "orders_created": "Orders created",
+      "integration_days": "Integration usage days"
+    }
   }
 }
