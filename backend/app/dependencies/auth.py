@@ -15,6 +15,12 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme), db: Session = Depends(get_db)) -> User:
+    return authenticate_access(credentials, db)
+
+
+def authenticate_access(
+    credentials: HTTPAuthorizationCredentials | None, db: Session, *, require_password_session: bool = False
+) -> User:
     if credentials is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing credentials")
     try:
@@ -25,17 +31,18 @@ def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(
     # Session-bound JWTs must stop working immediately after session
     # revocation, expiration, replay detection, or logout-all.
     raw_session_id = payload.get("sid")
-    if raw_session_id is None and not get_settings().legacy_auth_enabled:
+    if raw_session_id is None and (require_password_session or not get_settings().legacy_auth_enabled):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session-bound access required")
     if raw_session_id is not None:
         try:
             session_id = UUID(raw_session_id)
         except (TypeError, ValueError):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+        session_source = " AND authenticated_via = 'PASSWORD'" if require_password_session else ""
         active = db.execute(
             text(
                 "SELECT 1 FROM public.auth_sessions WHERE id=:sid AND user_id=:uid "
-                "AND revoked_at IS NULL AND expires_at > now()"
+                "AND revoked_at IS NULL AND expires_at > now()" + session_source
             ),
             {"sid": session_id, "uid": user_id},
         ).first()

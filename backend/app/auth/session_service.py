@@ -64,7 +64,7 @@ class SessionAuthenticationService:
         remaining = max(1, int((expires_at - datetime.now(UTC)).total_seconds()))
         return SessionTokens(create_access_token(user_id, session_id=session_id), cookie, remaining)
 
-    def create(self, user_id: UUID) -> SessionTokens:
+    def create(self, user_id: UUID, *, authenticated_with_password: bool = False) -> SessionTokens:
         now = datetime.now(UTC)
         expires_at = now + timedelta(days=self.settings.refresh_token_expire_days)
         session_id = uuid4()
@@ -72,13 +72,14 @@ class SessionAuthenticationService:
         self.db.execute(
             text(
                 "INSERT INTO public.auth_sessions "
-                "(id,user_id,refresh_hash,created_at,last_used_at,expires_at,rotation_count) "
-                "VALUES (:sid,:uid,:digest,:now,:now,:expires,0)"
+                "(id,user_id,refresh_hash,created_at,last_used_at,expires_at,rotation_count,authenticated_via) "
+                "VALUES (:sid,:uid,:digest,:now,:now,:expires,0,:authenticated_via)"
             ),
             {
                 "sid": session_id, "uid": user_id,
                 "digest": self._hash(issued.refresh_cookie),
                 "now": now, "expires": expires_at,
+                "authenticated_via": "PASSWORD" if authenticated_with_password else None,
             },
         )
         self.db.commit()

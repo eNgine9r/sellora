@@ -70,9 +70,10 @@ EXPECTED_PRIMARY_COUNTS = {
     "AUTHENTICATED_GLOBAL": 6,
     "WORKSPACE_SCOPED": 231,
     "FEATURE_GATED": 15,
+    "PLATFORM_ADMIN": 5,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 261
+EXPECTED_TOTAL_ROUTES = 266
 EXPECTED_MUTATION_ROUTES = 147
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
@@ -125,6 +126,8 @@ def _primary_scope(path: str, method: str | None = None) -> str:
         return "PUBLIC"
     if path in AUTHENTICATED_GLOBAL_ENDPOINTS:
         return "AUTHENTICATED_GLOBAL"
+    if path.startswith("/api/v1/platform-admin/"):
+        return "PLATFORM_ADMIN"
     if path.startswith(FEATURE_GATED_PREFIXES):
         return "FEATURE_GATED"
     if path.startswith(WORKSPACE_PREFIXES):
@@ -294,3 +297,19 @@ def test_global_search_is_explicitly_workspace_scoped_and_never_public() -> None
     assert matches == [("GET", path)]
     assert _primary_scope(path, "GET") == "WORKSPACE_SCOPED"
     assert path not in PUBLIC_ENDPOINTS and path not in AUTHENTICATED_GLOBAL_ENDPOINTS
+
+
+def test_platform_admin_routes_require_their_own_capabilities() -> None:
+    expected = {
+        "/me": "platform.access",
+        "/summary": "workspaces.read",
+        "/workspaces": "workspaces.read",
+        "/workspaces/{workspace_id}": "workspaces.read",
+        "/workspaces/{workspace_id}/subscription": "subscriptions.read",
+    }
+    routes = {path.removeprefix("/api/v1/platform-admin"): route for path, route in _api_routes()
+              if _primary_scope(path) == "PLATFORM_ADMIN"}
+    assert routes.keys() == expected.keys()
+    for path, route in routes.items():
+        assert route.methods == {"GET"}
+        assert expected[path] in {getattr(item.call, "platform_capability", None) for item in route.dependant.dependencies}

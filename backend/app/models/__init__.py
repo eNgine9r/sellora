@@ -56,3 +56,7 @@ __all__ += ["SubscriptionPaymentEventReceipt"]
 __all__ += ["BankPaymentEvidence", "BankPaymentRail", "BankPaymentKind", "BankPaymentOrigin"]
 
 __all__ += ["ManualPaymentConfirmation", "ManualPaymentMethod"]
+
+from app.models.platform_admin import PlatformAuditEvent, PlatformGrant
+
+__all__ += ["PlatformAuditEvent", "PlatformGrant"]
