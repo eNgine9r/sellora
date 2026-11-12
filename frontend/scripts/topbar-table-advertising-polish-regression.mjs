@@ -33,12 +33,12 @@ assert.match(source.importBadge, /statusBadgeClass/, "Import statuses must use s
 assert.match(source.campaignTable, /statusBadgeClass/, "Advertising campaign statuses must use shared badge styles");
 assert.match(source.productTable, /statusBadgeClass/, "Product active/inactive statuses must use shared badge styles");
 
-assert.match(source.topbar, /flex-wrap items-center/, "Topbar must be able to reflow at zoom/constrained widths");
-assert.match(source.topbar, /lg:flex-nowrap/, "Topbar should remain single-row on large layouts when possible");
-assert.match(source.topbar, /min-w-\[220px\] flex-1/, "Topbar search must keep a usable flexible width");
-assert.doesNotMatch(source.topbar, /DateRangeSelector/, "Topbar global period selector should be removed; local page selectors own period changes");
-assert.match(source.topbar, /whitespace-nowrap/, "Create/logout controls must not wrap awkwardly");
-assert.match(source.topbar, /account-topbar-group/, "User/workspace and logout must be visually grouped");
+assert.match(source.topbar, /mobile-topbar-compact flex w-full min-w-0/, "Topbar must prevent overflow at narrow widths");
+assert.match(source.topbar, /lg:h-full lg:gap-3/, "Topbar stays aligned on desktop");
+assert.match(source.topbar, /data-topbar-search-group/, "Global search has a flexible responsive slot");
+assert.doesNotMatch(source.topbar, /DateRangeSelector/, "Page period selector is not duplicated globally");
+assert.match(source.topbar, /whitespace-nowrap/, "Create label does not wrap");
+assert.match(source.topbar, /<ProfileMenu/, "Profile and workspace actions are grouped in the profile menu");
 assert.match(source.themeToggle, /shrink-0/, "Theme button must remain aligned as a fixed-size control");
 
 assert.match(source.customerTable, /sellora-scrollbar/, "Customers table must use Sellora scrollbar styling");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
@@ -32,6 +33,8 @@ function shipmentNeedsAction(shipment: Shipment) {
 
 export default function ShipmentsPage() {
   const { t, formatStatus, locale } = useI18n();
+  const searchRecordId = useSearchParams().get("shipment_id");
+  const openedFromSearchRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
@@ -168,6 +171,17 @@ export default function ShipmentsPage() {
     setShowAdvancedFilters(false);
     setPage(1);
   };
+
+  useEffect(() => {
+    if (!searchRecordId || !shipmentsQuery.data) return;
+    const key = workspaceId + ":" + searchRecordId;
+    if (openedFromSearchRef.current === key) return;
+    const match = shipmentsQuery.data.find((item) => item.id === searchRecordId);
+    if (match) {
+      openedFromSearchRef.current = key;
+      setSelectedShipment(match);
+    }
+  }, [searchRecordId, workspaceId, shipmentsQuery.data]);
 
   return (
     <WorkspacePage>

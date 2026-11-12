@@ -51,13 +51,13 @@ for (const key of ["sidebar", "topbar", "dashboard", "orders", "inventory", "adv
 assert.match(source.topbar, /LanguageSwitcher compact/, "Topbar must include compact language switcher");
 assert.match(source.settings, /<LanguageSwitcher \/>/, "Settings page must include language section switcher");
 assert.match(source.sidebar, /navigation\.dashboard/, "Sidebar must use navigation translation keys");
-assert.match(source.topbar, /topbar\.searchPlaceholder/, "Topbar search placeholder must be translated");
+assert(read("frontend/src/components/global-search.tsx").includes("topbar.searchPlaceholder"), "Global search placeholder must be translated");
 assert.match(source.orders, /orders\.create|orders\.edit/, "Orders page must use order translation keys");
 assert.match(source.inventory, /inventory\.lowStock|inventory\.healthy/, "Inventory badges must use translated labels");
 assert.match(source.advertising, /advertising\.manualDashboard|advertising\.createCampaign/, "Advertising page must use advertising translation keys");
 assert.match(source.importCenter, /importCenter\.preset|importCenter\.executeImport/, "Import Center must use import translation keys");
 assert.match(source.themeToggle, /theme\.label/, "Theme labels must remain localized");
-assert.match(source.topbar, /min-w-\[220px\] flex-1/, "Topbar responsive marker must remain intact");
+assert.match(source.topbar, /data-topbar-search-group/, "Topbar search must retain an adaptive group");
 assert.match(read("frontend/src/app/globals.css"), /sellora-scrollbar/, "Responsive scrollbar utility must remain intact");
 
 console.log("Localization regression passed");

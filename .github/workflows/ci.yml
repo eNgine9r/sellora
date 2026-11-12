@@ -355,6 +355,8 @@ jobs:
         run: npm ci
       - name: Verify Smart Sale compact queue and guarded confirmation UX
         run: node frontend/scripts/smart-sale-compact-ux-regression.mjs
+      - name: Verify global topbar search, tenant isolation and exact record navigation
+        run: node frontend/scripts/global-search-regression.mjs
       - name: Verify compact Shipments KPI and progressive filters
         run: node frontend/scripts/shipments-compact-filters-regression.mjs
       - name: Verify fulfillment amount and quantity behavior

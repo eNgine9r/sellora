@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FormDialog } from "@/components/form-dialog";
@@ -61,6 +62,8 @@ function ProductDrawerContent({ product, variants, inventory, activeTab, onTabCh
 
 export default function ProductsPage() {
   const { t } = useI18n();
+  const searchRecordId = useSearchParams().get("product_id");
+  const openedFromSearchRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
@@ -192,6 +195,18 @@ export default function ProductsPage() {
     setSelectedProduct(null);
     setActiveDrawerTab("overview");
   }, [workspaceId]);
+
+  useEffect(() => {
+    if (!searchRecordId || !productsQuery.data) return;
+    const key = workspaceId + ":" + searchRecordId;
+    if (openedFromSearchRef.current === key) return;
+    const match = productsQuery.data.find((item) => item.id === searchRecordId);
+    if (match) {
+      openedFromSearchRef.current = key;
+      setSelectedProduct(match);
+      setActiveDrawerTab("overview");
+    }
+  }, [searchRecordId, workspaceId, productsQuery.data]);
 
   return (
     <WorkspacePage>

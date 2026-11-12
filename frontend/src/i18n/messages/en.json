@@ -103,6 +103,25 @@
     "switchWorkspace": "Switch workspace",
     "actions": {
       "normalized": "Topbar actions share consistent height and alignment."
+    },
+    "search": {
+      "open": "Global search",
+      "title": "Search Sellora",
+      "quick": "Quick navigation",
+      "hint": "Type at least 2 characters. Search is scoped to this workspace.",
+      "loading": "Searching…",
+      "error": "Unable to load search results.",
+      "retry": "Try again",
+      "empty": "No results found. Try another term.",
+      "keyboard": "↑ ↓ — select · Enter — open · Esc — close",
+      "clear": "Clear search",
+      "groups": {
+        "orders": "Orders",
+        "customers": "Customers",
+        "leads": "Leads",
+        "products": "Products",
+        "shipments": "Shipments"
+      }
     }
   },
   "language": {
