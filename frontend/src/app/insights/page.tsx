@@ -27,10 +27,10 @@ function ratio(value: string | number | null | undefined) {
 
 export default function InsightsPage() {
   const { t, locale } = useI18n();
-  const { range } = useDateRange();
+  const { range, isReady: periodReadyFromStorage } = useDateRange();
   const { currentWorkspaceId, currentWorkspace, status } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
-  const enabled = status === "authenticated" && !!workspaceId;
+  const enabled = periodReadyFromStorage && status === "authenticated" && !!workspaceId;
   const dates = [range.date_from || undefined, range.date_to || undefined] as const;
   const currency = currentWorkspace?.currency_code ?? "UAH";
 

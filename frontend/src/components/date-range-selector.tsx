@@ -8,8 +8,9 @@ import { useDateRange } from "@/providers/date-range-provider";
 export function DateRangeSelector({ compact = false, onChange }: { compact?: boolean; onChange?: (range: DateRangeValue) => void }) {
   const { t, locale } = useI18n();
   const sharedRange = useDateRange();
-  const [localRange, setLocalRange] = useState<DateRangeValue>(() => dateRangeForPreset("last30"));
+  const [localRange, setLocalRange] = useState<DateRangeValue>(() => dateRangeForPreset("thisMonth"));
   const range = onChange ? localRange : sharedRange.range;
+  const isReady = Boolean(onChange) || sharedRange.isReady;
   const dateHelper = useMemo(() => (locale === "uk" ? "дд.мм.рррр" : "yyyy-mm-dd"), [locale]);
 
   function update(next: DateRangeValue) {
@@ -20,6 +21,8 @@ export function DateRangeSelector({ compact = false, onChange }: { compact?: boo
     }
     sharedRange.setRange(next);
   }
+
+  if (!isReady) return <div aria-busy="true" aria-label={t("dateRange.label")} className="h-12 w-36 animate-pulse rounded-2xl bg-surface-2 motion-reduce:animate-none" />;
 
   return (
     <div className={`date-range-selector flex min-w-0 shrink-0 flex-col gap-2 sm:flex-row sm:items-center ${compact ? "w-full" : "hidden lg:flex"}`}>

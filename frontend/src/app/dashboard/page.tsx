@@ -54,11 +54,11 @@ function OwnerMetricRow({ label, value, helper }: { label: string; value: string
 export default function DashboardPage() {
   const { t, formatStatus } = useI18n();
   const [showDetails, setShowDetails] = useState(false);
-  const { range, previousRange } = useDateRange();
+  const { range, previousRange, isReady: periodReadyFromStorage } = useDateRange();
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const currencyCode = currentWorkspace?.currency_code ?? "UAH";
-  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
+  const enabled = periodReadyFromStorage && authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const canSeeProfit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "ANALYST";
   const canReviewExternalTtn = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "MANAGER";
   const dateFrom = range.date_from || undefined;

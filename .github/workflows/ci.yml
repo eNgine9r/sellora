@@ -359,6 +359,8 @@ jobs:
         run: node frontend/scripts/global-search-regression.mjs
       - name: Verify compact Shipments KPI and progressive filters
         run: node frontend/scripts/shipments-compact-filters-regression.mjs
+      - name: Verify persisted dashboard date range and local-calendar defaults
+        run: node frontend/scripts/date-range-persistence-regression.mjs
       - name: Verify fulfillment amount and quantity behavior
         working-directory: frontend
         run: node scripts/fulfillment-amounts-test.mjs
