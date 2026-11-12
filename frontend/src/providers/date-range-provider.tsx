@@ -15,9 +15,10 @@ type DateRangeContextValue = {
 const DateRangeContext = createContext<DateRangeContextValue | null>(null);
 
 export function DateRangeProvider({ children }: PropsWithChildren) {
-  // Deterministic server/client initial selection avoids hydration mismatches.
-  // Fetches are gated by isReady until the browser preference is restored.
-  const [range, setRangeState] = useState<DateRangeValue>(() => dateRangeForPreset("thisMonth"));
+  // Date strings remain empty on SSR and initial hydration: server timezone
+  // may differ from the user's timezone (especially around midnight).
+  // The effect below resolves local calendar dates before enabling data queries.
+  const [range, setRangeState] = useState<DateRangeValue>({ preset: "thisMonth", date_from: "", date_to: "" });
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {

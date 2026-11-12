@@ -57,6 +57,7 @@ const insights = read("frontend/src/app/insights/page.tsx");
 assert(provider.includes('DATE_RANGE_STORAGE_KEY = "sellora:date-range:v1"'));
 assert(provider.includes('window.localStorage.getItem(DATE_RANGE_STORAGE_KEY)') && provider.includes('window.localStorage.setItem(DATE_RANGE_STORAGE_KEY'));
 assert(provider.includes('dateRangeForPreset("thisMonth")'));
+assert(provider.includes('useState<DateRangeValue>({ preset: "thisMonth", date_from: "", date_to: "" })'), "SSR initial date range must not depend on server timezone");
 assert(provider.includes('next.preset === "custom" ? next : { preset: next.preset }'), "only custom dates are stored as fixed dates");
 assert(provider.includes("setIsReady(true)") && provider.includes("isReady"), "hydration protected");
 assert(provider.includes('"focus"') && provider.includes('"visibilitychange"') && provider.includes("refreshRollingPreset"));
