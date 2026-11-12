@@ -270,7 +270,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_DB: sellora_direct_client_conflict_e2e_isolated
           POSTGRES_USER: sellora
@@ -343,6 +343,74 @@ jobs:
       - name: Run Platform Admin browser coverage on desktop and mobile
         working-directory: frontend
         run: npx playwright test --config=playwright.platform-admin.config.ts
+      - name: Rehearse Platform Admin off-switch rollback on disposable PostgreSQL 17
+        working-directory: backend
+        env:
+          ENVIRONMENT: development
+          SELLORA_PLATFORM_ADMIN_ENABLED: "false"
+          SELLORA_PRODUCT_USAGE_CAPTURE_ENABLED: "false"
+          SELLORA_COOKIE_SESSIONS_ENABLED: "true"
+          SELLORA_LEGACY_AUTH_ENABLED: "false"
+          SELLORA_CORS_ALLOWED_ORIGINS: http://127.0.0.1:3100
+        run: |
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 8101 > /tmp/sellora-platform-rollback.log 2>&1 &
+          runtime_pid=$!
+          trap 'kill "$runtime_pid" 2>/dev/null || true; wait "$runtime_pid" 2>/dev/null || true' EXIT
+          python - <<'PYTHON'
+          import os
+          import time
+
+          import httpx
+          from sqlalchemy import create_engine, make_url, text
+
+          url = make_url(os.environ["DATABASE_URL"])
+          assert url.host == "127.0.0.1" and url.database == "sellora_direct_client_conflict_e2e_isolated"
+          assert os.environ["SELLORA_DIRECT_CONFLICT_E2E"] == "YES"
+          engine = create_engine(url)
+          snapshot = text("""
+              SELECT (SELECT version_num FROM alembic_version),
+                     (SELECT count(*) FROM platform_operator_grants),
+                     (SELECT count(*) FROM platform_audit_events),
+                     (SELECT count(*) FROM product_usage_events),
+                     (SELECT count(*) FROM product_usage_daily),
+                     (SELECT count(*) FROM workspace_subscriptions),
+                     (SELECT count(*) FROM subscription_payment_event_receipts)
+          """)
+          with engine.connect() as db, httpx.Client(base_url="http://127.0.0.1:8101", trust_env=False, timeout=5) as client:
+              version = int(db.execute(text("SHOW server_version_num")).scalar_one())
+              assert 170000 <= version < 180000, version
+              before = db.execute(snapshot).one()
+              assert all(count > 0 for count in before[1:6])
+              for _ in range(50):
+                  try:
+                      if client.get("/health").status_code == 200:
+                          break
+                  except httpx.ConnectError:
+                      pass
+                  time.sleep(0.2)
+              else:
+                  raise AssertionError("Rollback API did not become healthy")
+              for account in ("admin", "owner"):
+                  login = client.post("/api/v1/auth/session/login", headers={"Origin": "http://127.0.0.1:3100"},
+                                      json={"email": f"qa-platform-{account}@example.com", "password": "QA-Platform-Local123!"})
+                  assert login.status_code == 200, (account, login.status_code)
+                  headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+                  for path in ("me", "activity/summary"):
+                      assert client.get(f"/api/v1/platform-admin/{path}", headers=headers).status_code == 404
+                  assert client.post("/api/v1/platform-admin/workspaces/search", headers=headers, json={}).status_code == 404
+                  profile = client.get("/api/v1/auth/me", headers=headers)
+                  assert profile.status_code == 200
+                  if account == "owner":
+                      workspace = profile.json()["memberships"][0]["workspace_id"]
+                      subscription = client.get("/api/v1/workspaces/current/subscription",
+                                                headers={**headers, "X-Workspace-ID": workspace})
+                      assert subscription.status_code == 200
+                      assert subscription.json()["plan_code"] == "qa-pilot"
+                      assert subscription.json()["enforcement_enabled"] is False
+              assert db.execute(snapshot).one() == before
+          engine.dispose()
+          print("PostgreSQL 17 rollback PASS: platform closed, CRM and subscription read available, data counts preserved")
+          PYTHON
       - name: Retain synthetic browser evidence
         if: always()
         uses: actions/upload-artifact@v4
