@@ -5,7 +5,7 @@ import os
 import time
 from urllib.parse import urlsplit
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
@@ -86,6 +86,15 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def platform_cache_control(request: Request, call_next):
+    response = await call_next(request)
+    prefix = f"{settings.api_v1_prefix}/platform-admin"
+    if request.url.path == prefix or request.url.path.startswith(prefix + "/"):
+        response.headers["Cache-Control"] = "private, no-store"
+    return response
+
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 

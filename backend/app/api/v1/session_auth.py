@@ -110,7 +110,7 @@ def session_login(
     user = AuthService(db).users.get_by_email(payload.email)
     if user is None or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    issued = SessionAuthenticationService(db).create(user.id)
+    issued = SessionAuthenticationService(db).create(user.id, authenticated_with_password=True)
     _set_cookie(response, issued)
     return SessionAccessResponse(access_token=issued.access_token)
 
