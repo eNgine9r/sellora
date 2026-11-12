@@ -22,7 +22,8 @@ from app.repositories.nova_poshta_external_repository import NovaPoshtaExternalR
 from app.repositories.product_repository import ProductVariantRepository
 from app.schemas.order import OrderCreate, OrderItemCreate
 from app.schemas.shipment import ShipmentCreate
-from app.schemas.smart_sale import SmartSaleCandidate, SmartSaleConfirmRequest, SmartSaleConfirmResult, SmartSaleSuggestion
+from app.schemas.smart_sale import SmartSaleCandidate, SmartSaleConfirmRequest, SmartSaleConfirmResult, SmartSaleSuggestion, SmartSalePriceHint
+from app.services.direct_sale_quote_service import DirectSaleQuoteService, SaleQuoteContext
 from app.services.direct_customer_automation_service import DirectCustomerAutomationError, DirectCustomerAutomationService
 from app.services.direct_order_proposal_service import DirectOrderProposalService, ProposalConversationNotFound
 from app.services.order_service import OrderService, OrderServiceError
@@ -38,6 +39,7 @@ class SmartSaleConfirmationService:
         self.db = db
         self.external = NovaPoshtaExternalRepository(db)
         self.proposals = DirectOrderProposalService(db)
+        self.quotes = DirectSaleQuoteService(db)
         self.customer_automation = DirectCustomerAutomationService(db)
         self.orders = OrderService(db)
         self.shipments = ShipmentService(db)
@@ -60,7 +62,9 @@ class SmartSaleConfirmationService:
     def _evidence(self, workspace_id: UUID, document_id: UUID) -> dict:
         return self.external.direct_evidence_by_document(workspace_id, [document_id]).get(document_id, {})
 
-    def _suggestion(self, workspace_id: UUID, conversation_id: UUID) -> SmartSaleSuggestion | None:
+    def _suggestion(
+        self, workspace_id: UUID, conversation_id: UUID, context: SaleQuoteContext | None = None
+    ) -> SmartSaleSuggestion | None:
         try:
             proposal = self.proposals.get(workspace_id, conversation_id)
         except ProposalConversationNotFound:
@@ -74,6 +78,15 @@ class SmartSaleConfirmationService:
                    if line.source == "INBOUND_SKU" and line.match_status == "MATCHED"
                    and not line.requires_review and len(line.candidates) == 1
                    and line.evidence and not line.candidates_truncated]
+        if context is not None:
+            # A SKU from an older sale in a reused Direct conversation must
+            # never prefill a different TTN. Require the exact source message
+            # inside the bounded sale window.
+            matched = [line for line in matched if
+                       context.anchor_found and all(
+                           source.message_id in context.anchored_ids
+                           for source in line.evidence
+                       )]
         if len(matched) != 1:
             return None
         line, item = matched[0], matched[0].candidates[0]
@@ -104,7 +117,8 @@ class SmartSaleConfirmationService:
                 )
             ) if conversation_id else None
             customer_id = match.get("direct_customer_id")
-            suggestion = self._suggestion(workspace_id, conversation_id) if conversation_id else None
+            context = self.quotes.get(workspace_id, conversation_id, doc.tracking_number) if conversation_id else None
+            suggestion = self._suggestion(workspace_id, conversation_id, context) if conversation_id else None
             if doc.match_state != "UNMATCHED":
                 reason = "EXTERNAL_TTN_CONFLICT"
             elif doc.matched_shipment_id:
@@ -120,7 +134,12 @@ class SmartSaleConfirmationService:
                 document_id=doc.id, tracking_masked=self._mask(doc.tracking_number),
                 provider_status=doc.provider_status, state=state, conversation_id=conversation_id,
                 customer_id=customer_id, customer_instagram=(conversation.participant_username if conversation else None),
-                suggested_item=suggestion, reason=reason,
+                suggested_item=suggestion,
+                price_hints=[
+                    SmartSalePriceHint(unit_price=q.amount, message_id=q.message_id)
+                    for q in (context.prices if context else ())
+                ],
+                reason=reason,
             ))
         return result
 
@@ -176,7 +195,8 @@ class SmartSaleConfirmationService:
         # sales: one DirectConversation.linked_order_id is not an exclusivity
         # constraint. The unique external TTN is the idempotency key.
         if payload.selection_source == "CATALOG_SUGGESTION":
-            suggested = self._suggestion(workspace_id, payload.expected_conversation_id)
+            context = self.quotes.get(workspace_id, payload.expected_conversation_id, doc.tracking_number)
+            suggested = self._suggestion(workspace_id, payload.expected_conversation_id, context)
             if suggested is None or suggested.variant_id != payload.product_variant_id or suggested.quantity != payload.quantity:
                 raise SmartSaleError("PRODUCT_EVIDENCE_CHANGED")
         # MANAGER_SELECTED deliberately permits manual selection of a real

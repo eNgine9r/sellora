@@ -16,6 +16,12 @@ class SmartSaleSuggestion(BaseModel):
     price_source: Literal["CATALOG_SUGGESTION"] = "CATALOG_SUGGESTION"
 
 
+class SmartSalePriceHint(BaseModel):
+    # Manager-authored quote; never bank-confirmed or final negotiated price.
+    unit_price: Decimal = Field(gt=0, decimal_places=2)
+    message_id: UUID
+
+
 class SmartSaleCandidate(BaseModel):
     document_id: UUID
     tracking_masked: str
@@ -25,6 +31,7 @@ class SmartSaleCandidate(BaseModel):
     customer_id: UUID | None = None
     customer_instagram: str | None = None
     suggested_item: SmartSaleSuggestion | None = None
+    price_hints: list[SmartSalePriceHint] = Field(default_factory=list, max_length=4)
     reason: str
     order_id: UUID | None = None
 
