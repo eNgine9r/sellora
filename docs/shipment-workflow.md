@@ -41,3 +41,30 @@ Sellora keeps order status and shipment status related but separate. Creating a 
 - TTN creation now treats incomplete Nova Poshta responses as unsafe: tracking is not saved until both tracking number and document ref are present.
 - Status sync without a TTN is blocked; empty or unavailable external statuses show a safe unavailable message and keep the internal shipment status badge as the source of truth.
 - Recipient phone, city and warehouse missing states have dedicated localized guidance before retrying TTN creation.
+
+## Compact shipments overview (2026-11-12)
+
+To prioritize the actual shipment table, `/shipments` now uses compact responsive
+KPI cards for All, Ready to ship, In transit, Delivered; these are derived from
+the full, unfiltered workspace shipment list and therefore do not change when
+a manager searches or narrows the table. Nonzero returned/cancelled records
+remain discoverable as a small secondary count. The previous large five-card
+balanced layout was intentionally retired for this page only.
+
+The external Nova Poshta inbox occupies a single condensed row on the
+Shipments page: unconfirmed TTNs and any verified Direct price hints are
+visible at a glance, with a link to `/shipments/confirmations` and an
+owner-only manual sync control. This section never equates a TTN with a paid
+order.
+
+The default filters are a search box and status selector. Carrier, TTN state
+and sort are behind an expandable **Filters** control, with an active count
+badge and one compact reset action. All filters remain functional, including
+when the extra controls are collapsed; manager/owner RBAC and shipment actions
+are unchanged.
+
+The screen avoids nested scroll containers for the overview and keeps
+Ukrainian/English controls and 44 px mobile tap targets. CI regressions
+(`frontend/scripts/shipments-compact-filters-regression.mjs` and the
+updated Dd.5 layout assertion) verify that this simplification does not
+regress table, pagination or Smart Sale links.

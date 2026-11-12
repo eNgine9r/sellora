@@ -2,13 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
-import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
+import { SearchInput, SortSelect } from "@/components/filter-controls";
 import { FormDialog } from "@/components/form-dialog";
 import { clampPage, PAGE_SIZE_OPTIONS, paginateItems, PaginationControls } from "@/components/pagination-controls";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui/states";
-import { Button, CompactSummary, EntitySidePanel, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
+import { Button, EntitySidePanel, WorkspaceHeader, WorkspacePage, WorkspaceSplitView } from "@/components/crm-workspace";
 import { ShipmentDetails } from "@/features/shipments/components/shipment-details";
 import { NovaPoshtaExternalInbox } from "@/features/shipments/components/nova-poshta-external-inbox";
 import { ShipmentForm } from "@/features/shipments/components/shipment-form";
@@ -30,7 +31,7 @@ function shipmentNeedsAction(shipment: Shipment) {
 }
 
 export default function ShipmentsPage() {
-  const { t, formatStatus } = useI18n();
+  const { t, formatStatus, locale } = useI18n();
   const queryClient = useQueryClient();
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
@@ -41,6 +42,7 @@ export default function ShipmentsPage() {
   const [ttnFilter, setTtnFilter] = useState<TtnFilter>("");
   const [search, setSearch] = useState("");
   const [shipmentSort, setShipmentSort] = useState("newest");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(5);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
@@ -50,6 +52,14 @@ export default function ShipmentsPage() {
   const [archivingShipment, setArchivingShipment] = useState<Shipment | null>(null);
 
   const shipmentsQuery = useQuery({ queryKey: ["shipments", workspaceId, status, search], queryFn: () => fetchShipments(workspaceId, status, search), enabled, refetchInterval: 45_000 });
+  // Summary cards always use the complete workspace list, not a search/status
+  // subset. The unfiltered query key is shared with the main list when idle.
+  const overviewQuery = useQuery({
+    queryKey: ["shipments", workspaceId, "", ""],
+    queryFn: () => fetchShipments(workspaceId, "", ""),
+    enabled,
+    refetchInterval: 45_000,
+  });
   const summaryQuery = useQuery({ queryKey: ["shipments-summary", workspaceId], queryFn: () => fetchShipmentSummary(workspaceId), enabled, refetchInterval: 45_000 });
   const ordersQuery = useQuery({ queryKey: ["orders", workspaceId, "shipment-select"], queryFn: () => fetchOrders(workspaceId, ""), enabled, refetchInterval: 45_000 });
   const invalidateShipmentState = () => {
@@ -86,7 +96,7 @@ export default function ShipmentsPage() {
       });
   }, [carrier, search, shipmentSort, shipmentsQuery.data, ttnFilter]);
   const paginatedShipments = useMemo(() => paginateItems(filteredShipments, page, pageSize), [filteredShipments, page, pageSize]);
-  const hasAnyShipments = (shipmentsQuery.data?.length ?? 0) > 0;
+  const hasAnyShipments = (overviewQuery.data?.length ?? 0) > 0;
   const hasActiveFilters = Boolean(search.trim() || status || carrier || ttnFilter || shipmentSort !== "newest");
 
   useEffect(() => {
@@ -113,24 +123,99 @@ export default function ShipmentsPage() {
     setInitialOrderId(undefined);
   }, [workspaceId]);
 
-  const allShipments = shipmentsQuery.data?.length ?? 0;
-  const readyShipments = (shipmentsQuery.data ?? []).filter((shipment) => shipment.status === "DRAFT" || shipment.status === "CREATED").length;
-  const deliveredShipments = (shipmentsQuery.data ?? []).filter((shipment) => shipment.status === "DELIVERED").length;
-  const problemShipments = (shipmentsQuery.data ?? []).filter((shipment) => shipment.status === "RETURNED" || shipment.status === "CANCELLED" || shipmentNeedsAction(shipment)).length;
+  const overview = overviewQuery.data ?? [];
+  const allShipments = overview.length;
+  const readyShipments = overview.filter((shipment) => shipment.status === "DRAFT" || shipment.status === "CREATED").length;
+  const deliveredShipments = overview.filter((shipment) => shipment.status === "DELIVERED").length;
+  const issueShipments = overview.filter((shipment) => shipment.status === "RETURNED" || shipment.status === "CANCELLED").length;
+  const advancedFilterCount = Number(Boolean(carrier)) + Number(Boolean(ttnFilter)) + Number(shipmentSort !== "newest");
+  const resetFilters = () => {
+    setSearch("");
+    setStatus("");
+    setCarrier("");
+    setTtnFilter("");
+    setShipmentSort("newest");
+    setPage(1);
+  };
 
   return (
     <WorkspacePage>
         <WorkspaceHeader title={t("shipments.title")} description={t("shipments.subtitle")} actions={canEdit ? <Button onClick={() => setIsCreateOpen(true)}>{t("shipments.create")}</Button> : undefined} />
-        <CompactSummary layout="five-balanced" items={[{ label: t("shipments.summary.all"), value: allShipments }, { label: t("shipments.summary.ready"), value: readyShipments }, { label: t("shipments.inTransit"), value: summaryQuery.data?.in_transit_count ?? 0 }, { label: t("shipments.summary.delivered"), value: deliveredShipments || (summaryQuery.data?.delivered_today ?? 0) }, { label: t("shipments.summary.problems"), value: problemShipments || (summaryQuery.data?.returned_this_month ?? 0) }]} />
+        <section aria-label={t("shipments.summary.all")} data-shipments-compact-summary
+          className="grid min-w-0 grid-cols-2 gap-2 md:grid-cols-4">
+          {([
+            [t("shipments.summary.all"), allShipments],
+            [t("shipments.summary.ready"), readyShipments],
+            [t("shipments.inTransit"), summaryQuery.data?.in_transit_count ?? 0],
+            [t("shipments.summary.delivered"), deliveredShipments],
+          ] as const).map(([label, value]) => (
+            <div key={label} className="flex min-h-[72px] min-w-0 flex-col justify-center rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 sm:px-4">
+              <span className="truncate text-xs font-medium text-text-secondary">{label}</span>
+              <span className="mt-0.5 text-xl font-bold tabular-nums text-text-primary">{overviewQuery.isPending ? "—" : value}</span>
+            </div>
+          ))}
+        </section>
         <NovaPoshtaExternalInbox key={workspaceId} workspaceId={workspaceId} role={currentWorkspace?.role} mode="summary" />
-        <FilterBar>
-          <SearchInput value={search} onChange={setSearch} placeholder={t("shipments.searchPlaceholder")} />
-          <select className="min-h-10 w-full min-w-0 max-w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" value={status} onChange={(event) => setStatus(event.target.value as ShipmentStatus | "")}>{STATUSES.map((item) => <option key={item || "all"} value={item}>{item ? formatStatus("shipment", item) : t("common.allStatuses")}</option>)}</select>
-          <select className="min-h-10 w-full min-w-0 max-w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" value={carrier} onChange={(event) => setCarrier(event.target.value as ShipmentCarrier | "")}>{CARRIERS.map((item) => <option key={item || "all"} value={item}>{item || t("shipments.allCarriers")}</option>)}</select>
-          <select className="min-h-10 w-full min-w-0 max-w-full rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" value={ttnFilter} onChange={(event) => setTtnFilter(event.target.value as TtnFilter)}><option value="">{t("shipments.allTtnStates")}</option><option value="hasTtn">{t("shipments.hasTtn")}</option><option value="missingTtn">{t("shipments.missingTtn")}</option><option value="needsAction">{t("shipments.needsAction")}</option></select>
-          <SortSelect value={shipmentSort} onChange={setShipmentSort} options={[{ value: "newest", label: t("sort.newest") }, { value: "oldest", label: t("sort.oldest") }, { value: "status", label: t("tables.status") }, { value: "updatedDesc", label: t("shipments.updatedRecently") }]} />
-          <ResetFiltersButton onClick={() => { setSearch(""); setStatus(""); setCarrier(""); setTtnFilter(""); setShipmentSort("newest"); setPage(1); }} />
-        </FilterBar>
+        <section aria-label={t("filters.sort")} data-shipments-compact-filters
+          className="grid min-w-0 gap-2 rounded-xl border border-border-subtle bg-surface-1 p-2.5 sm:p-3">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1">
+              <SearchInput value={search} onChange={setSearch} placeholder={t("shipments.searchPlaceholder")} />
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
+              <select aria-label={t("common.allStatuses")}
+                className="min-h-11 min-w-0 flex-1 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:w-44 sm:flex-none"
+                value={status} onChange={(event) => setStatus(event.target.value as ShipmentStatus | "")}>
+                {STATUSES.map((item) => <option key={item || "all"} value={item}>{item ? formatStatus("shipment", item) : t("common.allStatuses")}</option>)}
+              </select>
+              <button type="button" aria-controls="shipments-advanced-filters" aria-expanded={showAdvancedFilters}
+                onClick={() => setShowAdvancedFilters((expanded) => !expanded)}
+                className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${showAdvancedFilters || advancedFilterCount ? "border-primary bg-primary/10 text-primary" : "border-border-subtle text-text-secondary hover:bg-surface-hover"}`}>
+                <SlidersHorizontal aria-hidden="true" className="h-4 w-4"/>
+                {locale === "en" ? "Filters" : "Фільтри"}
+                {advancedFilterCount ? <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-white" aria-label={`${advancedFilterCount} active`}>{advancedFilterCount}</span> : null}
+                <ChevronDown aria-hidden="true" className={`h-3.5 w-3.5 transition-transform ${showAdvancedFilters ? "rotate-180" : ""}`}/>
+              </button>
+              {hasActiveFilters ? <button type="button" onClick={resetFilters}
+                aria-label={t("filters.reset")} title={t("filters.reset")}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border-subtle text-text-secondary transition hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-focus-ring">
+                <RotateCcw aria-hidden="true" className="h-4 w-4"/>
+              </button> : null}
+            </div>
+          </div>
+          {showAdvancedFilters ? <div id="shipments-advanced-filters" data-shipments-advanced-filters
+            className="grid min-w-0 gap-2 border-t border-border-subtle pt-3 sm:grid-cols-3">
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-text-secondary">
+              {t("shipments.allCarriers")}
+              <select className="min-h-11 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary"
+                value={carrier} onChange={(event) => setCarrier(event.target.value as ShipmentCarrier | "")}>
+                {CARRIERS.map((item) => <option key={item || "all"} value={item}>{item || t("shipments.allCarriers")}</option>)}
+              </select>
+            </label>
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-text-secondary">
+              {t("shipments.allTtnStates")}
+              <select className="min-h-11 w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 text-sm font-semibold text-text-primary"
+                value={ttnFilter} onChange={(event) => setTtnFilter(event.target.value as TtnFilter)}>
+                <option value="">{t("shipments.allTtnStates")}</option>
+                <option value="hasTtn">{t("shipments.hasTtn")}</option>
+                <option value="missingTtn">{t("shipments.missingTtn")}</option>
+                <option value="needsAction">{t("shipments.needsAction")}</option>
+              </select>
+            </label>
+            <label className="grid min-w-0 gap-1 text-xs font-medium text-text-secondary">
+              {t("filters.sort")}
+              <SortSelect value={shipmentSort} onChange={setShipmentSort} options={[
+                { value: "newest", label: t("sort.newest") },
+                { value: "oldest", label: t("sort.oldest") },
+                { value: "status", label: t("tables.status") },
+                { value: "updatedDesc", label: t("shipments.updatedRecently") },
+              ]}/>
+            </label>
+          </div> : null}
+          {issueShipments > 0 ? <p className="text-xs text-text-secondary" data-shipments-issue-count>
+            {t("shipments.summary.problems")}: <span className="font-semibold tabular-nums text-text-primary">{issueShipments}</span>
+          </p> : null}
+        </section>
         <WorkspaceSplitView panelOpen={Boolean(selectedShipment)} panel={selectedShipment ? <EntitySidePanel open={Boolean(selectedShipment)} title={selectedShipment.nova_poshta_document_number ?? selectedShipment.tracking_number ?? t("shipments.draftShipment")} description={`${t("shipments.carrier")}: ${selectedShipment.carrier}`} onClose={() => setSelectedShipment(null)} footer={canEdit ? <div className="flex gap-2"><Button variant="secondary" onClick={() => setEditingShipment(selectedShipment)}>{t("shipments.edit")}</Button><Button variant="danger" onClick={() => setArchivingShipment(selectedShipment)}>{t("shipments.archive")}</Button></div> : undefined}><ShipmentDetails shipment={selectedShipment} workspaceId={workspaceId} onStatusChange={(nextStatus) => statusMutation.mutate({ shipmentId: selectedShipment.id, nextStatus })} /></EntitySidePanel> : null}>
           {shipmentsQuery.isLoading ? <LoadingSkeleton rows={5} title={t("shipments.pagination.loading")} /> : null}
           {shipmentsQuery.isError ? <ErrorState title={t("shipments.loadError")} description={safeApiErrorMessage(shipmentsQuery.error, t("shipments.loadError"))} onRetry={() => void shipmentsQuery.refetch()} /> : null}
