@@ -337,6 +337,12 @@ jobs:
       - name: Run real Direct identity browser API PostgreSQL coverage
         working-directory: frontend
         run: npm run test:e2e:direct-identity
+      - name: Seed Platform Admin browser fixtures in the disposable database
+        working-directory: backend
+        run: python ../frontend/e2e/platform-admin/seed.py
+      - name: Run Platform Admin browser coverage on desktop and mobile
+        working-directory: frontend
+        run: npx playwright test --config=playwright.platform-admin.config.ts
       - name: Retain synthetic browser evidence
         if: always()
         uses: actions/upload-artifact@v4

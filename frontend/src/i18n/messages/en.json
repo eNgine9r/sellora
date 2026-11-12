@@ -3146,5 +3146,92 @@
     "navigation": "Navigation",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar"
+  },
+  "platformAdmin": {
+    "name": "Platform Admin",
+    "title": "Platform administration",
+    "description": "Sellora workspaces, subscriptions and team sizes.",
+    "signInTitle": "Sign in to Platform Admin",
+    "signInDescription": "Use the password for your Sellora operator account.",
+    "signInError": "Sign-in failed. Check your credentials and try again.",
+    "signOutError": "Sign-out failed. Please try again.",
+    "checkingAccess": "Checking access…",
+    "summary": "Platform metrics",
+    "loadingSummary": "Loading metrics…",
+    "asOf": "As of {time}",
+    "directory": "Workspace directory",
+    "loadingDirectory": "Loading workspaces…",
+    "search": "Search",
+    "searchPlaceholder": "Name, slug or ID",
+    "workspace": "Workspace",
+    "workspaceStatus": "Workspace state",
+    "workspaceType": "Workspace type",
+    "allStatuses": "All states",
+    "allTypes": "All types",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "demo": "Demo",
+    "standard": "Standard",
+    "applyFilters": "Apply filters",
+    "reset": "Reset",
+    "plan": "Plan",
+    "subscription": "Subscription",
+    "status": "Status",
+    "unassigned": "—",
+    "details": "Details",
+    "openWorkspace": "Open workspace {name}",
+    "profile": "Workspace profile",
+    "activeMembers": "Active team members",
+    "currency": "Currency",
+    "timezone": "Time zone",
+    "periodStart": "Period starts (UTC)",
+    "periodEnd": "Period ends (UTC)",
+    "cancelAtEnd": "Subscription ends at the close of the current period.",
+    "pagination": "Directory pages",
+    "previous": "Back",
+    "next": "Next",
+    "page": "Page {page}",
+    "empty": "No workspaces yet",
+    "emptyDescription": "Workspaces will appear here once created.",
+    "filteredEmpty": "No workspaces found",
+    "filteredEmptyDescription": "Change the search term or filters.",
+    "roles": {
+      "PLATFORM_ADMIN": "Administrator",
+      "PLATFORM_SUPPORT": "Support",
+      "PLATFORM_AUDITOR": "Auditor"
+    },
+    "metrics": {
+      "total_workspaces": "All workspaces",
+      "enabled_workspaces": "Enabled workspaces",
+      "workspaces_with_current_term": "Workspaces with a current term",
+      "demo_workspaces": "Demo workspaces"
+    },
+    "subscriptionStatus": {
+      "UNMANAGED": "Unmanaged",
+      "PENDING": "Pending",
+      "TRIALING": "Trial",
+      "ACTIVE": "Active",
+      "PAST_DUE": "Past due",
+      "CANCELED": "Canceled",
+      "EXPIRED": "Expired"
+    },
+    "feedback": {
+      "forbidden": {
+        "title": "Access denied",
+        "description": "Your account does not have permission to view platform data."
+      },
+      "unavailable": {
+        "title": "Platform Admin unavailable",
+        "description": "This area is currently disabled."
+      },
+      "error": {
+        "title": "Unable to load data",
+        "description": "Please try the request again."
+      },
+      "notFound": {
+        "title": "Workspace not found",
+        "description": "Close the profile and refresh the directory."
+      }
+    }
   }
 }

@@ -3146,5 +3146,92 @@
     "navigation": "Навігація",
     "collapse": "Згорнути панель",
     "expand": "Розгорнути панель"
+  },
+  "platformAdmin": {
+    "name": "Platform Admin",
+    "title": "Керування платформою",
+    "description": "Магазини Sellora, стан їхніх підписок і склад команд.",
+    "signInTitle": "Вхід до Platform Admin",
+    "signInDescription": "Увійдіть з паролем облікового запису оператора Sellora.",
+    "signInError": "Не вдалося увійти. Перевірте дані та повторіть спробу.",
+    "signOutError": "Не вдалося завершити сесію. Спробуйте ще раз.",
+    "checkingAccess": "Перевіряємо доступ…",
+    "summary": "Показники платформи",
+    "loadingSummary": "Завантажуємо показники…",
+    "asOf": "Станом на {time}",
+    "directory": "Реєстр магазинів",
+    "loadingDirectory": "Завантажуємо магазини…",
+    "search": "Пошук",
+    "searchPlaceholder": "Назва, slug або ID",
+    "workspace": "Магазин",
+    "workspaceStatus": "Стан магазину",
+    "workspaceType": "Тип магазину",
+    "allStatuses": "Усі стани",
+    "allTypes": "Усі типи",
+    "enabled": "Увімкнений",
+    "disabled": "Вимкнений",
+    "demo": "Демо",
+    "standard": "Звичайний",
+    "applyFilters": "Застосувати",
+    "reset": "Скинути",
+    "plan": "Тариф",
+    "subscription": "Підписка",
+    "status": "Статус",
+    "unassigned": "—",
+    "details": "Деталі",
+    "openWorkspace": "Відкрити магазин {name}",
+    "profile": "Профіль магазину",
+    "activeMembers": "Активні учасники команди",
+    "currency": "Валюта",
+    "timezone": "Часовий пояс",
+    "periodStart": "Початок періоду (UTC)",
+    "periodEnd": "Кінець періоду (UTC)",
+    "cancelAtEnd": "Підписка завершиться в кінці поточного періоду.",
+    "pagination": "Сторінки реєстру",
+    "previous": "Назад",
+    "next": "Далі",
+    "page": "Сторінка {page}",
+    "empty": "Магазинів ще немає",
+    "emptyDescription": "Створені магазини з’являться в реєстрі.",
+    "filteredEmpty": "Магазинів не знайдено",
+    "filteredEmptyDescription": "Змініть пошуковий запит або фільтри.",
+    "roles": {
+      "PLATFORM_ADMIN": "Адміністратор",
+      "PLATFORM_SUPPORT": "Підтримка",
+      "PLATFORM_AUDITOR": "Аудитор"
+    },
+    "metrics": {
+      "total_workspaces": "Усі магазини",
+      "enabled_workspaces": "Увімкнені магазини",
+      "workspaces_with_current_term": "Магазини з чинною підпискою",
+      "demo_workspaces": "Демо-магазини"
+    },
+    "subscriptionStatus": {
+      "UNMANAGED": "Без підписки",
+      "PENDING": "Очікує початку",
+      "TRIALING": "Пробний період",
+      "ACTIVE": "Активна",
+      "PAST_DUE": "Прострочена оплата",
+      "CANCELED": "Скасована",
+      "EXPIRED": "Завершена"
+    },
+    "feedback": {
+      "forbidden": {
+        "title": "Доступ заборонено",
+        "description": "Ваш обліковий запис не має дозволу переглядати дані платформи."
+      },
+      "unavailable": {
+        "title": "Platform Admin недоступний",
+        "description": "Цей розділ зараз вимкнено."
+      },
+      "error": {
+        "title": "Не вдалося завантажити дані",
+        "description": "Спробуйте повторити запит."
+      },
+      "notFound": {
+        "title": "Магазин не знайдено",
+        "description": "Закрийте профіль і оновіть реєстр."
+      }
+    }
   }
 }

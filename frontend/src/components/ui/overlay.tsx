@@ -46,7 +46,7 @@ export function useOverlayLifecycle(open: boolean, onClose: () => void) {
   return panelRef;
 }
 
-export function Drawer({ open, title, description, children, footer, onClose }: { open: boolean; title: string; description?: string; children: ReactNode; footer?: ReactNode; onClose: () => void }) {
+export function Drawer({ open, title, description, children, footer, onClose, className = "" }: { open: boolean; title: string; description?: string; children: ReactNode; footer?: ReactNode; onClose: () => void; className?: string }) {
   const { t } = useI18n();
   const titleId = useId();
   const panelRef = useOverlayLifecycle(open, onClose);
@@ -54,7 +54,7 @@ export function Drawer({ open, title, description, children, footer, onClose }: 
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-[var(--z-overlay)]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div className={`fixed inset-0 z-[var(--z-overlay)] ${className}`} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <button className="absolute inset-0 bg-[var(--overlay-background)] backdrop-blur-sm" aria-label={t("actions.close")} onClick={onClose} />
         <section ref={panelRef} tabIndex={-1} className="sellora-dialog-panel absolute inset-x-0 bottom-0 flex max-h-[96dvh] min-h-0 flex-col overflow-hidden rounded-t-[28px] border border-b-0 border-border-subtle bg-surface-1 shadow-[var(--shadow-overlay)] outline-none sm:inset-y-4 sm:left-auto sm:right-4 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:w-[min(520px,calc(100vw-2rem))] sm:rounded-[var(--radius-shell)] sm:border md:inset-y-0 md:right-0 md:h-dvh md:max-h-dvh md:rounded-none md:border-y-0 md:border-r-0">
           <header className="sticky top-0 z-10 flex min-w-0 items-start justify-between gap-3 border-b border-border-subtle bg-surface-1/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur sm:p-5">
