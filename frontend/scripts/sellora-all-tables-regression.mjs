@@ -57,9 +57,16 @@ assert(team.includes("sellora-adaptive-list") && team.includes("sellora-adaptive
 assert(team.includes("!lastOwner && !current") && team.includes("canManage"),
   "Protect current users and last owner from accidental deactivation");
 const dashboard = read("frontend/src/features/dashboard/components/recent-orders-table.tsx");
-assert(dashboard.includes("sellora-adaptive-list") &&
-  dashboard.includes("sellora-adaptive-table") &&
-  dashboard.includes("sellora-adaptive-cards"), "Dashboard orders must adapt to available width");
+// Dashboard recent orders are intentionally a compact, single-column link list
+// (not a data table). Verify its accessible responsive structure instead.
+assert(dashboard.includes("data-dashboard-recent-orders") &&
+  dashboard.includes("data-dashboard-recent-orders-list") &&
+  dashboard.includes("<ul") && dashboard.includes("<li") &&
+  dashboard.includes("min-w-0") && dashboard.includes("truncate") &&
+  dashboard.includes("sm:hidden") && dashboard.includes("sm:inline-flex") &&
+  dashboard.includes("encodeURIComponent(order.id)") &&
+  !dashboard.includes("<table"),
+  "Dashboard recent orders must be a responsive, compact and accessible linked list");
 
 const operational = [
   "leads/components/lead-table.tsx",
