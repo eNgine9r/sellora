@@ -50,26 +50,27 @@ export function ProfileMenu({ currentUser, currentWorkspace, currentWorkspaceId,
     <>
       <button
         ref={triggerRef}
+        title={userName(currentUser)}
         type="button"
-        className="account-profile-trigger hidden min-h-12 min-w-0 max-w-[260px] shrink-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-left shadow-sm transition hover:border-violet-200 hover:text-violet-700 dark:border-white/10 dark:bg-white/10 dark:text-white md:flex"
+        className="account-profile-trigger hidden h-10 min-w-10 max-w-[220px] shrink-0 items-center gap-2 rounded-xl border border-border-subtle bg-surface-2 px-1.5 text-left text-text-primary transition hover:border-border-strong hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring md:flex xl:px-2"
         aria-label={t("accountMenu.profile")}
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-violet-100 text-sm font-black text-violet-700 dark:bg-violet-400/20 dark:text-violet-100">{userName(currentUser).slice(0, 1).toUpperCase()}</span>
-        <span className="min-w-0 leading-tight">
-          <span className="block truncate text-sm font-black text-slate-900 dark:text-white">{userName(currentUser)}</span>
-          <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{currentWorkspace?.workspace_name ?? t("accountMenu.workspace")}</span>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-xs font-semibold text-primary">{userName(currentUser).slice(0, 1).toUpperCase()}</span>
+        <span className="hidden min-w-0 leading-tight xl:block">
+          <span className="block truncate text-xs font-semibold text-text-primary">{userName(currentUser)}</span>
+          <span className="block truncate text-[11px] text-text-muted">{currentWorkspace?.workspace_name ?? t("accountMenu.workspace")}</span>
         </span>
-        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+        <ChevronDown className="hidden h-3.5 w-3.5 shrink-0 text-text-muted xl:block" />
       </button>
       {open ? (
         <Portal>
           <div
             ref={panelRef}
             id={menuId}
-            className="fixed z-[100] max-h-[min(82vh,760px)] w-[min(calc(100vw-1.5rem),380px)] overflow-y-auto overflow-x-hidden rounded-[28px] border border-slate-200 bg-white p-4 text-slate-950 shadow-2xl dark:border-white/10 dark:bg-slate-950 dark:text-white"
+            className="fixed z-[100] max-h-[min(82vh,720px)] w-[min(calc(100vw-1.5rem),348px)] overflow-y-auto overflow-x-hidden rounded-2xl border border-border-subtle bg-surface-1 p-3 text-text-primary shadow-2xl sm:p-4"
             style={{ top: position.top, right: position.right }}
             role="menu"
           >

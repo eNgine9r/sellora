@@ -10,7 +10,7 @@ const checks = [
   ["standalone viewport still covers safe areas", layout.includes('viewportFit: "cover"')],
   ["brand is independently identifiable", topbar.includes("data-mobile-brand-lockup") && topbar.includes("mobile-brand-copy")],
   ["mobile brand text is legible weight and size", topbar.includes("mobile-brand-title truncate text-base font-bold")],
-  ["header logo avoids low resolution Next image derivative", topbar.includes('<BrandIcon className="h-10 w-10 shrink-0" priority unoptimized />') && brand.includes("unoptimized={unoptimized}")],
+  ["header logo avoids low resolution Next image derivative", /\<BrandIcon className="h-(?:9|10) w-(?:9|10) shrink-0" priority unoptimized \/>/.test(topbar) && brand.includes("unoptimized={unoptimized}")],
   ["header retains safe area", topbar.includes("mobile-safe-top sticky top-0") && css.includes("safe-area-inset-top")],
   ["mobile topbar opaque", css.includes("background-color: var(--canvas) !important") && css.includes(".mobile-safe-top[data-shell-topbar]")],
   ["mobile brand compositor reset", css.includes(".mobile-brand-lockup img") && css.includes("transform: none !important") && css.includes("filter: none !important") && css.includes("text-shadow: none !important")],

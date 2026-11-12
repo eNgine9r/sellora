@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditRecordDialog } from "@/components/edit-record-dialog";
 import { FilterBar, ResetFiltersButton, SearchInput, SortSelect } from "@/components/filter-controls";
@@ -35,6 +36,8 @@ function messageForApiError(error: unknown, context: "list" | "create" | "source
 
 export default function LeadsPage() {
   const { t } = useI18n();
+  const searchRecordId = useSearchParams().get("lead_id");
+  const openedFromSearchRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
@@ -107,6 +110,19 @@ export default function LeadsPage() {
   useEffect(() => {
     setSelectedLead(null);
   }, [workspaceId]);
+
+  // A global search result opens the exact entity only if the list contains it.
+  // Keep this idempotent across interval refetches and tenant switches.
+  useEffect(() => {
+    if (!searchRecordId || !leadsQuery.data) return;
+    const key = workspaceId + ":" + searchRecordId;
+    if (openedFromSearchRef.current === key) return;
+    const match = leadsQuery.data.find((item) => item.id === searchRecordId);
+    if (match) {
+      openedFromSearchRef.current = key;
+      setSelectedLead(match);
+    }
+  }, [searchRecordId, workspaceId, leadsQuery.data]);
 
   return (
     <WorkspacePage>

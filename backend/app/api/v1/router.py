@@ -29,6 +29,7 @@ from app.api.v1.orders import router as orders_router
 from app.api.v1.order_fulfillments import router as order_fulfillments_router
 from app.api.v1.order_fulfillment_operations import router as order_fulfillment_operations_router
 from app.api.v1.shipments import router as shipments_router
+from app.api.v1.search import router as search_router
 from app.api.v1.import_center import router as import_center_router
 from app.api.v1.instagram import router as instagram_router
 from app.api.v1.inventory import router as inventory_router
@@ -66,6 +67,7 @@ api_router.include_router(meta_ads_router)
 api_router.include_router(meta_ads_mock_router)
 api_router.include_router(nova_poshta_router)
 api_router.include_router(shipments_router)
+api_router.include_router(search_router)
 api_router.include_router(tags_router)
 api_router.include_router(attachments_router)
 api_router.include_router(workspaces_router)

@@ -67,6 +67,7 @@ export default function OrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const directPrefillOpened = useRef(false);
+  const genericCreateOpened = useRef(false);
   const {
     currentUser,
     currentWorkspace,
@@ -257,6 +258,16 @@ export default function OrdersPage() {
     directPrefillOpened.current = true;
     setIsCreateOpen(true);
   }, [customersQuery.data, enabled, requestedCreate, requestedCustomerId]);
+
+  useEffect(() => {
+    if (!requestedCreate) genericCreateOpened.current = false;
+  }, [requestedCreate]);
+
+  useEffect(() => {
+    if (!enabled || !canEdit || !requestedCreate || requestedCustomerId || genericCreateOpened.current) return;
+    genericCreateOpened.current = true;
+    setIsCreateOpen(true);
+  }, [enabled, canEdit, requestedCreate, requestedCustomerId]);
 
   useEffect(() => {
     if (!requestedOrderId || !ordersQuery.data?.length) return;

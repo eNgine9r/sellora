@@ -19,6 +19,7 @@ WORKSPACE_PREFIXES = (
     "/api/v1/products",
     "/api/v1/inventory",
     "/api/v1/shipments",
+    "/api/v1/search",
     "/api/v1/finance",
     "/api/v1/advertising",
     "/api/v1/analytics",
@@ -67,11 +68,11 @@ OWNER_ONLY_ENDPOINTS = {
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 9,
     "AUTHENTICATED_GLOBAL": 6,
-    "WORKSPACE_SCOPED": 230,
+    "WORKSPACE_SCOPED": 231,
     "FEATURE_GATED": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 260
+EXPECTED_TOTAL_ROUTES = 261
 EXPECTED_MUTATION_ROUTES = 147
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
@@ -286,3 +287,10 @@ def test_direct_identity_review_routes_require_manager_in_selected_workspace() -
             assert exc.value.status_code == 403
         for allowed in (user(RoleName.MANAGER), user(RoleName.OWNER)):
             assert guard(user=allowed, workspace_id=workspace) is allowed
+
+def test_global_search_is_explicitly_workspace_scoped_and_never_public() -> None:
+    path = "/api/v1/search"
+    matches = [(method, route_path) for route_path, route in _api_routes() for method in route.methods if route_path == path]
+    assert matches == [("GET", path)]
+    assert _primary_scope(path, "GET") == "WORKSPACE_SCOPED"
+    assert path not in PUBLIC_ENDPOINTS and path not in AUTHENTICATED_GLOBAL_ENDPOINTS
