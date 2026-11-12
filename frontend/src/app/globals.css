@@ -264,10 +264,17 @@ html {
 
 .sidebar-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-color: var(--border-strong) transparent;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
+}
+
+/* Sidebar and main content scroll in separate viewport-constrained regions
+   on desktop. Only mobile drawers use the touch scroll-lock mechanism. */
+@media (min-width: 1024px) {
+  [data-sidebar-scroll-host] { min-height: 0; height: 100%; overflow: hidden; }
+  [data-sidebar-scroll-region] { min-height: 0; height: 100%; overflow-y: auto; overscroll-behavior-y: contain; }
 }
 
 .sidebar-scrollbar::-webkit-scrollbar {
@@ -279,12 +286,12 @@ html {
 }
 
 .sidebar-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--border-strong);
   border-radius: 999px;
 }
 
 .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.34);
+  background: var(--text-muted);
 }
 
 input,

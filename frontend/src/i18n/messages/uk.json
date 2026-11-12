@@ -3141,5 +3141,10 @@
     "system": "Система",
     "expand": "Розгорнути",
     "collapse": "Згорнути"
+  },
+  "sidebarLayout": {
+    "navigation": "Навігація",
+    "collapse": "Згорнути панель",
+    "expand": "Розгорнути панель"
   }
 }
