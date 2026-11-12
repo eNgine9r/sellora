@@ -1,0 +1,83 @@
+import { expect, test, type Page } from "@playwright/test";
+
+const prefix = "/api/v1/platform-admin";
+
+async function signIn(page: Page, account: "admin" | "owner") {
+  await page.goto("/platform-admin");
+  await expect(page.getByRole("heading", { name: "Вхід до Platform Admin" })).toBeVisible();
+  await page.getByLabel("Email").fill(`qa-platform-${account}@example.com`);
+  await page.getByLabel("Пароль").fill("QA-Platform-Local123!");
+  await page.getByRole("button", { name: "Увійти", exact: true }).click();
+}
+
+test("admin views real metrics, filters, pages and opens a workspace profile", async ({ page, isMobile }) => {
+  const errors: string[] = [];
+  const platformHeaders: Record<string, string>[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname.startsWith(prefix)) platformHeaders.push(request.headers());
+  });
+  const summaryResponse = page.waitForResponse((response) => new URL(response.url()).pathname === `${prefix}/summary` && response.ok());
+  await signIn(page, "admin");
+  const summary = await (await summaryResponse).json();
+  await expect(page.getByRole("heading", { name: "Керування платформою" })).toBeVisible();
+  await expect(page.getByTestId("total_workspaces")).toHaveText(String(summary.total_workspaces));
+  await expect(page.getByTestId("workspaces_with_current_term")).toHaveText(String(summary.workspaces_with_current_term));
+  expect(summary.workspaces_with_current_term).toBeGreaterThan(0);
+
+  await page.getByRole("textbox", { name: "Пошук" }).fill("QA Platform Shop");
+  await page.getByRole("button", { name: "Застосувати" }).click();
+  const row = page.getByRole("button", { name: "Відкрити магазин QA Platform Shop 22" });
+  await expect(row).toBeVisible();
+  await expect(isMobile ? page.getByRole("list", { name: "Реєстр магазинів" }) : page.getByRole("table", { name: "Реєстр магазинів" })).toBeVisible();
+  await page.getByRole("button", { name: "Далі" }).click();
+  await expect(page.getByText("Сторінка 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Відкрити магазин QA Platform Shop 01" })).toBeVisible();
+  await expect(row).toHaveCount(0);
+  await page.getByRole("button", { name: "Назад" }).click();
+  await row.click();
+
+  const profile = page.getByRole("dialog", { name: "QA Platform Shop 22" });
+  await expect(profile.getByText("qa-pilot")).toBeVisible();
+  await expect(profile.getByText("Початок періоду (UTC)")).toBeVisible();
+  await expect(profile.getByText("Активні учасники команди")).toBeVisible();
+  await expect(profile.getByText("1", { exact: true })).toBeVisible();
+  await expect(profile.getByText(/@example\.com/)).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(profile).toHaveCount(0);
+  await expect(row).toBeFocused();
+
+  await page.getByLabel("Тип магазину").selectOption("true");
+  await page.getByRole("button", { name: "Застосувати" }).click();
+  await expect(page.getByRole("button", { name: "Відкрити магазин QA Platform Shop 01" })).toBeVisible();
+  await expect(row).toHaveCount(0);
+  await page.getByRole("textbox", { name: "Пошук" }).fill("Missing Platform Fixture");
+  await page.getByRole("button", { name: "Застосувати" }).click();
+  await expect(page.getByRole("heading", { name: "Магазинів не знайдено" })).toBeVisible();
+
+  const workspaces = /\/platform-admin\/workspaces\?/;
+  await page.route(workspaces, (route) => route.fulfill({ status: 503, body: "{}" }), { times: 1 });
+  await page.getByRole("button", { name: "Скинути" }).click();
+  await expect(page.getByRole("heading", { name: "Не вдалося завантажити дані" })).toBeVisible();
+  await page.getByRole("button", { name: "Спробувати ще раз" }).click();
+  await expect(row).toBeVisible();
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(platformHeaders.length).toBeGreaterThan(4);
+  expect(platformHeaders.every((headers) => !("x-workspace-id" in headers))).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("a tenant owner is denied through the direct URL and never loads platform data", async ({ page }) => {
+  const paths: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith(prefix)) paths.push(path);
+  });
+  const denied = page.waitForResponse((response) => new URL(response.url()).pathname === `${prefix}/me` && response.status() === 403);
+  await signIn(page, "owner");
+  await denied;
+  await expect(page.getByRole("heading", { name: "Доступ заборонено" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Реєстр магазинів" })).toHaveCount(0);
+  expect(paths).toEqual([`${prefix}/me`]);
+});

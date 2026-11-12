@@ -1,0 +1,72 @@
+import { apiRequest } from "@/services/api";
+
+export type PlatformRole = "PLATFORM_ADMIN" | "PLATFORM_SUPPORT" | "PLATFORM_AUDITOR";
+export type SubscriptionStatus = "UNMANAGED" | "PENDING" | "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "EXPIRED";
+
+type PlatformIdentity = {
+  operator_id: string;
+  role: PlatformRole;
+  capabilities: string[];
+};
+
+type Subscription = {
+  status: SubscriptionStatus;
+  plan_code: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+};
+
+export type PlatformWorkspace = {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  is_demo: boolean;
+  created_at: string;
+  subscription: Subscription;
+};
+
+export type PlatformWorkspaceDetail = PlatformWorkspace & {
+  currency_code: string;
+  timezone: string;
+  active_member_count: number;
+};
+
+type WorkspacePage = {
+  items: PlatformWorkspace[];
+  next_cursor: string | null;
+  as_of: string;
+};
+
+type PlatformSummary = {
+  as_of: string;
+  total_workspaces: number;
+  enabled_workspaces: number;
+  demo_workspaces: number;
+  workspaces_with_current_term: number;
+};
+
+export type WorkspaceFilters = {
+  search: string;
+  active: "" | "true" | "false";
+  demo: "" | "true" | "false";
+};
+
+function read<T>(path: string, signal: AbortSignal) {
+  return apiRequest<T>(`/platform-admin/${path}`, { signal, cache: "no-store" });
+}
+
+export const platformAdminApi = {
+  identity: (signal: AbortSignal) => read<PlatformIdentity>("me", signal),
+  summary: (signal: AbortSignal) => read<PlatformSummary>("summary", signal),
+  detail: (id: string, signal: AbortSignal) => read<PlatformWorkspaceDetail>(`workspaces/${encodeURIComponent(id)}`, signal),
+  workspaces(filters: WorkspaceFilters, cursor: string | null, signal: AbortSignal) {
+    const params = new URLSearchParams({ limit: "20" });
+    if (filters.search) params.set("q", filters.search);
+    if (filters.active) params.set("active", filters.active);
+    if (filters.demo) params.set("demo", filters.demo);
+    if (cursor) params.set("cursor", cursor);
+    return read<WorkspacePage>(`workspaces?${params}`, signal);
+  },
+};

@@ -68,6 +68,7 @@ function redirectToLogin() {
 }
 
 const WORKSPACE_HEADER = "X-Workspace-ID";
+const isPlatformPath = (path: string) => path.startsWith("/platform-admin/");
 
 function workspaceSessionError(path: string): ApiError {
   return new ApiError(
@@ -94,6 +95,8 @@ function headersWithAuth(path: string, initHeaders: HeadersInit | undefined, bod
   } else if (explicitAuthorization) {
     headers.set("Authorization", explicitAuthorization);
   }
+
+  if (isPlatformPath(path)) return headers;
 
   const currentWorkspaceId = normalizeWorkspaceId(authStorage.getCurrentWorkspaceId());
   // Explicit scopes belong to the initiating action, including a refresh retry.
@@ -139,6 +142,7 @@ export async function authenticatedFetch(path: string, init?: RequestInit, retry
 
   const refreshToken = authStorage.getRefreshToken();
   if (!refreshToken && !COOKIE_SESSION_AUTH_ENABLED) {
+    if (isPlatformPath(path)) return response;
     authStorage.clear();
     redirectToLogin();
     return response;
@@ -153,6 +157,7 @@ export async function authenticatedFetch(path: string, init?: RequestInit, retry
     return authenticatedFetch(path, init, false);
   } catch (error) {
     if (!COOKIE_SESSION_AUTH_ENABLED || error instanceof SecureSessionExpiredError) {
+      if (isPlatformPath(path)) return response;
       authStorage.clear();
       redirectToLogin();
       return response;
