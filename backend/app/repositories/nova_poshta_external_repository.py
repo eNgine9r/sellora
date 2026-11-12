@@ -1,5 +1,5 @@
 """All data access for the workspace-isolated Nova Poshta external inbox."""
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 from uuid import UUID, uuid4
 
@@ -74,6 +74,37 @@ class NovaPoshtaExternalRepository:
         if state:
             stmt = stmt.where(NovaPoshtaExternalDocument.match_state == state)
         return list(self.db.scalars(stmt.order_by(NovaPoshtaExternalDocument.last_seen_at.desc()).limit(min(limit, 100))).all())
+
+    def tracking_candidates(self, workspace_id: UUID, *, now: datetime, limit: int = 12) -> list[NovaPoshtaExternalDocument]:
+        """Only active/unknown tracking, with a retry ceiling and stable tenant scope."""
+        doc = NovaPoshtaExternalDocument
+        terminal_text = or_(
+            doc.provider_status.ilike("%отримано%"),
+            doc.provider_status.ilike("%вручено%"),
+            doc.provider_status.ilike("%відмова%"),
+            doc.provider_status.ilike("%повернен%"),
+        )
+        stmt = (
+            select(doc)
+            .where(
+                doc.workspace_id == workspace_id,
+                doc.deleted_at.is_(None),
+                doc.first_seen_at >= now - timedelta(days=90),
+                or_(doc.provider_tracking_checked_at.is_(None),
+                    doc.provider_tracking_checked_at <= now - timedelta(minutes=14)),
+                or_(
+                    doc.provider_normalized_status.in_(("CREATED", "IN_TRANSIT", "ARRIVED")),
+                    and_(doc.provider_normalized_status.is_(None), or_(doc.provider_status.is_(None), ~terminal_text)),
+                ),
+            )
+            .order_by(
+                doc.provider_tracking_checked_at.asc().nullsfirst(),
+                doc.last_seen_at.desc(),
+                doc.id,
+            )
+            .limit(min(max(limit, 1), 12))
+        )
+        return list(self.db.scalars(stmt).all())
 
     def direct_evidence_by_document(self, workspace_id: UUID, document_ids: list[UUID]) -> dict[UUID, dict]:
         """Find the unique Instagram thread where this sender-owned TTN was sent.

@@ -52,17 +52,26 @@ export default function ShipmentsPage() {
   const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
   const [archivingShipment, setArchivingShipment] = useState<Shipment | null>(null);
 
-  const shipmentsQuery = useQuery({ queryKey: ["shipments", workspaceId, status, search], queryFn: () => fetchShipments(workspaceId, status, search), enabled, refetchInterval: 45_000 });
-  // Summary cards always use the complete workspace list, not a search/status
-  // subset. The unfiltered query key is shared with the main list when idle.
-  const overviewQuery = useQuery({
+  // Fetch once per workspace; local search/filtering is instant and avoids
+  // a network request on every keystroke. Focus/reconnect always revalidate.
+  const shipmentsQuery = useQuery({
     queryKey: ["shipments", workspaceId, "", ""],
     queryFn: () => fetchShipments(workspaceId, "", ""),
-    enabled,
-    refetchInterval: 45_000,
+    enabled, staleTime: 15_000, refetchInterval: 60_000,
+    refetchOnWindowFocus: "always", refetchOnReconnect: "always", retry: 1,
   });
-  const summaryQuery = useQuery({ queryKey: ["shipments-summary", workspaceId], queryFn: () => fetchShipmentSummary(workspaceId), enabled, refetchInterval: 45_000 });
-  const ordersQuery = useQuery({ queryKey: ["orders", workspaceId, "shipment-select"], queryFn: () => fetchOrders(workspaceId, ""), enabled, refetchInterval: 45_000 });
+  const summaryQuery = useQuery({
+    queryKey: ["shipments-summary", workspaceId],
+    queryFn: () => fetchShipmentSummary(workspaceId),
+    enabled, staleTime: 10_000, refetchInterval: 30_000,
+    refetchOnWindowFocus: "always", refetchOnReconnect: "always", retry: 1,
+  });
+  // Avoid fetching all orders every 45s when the create dialog is closed.
+  const ordersQuery = useQuery({
+    queryKey: ["orders", workspaceId, "shipment-select"],
+    queryFn: () => fetchOrders(workspaceId, ""),
+    enabled: enabled && isCreateOpen, staleTime: 30_000,
+  });
   const invalidateShipmentState = () => {
     queryClient.invalidateQueries({ queryKey: ["shipments", workspaceId] });
     queryClient.invalidateQueries({ queryKey: ["shipments-summary", workspaceId] });
@@ -82,12 +91,13 @@ export default function ShipmentsPage() {
         const searchable = [tracking, shipment.order_number, shipment.customer_name, shipment.customer_phone, shipment.city, shipment.warehouse].filter(Boolean).join(" ").toLowerCase();
         const matchesSearch = !query || searchable.includes(query);
         const matchesCarrier = !carrier || shipment.carrier === carrier;
+        const matchesStatus = !status || shipment.status === status;
         const matchesTtn =
           !ttnFilter ||
           (ttnFilter === "hasTtn" && Boolean(tracking)) ||
           (ttnFilter === "missingTtn" && !tracking) ||
           (ttnFilter === "needsAction" && shipmentNeedsAction(shipment));
-        return matchesSearch && matchesCarrier && matchesTtn;
+        return matchesSearch && matchesStatus && matchesCarrier && matchesTtn;
       })
       .sort((left, right) => {
         if (shipmentSort === "oldest") return left.created_at.localeCompare(right.created_at);
@@ -95,9 +105,9 @@ export default function ShipmentsPage() {
         if (shipmentSort === "updatedDesc") return right.updated_at.localeCompare(left.updated_at);
         return right.created_at.localeCompare(left.created_at);
       });
-  }, [carrier, search, shipmentSort, shipmentsQuery.data, ttnFilter]);
+  }, [carrier, search, shipmentSort, shipmentsQuery.data, status, ttnFilter]);
   const paginatedShipments = useMemo(() => paginateItems(filteredShipments, page, pageSize), [filteredShipments, page, pageSize]);
-  const hasAnyShipments = (overviewQuery.data?.length ?? 0) > 0;
+  const hasAnyShipments = (shipmentsQuery.data?.length ?? 0) > 0;
   const hasActiveFilters = Boolean(search.trim() || status || carrier || ttnFilter || shipmentSort !== "newest");
 
   useEffect(() => {
@@ -140,11 +150,14 @@ export default function ShipmentsPage() {
     };
   }, [showAdvancedFilters]);
 
-  const overview = overviewQuery.data ?? [];
-  const allShipments = overview.length;
-  const readyShipments = overview.filter((shipment) => shipment.status === "DRAFT" || shipment.status === "CREATED").length;
-  const deliveredShipments = overview.filter((shipment) => shipment.status === "DELIVERED").length;
-  const issueShipments = overview.filter((shipment) => shipment.status === "RETURNED" || shipment.status === "CANCELLED").length;
+  const summary = summaryQuery.data;
+  const allShipments = summary?.crm_total_count;
+  const readyShipments = summary?.crm_ready_count;
+  const deliveredShipments = summary?.crm_delivered_count;
+  const issueShipments = summary?.crm_problem_count ?? 0;
+  const providerCheckedAt = summary?.provider_tracking_checked_at;
+  const providerPending = summary?.provider_pending_count ?? 0;
+  const providerStale = Boolean(providerCheckedAt && summaryQuery.dataUpdatedAt - new Date(providerCheckedAt).getTime() > 35 * 60_000);
   const advancedFilterCount = Number(Boolean(carrier)) + Number(Boolean(ttnFilter)) + Number(shipmentSort !== "newest");
   const resetFilters = () => {
     setSearch("");
@@ -164,16 +177,25 @@ export default function ShipmentsPage() {
           {([
             [t("shipments.summary.all"), allShipments],
             [t("shipments.summary.ready"), readyShipments],
-            [t("shipments.inTransit"), summaryQuery.data?.in_transit_count ?? 0],
+            [t("shipments.inTransit"), summary?.in_transit_count],
             [t("shipments.summary.delivered"), deliveredShipments],
           ] as const).map(([label, value]) => (
             <div key={label} className="flex min-h-[56px] min-w-0 items-center justify-between gap-2 bg-surface-1 px-3 py-2">
               <span className="min-w-0 truncate text-xs font-medium text-text-secondary">{label}</span>
-              <span className="shrink-0 text-lg font-bold tabular-nums text-text-primary">{overviewQuery.isPending ? "—" : value}</span>
+              <span className="shrink-0 text-lg font-bold tabular-nums text-text-primary">{summaryQuery.isPending || summaryQuery.isError || value === undefined ? "—" : value}</span>
             </div>
           ))}
         </section>
         <NovaPoshtaExternalInbox key={workspaceId} workspaceId={workspaceId} role={currentWorkspace?.role} mode="summary" />
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 text-[11px] text-text-muted" data-shipment-provider-freshness>
+          <span>
+            {locale === "en" ? "In transit includes verified Nova Poshta waybills, including those without CRM orders." : "«У дорозі» враховує ТТН Нової Пошти, навіть без замовлення в CRM."}
+          </span>
+          {summaryQuery.isError ? <span role="status" className="text-warning">{locale === "en" ? "Status update unavailable" : "Не вдалося оновити статуси"}</span>
+            : providerPending > 0 || providerStale ? <span className="text-warning">{locale === "en" ? "Some NP statuses are pending verification" : "Частина статусів НП очікує перевірки"}</span>
+            : providerCheckedAt ? <span>{locale === "en" ? "NP checked" : "НП перевірено"}: {new Date(providerCheckedAt).toLocaleTimeString(locale === "en" ? "en-GB" : "uk-UA", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Kyiv" })}</span>
+            : <span>{locale === "en" ? "NP tracking not yet verified" : "Перевірка статусів НП ще не виконана"}</span>}
+        </div>
         <section aria-label={t("filters.sort")} data-shipments-compact-filters
           className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="min-w-[12rem] flex-[1_1_18rem]">

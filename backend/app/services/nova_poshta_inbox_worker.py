@@ -47,6 +47,11 @@ def run_once(*, dry_run: bool = False):
                         )
                         for key in ("scanned", "linked", "unmatched", "conflicts"):
                             stats[key] += result[key]
+                        # Tracking is a separate bounded read-only provider pass.
+                        # It also covers older TTNs no longer in the 3-day listing.
+                        tracking = NovaPoshtaExternalInboxService(db).refresh_tracking(workspace_id)
+                        stats["tracking_checked"] = stats.get("tracking_checked", 0) + tracking["checked"]
+                        stats["tracking_changed"] = stats.get("tracking_changed", 0) + tracking["changed"]
                     except Exception as exc:
                         db.rollback()
                         stats["failed"] += 1

@@ -20,6 +20,8 @@ class NovaPoshtaExternalDocument(UUIDPrimaryKeyMixin, WorkspaceScopedMixin, Soft
     tracking_number: Mapped[str] = mapped_column(String(32), nullable=False)
     document_ref: Mapped[str | None] = mapped_column(String(120), nullable=True)
     provider_status: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    provider_normalized_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    provider_tracking_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     match_state: Mapped[str] = mapped_column(String(20), default="UNMATCHED", nullable=False)
     matched_shipment_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("shipments.id", ondelete="SET NULL"), nullable=True
