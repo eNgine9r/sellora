@@ -32,12 +32,12 @@ function MetricCard({ label, value, helper }: { label: string; value: string | n
 
 export default function AnalyticsPage() {
   const { t, formatStatus } = useI18n();
-  const { range } = useDateRange();
+  const { range, isReady: periodReadyFromStorage } = useDateRange();
   const { currentUser, currentWorkspace, currentWorkspaceId, status: authStatus } = useAuth();
   const workspaceId = currentWorkspaceId ?? "";
   const currencyCode = currentWorkspace?.currency_code ?? "UAH";
   const canSeeProfit = currentWorkspace?.role === "OWNER" || currentWorkspace?.role === "ANALYST";
-  const enabled = authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
+  const enabled = periodReadyFromStorage && authStatus === "authenticated" && Boolean(currentUser) && Boolean(workspaceId);
   const startDate = range.date_from || undefined;
   const endDate = range.date_to || undefined;
   const [analyticsPage, setAnalyticsPage] = useState(1);
