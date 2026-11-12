@@ -364,7 +364,10 @@
     },
     "recentOrders": {
       "title": "Recent orders",
-      "subtitle": "Latest created orders regardless of selected period, so period KPI values are not confused with history."
+      "subtitle": "Latest created orders regardless of selected period, so period KPI values are not confused with history.",
+      "allDates": "All time",
+      "viewAll": "All orders",
+      "retry": "Try again"
     },
     "topProducts": {
       "title": "Top products",
@@ -550,6 +553,10 @@
       "title": "Store setup",
       "expand": "Details",
       "collapse": "Collapse"
+    },
+    "details": {
+      "title": "Detailed analytics",
+      "subtitle": "Funnel, ads, inventory and products"
     }
   },
   "tables": {
