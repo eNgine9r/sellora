@@ -27,24 +27,27 @@ class InvalidPlatformCursor(ValueError):
     pass
 
 
-def _cursor_signature(payload: bytes) -> bytes:
-    return hmac.digest(get_settings().jwt_secret.encode(), b"sellora-platform-workspaces:" + payload, hashlib.sha256)
+def _cursor_signature(payload: bytes, filters: tuple) -> bytes:
+    context = json.dumps(filters, separators=(",", ":")).encode()
+    return hmac.digest(
+        get_settings().jwt_secret.encode(),
+        b"sellora-platform-workspaces-v2:" + context + b"\x00" + payload,
+        hashlib.sha256,
+    )
 
 
 def _encode_cursor(workspace: PlatformWorkspace, filters: tuple) -> str:
-    payload = json.dumps([workspace.created_at.isoformat(), str(workspace.id), filters], separators=(",", ":")).encode()
-    return base64.urlsafe_b64encode(_cursor_signature(payload) + payload).decode()
+    payload = json.dumps([workspace.created_at.isoformat(), str(workspace.id)], separators=(",", ":")).encode()
+    return base64.urlsafe_b64encode(_cursor_signature(payload, filters) + payload).decode()
 
 
 def _decode_cursor(cursor: str, filters: tuple) -> tuple[datetime, UUID]:
     try:
         signed = base64.b64decode(cursor, altchars=b"-_", validate=True)
         signature, payload = signed[:32], signed[32:]
-        if not hmac.compare_digest(signature, _cursor_signature(payload)):
+        if not hmac.compare_digest(signature, _cursor_signature(payload, filters)):
             raise ValueError
-        created_at, workspace_id, cursor_filters = json.loads(payload)
-        if cursor_filters != list(filters):
-            raise ValueError
+        created_at, workspace_id = json.loads(payload)
         instant = datetime.fromisoformat(created_at)
         if instant.tzinfo is None:
             raise ValueError

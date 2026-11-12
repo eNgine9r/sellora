@@ -70,10 +70,11 @@ EXPECTED_PRIMARY_COUNTS = {
     "AUTHENTICATED_GLOBAL": 6,
     "WORKSPACE_SCOPED": 231,
     "FEATURE_GATED": 15,
-    "PLATFORM_ADMIN": 7,
+    "PLATFORM_ADMIN": 8,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 268
+EXPECTED_TOTAL_ROUTES = 269
+READ_ONLY_BODY_ROUTES = {("POST", "/api/v1/platform-admin/workspaces/search")}
 EXPECTED_MUTATION_ROUTES = 147
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
@@ -154,7 +155,7 @@ def test_endpoint_inventory_primary_classifications_are_exactly_reconciled() -> 
 def test_endpoint_inventory_permission_subsets_are_not_counted_as_primary_scopes() -> None:
     routes = _api_routes()
     owner_only = [(method, path) for path, route in routes for method in route.methods if (method, path) in OWNER_ONLY_ENDPOINTS]
-    mutation_routes = [(method, path) for path, route in routes for method in route.methods if method in {"POST", "PUT", "PATCH", "DELETE"}]
+    mutation_routes = [(method, path) for path, route in routes for method in route.methods if method in {"POST", "PUT", "PATCH", "DELETE"} and (method, path) not in READ_ONLY_BODY_ROUTES]
 
     assert len(owner_only) == len(OWNER_ONLY_ENDPOINTS)
     assert len(mutation_routes) == EXPECTED_MUTATION_ROUTES
@@ -306,6 +307,7 @@ def test_platform_admin_routes_require_their_own_capabilities() -> None:
         "/activity/summary": "activity.read",
         "/workspaces/{workspace_id}/activity": "activity.read",
         "/workspaces": "workspaces.read",
+        "/workspaces/search": "workspaces.read",
         "/workspaces/{workspace_id}": "workspaces.read",
         "/workspaces/{workspace_id}/subscription": "subscriptions.read",
     }
@@ -313,5 +315,5 @@ def test_platform_admin_routes_require_their_own_capabilities() -> None:
               if _primary_scope(path) == "PLATFORM_ADMIN"}
     assert routes.keys() == expected.keys()
     for path, route in routes.items():
-        assert route.methods == {"GET"}
+        assert route.methods == ({"POST"} if path == "/workspaces/search" else {"GET"})
         assert expected[path] in {getattr(item.call, "platform_capability", None) for item in route.dependant.dependencies}

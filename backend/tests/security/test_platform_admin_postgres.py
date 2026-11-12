@@ -1,5 +1,6 @@
 """Exercise the platform API using the explicitly isolated PostgreSQL canary."""
 
+import base64
 import os
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
@@ -183,19 +184,24 @@ def test_workspace_directory_and_subscription_return_only_scoped_projections(cli
     db.flush()
     auth = login(client, support)
     filters = {"q": "Platform Search Match", "limit": 1}
-    page_response = client.get(f"{PREFIX}/workspaces", params=filters, headers=auth)
+    search_path = f"{PREFIX}/workspaces/search"
+    page_response = client.post(search_path, json=filters, headers=auth)
     assert page_response.status_code == 200, page_response.text
     page = page_response.json()
-    second_page = client.get(
-        f"{PREFIX}/workspaces", params={**filters, "cursor": page["next_cursor"]}, headers=auth,
-    ).json()
+    assert filters["q"].encode() not in base64.urlsafe_b64decode(page["next_cursor"])[32:]
+    second_page = client.post(search_path, json={**filters, "cursor": page["next_cursor"]}, headers=auth).json()
     assert {page["items"][0]["id"], second_page["items"][0]["id"]} == {str(first.id), str(second.id)}
     assert second_page["next_cursor"] is None
-    assert client.get(
-        f"{PREFIX}/workspaces", params={**filters, "active": "true", "cursor": page["next_cursor"]}, headers=auth,
+    assert client.post(
+        search_path, json={**filters, "active": True, "cursor": page["next_cursor"]}, headers=auth,
     ).status_code == 422
+    assert client.post(search_path, json={}, headers=login(client, active_member)).status_code == 403
+    assert client.post(search_path, json={}).status_code == 401
+    assert client.get(f"{PREFIX}/workspaces", params=filters, headers=auth).status_code == 422
     demo_page = client.get(f"{PREFIX}/workspaces", params={"active": "false", "demo": "true"}, headers=auth).json()
     assert [item["id"] for item in demo_page["items"]] == [str(second.id)]
+    demo_alias = client.get(f"{PREFIX}/workspaces/", params={"active": "false", "demo": "true"}, headers=auth).json()
+    assert [item["id"] for item in demo_alias["items"]] == [str(second.id)]
     detail = client.get(f"{PREFIX}/workspaces/{first.id}", headers=auth).json()
     assert detail["active_member_count"] == 1 and detail["subscription"]["plan_code"] == "pilot"
     assert set(detail) == {"id", "name", "slug", "is_active", "is_demo", "created_at", "subscription",

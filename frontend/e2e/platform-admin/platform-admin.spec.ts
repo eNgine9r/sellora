@@ -13,9 +13,14 @@ async function signIn(page: Page, account: "admin" | "owner") {
 test("admin views real metrics, filters, pages and opens a workspace profile", async ({ page, isMobile }) => {
   const errors: string[] = [];
   const platformHeaders: Record<string, string>[] = [];
+  const directoryRequests: { method: string; search: string; body: string | null }[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => {
-    if (new URL(request.url()).pathname.startsWith(prefix)) platformHeaders.push(request.headers());
+    const url = new URL(request.url());
+    if (url.pathname.startsWith(prefix)) platformHeaders.push(request.headers());
+    if (url.pathname === `${prefix}/workspaces/search`) {
+      directoryRequests.push({ method: request.method(), search: url.search, body: request.postData() });
+    }
   });
   const summaryResponse = page.waitForResponse((response) => new URL(response.url()).pathname === `${prefix}/summary` && response.ok());
   await signIn(page, "admin");
@@ -64,7 +69,7 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
   await page.getByRole("button", { name: "Застосувати" }).click();
   await expect(page.getByRole("heading", { name: "Магазинів не знайдено" })).toBeVisible();
 
-  const workspaces = /\/platform-admin\/workspaces\?/;
+  const workspaces = (url: URL) => url.pathname === `${prefix}/workspaces/search`;
   await page.route(workspaces, (route) => route.fulfill({ status: 503, body: "{}" }), { times: 1 });
   await page.getByRole("button", { name: "Скинути" }).click();
   await expect(page.getByRole("heading", { name: "Не вдалося завантажити дані" })).toBeVisible();
@@ -74,6 +79,24 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(platformHeaders.length).toBeGreaterThan(4);
   expect(platformHeaders.every((headers) => !("x-workspace-id" in headers))).toBe(true);
+  expect(directoryRequests.length).toBeGreaterThan(3);
+  expect(directoryRequests.every(({ method, search }) => method === "POST" && search === "")).toBe(true);
+  expect(directoryRequests.some(({ body }) => body && JSON.parse(body).q === "QA Platform Shop")).toBe(true);
+  expect(directoryRequests.some(({ body }) => body && JSON.parse(body).cursor)).toBe(true);
+  const authorization = platformHeaders.find((headers) => headers.authorization)?.authorization;
+  expect(authorization).toBeTruthy();
+  const legacyAlias = await page.request.get(`${prefix}/workspaces/`, {
+    headers: { authorization: authorization! },
+    params: { q: "synthetic-proxy-private-marker" },
+    maxRedirects: 0,
+  });
+  expect(legacyAlias.status()).toBe(422);
+  expect(legacyAlias.headers().location).toBeUndefined();
+  expect(await legacyAlias.text()).not.toContain("synthetic-proxy-private-marker");
+  const ordinarySlash = await page.request.get("/platform-admin/", { maxRedirects: 0 });
+  expect(ordinarySlash.status()).toBe(308);
+  expect(ordinarySlash.headers().location).toBe("/platform-admin");
+
   expect(errors).toEqual([]);
 });
 
