@@ -15,7 +15,7 @@ const mobileQuickNavBlock = appShell.match(/const mobileQuickNav = \[[\s\S]*?\];
 const checks = [
   ["/direct is in canonical protected routes", protectedRoutesBlock.includes('"/direct"')],
   ["unauthenticated protected route redirects to login", appShell.includes('router.replace("/login")') && appShell.includes('status === "unauthenticated"')],
-  ["authenticated protected content renders inside AppShell", appShell.includes("<AppSidebar showBrand={false} />") && appShell.includes("<AppTopbar") && appShell.includes("{children}")],
+  ["authenticated protected content renders inside AppShell", appShell.includes("<AppSidebar showBrand={false} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />") && appShell.includes("<AppTopbar") && appShell.includes("{children}")],
   ["mobile navigation drawer remains canonical", appShell.includes("mobile-sidebar-drawer") && appShell.includes("<AppSidebar onNavigate")],
   ["mobile quick nav preserves approved five primary modules", ["/dashboard", "/leads", "/orders", "/products", "/finance"].every((href) => mobileQuickNavBlock.includes(`href: "${href}"`)) && !mobileQuickNavBlock.includes('href: "/direct"')],
   ["Direct remains reachable from the mobile account sheet", mobileMoreSheet.includes('href="/direct"') && mobileMoreSheet.includes('t("navigation.direct")')],

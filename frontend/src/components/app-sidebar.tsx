@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart3, Boxes, CalendarDays, ChevronDown, Megaphone, MessageCircle, NotebookText, PackageOpen, Settings, ShoppingBag, Sparkles, Truck, Users, WalletCards, X } from "lucide-react";
+import { BarChart3, Boxes, CalendarDays, ChevronDown, PanelLeftClose, PanelLeftOpen, Megaphone, MessageCircle, NotebookText, PackageOpen, Settings, ShoppingBag, Sparkles, Truck, Users, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLockup } from "@/components/brand";
@@ -66,7 +66,17 @@ function isActiveNav(pathname: string, href: string) {
     || (href === "/reports" && (pathname === "/analytics" || pathname.startsWith("/analytics/")));
 }
 
-export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () => void; showBrand?: boolean }) {
+export function AppSidebar({
+  onNavigate,
+  showBrand = true,
+  collapsed = false,
+  onToggleCollapsed,
+}: {
+  onNavigate?: () => void;
+  showBrand?: boolean;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
+}) {
   const pathname = usePathname();
   const { t } = useI18n();
 
@@ -88,7 +98,7 @@ export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () =
   }, [pathname]);
 
   return (
-    <aside className="sellora-sidebar flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-r border-border-subtle bg-sidebar text-text-primary" data-sidebar-groups>
+    <aside className="sellora-sidebar flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-r border-border-subtle bg-sidebar text-text-primary" data-sidebar-groups data-sidebar-collapsed={collapsed ? "true" : "false"}>
       {showBrand ? (
         <div className="mobile-sidebar-brand flex shrink-0 items-center gap-2 px-3 pb-1 pt-3 sm:px-4">
           <Link
@@ -103,15 +113,33 @@ export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () =
         </div>
       ) : null}
 
-      <nav className="sidebar-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-3 pb-4 pt-3 lg:gap-4 lg:pt-5" aria-label={t("mobileNavigation.drawer")}>
+      {onToggleCollapsed ? (
+        <div className={"hidden shrink-0 items-center border-b border-border-subtle/60 py-2 lg:flex " + (collapsed ? "justify-center px-2" : "justify-between px-3")} data-sidebar-desktop-controls>
+          {!collapsed ? <span className="px-2 text-[10px] font-bold uppercase tracking-[0.13em] text-text-muted">{t("sidebarLayout.navigation")}</span> : null}
+          <button type="button" onClick={onToggleCollapsed}
+            aria-label={collapsed ? t("sidebarLayout.expand") : t("sidebarLayout.collapse")}
+            aria-pressed={collapsed}
+            title={collapsed ? t("sidebarLayout.expand") : t("sidebarLayout.collapse")}
+            data-sidebar-collapse-toggle
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border-subtle bg-surface-1/80 text-text-secondary transition-colors hover:border-border-strong hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+            {collapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" aria-hidden="true" /> : <PanelLeftClose className="h-[18px] w-[18px]" aria-hidden="true" />}
+          </button>
+        </div>
+      ) : null}
+
+      <nav
+        className={"sidebar-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-3 pb-4 pt-3 lg:gap-3 lg:pt-3 " + (collapsed ? "lg:gap-2 lg:px-2 lg:pt-2" : "")}
+        aria-label={t("mobileNavigation.drawer")}
+        data-sidebar-scroll-region
+      >
         {navigationGroups.map((group) => {
           const mobileHidden = group.id === "system";
           const opened = group.id === "main" || expanded[group.id];
 
           return (
             <section key={group.id} className={`min-w-0 ${mobileHidden ? "hidden lg:block" : ""}`} data-sidebar-section={group.id}>
-              {group.id !== "main" ? <div className="mx-2 mb-2 border-t border-border-subtle/70" aria-hidden="true" /> : null}
-              <div className="mb-1 min-w-0 px-2">
+              {group.id !== "main" ? <div className={collapsed ? "mx-auto mb-2 w-7 border-t border-border-subtle/70 lg:mb-1" : "mx-2 mb-2 border-t border-border-subtle/70"} aria-hidden="true" /> : null}
+              <div className={"mb-1 min-w-0 px-2 " + (collapsed ? "lg:hidden" : "")}>
                 {group.id === "main" || group.id === "system" ? (
                   <p className="flex min-h-8 items-center text-[10px] font-bold uppercase tracking-[0.16em] text-text-muted">{t(group.label)}</p>
                 ) : (
@@ -140,15 +168,17 @@ export function AppSidebar({ onNavigate, showBrand = true }: { onNavigate?: () =
                       href={href}
                       onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
-                      className={`group relative flex min-h-12 min-w-0 items-center gap-3 rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring lg:min-h-10 lg:py-2 ${
+                      aria-label={collapsed ? t(label) : undefined}
+                      title={collapsed ? t(label) : undefined}
+                      className={`group relative flex min-h-12 min-w-0 items-center gap-3 rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring lg:min-h-10 lg:py-2 ${collapsed ? "lg:justify-center lg:gap-0 lg:px-0 lg:py-2.5" : ""} ${
                         active
                           ? "border-primary/25 bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(167,139,250,0.05)]"
                           : "border-transparent text-text-secondary hover:border-border-subtle hover:bg-surface-hover hover:text-text-primary"
                       }`}
                     >
                       {active ? <span className="absolute bottom-2 left-0 top-2 w-[3px] rounded-r-full bg-primary" aria-hidden="true" /> : null}
-                      <Icon className={`h-[18px] w-[18px] shrink-0 transition-colors lg:h-4 lg:w-4 ${active ? "text-primary" : "text-text-muted group-hover:text-text-primary"}`} aria-hidden="true" />
-                      <span className="truncate">{t(label)}</span>
+                      <Icon className={`h-[18px] w-[18px] shrink-0 transition-colors lg:h-[18px] lg:w-[18px] ${active ? "text-primary" : "text-text-muted group-hover:text-text-primary"}`} aria-hidden="true" />
+                      <span className={"truncate " + (collapsed ? "lg:sr-only" : "")}>{t(label)}</span>
                     </Link>
                   );
                 })}

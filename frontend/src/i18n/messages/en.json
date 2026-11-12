@@ -3141,5 +3141,10 @@
     "system": "System",
     "expand": "Expand",
     "collapse": "Collapse"
+  },
+  "sidebarLayout": {
+    "navigation": "Navigation",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
   }
 }

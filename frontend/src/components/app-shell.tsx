@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { BarChart3, Home, LogOut, Package, Settings, ShoppingBag, Users } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
-import { DesktopBrandLockup } from "@/components/brand";
+import { BrandIcon, DesktopBrandLockup } from "@/components/brand";
 import { GlobalAppLoader } from "@/components/global-app-loader";
 import { DirectLiveProvider } from "@/components/direct-live-provider";
 import { NoWorkspaceOnboarding } from "@/components/no-workspace-onboarding";
@@ -58,6 +58,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Persist per device; the responsive drawer always stays expanded.
+  useEffect(() => {
+    try { setSidebarCollapsed(window.localStorage.getItem("sellora:sidebar:collapsed:v1") === "true"); }
+    catch { /* Browsers with restricted storage still get a working toggle. */ }
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((collapsed) => {
+      const next = !collapsed;
+      try { window.localStorage.setItem("sellora:sidebar:collapsed:v1", String(next)); }
+      catch { /* No persistence when storage is disabled. */ }
+      return next;
+    });
+  };
+
   const protectedPath = isProtectedPath(pathname);
 
   useEffect(() => {
@@ -141,17 +158,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <DirectLiveProvider workspaceId={currentWorkspaceId}>
-      <div className="min-h-screen w-full overflow-x-clip bg-canvas text-text-primary lg:grid lg:[--sidebar-width:232px] 2xl:[--sidebar-width:244px] lg:[--topbar-height:72px] lg:[grid-template-columns:var(--sidebar-width)_minmax(0,1fr)] lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]" data-protected-shell-grid>
-        <div className="relative hidden min-w-0 overflow-hidden border-b border-r border-border-subtle bg-sidebar px-5 lg:flex lg:h-[var(--topbar-height)] lg:w-[var(--sidebar-width)] lg:items-center 2xl:px-6" data-shell-brand-cell>
+      <div
+        className={`min-h-screen w-full overflow-x-clip bg-canvas text-text-primary lg:grid lg:h-screen lg:h-dvh lg:min-h-0 lg:overflow-hidden lg:[--topbar-height:72px] lg:[grid-template-columns:var(--sidebar-width)_minmax(0,1fr)] lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)] lg:transition-[grid-template-columns] lg:duration-200 motion-reduce:transition-none ${sidebarCollapsed ? "lg:[--sidebar-width:76px] 2xl:[--sidebar-width:76px]" : "lg:[--sidebar-width:232px] 2xl:[--sidebar-width:244px]"}`}
+        data-protected-shell-grid data-sidebar-layout={sidebarCollapsed ? "collapsed" : "expanded"}
+      >
+        <div className={`relative hidden min-w-0 overflow-hidden border-b border-r border-border-subtle bg-sidebar lg:flex lg:h-[var(--topbar-height)] lg:w-[var(--sidebar-width)] lg:items-center ${sidebarCollapsed ? "lg:justify-center lg:px-2" : "lg:px-5 2xl:px-6"}`} data-shell-brand-cell>
           <div className="pointer-events-none absolute -left-14 -top-16 h-32 w-32 rounded-full bg-primary/[0.10] blur-3xl" aria-hidden="true" />
-          <Link href="/dashboard" aria-label={t("navigation.dashboard")} className="group relative flex w-full min-w-0 items-center rounded-xl py-1 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
-            <DesktopBrandLockup />
+          <Link href="/dashboard" aria-label={t("navigation.dashboard")} title={sidebarCollapsed ? "Sellora" : undefined} className={`group relative flex w-full min-w-0 items-center rounded-xl py-1 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${sidebarCollapsed ? "justify-center" : ""}`}>
+            {sidebarCollapsed ? <BrandIcon className="h-10 w-10" priority unoptimized /> : <DesktopBrandLockup />}
           </Link>
         </div>
-        <aside className="hidden min-h-0 lg:block lg:[grid-column:1] lg:[grid-row:2]">
-          <AppSidebar showBrand={false} />
+        <aside className="hidden min-h-0 min-w-0 lg:block lg:overflow-hidden lg:[grid-column:1] lg:[grid-row:2]" data-sidebar-scroll-host>
+          <AppSidebar showBrand={false} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
         </aside>
-        <div className="min-w-0 overflow-x-clip pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:[grid-column:2] lg:[grid-row:1/3] lg:grid lg:min-h-0 lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]" data-shell-page-column>
+        <div className="min-w-0 overflow-x-clip pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:[grid-column:2] lg:[grid-row:1/3] lg:grid lg:min-h-0 lg:overflow-hidden lg:[grid-template-rows:var(--topbar-height)_minmax(0,1fr)]" data-shell-page-column>
           <AppTopbar
             currentUser={currentUser}
             currentWorkspace={currentWorkspace}
@@ -163,7 +183,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onSwitchWorkspace={switchWorkspace}
             onWorkspaceCreated={reloadCurrentUser}
           />
-          <div className="min-w-0 overflow-x-clip lg:min-h-0 lg:overflow-y-auto">
+          <div className="min-w-0 overflow-x-clip lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain" data-main-scroll-region>
             {error ? <p className="mx-4 mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-warning md:mx-6">{error}</p> : null}
             {!currentWorkspaceId ? <NoWorkspaceOnboarding onWorkspaceCreated={reloadCurrentUser} onSwitchWorkspace={switchWorkspace} /> : children}
           </div>
