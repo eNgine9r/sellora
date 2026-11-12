@@ -37,3 +37,34 @@ Your Jewelry sells in Instagram Direct, receives payment into mono FOP outside S
 - Confirming returns a created sale ID, not a payment from bank. Price is explicit manager-reviewed input; unknown COGS remains unconfirmed so profit is not fabricated.
 - API replays cannot double-reserve inventory or double-count sales; different details on an already linked TTN return conflict.
 - Manual review order fallback remains available.
+
+## Update: bounded evidence-based price hints (12.11.2026)
+
+A provider-free **read-only** extension finds recent explicit monetary quotes
+made by the shop in Direct **before the exact TTN**. It ignores inbound amounts,
+bare numeric strings, prices quoted with delivery/fee/deposit context, synthetic
+messages, and anything older than seven days or separated by a previous TTN.
+Evidence uses source `direct_message.id`, workspace scope, and no raw message
+text in the API response. Two or more distinct prices show selectable options:
+Sellora never silently decides which one was finally accepted. A single recent
+quote can prefill the per-item amount, but the manager still needs to inspect
+and confirm the exact negotiated final unit price.
+
+`SmartSaleCandidate.price_hints` is a list of at most four
+`{unit_price, message_id}` tuples. A matching catalog price moves a variant
+upward in the chooser, **never** selects it or changes inventory automatically.
+
+The existing `INBOUND_SKU` product suggestion now also requires that SKU's
+source message to be inside the same bounded TTN window. A SKU from an older
+sale in a reused Instagram conversation cannot preselect the new sale.
+
+**Live read-only calibration:** 17 TTN candidates, 12 with at least one
+non-conflicting seller-price message within the bounded window; 10 have a
+single distinct quote and 2 have several; no product variant can be established
+from exact SKU/title evidence. These numbers are dynamic and **do not**
+mean 12 verified sales or 12 negotiated prices. Product photo/link-to-catalog
+mapping and evidence-backed multi-line order extraction still require later
+development. The existing manual product picker is intentionally preserved.
+
+No new database tables/migrations, no banking API, no messaging to Instagram,
+no release test that modifies customer sales.

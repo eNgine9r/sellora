@@ -15,6 +15,10 @@ const labels = {
     approved: "Продаж зареєстровано",
     price: "Фінальна ціна за одиницю, ₴",
     suggested: "Підставлена ціна з каталогу — звірте з домовленістю в Direct",
+    quoted: "Ціни з повідомлень магазину перед ТТН",
+    quotedWarning: "Це лише підказки. Якщо були різні пропозиції, оберіть фактично погоджену покупцем суму.",
+    matchingCatalog: "Збігається з обраною ціною",
+    reviewUnitPrice: "Перевірте: це ціна за одиницю, а не загальна сума з доставкою.",
     status: "Натискаючи «Так, продано», ви підтверджуєте, що перевірили квитанцію в Direct, фактичне надходження коштів на рахунок ФОП, товар, кількість і ціну. Sellora не підключена до банку.",
     confirm: "Так, продано",
     checking: "Зберігаємо…",
@@ -45,6 +49,10 @@ const labels = {
     approved: "Sale recorded",
     price: "Agreed price per unit, UAH",
     suggested: "Catalog price suggested — check the agreed amount in Direct",
+    quoted: "Prices mentioned by the shop before the TTN",
+    quotedWarning: "Hints only. If multiple prices were quoted, select the buyer-agreed amount.",
+    matchingCatalog: "Matches selected price",
+    reviewUnitPrice: "Verify that this is the per-item price, not an order total with shipping.",
     status: "By clicking 'Yes, sold', you attest you checked the receipt in Direct, actual funds in your FOP bank account, item, quantity and price. Sellora has no banking connection.",
     confirm: "Yes, sold",
     checking: "Saving…",
@@ -79,10 +87,13 @@ export function SmartSaleApproval({ workspaceId, candidate }: {
   const t = locale === "en" ? labels.en : labels.uk;
   const client = useQueryClient();
   const item = candidate.suggested_item;
+  const quotes = candidate.price_hints ?? [];
   const [manual, setManual] = useState(!item);
   const [variantId, setVariantId] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const [price, setPrice] = useState(item?.suggested_unit_price ?? "");
+  const [price, setPrice] = useState(
+    item?.suggested_unit_price ?? (quotes.length === 1 ? quotes[0].unit_price : ""),
+  );
   const [search, setSearch] = useState("");
   const [completedOrder, setCompletedOrder] = useState<string | null>(null);
   const catalog = useQuery({
@@ -110,6 +121,13 @@ export function SmartSaleApproval({ workspaceId, candidate }: {
     .filter(v => v.is_active && v.sku &&
       (!search.trim() || [v.sku, v.color, v.size, productNames.get(v.product_id)]
         .filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase().trim())))
+    .sort((a, b) => {
+      // The manager must still select the actual item. A matching catalog
+      // price only changes display order; it never authorizes a purchase.
+      const matchA = price && a.price === price ? 0 : 1;
+      const matchB = price && b.price === price ? 0 : 1;
+      return matchA - matchB;
+    })
     .slice(0, 50);
   const selected = (catalog.data?.variants ?? []).find(v => v.id === variantId);
   const effectiveVariant = manual ? selected?.id : item?.variant_id;
@@ -161,7 +179,7 @@ export function SmartSaleApproval({ workspaceId, candidate }: {
       <p className="text-xs font-medium text-amber-700">{t.singleItem}</p>
       <label className="grid gap-1 text-xs font-semibold">{t.search}
         <input type="search" className="min-h-11 rounded-lg border border-input-border bg-input-background px-3 text-sm"
-          value={search} onChange={e => { setSearch(e.target.value); setVariantId(""); setPrice(""); }} />
+          value={search} onChange={e => { setSearch(e.target.value); setVariantId(""); }} />
       </label>
       {catalog.isLoading ? <p className="text-xs text-text-muted">{t.catalogLoading}</p> : null}
       {catalog.isError ? <p role="alert" className="text-xs text-red-500">{safeApiErrorMessage(catalog.error)}</p> : null}
@@ -171,11 +189,15 @@ export function SmartSaleApproval({ workspaceId, candidate }: {
             const id = e.target.value;
             setVariantId(id);
             const chosen = catalog.data?.variants.find(v => v.id === id);
-            setPrice(chosen?.price ?? "");
+            // Never silently replace ambiguous Direct quotes with a
+            // catalog list price. Explicit price selection is mandatory.
+            setPrice(previous => previous || (quotes.length === 0 ? chosen?.price || "" : ""));
           }}>
           <option value="">{t.choose}</option>
           {variantOptions.map(v => <option key={v.id} value={v.id}>
-            {[productNames.get(v.product_id), v.sku, v.color, v.size, `зал. ${stock.get(v.id) ?? 0}`].filter(Boolean).join(" · ")}
+            {[productNames.get(v.product_id), v.sku, v.color, v.size,
+              price && v.price === price ? t.matchingCatalog : null,
+              `зал. ${stock.get(v.id) ?? 0}`].filter(Boolean).join(" · ")}
           </option>)}
         </select>
       </label>
@@ -188,10 +210,26 @@ export function SmartSaleApproval({ workspaceId, candidate }: {
     {candidate.conversation_id && !manual && item ? <button type="button"
       className="w-fit text-xs font-semibold text-primary underline underline-offset-2"
       onClick={() => { setManual(true); setPrice(""); }}>{t.change}</button> : null}
+    {candidate.conversation_id && quotes.length > 0 ? <div className="grid gap-2 rounded-xl border border-border bg-surface-2 p-3">
+      <p className="text-xs font-semibold">{t.quoted}</p>
+      <div className="flex flex-wrap gap-2">
+        {quotes.map(quote => (
+          <button key={quote.message_id} type="button"
+            onClick={() => setPrice(quote.unit_price)}
+            aria-pressed={price === quote.unit_price}
+            className={`min-h-10 rounded-lg border px-3 text-sm font-semibold transition ${price === quote.unit_price
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border bg-surface text-text-primary hover:border-primary"}`}
+          >{quote.unit_price} ₴</button>
+        ))}
+      </div>
+      <p className="text-xs text-text-muted">{t.quotedWarning}</p>
+    </div> : null}
     {candidate.conversation_id ? <label className="grid gap-1 text-xs font-semibold">{t.price}
       <input type="text" inputMode="decimal" aria-label={t.price}
         value={price} onChange={event => setPrice(event.target.value)}
         className="min-h-11 w-36 rounded-lg border border-input-border bg-input-background px-3 py-2 text-sm text-text-primary" />
+      <span className="text-xs font-normal text-text-muted">{t.reviewUnitPrice}</span>
     </label> : null}
     {canConfirm ? <p className="rounded-lg bg-amber-500/10 p-3 text-xs text-text-muted">{t.status}</p> : null}
     <div className="flex flex-wrap gap-2">

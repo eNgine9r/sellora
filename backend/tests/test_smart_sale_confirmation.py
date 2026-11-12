@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy.dialects import postgresql
 
+from app.services.direct_sale_quote_service import SaleQuoteContext
 from app.schemas.smart_sale import SmartSaleCandidate, SmartSaleConfirmRequest, SmartSaleSuggestion
 from app.services.smart_sale_confirmation_service import SmartSaleConfirmationService, SmartSaleError
 
@@ -131,7 +132,8 @@ def build_confirmation_service(doc=None, match=None, suggested=None):
     service.db = db
     service._document = lambda w, doc_id, lock=False: doc if w == workspace and doc_id == doc.id else None
     service._evidence = lambda w, doc_id: matched
-    service._suggestion = lambda w, conv: suggested if suggested is not None else suggestion(variant_id)
+    service.quotes = SimpleNamespace(get=lambda w, conv, tracking: SaleQuoteContext(frozenset(), (), True))
+    service._suggestion = lambda w, conv, context=None: suggested if suggested is not None else suggestion(variant_id)
     service.customer_automation = SimpleNamespace(
         conversations=SimpleNamespace(get=lambda w, cid: conversation if cid == conversation_id else None),
         ensure_candidate=lambda w, cid, actor, commit: SimpleNamespace(customer=customer),
@@ -210,7 +212,7 @@ def test_existing_direct_order_does_not_block_new_distinct_ttn_sale():
 
 def test_manager_can_select_real_catalog_variant_when_no_sku_detected():
     s, payload, workspace, actor, doc, conv, db, created, audits = build_confirmation_service()
-    s._suggestion = lambda w, c: None
+    s._suggestion = lambda w, c, context=None: None
     manual = payload.model_copy(update={"selection_source": "MANAGER_SELECTED"})
     result = s.confirm(workspace, doc.id, manual, actor)
     assert result.order_id and db.commits == 1

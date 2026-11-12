@@ -8,6 +8,10 @@ export type SmartSaleCandidate = {
   conversation_id: string | null;
   customer_id: string | null;
   customer_instagram: string | null;
+  price_hints: Array<{
+    unit_price: string;
+    message_id: string;
+  }>;
   suggested_item: {
     variant_id: string;
     sku: string;
