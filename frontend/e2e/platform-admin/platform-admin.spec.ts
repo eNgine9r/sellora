@@ -178,3 +178,58 @@ test("admin finds a Sellora account and can archive and restore an eligible work
   await directory.getByRole("button", { name: "Поточний реєстр" }).click();
   await expect(open).toBeVisible();
 });
+
+test("MFA uses six slots with native editing, paste, validation and retry", async ({ page }, testInfo) => {
+  // Keep sign-in and post-verification page data real. Stub the challenge response
+  // so browser tests can cover form behavior without depending on a TOTP time window.
+  let verified = false;
+  const submissions: string[] = [];
+  await page.route((url) => url.pathname === `${prefix}/me`, async (route) => {
+    if (verified) return route.continue();
+    await route.fulfill({ status: 403, json: { detail: "PLATFORM_MFA_REQUIRED" } });
+  });
+  await page.route((url) => url.pathname === `${prefix}/mfa/verify`, async (route) => {
+    submissions.push(route.request().postDataJSON().code);
+    verified = submissions.length === 2;
+    await route.fulfill(verified
+      ? { json: { proof: "synthetic-browser-proof" } }
+      : { status: 403, json: { detail: "PLATFORM_MFA_INVALID_CODE" } });
+  });
+
+  await signIn(page, "admin");
+  await expect(page.getByRole("heading", { name: "Підтвердження входу" })).toBeVisible();
+  const input = page.getByRole("textbox", { name: "Код підтвердження" });
+  const slots = page.getByTestId("platform-mfa-slots");
+  const submit = page.getByRole("button", { name: "Підтвердити", exact: true });
+  await expect(slots.locator(":scope > span")).toHaveCount(6);
+  await expect(input).toBeFocused();
+  await expect(input).toHaveAttribute("autocomplete", "one-time-code");
+  await expect(input).toHaveAttribute("inputmode", "numeric");
+  await expect(submit).toBeDisabled();
+  await page.screenshot({ path: testInfo.outputPath("platform-mfa.png") });
+
+  await input.pressSequentially("0a12345");
+  await expect(input).toHaveValue("012345");
+  await expect(slots).toHaveText("012345");
+  await input.press("ArrowLeft");
+  await input.press("Backspace");
+  await expect(input).toHaveValue("01235");
+  await expect(submit).toBeDisabled();
+  expect(submissions).toEqual([]);
+  await input.press("4");
+  await expect(input).toHaveValue("012345");
+  await input.press("Enter");
+  await expect(page.getByRole("alert")).toHaveText("Код недійсний або вже використаний. Спробуйте новий код.");
+  await expect(input).toHaveValue("");
+  await expect(input).toBeFocused();
+
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.evaluate(() => navigator.clipboard.writeText("056 789"));
+  await input.press("Control+v");
+  await expect(input).toHaveValue("056789");
+  await expect(slots).toHaveText("056789");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await submit.click();
+  await expect(page.getByRole("heading", { name: "Користувачі" })).toBeVisible();
+  expect(submissions).toEqual(["012345", "056789"]);
+});

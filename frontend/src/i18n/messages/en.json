@@ -3157,6 +3157,7 @@
     "mfaTitle": "Verify your sign-in",
     "mfaDescription": "Enter the six-digit code from your authenticator app to access Platform Admin.",
     "mfaCode": "Verification code",
+    "mfaCodeHint": "You can paste all six digits at once.",
     "mfaVerify": "Verify",
     "mfaInvalid": "This code is invalid or has already been used. Try a new code.",
     "mfaRateLimited": "Too many attempts. Wait up to five minutes and try again.",

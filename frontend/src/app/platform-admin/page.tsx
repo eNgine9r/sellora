@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { KeyRound, LogOut, ShieldCheck } from "lucide-react";
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { ArrowRight, KeyRound, LogOut, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { BrandIcon } from "@/components/brand";
 import { Button, Card, FormField, Input, LoadingSkeleton, StatusBadge } from "@/components/ui/primitives";
 import { useAuth } from "@/hooks/use-auth";
@@ -12,6 +12,7 @@ import { COOKIE_SESSION_AUTH_ENABLED } from "@/services/auth.service";
 import { clearPlatformMfaProof, platformAdminApi, platformMfaError } from "@/services/platform-admin";
 import { PlatformDashboard } from "./platform-dashboard";
 import { PlatformProblem } from "./platform-feedback";
+import { PlatformMfaCode, platformMfaCodeLength } from "./platform-mfa-code";
 
 function PlatformAccessCard({ title, description, challenge = false, children }: {
   title: string;
@@ -22,7 +23,7 @@ function PlatformAccessCard({ title, description, challenge = false, children }:
   const Icon = challenge ? KeyRound : ShieldCheck;
   return (
     <div className="mx-auto grid max-w-md place-items-center py-6 sm:py-16">
-      <Card className="w-full border-violet-500/25 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.14),transparent_63%)] sm:p-8">
+      <Card className={`w-full border-violet-500/25 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.14),transparent_63%)] sm:p-8 ${challenge ? "shadow-[0_20px_64px_rgba(0,0,0,0.3)]" : ""}`}>
         <div className="mb-5 grid size-12 place-items-center rounded-2xl border border-violet-500/30 bg-violet-500/10 text-violet-300">
           <Icon className="size-5" aria-hidden="true" />
         </div>
@@ -70,14 +71,15 @@ function PlatformSignIn({ onSignedIn }: { onSignedIn: () => void }) {
 function PlatformMfaChallenge({ onVerified }: { onVerified: () => void }) {
   const { t } = useI18n();
   const [pending, setPending] = useState(false);
+  const submitting = useRef(false);
+  const [code, setCode] = useState("");
   const [error, setError] = useState<"mfaInvalid" | "mfaRateLimited" | "mfaNotEnrolled" | "mfaUnavailable">();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
-    const form = event.currentTarget;
-    const code = String(new FormData(form).get("code"));
-    form.reset();
+    if (submitting.current || !/^[0-9]{6}$/.test(code)) return;
+    submitting.current = true;
+    setCode("");
     setPending(true);
     setError(undefined);
     try {
@@ -95,18 +97,20 @@ function PlatformMfaChallenge({ onVerified }: { onVerified: () => void }) {
         default: setError("mfaUnavailable");
       }
     } finally {
+      submitting.current = false;
       setPending(false);
     }
   }
 
   return (
     <PlatformAccessCard title={t("platformAdmin.mfaTitle")} description={t("platformAdmin.mfaDescription")} challenge>
-      <form className="mt-6 grid gap-4" onSubmit={submit}>
-        <FormField label={t("platformAdmin.mfaCode")}>
-          <Input name="code" className="text-center font-mono text-lg tracking-[0.35em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required />
-        </FormField>
-        {error ? <p role="alert" className="text-sm text-[var(--danger-foreground)]">{t(`platformAdmin.${error}`)}</p> : null}
-        <Button variant="brand" type="submit" loading={pending}>{t("platformAdmin.mfaVerify")}</Button>
+      <form className="mt-7 grid gap-5" onSubmit={submit}>
+        <PlatformMfaCode value={code} pending={pending} error={error ? t(`platformAdmin.${error}`) : undefined}
+          onChange={(value) => { setCode(value); setError(undefined); }} />
+        <Button className="justify-between rounded-xl" type="submit" loading={pending}
+          disabled={code.length !== platformMfaCodeLength}>
+          <span>{t("platformAdmin.mfaVerify")}</span><ArrowRight className="size-4" aria-hidden="true" />
+        </Button>
       </form>
     </PlatformAccessCard>
   );
