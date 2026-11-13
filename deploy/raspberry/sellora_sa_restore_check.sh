@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Restore the encrypted local copy matched by the last off-host verification.
+set -euo pipefail
+umask 077
+
+fail() { printf '%s\n' "$1" >&2; exit 1; }
+
+root=/home/btcradar/runtime/sellora/protected-backups
+receipt="$root/.last-offhost-verified"
+key="$root/db-backup-passphrase.key"
+image=postgres:17-alpine
+expected_revision=202611120055
+
+[[ $(id -u) == 1000 && -t 0 ]] || fail OWNER_TERMINAL_REQUIRED
+[[ -d "$root" && ! -L "$root" && $(stat -c '%u:%a' "$root") == 1000:700 ]] ||
+  fail BACKUP_DIRECTORY_INVALID
+private_file() {
+  [[ -f "$1" && ! -L "$1" && -s "$1" && $(stat -c '%u:%a' "$1") == 1000:600 ]]
+}
+private_file "$receipt" && private_file "$key" || fail BACKUP_RECEIPT_OR_KEY_INVALID
+[[ $(stat -c '%s' "$receipt") -le 1024 ]] || fail BACKUP_RECEIPT_INVALID
+
+mapfile -t fields < "$receipt"
+[[ ${#fields[@]} == 5 ]] || fail BACKUP_RECEIPT_INVALID
+[[ ${fields[0]} =~ ^verified_at_utc=([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)$ ]] ||
+  fail BACKUP_RECEIPT_TIME_INVALID
+verified_at=${BASH_REMATCH[1]}
+[[ ${fields[1]} =~ ^filename=(sellora-db-[0-9]{8}-[0-9]{6}\.pgdump\.enc)$ ]] ||
+  fail BACKUP_FILENAME_INVALID
+filename=${BASH_REMATCH[1]}
+[[ ${fields[2]} =~ ^sha256=([a-f0-9]{64})$ ]] || fail BACKUP_RECEIPT_HASH_INVALID
+expected_hash=${BASH_REMATCH[1]}
+[[ ${fields[3]} =~ ^size=([1-9][0-9]{0,9})$ && ${fields[4]} == remote=nexolab-edge-01 ]] ||
+  fail BACKUP_RECEIPT_INVALID
+expected_size=${BASH_REMATCH[1]}
+(( expected_size <= 1073741824 )) || fail BACKUP_SIZE_INVALID
+archive="$root/$filename"
+private_file "$archive" || fail BACKUP_ARCHIVE_INVALID
+[[ $(stat -c '%s' "$archive") == "$expected_size" ]] || fail BACKUP_SIZE_MISMATCH
+age=$(( $(date +%s) - $(stat -c '%Y' "$archive") ))
+(( age >= 0 && age < 129600 )) || fail BACKUP_ARCHIVE_STALE
+read -r hash _ < <(sha256sum < "$archive")
+[[ "$hash" == "$expected_hash" ]] || fail BACKUP_SHA256_MISMATCH
+
+image_id=$(docker image inspect --format '{{.Id}}' "$image") || fail BACKUP_POSTGRES_IMAGE_MISSING
+[[ "$image_id" =~ ^sha256:[a-f0-9]{64}$ ]] || fail BACKUP_POSTGRES_IMAGE_INVALID
+
+restore_command='
+set -eu
+initdb -D "$PGDATA" --username=postgres --auth-local=trust --auth-host=reject \
+  > /dev/null 2>&1 || { echo RESTORE_INIT_FAILED >&2; exit 1; }
+pg_ctl -D "$PGDATA" -l /tmp/postgres.log \
+  -o "-c listen_addresses= -c unix_socket_directories=/tmp -c shared_buffers=24MB -c max_connections=10" \
+  -t 30 -w start > /dev/null 2>&1 || { echo RESTORE_START_FAILED >&2; exit 1; }
+createdb -h /tmp -U postgres -T template0 sellora_restore_check \
+  > /dev/null 2>&1 || { echo RESTORE_CREATE_DB_FAILED >&2; exit 1; }
+timeout 600 pg_restore -h /tmp -U postgres -d sellora_restore_check \
+  --no-owner --no-privileges --single-transaction --exit-on-error \
+  > /dev/null 2>&1 || { echo ARCHIVE_RESTORE_FAILED >&2; exit 1; }
+export PGOPTIONS="-c default_transaction_read_only=on -c statement_timeout=5000"
+revision=$(psql -XAtq -h /tmp -U postgres -d sellora_restore_check -v ON_ERROR_STOP=1 \
+  -c "SELECT version_num FROM public.alembic_version" 2>/dev/null) || { echo RESTORED_REVISION_UNREADABLE >&2; exit 1; }
+[ "$revision" = "$EXPECTED_REVISION" ] || { echo RESTORED_REVISION_MISMATCH >&2; exit 1; }
+psql -XAtq -h /tmp -U postgres -d sellora_restore_check -v ON_ERROR_STOP=1 \
+  -c "SELECT 1 FROM public.users LIMIT 1; SELECT 1 FROM public.workspaces LIMIT 1;
+      SELECT 1 FROM public.orders LIMIT 1; SELECT 1 FROM public.workspace_subscriptions LIMIT 1;" \
+  > /dev/null 2>&1 || { echo RESTORED_SCHEMA_SMOKE_FAILED >&2; exit 1; }
+printf "restored_revision=%s\nrestored_schema_smoke=PASS\n" "$revision"
+'
+
+if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+    -pass "file:$key" -in "$archive" |
+  docker run --rm -i --pull=never --network none --log-driver=none \
+    --user postgres --security-opt no-new-privileges --read-only \
+    --memory 768m --memory-swap 768m --cpus 1 \
+    --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid,nodev,size=512m,mode=1777 \
+    --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777 \
+    -e PGDATA=/var/lib/postgresql/data/restore -e "EXPECTED_REVISION=$expected_revision" \
+    --entrypoint sh "$image_id" -c "$restore_command"
+then
+  fail RESTORE_CHECK_FAILED
+fi
+
+printf 'archive=%s\noffhost_verified_at_utc=%s\nencrypted_sha256_match=PASS\npostgres_image=%s\nrestore_check=PASS\n' \
+  "$filename" "$verified_at" "$image_id"
