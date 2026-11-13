@@ -15,6 +15,7 @@ from app.schemas.platform_admin import (
     PlatformUserDetail,
     PlatformUserPage,
     PlatformUserSearchParams,
+    PlatformUserSummary,
     PlatformWorkspaceDetail,
     PlatformWorkspaceListParams,
     PlatformWorkspacePage,
@@ -191,7 +192,16 @@ def search_platform_users(
     service = PlatformUserService(db)
     return _audited_read(db, actor, "LIST_USERS", lambda: service.list_users(
         search=params.q, without_workspaces=params.without_workspaces, cursor=params.cursor, limit=params.limit,
+        segment=params.segment, active=params.active,
     ))
+
+
+@router.get("/users/summary", response_model=PlatformUserSummary)
+def get_platform_users_summary(
+    actor: PlatformIdentity = Depends(require_platform_permission("users.read", "READ_USERS_SUMMARY")),
+    db: Session = Depends(get_db),
+) -> PlatformUserSummary:
+    return _audited_read(db, actor, "READ_USERS_SUMMARY", PlatformUserService(db).summarize)
 
 
 @router.get("/users/{user_id}", response_model=PlatformUserDetail)

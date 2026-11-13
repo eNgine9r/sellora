@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, ArrowRight, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, CreditCard, FlaskConical, LayoutDashboard, Search, Store, Users } from "lucide-react";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Activity, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, CreditCard, FlaskConical, Search, Store, Users } from "lucide-react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { Drawer } from "@/components/ui/overlay";
 import { Button, Card, DataTable, EmptyState, FormField, Input, LoadingSkeleton, Select, StatusBadge } from "@/components/ui/primitives";
 import { useI18n } from "@/i18n/provider";
@@ -28,11 +28,23 @@ const subscriptionTones = {
 
 const subscriptionStatuses = Object.keys(subscriptionTones) as SubscriptionStatus[];
 const sections = [
-  { id: "platform-overview", label: "platformAdmin.overviewNav", icon: LayoutDashboard },
-  { id: "platform-directory", label: "platformAdmin.directoryNav", icon: Store },
   { id: "platform-users", label: "platformRegistry.users", icon: Users },
+  { id: "platform-directory", label: "platformAdmin.directoryNav", icon: Store },
   { id: "platform-activity", label: "platformAdmin.activityNav", icon: Activity },
 ] as const;
+
+function subscribeToSection(onChange: () => void) {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+}
+
+function getSection() {
+  return window.location.hash.slice(1);
+}
+
+function getInitialSection() {
+  return "";
+}
 
 function SubscriptionBadge({ status }: { status: SubscriptionStatus }) {
   const { t } = useI18n();
@@ -217,12 +229,47 @@ function WorkspaceProfile({ id, operatorId, onClose, recheckAccess, showActivity
 export function PlatformDashboard({ operatorId, recheckAccess, showActivity, showUsers, canArchive }: {
   operatorId: string; recheckAccess: () => void; showActivity: boolean; showUsers: boolean; canArchive: boolean;
 }) {
+  const { t } = useI18n();
+  const [selected, setSelected] = useState<string | null>(null);
+  const closeProfile = useCallback(() => setSelected(null), []);
+  const requestedSection = useSyncExternalStore(subscribeToSection, getSection, getInitialSection);
+  const availableSections = sections.filter(({ id }) =>
+    (id !== "platform-users" || showUsers) && (id !== "platform-activity" || showActivity));
+  const currentSection = availableSections.find(({ id }) => id === requestedSection) ?? availableSections[0];
+
+  return (
+    <div className="grid min-w-0 items-start gap-6 md:grid-cols-[11rem_minmax(0,1fr)] lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8">
+      <nav aria-label={t("platformAdmin.sections")} className="sticky top-0 z-20 grid grid-flow-col auto-cols-fr gap-1 rounded-xl border border-border-subtle bg-surface-1 p-1.5 md:top-6 md:grid-flow-row md:p-2">
+        {availableSections.map(({ id, label, icon: Icon }) => (
+          <a key={id} href={`#${id}`} aria-current={id === currentSection.id ? "page" : undefined}
+            className="flex min-h-11 min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg px-1 text-center text-xs font-semibold text-text-secondary outline-none transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:ring-2 focus-visible:ring-focus-ring aria-[current=page]:bg-violet-500/15 aria-[current=page]:text-violet-200 sm:flex-row sm:px-3 sm:text-sm md:justify-start">
+            <Icon className="size-4 shrink-0" aria-hidden="true" />
+            {t(label)}
+          </a>
+        ))}
+      </nav>
+      <div className="min-w-0">
+        {currentSection.id === "platform-users" ? <PlatformUsers operatorId={operatorId} recheckAccess={recheckAccess} onOpenWorkspace={setSelected} /> : null}
+        {currentSection.id === "platform-directory" ? <PlatformWorkspaces operatorId={operatorId} recheckAccess={recheckAccess} onOpenWorkspace={setSelected} /> : null}
+        {currentSection.id === "platform-activity" ? (
+          <section id="platform-activity" className="grid scroll-mt-24 gap-5 md:scroll-mt-6" aria-labelledby="platform-activity-title" tabIndex={-1}>
+            <h1 id="platform-activity-title" className="text-2xl font-bold tracking-tight sm:text-3xl">{t("platformAdmin.activityNav")}</h1>
+            <PlatformActivity operatorId={operatorId} recheckAccess={recheckAccess} />
+          </section>
+        ) : null}
+      </div>
+      {selected ? <WorkspaceProfile key={selected} id={selected} operatorId={operatorId} onClose={closeProfile} recheckAccess={recheckAccess} showActivity={showActivity} canArchive={canArchive} /> : null}
+    </div>
+  );
+}
+
+function PlatformWorkspaces({ operatorId, recheckAccess, onOpenWorkspace }: {
+  operatorId: string; recheckAccess: () => void; onOpenWorkspace: (id: string) => void;
+}) {
   const { t, locale } = useI18n();
   const [filters, setFilters] = useState(defaultFilters);
   const [draft, setDraft] = useState(defaultFilters);
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
-  const [selected, setSelected] = useState<string | null>(null);
-  const closeProfile = useCallback(() => setSelected(null), []);
   const cursor = cursors[cursors.length - 1];
   const summary = useQuery({
     queryKey: ["platform-admin", operatorId, "summary"],
@@ -266,132 +313,93 @@ export function PlatformDashboard({ operatorId, recheckAccess, showActivity, sho
   if (denied) return <PlatformProblem message="forbidden" />;
 
   return (
-    <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[12rem_minmax(0,1fr)] xl:gap-9">
-      <nav aria-label={t("platformAdmin.sections")} className="sticky top-0 z-20 flex flex-wrap gap-1 rounded-2xl border border-border-subtle bg-surface-1 p-1.5 shadow-[var(--shadow-card)] xl:top-8 xl:grid xl:p-2">
-        {sections.filter(({ id }) => (id !== "platform-activity" || showActivity) && (id !== "platform-users" || showUsers)).map(({ id, label, icon: Icon }) => (
-          <a key={id} href={`#${id}`} className="flex min-h-10 items-center gap-2 rounded-xl px-2.5 text-sm font-semibold text-text-secondary transition-colors hover:bg-violet-500/10 hover:text-violet-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring xl:px-3">
-            <Icon className="size-4 shrink-0 text-violet-300" aria-hidden="true" />
-            {t(label)}
-          </a>
-        ))}
-      </nav>
-
-      <div className="grid min-w-0 gap-8 sm:gap-10">
-        <section id="platform-overview" className="grid min-w-0 scroll-mt-32 gap-4 xl:scroll-mt-8" aria-labelledby="platform-title" tabIndex={-1}>
-          <div className="relative isolate overflow-hidden rounded-[var(--radius-shell)] border border-violet-500/25 bg-surface-1 px-5 py-7 sm:px-8 sm:py-9">
-            <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.27),transparent_64%)]" aria-hidden="true" />
-            <div className="relative flex flex-wrap items-end justify-between gap-5">
-              <div className="min-w-0">
-                <h1 id="platform-title" className="text-3xl font-bold tracking-tight sm:text-4xl">{t("platformAdmin.title")}</h1>
-                <p className="mt-2 max-w-lg text-sm leading-6 text-text-secondary">{t("platformAdmin.description")}</p>
-              </div>
-              <a href="#platform-directory" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-400/35 bg-violet-500/15 px-3.5 text-sm font-semibold text-violet-100 transition-colors hover:bg-violet-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
-                {t("platformAdmin.openDirectory")}<ArrowRight className="size-4" aria-hidden="true" />
-              </a>
-            </div>
-          </div>
-          {summary.isPending ? <LoadingSkeleton title={t("platformAdmin.loadingSummary")} rows={1} /> : null}
-          {summary.error ? <PlatformProblem message="error" retry={() => void summary.refetch()} /> : null}
-          {summary.data && !summary.error ? (
-            <>
-              <div role="group" aria-label={t("platformAdmin.summary")} className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-                {metrics.map(({ key, icon: Icon, accent }) => (
-                  <Card key={key} className="min-w-0">
-                    <div className={`mb-4 grid size-9 place-items-center rounded-xl ${accent}`}>
-                      <Icon className="size-4" aria-hidden="true" />
-                    </div>
-                    <dl className="flex flex-col">
-                      <dt className="order-last mt-1 text-xs font-semibold leading-5 text-text-secondary sm:text-sm">{t(`platformAdmin.metrics.${key}`)}</dt>
-                      <dd data-testid={key} className="text-3xl font-bold tracking-tight tabular-nums">{number.format(summary.data[key])}</dd>
-                    </dl>
-                  </Card>
-                ))}
-              </div>
-              <p className="flex items-center gap-2 text-xs text-text-secondary">
-                <CalendarDays className="size-3.5" aria-hidden="true" />
-                {t("platformAdmin.asOf", { time: time.format(new Date(summary.data.as_of)) })}
-              </p>
-            </>
-          ) : null}
-        </section>
-
-        <section id="platform-directory" className="grid min-w-0 scroll-mt-32 gap-4 xl:scroll-mt-8" aria-labelledby="platform-directory-title" tabIndex={-1}>
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 id="platform-directory-title" className="text-xl font-bold tracking-tight sm:text-2xl">{t("platformAdmin.directory")}</h2>
-              <p className="mt-1 text-sm text-text-secondary">{t("platformAdmin.directoryDescription")}</p>
-            </div>
-            {directory.data && !directory.error ? (
-              <span className="text-xs tabular-nums text-text-secondary" aria-live="polite">{t("platformAdmin.visibleRows", { count: number.format(items.length) })}</span>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap gap-2" role="group" aria-label={t("platformAdmin.directory")}>
-            <Button size="sm" variant={filters.archived ? "ghost" : "secondary"} aria-pressed={!filters.archived} onClick={() => switchArchive(false)}>
-              {t("platformRegistry.current")}
-            </Button>
-            <Button size="sm" variant={filters.archived ? "secondary" : "ghost"} aria-pressed={filters.archived} onClick={() => switchArchive(true)}>
-              {t("platformRegistry.archiveTab")}
-              {summary.data && !summary.error && summary.data.archived_workspaces !== undefined ? number.format(summary.data.archived_workspaces) : null}
-            </Button>
-          </div>
-          <form onSubmit={applyFilters} className="grid items-end gap-3 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1.25fr] xl:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1.25fr_auto]">
-            <FormField label={t("platformAdmin.search")}>
-              <Input name="search" value={draft.search} onChange={(event) => setDraft({ ...draft, search: event.target.value })} maxLength={120} placeholder={t("platformAdmin.searchPlaceholder")} />
-            </FormField>
-            <FormField label={t("platformAdmin.workspaceStatus")}>
-              <Select name="active" value={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.value as WorkspaceFilters["active"] })}>
-                <option value="">{t("platformAdmin.allStatuses")}</option>
-                <option value="true">{t("platformAdmin.enabled")}</option>
-                <option value="false">{t("platformAdmin.disabled")}</option>
-              </Select>
-            </FormField>
-            <FormField label={t("platformAdmin.workspaceType")}>
-              <Select name="demo" value={draft.demo} onChange={(event) => setDraft({ ...draft, demo: event.target.value as WorkspaceFilters["demo"] })}>
-                <option value="">{t("platformAdmin.allTypes")}</option>
-                <option value="false">{t("platformAdmin.standard")}</option>
-                <option value="true">{t("platformAdmin.demo")}</option>
-              </Select>
-            </FormField>
-            <FormField label={t("platformAdmin.subscriptionFilter")}>
-              <Select name="subscriptionStatus" value={draft.subscriptionStatus} onChange={(event) => setDraft({ ...draft, subscriptionStatus: event.target.value as WorkspaceFilters["subscriptionStatus"] })}>
-                <option value="">{t("platformAdmin.allStatuses")}</option>
-                {subscriptionStatuses.map((status) => <option key={status} value={status}>{t(`platformAdmin.subscriptionStatus.${status}`)}</option>)}
-              </Select>
-            </FormField>
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" variant="brand"><Search className="size-4" aria-hidden="true" />{t("platformAdmin.applyFilters")}</Button>
-              {filtered || hasDraft ? <Button variant="ghost" type="button" onClick={clearFilters}>{t("platformAdmin.reset")}</Button> : null}
-            </div>
-          </form>
-          {directory.isPending ? <LoadingSkeleton title={t("platformAdmin.loadingDirectory")} /> : null}
-          {directory.error ? <PlatformProblem message="error" retry={() => void directory.refetch()} /> : null}
-          {directory.data && !directory.error ? (
-            items.length
-              ? <WorkspaceDirectory items={items} onSelect={setSelected} />
-              : <EmptyState title={t(filtered ? "platformAdmin.filteredEmpty" : filters.archived ? "platformRegistry.archiveEmpty" : "platformAdmin.empty")} description={t(filtered ? "platformAdmin.filteredEmptyDescription" : filters.archived ? "platformRegistry.archiveEmptyDescription" : "platformAdmin.emptyDescription")} />
-          ) : null}
-          {!directory.error && (cursors.length > 1 || nextCursor) ? (
-            <nav className="flex flex-wrap items-center justify-between gap-2" aria-label={t("platformAdmin.pagination")}>
-              <Button variant="secondary" size="sm" disabled={cursors.length === 1} onClick={() => setCursors((current) => current.slice(0, -1))}>
-                <ChevronLeft className="size-4" aria-hidden="true" />{t("platformAdmin.previous")}
-              </Button>
-              <span className="text-xs tabular-nums text-text-secondary" aria-live="polite">{t("platformAdmin.page", { page: cursors.length })}</span>
-              <Button variant="secondary" size="sm" disabled={!nextCursor} onClick={() => { if (nextCursor) setCursors((current) => [...current, nextCursor]); }}>
-                {t("platformAdmin.next")}<ChevronRight className="size-4" aria-hidden="true" />
-              </Button>
-            </nav>
-          ) : null}
-        </section>
-
-        {showUsers ? <PlatformUsers operatorId={operatorId} recheckAccess={recheckAccess} onOpenWorkspace={setSelected} /> : null}
-
-        {showActivity ? (
-          <section id="platform-activity" aria-label={t("platformActivity.title")} className="scroll-mt-32 xl:scroll-mt-8" tabIndex={-1}>
-            <PlatformActivity operatorId={operatorId} recheckAccess={recheckAccess} />
-          </section>
-        ) : null}
+    <section id="platform-directory" className="grid min-w-0 scroll-mt-24 gap-5 md:scroll-mt-6" aria-labelledby="platform-directory-title" tabIndex={-1}>
+      <div>
+        <h1 id="platform-directory-title" className="text-2xl font-bold tracking-tight sm:text-3xl">{t("platformAdmin.directory")}</h1>
+        <p className="mt-1 text-sm text-text-secondary">{t("platformAdmin.directoryDescription")}</p>
       </div>
-      {selected ? <WorkspaceProfile key={selected} id={selected} operatorId={operatorId} onClose={closeProfile} recheckAccess={recheckAccess} showActivity={showActivity} canArchive={canArchive} /> : null}
-    </div>
+      {summary.isPending ? <LoadingSkeleton title={t("platformAdmin.loadingSummary")} rows={1} /> : null}
+      {summary.error ? <PlatformProblem message="error" retry={() => void summary.refetch()} /> : null}
+      {summary.data && !summary.error ? (
+        <>
+          <div role="group" aria-label={t("platformAdmin.summary")} className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+            {metrics.map(({ key, icon: Icon, accent }) => (
+              <Card key={key} className="min-w-0">
+                <div className={`mb-4 grid size-9 place-items-center rounded-xl ${accent}`}>
+                  <Icon className="size-4" aria-hidden="true" />
+                </div>
+                <dl className="flex flex-col">
+                  <dt className="order-last mt-1 text-xs font-semibold leading-5 text-text-secondary sm:text-sm">{t(`platformAdmin.metrics.${key}`)}</dt>
+                  <dd data-testid={key} className="text-3xl font-bold tracking-tight tabular-nums">{number.format(summary.data[key])}</dd>
+                </dl>
+              </Card>
+            ))}
+          </div>
+          <p className="flex items-center gap-2 text-xs text-text-secondary">
+            <CalendarDays className="size-3.5" aria-hidden="true" />
+            {t("platformAdmin.asOf", { time: time.format(new Date(summary.data.as_of)) })}
+          </p>
+        </>
+      ) : null}
+      {directory.data && !directory.error ? (
+        <p className="text-xs tabular-nums text-text-secondary" aria-live="polite">{t("platformAdmin.visibleRows", { count: number.format(items.length) })}</p>
+      ) : null}
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t("platformAdmin.directory")}>
+        <Button size="sm" variant={filters.archived ? "ghost" : "secondary"} aria-pressed={!filters.archived} onClick={() => switchArchive(false)}>
+          {t("platformRegistry.current")}
+        </Button>
+        <Button size="sm" variant={filters.archived ? "secondary" : "ghost"} aria-pressed={filters.archived} onClick={() => switchArchive(true)}>
+          {t("platformRegistry.archiveTab")}
+          {summary.data && !summary.error && summary.data.archived_workspaces !== undefined ? number.format(summary.data.archived_workspaces) : null}
+        </Button>
+      </div>
+      <form onSubmit={applyFilters} className="grid items-end gap-3 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1.25fr] 2xl:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1.25fr_auto]">
+        <FormField label={t("platformAdmin.search")}>
+          <Input name="search" value={draft.search} onChange={(event) => setDraft({ ...draft, search: event.target.value })} maxLength={120} placeholder={t("platformAdmin.searchPlaceholder")} />
+        </FormField>
+        <FormField label={t("platformAdmin.workspaceStatus")}>
+          <Select name="active" value={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.value as WorkspaceFilters["active"] })}>
+            <option value="">{t("platformAdmin.allStatuses")}</option>
+            <option value="true">{t("platformAdmin.enabled")}</option>
+            <option value="false">{t("platformAdmin.disabled")}</option>
+          </Select>
+        </FormField>
+        <FormField label={t("platformAdmin.workspaceType")}>
+          <Select name="demo" value={draft.demo} onChange={(event) => setDraft({ ...draft, demo: event.target.value as WorkspaceFilters["demo"] })}>
+            <option value="">{t("platformAdmin.allTypes")}</option>
+            <option value="false">{t("platformAdmin.standard")}</option>
+            <option value="true">{t("platformAdmin.demo")}</option>
+          </Select>
+        </FormField>
+        <FormField label={t("platformAdmin.subscriptionFilter")}>
+          <Select name="subscriptionStatus" value={draft.subscriptionStatus} onChange={(event) => setDraft({ ...draft, subscriptionStatus: event.target.value as WorkspaceFilters["subscriptionStatus"] })}>
+            <option value="">{t("platformAdmin.allStatuses")}</option>
+            {subscriptionStatuses.map((status) => <option key={status} value={status}>{t(`platformAdmin.subscriptionStatus.${status}`)}</option>)}
+          </Select>
+        </FormField>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" variant="brand"><Search className="size-4" aria-hidden="true" />{t("platformAdmin.applyFilters")}</Button>
+          {filtered || hasDraft ? <Button variant="ghost" type="button" onClick={clearFilters}>{t("platformAdmin.reset")}</Button> : null}
+        </div>
+      </form>
+      {directory.isPending ? <LoadingSkeleton title={t("platformAdmin.loadingDirectory")} /> : null}
+      {directory.error ? <PlatformProblem message="error" retry={() => void directory.refetch()} /> : null}
+      {directory.data && !directory.error ? (
+        items.length
+          ? <WorkspaceDirectory items={items} onSelect={onOpenWorkspace} />
+          : <EmptyState title={t(filtered ? "platformAdmin.filteredEmpty" : filters.archived ? "platformRegistry.archiveEmpty" : "platformAdmin.empty")} description={t(filtered ? "platformAdmin.filteredEmptyDescription" : filters.archived ? "platformRegistry.archiveEmptyDescription" : "platformAdmin.emptyDescription")} />
+      ) : null}
+      {!directory.error && (cursors.length > 1 || nextCursor) ? (
+        <nav className="flex flex-wrap items-center justify-between gap-2" aria-label={t("platformAdmin.pagination")}>
+          <Button variant="secondary" size="sm" disabled={cursors.length === 1} onClick={() => setCursors((current) => current.slice(0, -1))}>
+            <ChevronLeft className="size-4" aria-hidden="true" />{t("platformAdmin.previous")}
+          </Button>
+          <span className="text-xs tabular-nums text-text-secondary" aria-live="polite">{t("platformAdmin.page", { page: cursors.length })}</span>
+          <Button variant="secondary" size="sm" disabled={!nextCursor} onClick={() => { if (nextCursor) setCursors((current) => [...current, nextCursor]); }}>
+            {t("platformAdmin.next")}<ChevronRight className="size-4" aria-hidden="true" />
+          </Button>
+        </nav>
+      ) : null}
+    </section>
   );
 }

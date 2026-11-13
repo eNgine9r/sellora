@@ -191,7 +191,7 @@ export default function PlatformAdminPage() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-[96rem] px-4 py-6 sm:px-8 sm:py-9">
+      <main className="mx-auto max-w-[96rem] px-4 py-4 sm:px-8 md:py-6">
         {signOutFailed ? <p className="mb-4 text-sm text-[var(--danger-foreground)]" role="alert">{t("platformAdmin.signOutError")}</p> : null}
         {content}
       </main>

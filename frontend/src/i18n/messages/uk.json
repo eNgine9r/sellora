@@ -3316,6 +3316,32 @@
       "OWNER": "Власник",
       "MANAGER": "Менеджер",
       "ANALYST": "Аналітик"
+    },
+    "consoleDescription": "Акаунти Sellora, їхні магазини та останні входи.",
+    "summary": "Показники акаунтів",
+    "accountSegments": "Групи акаунтів",
+    "allAccounts": "Усі акаунти",
+    "account": "Акаунт",
+    "accountStatus": "Стан акаунта",
+    "ownedWorkspaces": "Власні магазини",
+    "lastLogin": "Останній вхід",
+    "noLogin": "Вхід не зафіксовано",
+    "createdColumn": "Акаунт створено",
+    "accountId": "ID акаунта",
+    "accountBilling": "Підписка акаунта",
+    "billingUnavailable": "Оплати та ліміти на рівні акаунта ще не підключені.",
+    "find": "Знайти",
+    "loading": "Завантажуємо акаунти…",
+    "segments": {
+      "STANDARD": "Зі звичайним магазином",
+      "DEMO_ONLY": "Лише демо",
+      "NO_ENABLED_WORKSPACE": "Без увімкнених магазинів"
+    },
+    "metrics": {
+      "total_accounts": "Усі акаунти",
+      "enabled_accounts": "Акаунти з доступом",
+      "demo_only_accounts": "Лише демо",
+      "accounts_without_enabled_workspace": "Без увімкнених магазинів"
     }
   }
 }

@@ -13,7 +13,8 @@ from app.models.platform_admin import PlatformAuditEvent, PlatformRole
 from app.repositories.platform_admin_repository import PlatformAuditRepository, PlatformUserRepository, PlatformWorkspaceRepository
 from app.repositories.subscription_repository import SubscriptionRepository
 from app.schemas.platform_admin import (
-    PlatformIdentity, PlatformSummary, PlatformUser, PlatformUserDetail, PlatformUserPage, PlatformUserWorkspace,
+    PlatformIdentity, PlatformSummary, PlatformUser, PlatformUserDetail, PlatformUserPage, PlatformUserSegment,
+    PlatformUserSummary, PlatformUserWorkspace,
     PlatformWorkspace, PlatformWorkspaceDetail, PlatformWorkspacePage,
 )
 from app.schemas.subscription import SubscriptionDisplayStatus, SubscriptionStatusResponse
@@ -170,12 +171,36 @@ class PlatformUserService:
     def __init__(self, db: Session) -> None:
         self.users = PlatformUserRepository(db)
 
-    def list_users(self, *, search: str | None, without_workspaces: bool, cursor: str | None, limit: int) -> PlatformUserPage:
+    @staticmethod
+    def _project(user, counts) -> PlatformUser:
+        segment: PlatformUserSegment = "NO_ENABLED_WORKSPACE"
+        if counts and counts["standard_count"]:
+            segment = "STANDARD"
+        elif counts and counts["demo_count"]:
+            segment = "DEMO_ONLY"
+        return PlatformUser(
+            **user, segment=segment, owned_workspace_count=counts["owned_count"] if counts else 0,
+        )
+
+    def summarize(self) -> PlatformUserSummary:
+        return PlatformUserSummary(**self.users.summarize())
+
+    def list_users(
+        self, *, search: str | None, without_workspaces: bool, cursor: str | None, limit: int,
+        segment: PlatformUserSegment | None = None, active: bool | None = None,
+    ) -> PlatformUserPage:
         search = (search or "").strip() or None
         filters = ("users", search, without_workspaces)
+        if segment is not None or active is not None:
+            filters += (segment, active)
         before = _decode_cursor(cursor, filters) if cursor else None
-        rows = self.users.list_users(search=search, without_workspaces=without_workspaces, before=before, limit=limit + 1)
-        items = [PlatformUser(**row) for row in rows[:limit]]
+        rows = self.users.list_users(
+            search=search, without_workspaces=without_workspaces, segment=segment,
+            active=active, before=before, limit=limit + 1,
+        )
+        visible = rows[:limit]
+        counts = self.users.workspace_counts([row["id"] for row in visible]) if visible else {}
+        items = [self._project(row, counts.get(row["id"])) for row in visible]
         return PlatformUserPage(
             items=items,
             next_cursor=_encode_cursor(items[-1].created_at, items[-1].id, filters) if len(rows) > limit else None,
@@ -190,8 +215,9 @@ class PlatformUserService:
         limit = 20
         rows = self.users.list_user_workspaces(user_id, before=before, limit=limit + 1)
         items = [PlatformUserWorkspace(**row) for row in rows[:limit]]
+        projection = self._project(user, self.users.workspace_counts([user_id]).get(user_id))
         return PlatformUserDetail(
-            **user, workspaces=items,
+            **projection.model_dump(), workspaces=items,
             next_cursor=_encode_cursor(rows[limit - 1]["created_at"], items[-1].id, filters) if len(rows) > limit else None,
         )
 

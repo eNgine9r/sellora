@@ -22,26 +22,28 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
       directoryRequests.push({ method: request.method(), search: url.search, body: request.postData() });
     }
   });
-  const summaryResponse = page.waitForResponse((response) => new URL(response.url()).pathname === `${prefix}/summary` && response.ok());
   await signIn(page, "admin");
-  const summary = await (await summaryResponse).json();
-  await expect(page.getByRole("heading", { name: "Керування платформою" })).toBeVisible();
-  await expect(page.getByTestId("total_workspaces")).toHaveText(String(summary.total_workspaces));
-  await expect(page.getByTestId("workspaces_with_current_term")).toHaveText(String(summary.workspaces_with_current_term));
-  expect(summary.workspaces_with_current_term).toBeGreaterThan(0);
+  const navigation = page.getByRole("navigation", { name: "Розділи панелі" });
+  await expect(page.getByRole("heading", { name: "Користувачі" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Користувачі" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("heading", { name: "Реєстр магазинів" })).toHaveCount(0);
+  await navigation.getByRole("link", { name: "Активність" }).click();
+  await expect(page).toHaveURL(/#platform-activity$/);
   const activityOrders = page.getByTestId("activity-orders_created");
   await expect(activityOrders).toHaveText("1");
   await page.getByRole("button", { name: "30 днів", exact: true }).click();
   await expect(activityOrders).toHaveText("2");
   await expect(page.getByRole("button", { name: "30 днів", exact: true })).toHaveAttribute("aria-pressed", "true");
-  const navigation = page.getByRole("navigation", { name: "Розділи панелі" });
-  await navigation.getByRole("link", { name: "Активність" }).click();
-  await expect(page).toHaveURL(/#platform-activity$/);
   await page.getByText("Переглянути значення за днями").click();
   await expect(page.getByRole("table", { name: "Замовлення за днями" }).getByRole("row")).toHaveCount(31);
   await page.getByText("Переглянути значення за днями").click();
+  const summaryResponse = page.waitForResponse((response) => new URL(response.url()).pathname === `${prefix}/summary` && response.ok());
   await navigation.getByRole("link", { name: "Магазини" }).click();
   await expect(page).toHaveURL(/#platform-directory$/);
+  const summary = await (await summaryResponse).json();
+  await expect(page.getByTestId("total_workspaces")).toHaveText(String(summary.total_workspaces));
+  await expect(page.getByTestId("workspaces_with_current_term")).toHaveText(String(summary.workspaces_with_current_term));
+  expect(summary.workspaces_with_current_term).toBeGreaterThan(0);
 
   await page.getByRole("textbox", { name: "Пошук" }).fill("QA Platform Shop");
   await page.getByRole("button", { name: "Застосувати" }).click();
@@ -129,16 +131,24 @@ test("a tenant owner is denied through the direct URL and never loads platform d
   expect(paths).toEqual([`${prefix}/me`]);
 });
 
-test("admin finds a Sellora account and can archive and restore an eligible workspace", async ({ page }) => {
+test("admin finds a Sellora account and can archive and restore an eligible workspace", async ({ page, isMobile }, testInfo) => {
   await signIn(page, "admin");
   const sections = page.getByRole("navigation", { name: "Розділи панелі" });
-  await sections.getByRole("link", { name: "Користувачі" }).click();
-  await page.getByRole("textbox", { name: "Ім’я, email або ID" }).fill("qa-platform-owner@example.com");
-  await page.getByRole("button", { name: "Показати користувачів" }).click();
+  const users = page.getByRole("region", { name: "Користувачі" });
+  await expect(users.getByRole("group", { name: "Показники акаунтів" })).toBeVisible();
+  await expect(isMobile ? users.getByRole("list", { name: "Користувачі" }) : users.getByRole("table", { name: "Користувачі" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("platform-users.png") });
+  await users.getByRole("button", { name: "Лише демо", exact: true }).click();
+  await expect(users.getByRole("heading", { name: "Користувачів не знайдено" })).toBeVisible();
+  await users.getByRole("button", { name: "Зі звичайним магазином", exact: true }).click();
+  await users.getByRole("textbox", { name: "Ім’я, email або ID" }).fill("qa-platform-owner@example.com");
+  await users.getByRole("button", { name: "Знайти", exact: true }).click();
   await page.getByRole("button", { name: "Відкрити профіль QA Owner" }).click();
   const user = page.getByRole("dialog", { name: "QA Owner" });
   await expect(user.getByText("QA Platform Shop 22")).toBeVisible();
+  await expect(user.getByText("Оплати та ліміти на рівні акаунта ще не підключені.")).toBeVisible();
   await expect(user.getByText("Власник", { exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("platform-user-profile.png") });
   await user.getByRole("button", { name: "Деталі", exact: true }).click();
   const paid = page.getByRole("dialog", { name: "QA Platform Shop 22" });
   await expect(paid.getByText("qa-pilot")).toBeVisible();

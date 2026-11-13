@@ -88,6 +88,21 @@ export type WorkspaceFilters = {
   archived: boolean;
 };
 
+export type PlatformUserSegment = "STANDARD" | "DEMO_ONLY" | "NO_ENABLED_WORKSPACE";
+
+export type PlatformUserFilters = {
+  search: string;
+  segment: "" | PlatformUserSegment;
+  active: "" | "true" | "false";
+};
+
+type PlatformUserSummary = {
+  total_accounts: number;
+  enabled_accounts: number;
+  demo_only_accounts: number;
+  accounts_without_enabled_workspace: number;
+};
+
 export type PlatformUser = {
   id: string;
   email: string;
@@ -95,6 +110,9 @@ export type PlatformUser = {
   last_name: string;
   is_active: boolean;
   created_at: string;
+  last_login_at: string | null;
+  owned_workspace_count: number;
+  segment: PlatformUserSegment;
 };
 
 type PlatformUserDetail = PlatformUser & {
@@ -140,13 +158,19 @@ export const platformAdminApi = {
     return read<ProductUsageReport>(`${path}?days=${days}`, signal);
   },
   detail: (id: string, signal: AbortSignal) => read<PlatformWorkspaceDetail>(`workspaces/${encodeURIComponent(id)}`, signal),
-  users(search: string, withoutWorkspaces: boolean, cursor: string | null, signal: AbortSignal) {
+  userSummary: (signal: AbortSignal) => read<PlatformUserSummary>("users/summary", signal),
+  users(filters: PlatformUserFilters, cursor: string | null, signal: AbortSignal) {
     return apiRequest<{ items: PlatformUser[]; next_cursor: string | null }>("/platform-admin/users/search", {
       method: "POST",
       signal,
       headers: proofHeaders(),
       cache: "no-store",
-      body: JSON.stringify({ q: search || undefined, without_workspaces: withoutWorkspaces, cursor: cursor || undefined }),
+      body: JSON.stringify({
+        q: filters.search || undefined,
+        segment: filters.segment || undefined,
+        active: filters.active ? filters.active === "true" : undefined,
+        cursor: cursor || undefined,
+      }),
     });
   },
   user(id: string, cursor: string | null, signal: AbortSignal) {

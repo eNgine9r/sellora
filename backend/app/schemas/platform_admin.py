@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -66,12 +67,17 @@ class PlatformWorkspaceRequestError(BaseModel):
     detail: str
 
 
+PlatformUserSegment = Literal["STANDARD", "DEMO_ONLY", "NO_ENABLED_WORKSPACE"]
+
+
 class PlatformUserSearchParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     q: str | None = Field(default=None, max_length=255)
     cursor: str | None = Field(default=None, min_length=1, max_length=900)
     without_workspaces: bool = False
+    segment: PlatformUserSegment | None = None
+    active: bool | None = None
     limit: int = Field(default=20, ge=1, le=50)
 
 
@@ -82,6 +88,18 @@ class PlatformUser(BaseModel):
     last_name: str
     is_active: bool
     created_at: datetime
+
+
+    last_login_at: datetime | None = None
+    owned_workspace_count: int
+    segment: PlatformUserSegment
+
+
+class PlatformUserSummary(BaseModel):
+    total_accounts: int
+    enabled_accounts: int
+    demo_only_accounts: int
+    accounts_without_enabled_workspace: int
 
 
 class PlatformUserPage(BaseModel):

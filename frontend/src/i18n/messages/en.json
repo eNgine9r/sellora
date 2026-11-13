@@ -3316,6 +3316,32 @@
       "OWNER": "Owner",
       "MANAGER": "Manager",
       "ANALYST": "Analyst"
+    },
+    "consoleDescription": "Sellora accounts, their workspaces, and recent sign-ins.",
+    "summary": "Account overview",
+    "accountSegments": "Account segments",
+    "allAccounts": "All accounts",
+    "account": "Account",
+    "accountStatus": "Account status",
+    "ownedWorkspaces": "Owned stores",
+    "lastLogin": "Last sign-in",
+    "noLogin": "No sign-in recorded",
+    "createdColumn": "Account created",
+    "accountId": "Account ID",
+    "accountBilling": "Account subscription",
+    "billingUnavailable": "Account-level payments and limits are not connected yet.",
+    "find": "Search",
+    "loading": "Loading accounts…",
+    "segments": {
+      "STANDARD": "With a standard store",
+      "DEMO_ONLY": "Demo only",
+      "NO_ENABLED_WORKSPACE": "Without enabled stores"
+    },
+    "metrics": {
+      "total_accounts": "Total accounts",
+      "enabled_accounts": "Enabled accounts",
+      "demo_only_accounts": "Demo only",
+      "accounts_without_enabled_workspace": "Without enabled stores"
     }
   }
 }
