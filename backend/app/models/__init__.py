@@ -64,3 +64,7 @@ __all__ += ["PlatformAuditEvent", "PlatformGrant"]
 from app.models.product_usage import ProductUsageDaily, ProductUsageEvent
 
 __all__ += ["ProductUsageDaily", "ProductUsageEvent"]
+
+from app.models.auth_identity import AuthEmailChallenge, AuthIdentity
+
+__all__ += ["AuthEmailChallenge", "AuthIdentity"]
