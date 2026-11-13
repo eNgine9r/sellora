@@ -3150,7 +3150,7 @@
   "platformAdmin": {
     "name": "Platform Admin",
     "title": "Platform administration",
-    "description": "Sellora workspaces, subscriptions and team sizes.",
+    "description": "Workspace, subscription, and Sellora usage at a glance.",
     "signInTitle": "Sign in to Platform Admin",
     "signInDescription": "Use the password for your Sellora operator account.",
     "signInError": "Sign-in failed. Check your credentials and try again.",
@@ -3170,7 +3170,7 @@
     "directory": "Workspace directory",
     "loadingDirectory": "Loading workspaces…",
     "search": "Search",
-    "searchPlaceholder": "Name, slug or ID",
+    "searchPlaceholder": "Name, slug, or ID",
     "workspace": "Workspace",
     "workspaceStatus": "Workspace state",
     "workspaceType": "Workspace type",
@@ -3211,7 +3211,7 @@
     "metrics": {
       "total_workspaces": "All workspaces",
       "enabled_workspaces": "Enabled workspaces",
-      "workspaces_with_current_term": "Workspaces with a current term",
+      "workspaces_with_current_term": "Current subscriptions and trials",
       "demo_workspaces": "Demo workspaces"
     },
     "subscriptionStatus": {
@@ -3240,7 +3240,19 @@
         "title": "Workspace not found",
         "description": "Close the profile and refresh the directory."
       }
-    }
+    },
+    "sections": "Admin sections",
+    "overviewNav": "Overview",
+    "directoryNav": "Workspaces",
+    "activityNav": "Activity",
+    "openDirectory": "Browse workspaces",
+    "directoryDescription": "Search by workspace name, slug, or ID.",
+    "visibleRows": "On this page: {count}",
+    "subscriptionFilter": "Subscription status",
+    "created": "Created",
+    "createdUtc": "Created (UTC)",
+    "workspaceId": "Workspace ID",
+    "workspaceInfo": "About the workspace"
   },
   "platformActivity": {
     "title": "Sellora usage",
@@ -3261,6 +3273,11 @@
       "first_orders": "First orders",
       "orders_created": "Orders created",
       "integration_days": "Integration usage days"
-    }
+    },
+    "dailyOrders": "Orders by day",
+    "dailyOrdersDescription": "New orders by UTC day. Historical imports are excluded.",
+    "dailyValue": "{day} · {count}",
+    "dailyTable": "View daily values",
+    "day": "Date (UTC)"
   }
 }

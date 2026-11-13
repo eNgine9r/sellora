@@ -13,7 +13,7 @@ from app.models.platform_admin import PlatformAuditEvent, PlatformRole
 from app.repositories.platform_admin_repository import PlatformAuditRepository, PlatformWorkspaceRepository
 from app.repositories.subscription_repository import SubscriptionRepository
 from app.schemas.platform_admin import PlatformIdentity, PlatformSummary, PlatformWorkspace, PlatformWorkspaceDetail, PlatformWorkspacePage
-from app.schemas.subscription import SubscriptionStatusResponse
+from app.schemas.subscription import SubscriptionDisplayStatus, SubscriptionStatusResponse
 from app.services.subscription_service import describe_subscription
 
 CAPABILITIES = {
@@ -72,12 +72,18 @@ class PlatformWorkspaceService:
 
     def list_workspaces(
         self, *, search: str | None, active: bool | None, demo: bool | None, cursor: str | None, limit: int,
+        subscription_status: SubscriptionDisplayStatus | None = None,
     ) -> PlatformWorkspacePage:
         search = search.strip() or None if search else None
         filters = (search, active, demo)
+        if subscription_status is not None:
+            filters += (subscription_status.value,)
         before = _decode_cursor(cursor, filters) if cursor else None
         now = datetime.now(UTC)
-        rows = self.workspaces.list_workspaces(search=search, active=active, demo=demo, before=before, limit=limit + 1)
+        rows = self.workspaces.list_workspaces(
+            search=search, active=active, demo=demo, before=before, limit=limit + 1,
+            subscription_status=subscription_status, now=now,
+        )
         items = [self._project(row, now) for row in rows[:limit]]
         return PlatformWorkspacePage(
             items=items, as_of=now,

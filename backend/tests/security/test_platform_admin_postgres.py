@@ -218,6 +218,52 @@ def test_workspace_directory_and_subscription_return_only_scoped_projections(cli
     assert event.outcome == "ALLOWED"
 
 
+def test_subscription_filter_matches_display_status_and_binds_the_cursor(client, db):
+    now = datetime.now(UTC)
+    plans = (
+        ("Current", "ACTIVE", -2, 2, "ACTIVE"),
+        ("Trial", "TRIALING", -2, 2, "TRIALING"),
+        ("Future", "ACTIVE", 2, 4, "PENDING"),
+        ("Stored pending", "PENDING", 2, 4, "PENDING"),
+        ("Ended", "TRIALING", -4, -2, "EXPIRED"),
+        ("Overdue", "PAST_DUE", -4, -2, "PAST_DUE"),
+        ("Cancelled", "CANCELED", -4, 2, "CANCELED"),
+        ("No subscription", None, 0, 0, "UNMANAGED"),
+    )
+    expected = {}
+    for name, stored_status, start, end, display_status in plans:
+        workspace = add_workspace(db, f"Subscription filter {name}", active=name != "Stored pending")
+        expected.setdefault(display_status, set()).add(str(workspace.id))
+        if stored_status:
+            db.add(WorkspaceSubscription(
+                workspace_id=workspace.id, plan_code="pilot", status=stored_status,
+                current_period_start=now + timedelta(days=start), current_period_end=now + timedelta(days=end),
+            ))
+    db.flush()
+
+    auth = login(client, add_user(db, PlatformRole.SUPPORT))
+    search = f"{PREFIX}/workspaces/search"
+    for status, ids in expected.items():
+        response = client.post(search, json={"subscription_status": status}, headers=auth)
+        assert response.status_code == 200
+        items = response.json()["items"]
+        assert {item["id"] for item in items} == ids
+        assert {item["subscription"]["status"] for item in items} == {status}
+
+    filters = {"q": "Subscription filter", "subscription_status": "PENDING", "limit": 1}
+    first = client.post(search, json=filters, headers=auth).json()
+    assert first["next_cursor"]
+    request = {**filters, "cursor": first["next_cursor"]}
+    second = client.post(search, json=request, headers=auth).json()
+    assert {first["items"][0]["id"], second["items"][0]["id"]} == expected["PENDING"]
+    assert second["next_cursor"] is None
+    assert client.post(search, json={**request, "subscription_status": "ACTIVE"}, headers=auth).status_code == 422
+    assert client.post(search, json={**filters, "subscription_status": "INVALID"}, headers=auth).status_code == 422
+    inactive = client.post(search, json={**filters, "active": False}, headers=auth).json()
+    assert [item["name"] for item in inactive["items"]] == ["Subscription filter Stored pending"]
+    assert client.post(search, json=filters, headers=login(client, add_user(db))).status_code == 403
+
+
 def test_grant_lifecycle_and_audit_immutability(db):
     admin, support = add_user(db), add_user(db)
     service = PlatformGrantService(db)
@@ -316,6 +362,8 @@ def test_product_usage_failure_does_not_block_product_commit(db, capture_enabled
     report = ProductUsageService(db).get_report(7, workspace_id=workspace.id)
     assert report.coverage == "partial" and report.dropped_operations == 1
     assert report.totals.active_workspaces == 0
+    assert report.daily[-1].dropped_operations == 1
+    assert report.daily[-1].orders_created == 0
 
 
 def test_product_usage_windows_and_workspace_boundaries(client, db, capture_enabled, monkeypatch):
@@ -341,6 +389,12 @@ def test_product_usage_windows_and_workspace_boundaries(client, db, capture_enab
     assert overall["totals"]["active_workspaces"] == 2
     assert overall["totals"]["active_workspace_days"] == 3
     assert overall["totals"]["orders_created"] == 3
+    assert overall["daily"] == [
+        {"day": (now.date() - timedelta(days=age)).isoformat(),
+         "orders_created": {6: 1, 0: 2}.get(age, 0), "dropped_operations": 0}
+        for age in range(6, -1, -1)
+    ]
+    assert client.get(second_url, headers=auth).json()["daily"][-1]["orders_created"] == 1
     assert client.get(first_url, params={"days": 30}, headers={**auth, "X-Workspace-ID": str(second.id)}).json()["totals"]["orders_created"] == 4
     assert client.get(second_url, headers=auth).json()["totals"]["first_products"] == 0
     assert client.get(first_url, headers=auth).json()["totals"]["orders_created"] == 2
@@ -353,7 +407,10 @@ def test_product_usage_windows_and_workspace_boundaries(client, db, capture_enab
     monkeypatch.setattr(get_settings(), "product_usage_coverage_from", now - timedelta(days=3))
     partial = ProductUsageService(db).get_report(7, workspace_id=first.id, now=now)
     assert partial.coverage == "partial" and partial.totals.orders_created == 1
+    assert [point.day for point in partial.daily] == [now.date() - timedelta(days=age) for age in (2, 1, 0)]
     monkeypatch.setattr(get_settings(), "product_usage_capture_enabled", False)
+    unavailable = ProductUsageService(db).get_report(7, workspace_id=first.id, now=now)
+    assert unavailable.totals is None and unavailable.daily == []
     before = db.scalar(select(ProductUsageDaily.event_count).where(
         ProductUsageDaily.workspace_id == first.id, ProductUsageDaily.day == now.date(),
         ProductUsageDaily.event_type == UsageEvent.ORDER_CREATED,

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_, select, text
+from sqlalchemy import and_, case, func, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog
@@ -11,6 +11,7 @@ from app.models.workspace import Workspace
 from app.models.workspace_subscription import SubscriptionStatus, WorkspaceSubscription
 from app.models.workspace_user import WorkspaceUser
 from app.repositories.audit_log_repository import DEMO_WORKSPACE_CREATE_ACTION
+from app.schemas.subscription import SubscriptionDisplayStatus
 
 
 class PlatformGrantRepository:
@@ -69,6 +70,7 @@ class PlatformWorkspaceRepository:
     def list_workspaces(
         self, *, search: str | None, active: bool | None, demo: bool | None,
         before: tuple[datetime, UUID] | None, limit: int,
+        subscription_status: SubscriptionDisplayStatus | None, now: datetime,
     ):
         statement = self._with_subscription()
         if search:
@@ -82,6 +84,17 @@ class PlatformWorkspaceRepository:
             statement = statement.where(Workspace.is_active == active)
         if demo is not None:
             statement = statement.where(self._is_demo() if demo else ~self._is_demo())
+        if subscription_status is not None:
+            subscription = WorkspaceSubscription
+            # Match describe_subscription at the same instant used to project the results.
+            has_term = subscription.status.in_((SubscriptionStatus.ACTIVE.value, SubscriptionStatus.TRIALING.value))
+            display_status = case(
+                (subscription.workspace_id.is_(None), SubscriptionDisplayStatus.UNMANAGED.value),
+                (and_(has_term, subscription.current_period_start > now), SubscriptionDisplayStatus.PENDING.value),
+                (and_(has_term, subscription.current_period_end <= now), SubscriptionDisplayStatus.EXPIRED.value),
+                else_=subscription.status,
+            )
+            statement = statement.where(display_status == subscription_status.value)
         if before:
             created_at, workspace_id = before
             statement = statement.where(or_(

@@ -34,7 +34,14 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
   await page.getByRole("button", { name: "30 днів", exact: true }).click();
   await expect(activityOrders).toHaveText("2");
   await expect(page.getByRole("button", { name: "30 днів", exact: true })).toHaveAttribute("aria-pressed", "true");
-
+  const navigation = page.getByRole("navigation", { name: "Розділи панелі" });
+  await navigation.getByRole("link", { name: "Активність" }).click();
+  await expect(page).toHaveURL(/#platform-activity$/);
+  await page.getByText("Переглянути значення за днями").click();
+  await expect(page.getByRole("table", { name: "Замовлення за днями" }).getByRole("row")).toHaveCount(31);
+  await page.getByText("Переглянути значення за днями").click();
+  await navigation.getByRole("link", { name: "Магазини" }).click();
+  await expect(page).toHaveURL(/#platform-directory$/);
 
   await page.getByRole("textbox", { name: "Пошук" }).fill("QA Platform Shop");
   await page.getByRole("button", { name: "Застосувати" }).click();
@@ -61,6 +68,12 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
   await expect(profile).toHaveCount(0);
   await expect(row).toBeFocused();
 
+  await page.getByLabel("Статус підписки").selectOption("ACTIVE");
+  await page.getByRole("button", { name: "Застосувати" }).click();
+  await expect(page.getByText("На сторінці: 1", { exact: true })).toBeVisible();
+  await expect(row).toBeVisible();
+  await expect(page.getByRole("button", { name: "Далі", exact: true })).toHaveCount(0);
+  await page.getByLabel("Статус підписки").selectOption("");
   await page.getByLabel("Тип магазину").selectOption("true");
   await page.getByRole("button", { name: "Застосувати" }).click();
   await expect(page.getByRole("button", { name: "Відкрити магазин QA Platform Shop 01" })).toBeVisible();
@@ -83,6 +96,7 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
   expect(directoryRequests.every(({ method, search }) => method === "POST" && search === "")).toBe(true);
   expect(directoryRequests.some(({ body }) => body && JSON.parse(body).q === "QA Platform Shop")).toBe(true);
   expect(directoryRequests.some(({ body }) => body && JSON.parse(body).cursor)).toBe(true);
+  expect(directoryRequests.some(({ body }) => body && JSON.parse(body).subscription_status === "ACTIVE")).toBe(true);
   const authorization = platformHeaders.find((headers) => headers.authorization)?.authorization;
   expect(authorization).toBeTruthy();
   const legacyAlias = await page.request.get(`${prefix}/workspaces/`, {

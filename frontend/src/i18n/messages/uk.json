@@ -3150,7 +3150,7 @@
   "platformAdmin": {
     "name": "Platform Admin",
     "title": "Керування платформою",
-    "description": "Магазини Sellora, стан їхніх підписок і склад команд.",
+    "description": "Стан магазинів, підписок і використання Sellora.",
     "signInTitle": "Вхід до Platform Admin",
     "signInDescription": "Увійдіть з паролем облікового запису оператора Sellora.",
     "signInError": "Не вдалося увійти. Перевірте дані та повторіть спробу.",
@@ -3170,7 +3170,7 @@
     "directory": "Реєстр магазинів",
     "loadingDirectory": "Завантажуємо магазини…",
     "search": "Пошук",
-    "searchPlaceholder": "Назва, slug або ID",
+    "searchPlaceholder": "Назва, адреса або ID",
     "workspace": "Магазин",
     "workspaceStatus": "Стан магазину",
     "workspaceType": "Тип магазину",
@@ -3211,7 +3211,7 @@
     "metrics": {
       "total_workspaces": "Усі магазини",
       "enabled_workspaces": "Увімкнені магазини",
-      "workspaces_with_current_term": "Магазини з чинною підпискою",
+      "workspaces_with_current_term": "Чинні підписки й пробні періоди",
       "demo_workspaces": "Демо-магазини"
     },
     "subscriptionStatus": {
@@ -3240,7 +3240,19 @@
         "title": "Магазин не знайдено",
         "description": "Закрийте профіль і оновіть реєстр."
       }
-    }
+    },
+    "sections": "Розділи панелі",
+    "overviewNav": "Огляд",
+    "directoryNav": "Магазини",
+    "activityNav": "Активність",
+    "openDirectory": "До реєстру магазинів",
+    "directoryDescription": "Пошук за назвою, ідентифікатором або короткою адресою магазину.",
+    "visibleRows": "На сторінці: {count}",
+    "subscriptionFilter": "Статус підписки",
+    "created": "Створено",
+    "createdUtc": "Створено (UTC)",
+    "workspaceId": "ID магазину",
+    "workspaceInfo": "Про магазин"
   },
   "platformActivity": {
     "title": "Активність у Sellora",
@@ -3261,6 +3273,11 @@
       "first_orders": "Перші замовлення",
       "orders_created": "Створені замовлення",
       "integration_days": "Дні використання інтеграцій"
-    }
+    },
+    "dailyOrders": "Замовлення за днями",
+    "dailyOrdersDescription": "Нові замовлення за UTC-добу. Історичний імпорт виключено.",
+    "dailyValue": "{day} · {count}",
+    "dailyTable": "Переглянути значення за днями",
+    "day": "Дата (UTC)"
   }
 }

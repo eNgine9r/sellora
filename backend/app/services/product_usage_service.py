@@ -10,7 +10,7 @@ from app.models.product_usage import DROPPED_EVENTS, UsageEvent, UsageSource
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.platform_admin_repository import PlatformWorkspaceRepository
 from app.repositories.product_usage_repository import ProductUsageRepository
-from app.schemas.product_usage import ProductUsageReport, ProductUsageTotals
+from app.schemas.product_usage import ProductUsageDay, ProductUsageReport, ProductUsageTotals
 
 logger = logging.getLogger(__name__)
 
@@ -118,9 +118,20 @@ class ProductUsageService:
         if first_reported_day > to_day:
             return report
         totals = dict(self.usage.totals(first_reported_day, to_day, workspace_id))
-        dropped = int(totals.pop("dropped_operations"))
+        recorded = {
+            row["day"]: ProductUsageDay(**row)
+            for row in self.usage.daily_orders(first_reported_day, to_day, workspace_id)
+        }
+        daily = []
+        day = first_reported_day
+        while day <= to_day:
+            daily.append(recorded.get(day) or ProductUsageDay(day=day, orders_created=0, dropped_operations=0))
+            day += timedelta(days=1)
+        totals["orders_created"] = sum(point.orders_created for point in daily)
+        dropped = sum(point.dropped_operations for point in daily)
         return report.model_copy(update={
             "coverage": "partial" if first_reported_day > from_day or dropped else "complete",
             "dropped_operations": dropped,
             "totals": ProductUsageTotals(**totals),
+            "daily": daily,
         })

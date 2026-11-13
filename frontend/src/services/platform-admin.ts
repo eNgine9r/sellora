@@ -59,6 +59,12 @@ type ProductUsageTotals = {
   integration_days: number;
 };
 
+export type ProductUsageDay = {
+  day: string;
+  orders_created: number;
+  dropped_operations: number;
+};
+
 type ProductUsageReport = {
   days: UsageDays;
   from_day: string;
@@ -68,12 +74,14 @@ type ProductUsageReport = {
   coverage: "complete" | "partial" | "unavailable";
   dropped_operations: number | null;
   totals: ProductUsageTotals | null;
+  daily?: ProductUsageDay[];
 };
 
 export type WorkspaceFilters = {
   search: string;
   active: "" | "true" | "false";
   demo: "" | "true" | "false";
+  subscriptionStatus: "" | SubscriptionStatus;
 };
 
 let mfaProof: string | undefined;
@@ -123,6 +131,7 @@ export const platformAdminApi = {
         q: filters.search || undefined,
         active: filters.active ? filters.active === "true" : undefined,
         demo: filters.demo ? filters.demo === "true" : undefined,
+        subscription_status: filters.subscriptionStatus || undefined,
         cursor: cursor || undefined,
       }),
     });

@@ -123,6 +123,7 @@ def search_platform_workspaces(
     service = PlatformWorkspaceService(db)
     return _audited_read(db, actor, WORKSPACES, lambda: service.list_workspaces(
         search=params.q, active=params.active, demo=params.demo, cursor=params.cursor, limit=params.limit,
+        subscription_status=params.subscription_status,
     ))
 
 
