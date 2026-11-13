@@ -71,6 +71,12 @@ restore_failure() {
     reason=ARCHIVE_VERSION_UNSUPPORTED
   elif grep -Eq "could not read from input file|unexpected end of file|input file is too short|does not appear to be a valid archive|could not uncompress data" "$log"; then
     reason=ARCHIVE_READ_FAILED
+  elif grep -Eq "invalid byte sequence for encoding .*: 0x00([[:space:]]|$)" "$log"; then
+    reason=INVALID_ZERO_BYTE
+  elif grep -Fq "invalid byte sequence for encoding" "$log"; then
+    reason=INVALID_ENCODING_BYTES
+  elif grep -Fq "has no equivalent in encoding" "$log"; then
+    reason=ENCODING_CONVERSION_FAILED
   elif grep -Eq "unrecognized configuration parameter" "$log"; then
     reason=SERVER_SETTING_UNSUPPORTED
   elif grep -Fq "schema \"public\" already exists" "$log"; then
@@ -113,17 +119,37 @@ restore_failure() {
     exit
   }" "$log")
   if [ -n "$toc_entry" ]; then printf "%s\n" "$toc_entry" >&2; fi
+  # Discard everything after the location prefix, including quoted COPY values.
+  copy_location=$(awk "
+    /^[[:space:]]*CONTEXT:[[:space:]]+COPY [a-z_][a-z0-9_]*([.][a-z_][a-z0-9_]*)?, line [0-9]+([,:]|$)/ {
+      prefix = \$0
+      sub(/^[[:space:]]*CONTEXT:[[:space:]]+COPY /, \"\", prefix)
+      split(prefix, fields, /[, :]+/)
+      printf \"copy_table=%s copy_line=%s\", fields[1], fields[3]
+      if (fields[4] == \"column\" && fields[5] ~ /^[a-z_][a-z0-9_]*$/ &&
+          prefix ~ /, column [a-z_][a-z0-9_]*:/)
+        printf \" copy_column=%s\", fields[5]
+      printf \"\n\"
+      exit
+    }
+  " "$log")
+  if [ -n "$copy_location" ]; then printf "%s\n" "$copy_location" >&2; fi
   df -Pk "$PGDATA" /dev/shm | awk "NR > 1 {print \"available_kib=\" \$4, \"mount=\" \$6}" >&2
   exit 1
 }
 
-initdb -D "$PGDATA" --username=postgres --auth-local=trust --auth-host=reject \
+initdb -D "$PGDATA" --encoding=UTF8 --locale=C \
+  --username=postgres --auth-local=trust --auth-host=reject \
   > /dev/null 2>&1 || { echo RESTORE_INIT_FAILED >&2; exit 1; }
 pg_ctl -D "$PGDATA" -l /tmp/postgres.log \
   -o "-c listen_addresses= -c unix_socket_directories=/tmp -c shared_buffers=24MB -c max_connections=10 -c log_line_prefix=SELLORA_RESTORE:%e:%i: -c log_error_verbosity=terse -c log_min_messages=error -c log_min_error_statement=panic" \
   -t 30 -w start > /dev/null 2>&1 || { echo RESTORE_START_FAILED >&2; exit 1; }
 createdb -h /tmp -U postgres -T template0 sellora_restore_check \
   > /dev/null 2>&1 || { echo RESTORE_CREATE_DB_FAILED >&2; exit 1; }
+target_encoding=$(psql -XAtq -h /tmp -U postgres -d sellora_restore_check -v ON_ERROR_STOP=1 \
+  -c "SHOW server_encoding" 2>/dev/null) || { echo RESTORE_ENCODING_UNREADABLE >&2; exit 1; }
+[ "$target_encoding" = UTF8 ] || { echo RESTORE_ENCODING_MISMATCH >&2; exit 1; }
+printf "restore_target_encoding=UTF8\n"
 # template0 includes public, which a schema-filtered archive can recreate.
 # Clean only the objects in the archive, inside this disposable database.
 timeout 600 pg_restore -h /tmp -U postgres -d sellora_restore_check \
