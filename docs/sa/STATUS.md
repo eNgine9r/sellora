@@ -9,7 +9,7 @@
 | SA.4 | Аудит завершено. [Початковий аудит](handoffs/SA.4.md) · [Виправлення #417](https://github.com/eNgine9r/sellora/pull/417) · [Докази повторної перевірки](handoffs/SA.4-remediation.md) |
 | SA.5 | Виправлення злиті в [PR #417](https://github.com/eNgine9r/sellora/pull/417). Ізольований QA та репетиція off switch пройшли. [Handoff SA.5](handoffs/SA.5.md) |
 | Захищений Platform Admin staging | **PASS.** Окремі frontend, API та PostgreSQL. Підтверджено роль оператора, ручний вхід і запис про доступ в аудиті. [Докази](handoffs/SA.5.md#фактичний-результат-захищеного-staging) |
-| Спільний staging | Залишається на `a8e5ff2`. Збірку для злиття #417 [скасовано](https://vercel.com/engine9rs-projects/sellora-web-staging/EkcsHPxX2A7JK3xSMK8X2xqrdAYe). |
-| Production rollout | **NO-GO** станом на 13.11.2026. Відновлення архіву й репетиції ARM64 пройшли в ізоляції. Залишаються production-конфігурація frontend/API, підтвердження прав після міграції та захист входу оператора. [Preflight](PRODUCTION_PREFLIGHT.md) |
+| Робочий CRM-фронтенд | Власник підтвердив [sellora-web-staging.vercel.app](https://sellora-web-staging.vercel.app). Поточний deployment — `a8e5ff2`. |
+| Production rollout | **NO-GO** станом на 13.11.2026. Робочу адресу підтверджено, відновлення архіву й репетиції ARM64 пройшли. Залишаються захист входу оператора, перевірка нової пари frontend/API та перевірка прав після бойової міграції. [Preflight](PRODUCTION_PREFLIGHT.md) |
 
 [Архітектура](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) · [Handoff SA.0](handoffs/SA.0.md)
