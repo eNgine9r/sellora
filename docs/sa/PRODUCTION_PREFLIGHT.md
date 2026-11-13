@@ -85,25 +85,54 @@ systemctl --user show --no-pager -p Id -p LoadState -p Result -p ExecMainStatus 
 
 ## Наступна перевірка для відкату
 
-У нативному терміналі власника визначити спосіб запуску бойового контейнера. Команда виводить лише тип запуску, без аргументів і змінних середовища.
+Попередній огляд повернув `startup_mode=owner_review_required`. Історичний [Raspberry handoff](../operations/s8-owner-release-handoff.md) описує обгортку `scripts/start_raspberry.py`. Вона не входить у Git-версію бойового коміту. Потрібно звірити, чи її використовує саме поточний контейнер.
+
+У нативному терміналі власника виконати огляд метаданих Docker і фіксованих файлів контейнера. Вивід містить лише відомі типи запуску, SHA-256 обгортки, ознаки в її тексті та наявність файлів ревізій.
 
 ```bash
-docker inspect --format '{{json .Path}} {{json .Args}}' sellora-rpi-backend-1 |
-  python3 -c '
+(
+  set -e -o pipefail
+  container=sellora-rpi-backend-1
+  docker inspect --format '{{json .Path}} {{json .Args}}' "$container" |
+    python3 -c '
 import json, re, sys
 raw = sys.stdin.read().strip()
 path, end = json.JSONDecoder().raw_decode(raw)
-argv = json.loads(raw[end:].strip())
-command = " ".join([path, *argv])
-if re.search(r"\brender-start\.sh\b|\balembic\b", command):
-    print("startup_mode=migration_script_or_command")
-elif re.search(r"\buvicorn\b", command):
-    print("startup_mode=uvicorn_observed")
+command = " ".join([path, *json.loads(raw[end:].strip())])
+for pattern, label in (
+    (r"\bstart_raspberry\.py\b", "raspberry_wrapper"),
+    (r"\brender-start\.sh\b|\balembic\b", "migration_script_or_command"),
+    (r"\buvicorn\b", "uvicorn_observed"),
+):
+    if re.search(pattern, command):
+        print("startup_mode=" + label)
+        break
 else:
     print("startup_mode=owner_review_required")
 '
+  docker exec -i --workdir /app "$container" python -IB - <<'PY'
+import hashlib
+import re
+from pathlib import Path
+
+wrapper = Path('/app/scripts/start_raspberry.py')
+if wrapper.is_file() and wrapper.stat().st_size <= 65536:
+    source = wrapper.read_bytes()
+    print('wrapper_sha256=' + hashlib.sha256(source).hexdigest())
+    for marker in ('alembic', 'uvicorn'):
+        present = bool(re.search(rb'\b' + marker.encode() + rb'\b', source))
+        print(f'wrapper_{marker}_reference={"yes" if present else "no"}')
+else:
+    print('wrapper_source=unavailable')
+
+versions = Path('/app/alembic/versions')
+for suffix in ('055', '056', '057'):
+    matches = any(versions.glob(f'202611120{suffix}_*.py'))
+    print(f'packaged_revision_{suffix}={"yes" if matches else "no"}')
+PY
+)
 ```
 
-Визначений тип запуску слугує для підготовки репетиції. Для підтвердження відкату потрібно запустити зафіксований попередній образ на ізольованій схемі `202611120057` з погодженою конфігурацією й перевірити readiness та базові CRM-операції.
+Ознака у вихідному тексті допомагає визначити, що потрібно перевірити в обгортці. Сумісність відкату підтверджує запуск попереднього образу на ізольованій схемі `202611120057` з погодженою конфігурацією, перевіркою readiness і базових CRM-операцій.
 
 Після підтвердження всіх умов зафіксувати `GO` на конкретні артефакти. Окреме погодження потрібне перед бойовим deployment, міграціями або видачею production grant.
