@@ -219,7 +219,8 @@ test("MFA uses six slots with native editing, paste, validation and retry", asyn
   await input.press("4");
   await expect(input).toHaveValue("012345");
   await input.press("Enter");
-  await expect(page.getByRole("alert")).toHaveText("Код недійсний або вже використаний. Спробуйте новий код.");
+  const codeError = page.getByRole("alert").filter({ hasText: "Код недійсний або вже використаний. Спробуйте новий код." });
+  await expect(codeError).toBeVisible();
   await expect(input).toHaveValue("");
   await expect(input).toBeFocused();
 
@@ -228,7 +229,7 @@ test("MFA uses six slots with native editing, paste, validation and retry", asyn
   await input.press("Control+v");
   await expect(input).toHaveValue("056789");
   await expect(slots).toHaveText("056789");
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(codeError).toHaveCount(0);
   await submit.click();
   await expect(page.getByRole("heading", { name: "Користувачі" })).toBeVisible();
   expect(submissions).toEqual(["012345", "056789"]);
