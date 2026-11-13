@@ -21,6 +21,12 @@ def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(
 def authenticate_access(
     credentials: HTTPAuthorizationCredentials | None, db: Session, *, require_password_session: bool = False
 ) -> User:
+    return authenticate_access_session(credentials, db, require_password_session=require_password_session)[0]
+
+
+def authenticate_access_session(
+    credentials: HTTPAuthorizationCredentials | None, db: Session, *, require_password_session: bool = False
+) -> tuple[User, UUID | None]:
     if credentials is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing credentials")
     try:
@@ -30,6 +36,7 @@ def authenticate_access(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     # Session-bound JWTs must stop working immediately after session
     # revocation, expiration, replay detection, or logout-all.
+    session_id = None
     raw_session_id = payload.get("sid")
     if raw_session_id is None and (require_password_session or not get_settings().legacy_auth_enabled):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session-bound access required")
@@ -51,4 +58,4 @@ def authenticate_access(
     user = UserRepository(db).get_by_id(user_id)
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive or missing user")
-    return user
+    return user, session_id

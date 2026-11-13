@@ -370,3 +370,124 @@ def test_product_usage_windows_and_workspace_boundaries(client, db, capture_enab
             'public.product_usage_events'::regclass, 'public.product_usage_daily'::regclass
         ) AND relrowsecurity
     """)).scalar_one() == 2
+
+
+@pytest.fixture
+def mfa(client, db, monkeypatch):
+    from cryptography.fernet import Fernet
+    from pydantic import SecretStr
+
+    from app.repositories.platform_mfa_repository import PlatformMfaRepository
+
+    monkeypatch.setattr(get_settings(), "platform_admin_mfa_required", True)
+    key = Fernet.generate_key()
+    cipher = Fernet(key)
+    monkeypatch.setattr(get_settings(), "platform_admin_mfa_key", SecretStr(key.decode()))
+    operator = add_user(db, PlatformRole.ADMIN)
+    seed = b"12345678901234567890"
+    PlatformMfaRepository(db).replace_factor(operator.id, cipher.encrypt(seed), -1)
+    db.commit()
+    return operator, seed
+
+
+def test_platform_mfa_is_required_for_all_reads_and_bound_to_password_session(client, db, mfa):
+    from app.services.platform_mfa_service import MFA_HEADER, totp_code
+
+    operator, seed = mfa
+    auth = login(client, operator)
+    code = totp_code(seed, int(datetime.now(UTC).timestamp()) // 30)
+    verify_url = f"{PREFIX}/mfa/verify"
+    for path in ("me", "summary", "workspaces", "activity/summary"):
+        denied = client.get(f"{PREFIX}/{path}", headers=auth)
+        assert denied.status_code == 403
+        assert denied.json() == {"detail": "PLATFORM_MFA_REQUIRED"}
+    assert client.post(f"{PREFIX}/workspaces/search", json={}, headers=auth).status_code == 403
+    assert client.post(verify_url, json={"code": code}).status_code == 401
+    assert client.get("/api/v1/auth/me", headers=auth).status_code == 200
+
+    response = client.post(verify_url, json={"code": code}, headers=auth)
+    assert response.status_code == 200, response.text
+    assert response.headers["cache-control"] == "private, no-store"
+    proof = response.json()["proof"]
+    assert client.get(f"{PREFIX}/summary", headers=auth).status_code == 403
+    assert client.get(f"{PREFIX}/summary", headers=auth | {MFA_HEADER: proof}).status_code == 200
+    assert client.post(verify_url, json={"code": code}, headers=auth).json() == {"detail": "PLATFORM_MFA_INVALID_CODE"}
+
+    other_session = login(client, operator)
+    assert client.get(f"{PREFIX}/me", headers=other_session | {MFA_HEADER: proof}).status_code == 403
+    assert client.post(verify_url, json={"code": code}, headers=other_session).status_code == 403
+    assert client.post("/api/v1/auth/session/logout-all", headers=other_session | ORIGIN).status_code == 204
+    assert client.get(f"{PREFIX}/me", headers=auth | {MFA_HEADER: proof}).status_code == 401
+
+
+def test_platform_mfa_limits_failures_and_redacts_invalid_input(client, db, mfa, monkeypatch):
+    from app.services.platform_mfa_service import MFA_HEADER, totp_code
+
+    operator, seed = mfa
+    auth = login(client, operator)
+    verify_url = f"{PREFIX}/mfa/verify"
+    tenant = add_user(db)
+    add_member(db, add_workspace(db, "Synthetic MFA tenant"), tenant, "OWNER")
+    tenant_auth = login(client, tenant)
+    assert client.get("/api/v1/auth/me", headers=tenant_auth).status_code == 200
+    assert client.post(verify_url, json={"code": "123456"}, headers=tenant_auth).json() == {"detail": "Platform access denied"}
+
+    marker = "SYNTHETIC_PRIVATE_MFA_INPUT"
+    response = client.post(f"{verify_url}/?code={marker}", json={"code": {"secret": marker}}, headers=auth)
+    assert response.status_code == 422
+    assert marker not in response.text
+    assert response.headers["cache-control"] == "private, no-store"
+    for _ in range(5):
+        assert client.post(verify_url, json={"code": "bad"}, headers=auth).status_code == 403
+    response = client.post(verify_url, json={"code": "bad"}, headers=login(client, operator))
+    assert response.status_code == 429
+
+    db.execute(text("UPDATE public.platform_operator_mfa SET window_started_at = now() - interval '6 minutes'"))
+    db.commit()
+    code = totp_code(seed, int(datetime.now(UTC).timestamp()) // 30)
+    response = client.post(verify_url, json={"code": code}, headers=auth)
+    assert response.status_code == 200, response.text
+    elevated = auth | {MFA_HEADER: response.json()["proof"]}
+    assert client.get(f"{PREFIX}/me", headers=elevated).status_code == 200
+    monkeypatch.setattr(get_settings(), "platform_admin_mfa_key", None)
+    assert client.get(f"{PREFIX}/me", headers=elevated).status_code == 503
+    assert client.get("/api/v1/auth/me", headers=tenant_auth).status_code == 200
+
+
+def test_platform_mfa_proof_survives_refresh_and_expires_or_can_be_revoked(client, db, mfa):
+    from app.repositories.platform_mfa_repository import PlatformMfaRepository
+    from app.services.platform_mfa_service import MFA_HEADER, totp_code
+
+    operator, seed = mfa
+    auth = login(client, operator)
+    code = totp_code(seed, int(datetime.now(UTC).timestamp()) // 30)
+    proof = client.post(f"{PREFIX}/mfa/verify", json={"code": code}, headers=auth).json()["proof"]
+    response = client.post("/api/v1/auth/session/refresh", headers=ORIGIN)
+    assert response.status_code == 200
+    elevated = {"Authorization": f"Bearer {response.json()['access_token']}", MFA_HEADER: proof}
+    assert client.get(f"{PREFIX}/me", headers=elevated).status_code == 200
+
+    db.execute(text("UPDATE public.auth_sessions SET platform_mfa_expires_at = now() WHERE user_id = :uid"), {"uid": operator.id})
+    db.commit()
+    assert client.get(f"{PREFIX}/me", headers=elevated).status_code == 403
+    db.execute(text("""
+        UPDATE public.auth_sessions SET platform_mfa_expires_at = clock_timestamp() + interval '30 minutes'
+        WHERE user_id = :uid
+    """), {"uid": operator.id})
+    db.commit()
+    assert client.get(f"{PREFIX}/me", headers=elevated).status_code == 200
+
+    grant = db.get(PlatformGrant, operator.id)
+    grant.revoked_at = datetime.now(UTC)
+    db.commit()
+    assert client.get(f"{PREFIX}/me", headers=elevated).status_code == 403
+    grant.revoked_at = None
+    grant.granted_at = datetime.now(UTC) + timedelta(seconds=1)
+    db.commit()
+    assert client.get(f"{PREFIX}/me", headers=elevated).json() == {"detail": "PLATFORM_MFA_REQUIRED"}
+
+    PlatformMfaRepository(db).delete_factor(operator.id)
+    db.commit()
+    assert client.post(f"{PREFIX}/mfa/verify", json={"code": code}, headers=auth).json() == {
+        "detail": "PLATFORM_MFA_NOT_ENROLLED",
+    }

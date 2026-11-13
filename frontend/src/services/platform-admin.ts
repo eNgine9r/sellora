@@ -1,4 +1,4 @@
-import { apiRequest } from "@/services/api";
+import { ApiError, apiRequest } from "@/services/api";
 
 export type PlatformRole = "PLATFORM_ADMIN" | "PLATFORM_SUPPORT" | "PLATFORM_AUDITOR";
 export type SubscriptionStatus = "UNMANAGED" | "PENDING" | "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "EXPIRED";
@@ -76,11 +76,35 @@ export type WorkspaceFilters = {
   demo: "" | "true" | "false";
 };
 
+let mfaProof: string | undefined;
+
+export function clearPlatformMfaProof() {
+  mfaProof = undefined;
+}
+
+export function platformMfaError(error: unknown): string | undefined {
+  if (!(error instanceof ApiError) || !error.detail || typeof error.detail !== "object") return;
+  const detail = (error.detail as { detail?: unknown }).detail;
+  return typeof detail === "string" ? detail : undefined;
+}
+
+function proofHeaders(): HeadersInit {
+  return mfaProof ? { "X-Sellora-Platform-MFA": mfaProof } : {};
+}
+
 function read<T>(path: string, signal: AbortSignal) {
-  return apiRequest<T>(`/platform-admin/${path}`, { signal, cache: "no-store" });
+  return apiRequest<T>(`/platform-admin/${path}`, { signal, headers: proofHeaders(), cache: "no-store" });
 }
 
 export const platformAdminApi = {
+  async verifyMfa(code: string) {
+    const result = await apiRequest<{ proof: string }>("/platform-admin/mfa/verify", {
+      method: "POST",
+      cache: "no-store",
+      body: JSON.stringify({ code }),
+    });
+    mfaProof = result.proof;
+  },
   identity: (signal: AbortSignal) => read<PlatformIdentity>("me", signal),
   summary: (signal: AbortSignal) => read<PlatformSummary>("summary", signal),
   activity(days: UsageDays, workspaceId: string | undefined, signal: AbortSignal) {
@@ -92,6 +116,7 @@ export const platformAdminApi = {
     return apiRequest<WorkspacePage>("/platform-admin/workspaces/search", {
       method: "POST",
       signal,
+      headers: proofHeaders(),
       cache: "no-store",
       body: JSON.stringify({
         limit: 20,

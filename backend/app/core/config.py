@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import AwareDatetime, Field, model_validator
+from pydantic import AwareDatetime, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     product_usage_capture_enabled: bool = Field(default=False, alias="SELLORA_PRODUCT_USAGE_CAPTURE_ENABLED")
     product_usage_coverage_from: AwareDatetime | None = Field(default=None, alias="SELLORA_PRODUCT_USAGE_COVERAGE_FROM")
     platform_admin_enabled: bool = Field(default=False, alias="SELLORA_PLATFORM_ADMIN_ENABLED")
+    platform_admin_mfa_required: bool = Field(default=False, alias="SELLORA_PLATFORM_ADMIN_MFA_REQUIRED")
+    platform_admin_mfa_key: SecretStr | None = Field(default=None, alias="SELLORA_PLATFORM_ADMIN_MFA_KEY")
     legacy_auth_enabled: bool = Field(default=True, alias="SELLORA_LEGACY_AUTH_ENABLED")
     login_rate_limit_enabled: bool = Field(default=False, alias="SELLORA_LOGIN_RATE_LIMIT_ENABLED")
     login_rate_limit_max_failures: int = Field(default=8, ge=3, le=30, alias="SELLORA_LOGIN_RATE_LIMIT_MAX_FAILURES")
@@ -98,6 +100,10 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", populate_by_name=True, extra="ignore",
         hide_input_in_errors=True,
     )
+
+    @property
+    def platform_admin_requires_mfa(self) -> bool:
+        return self.platform_admin_mfa_required or self.environment == "production"
 
     @model_validator(mode="after")
     def validate_platform_admin_signing_key(self) -> "Settings":

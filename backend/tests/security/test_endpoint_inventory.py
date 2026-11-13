@@ -2,6 +2,7 @@ from collections import Counter
 
 from fastapi.routing import APIRoute
 
+from app.dependencies.platform_admin import require_platform_mfa_challenge
 from app.main import app
 
 
@@ -70,12 +71,12 @@ EXPECTED_PRIMARY_COUNTS = {
     "AUTHENTICATED_GLOBAL": 6,
     "WORKSPACE_SCOPED": 231,
     "FEATURE_GATED": 15,
-    "PLATFORM_ADMIN": 8,
+    "PLATFORM_ADMIN": 9,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 269
+EXPECTED_TOTAL_ROUTES = 270
 READ_ONLY_BODY_ROUTES = {("POST", "/api/v1/platform-admin/workspaces/search")}
-EXPECTED_MUTATION_ROUTES = 147
+EXPECTED_MUTATION_ROUTES = 148
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -155,7 +156,8 @@ def test_endpoint_inventory_primary_classifications_are_exactly_reconciled() -> 
 def test_endpoint_inventory_permission_subsets_are_not_counted_as_primary_scopes() -> None:
     routes = _api_routes()
     owner_only = [(method, path) for path, route in routes for method in route.methods if (method, path) in OWNER_ONLY_ENDPOINTS]
-    mutation_routes = [(method, path) for path, route in routes for method in route.methods if method in {"POST", "PUT", "PATCH", "DELETE"} and (method, path) not in READ_ONLY_BODY_ROUTES]
+    mutation_routes = [(method, path) for path, route in routes for method in route.methods
+                       if method in {"POST", "PUT", "PATCH", "DELETE"} and (method, path) not in READ_ONLY_BODY_ROUTES]
 
     assert len(owner_only) == len(OWNER_ONLY_ENDPOINTS)
     assert len(mutation_routes) == EXPECTED_MUTATION_ROUTES
@@ -313,6 +315,9 @@ def test_platform_admin_routes_require_their_own_capabilities() -> None:
     }
     routes = {path.removeprefix("/api/v1/platform-admin"): route for path, route in _api_routes()
               if _primary_scope(path) == "PLATFORM_ADMIN"}
+    challenge = routes.pop("/mfa/verify")
+    assert challenge.methods == {"POST"}
+    assert require_platform_mfa_challenge in {item.call for item in challenge.dependant.dependencies}
     assert routes.keys() == expected.keys()
     for path, route in routes.items():
         assert route.methods == ({"POST"} if path == "/workspaces/search" else {"GET"})
