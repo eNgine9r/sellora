@@ -257,7 +257,7 @@ export function PlatformDashboard({ operatorId, recheckAccess, showActivity, sho
   }
 
   function switchArchive(archived: boolean) {
-    const next = { ...defaultFilters, archived };
+    const next = { ...defaultFilters, search: filters.search, archived };
     setFilters(next);
     setDraft(next);
     setCursors([null]);
