@@ -164,7 +164,7 @@
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "contextTitle": "Every sale.\nOne workspace.",
-    "contextDescription": "Customers, orders and results — pick up right where you left off.",
+    "contextDescription": "Orders, customers, inventory and finances for your store in one place.",
     "trustStatement": "Account-based workspace access. Your team’s data is kept separate from other workspaces.",
     "indicators": [
       {
@@ -184,7 +184,60 @@
     "formNote": "Use the email and password for your account.",
     "secureLabel": "Access your CRM",
     "previewLabel": "Customer → order → result",
-    "validationError": "Enter a valid email address and your password."
+    "validationError": "Enter a valid email address and your password.",
+    "access": {
+      "continue": {
+        "google": "Continue with Google",
+        "facebook": "Continue with Facebook"
+      },
+      "orEmail": "or use email",
+      "noAccount": "New to Sellora?",
+      "createAccount": "Create an account",
+      "haveAccount": "Already have an account?",
+      "signupHelp": "Choose how to sign up. Then create your first store.",
+      "continueEmail": "Sign up with email",
+      "otherMethods": "Other sign-up methods",
+      "consent": "I agree to the",
+      "consentTerms": "Terms of Service",
+      "consentAnd": "and",
+      "consentPrivacy": "Privacy Policy",
+      "acceptRequired": "Accept the Terms of Service and Privacy Policy to continue.",
+      "loadingOptions": "Loading sign-up options…",
+      "verifyTitle": "Verify your email",
+      "verifyHelp": "Enter the email address where we should send your verification code.",
+      "sendCode": "Send code",
+      "emailCode": "Six-digit code",
+      "verifyAction": "Verify email",
+      "codeSent": "If this address can be registered, we’ll send a code. It expires in 10 minutes.",
+      "resend": "Send again",
+      "resendWait": "Resend available in a minute",
+      "changeEmail": "Change email",
+      "firstName": "First name",
+      "passwordHint": "At least 12 characters",
+      "methodsTitle": "Sign-in methods",
+      "methodsHelp": "Connect Google or Facebook to your Sellora account.",
+      "link": "Connect",
+      "linked": "Connected",
+      "linkSuccess": "Sign-in method connected.",
+      "retry": "Try again",
+      "rateLimited": "Too many sign-in attempts. Try again later.",
+      "errors": {
+        "expired": "This request expired. Start again.",
+        "cancelled": "You cancelled sign-in. Try again or choose another method.",
+        "provider_error": "We couldn’t confirm sign-in with this provider. Please try again.",
+        "account_required": "Create an account or connect this provider in your existing account settings to sign in with it.",
+        "account_exists": "Sign in to your existing account. You can connect another sign-in method in Settings.",
+        "provider_in_use": "This sign-in method is already connected to a Sellora account.",
+        "session_required": "Sign in to Sellora again to connect this sign-in method.",
+        "verified_email_required": "Use a Google account with a verified Gmail or Google Workspace address.",
+        "invalid_code": "The code is incorrect or expired. Check it or request a new one.",
+        "delivery_failed": "We couldn’t send the code. Try again later.",
+        "invalid_request": "Check the information you entered and try again.",
+        "invalid_registration": "Complete all fields and accept the Terms of Service.",
+        "unavailable": "This sign-in method is currently unavailable.",
+        "registration_unavailable": "Sign-up is currently unavailable."
+      }
+    }
   },
   "landing": {
     "nav": {
@@ -3188,7 +3241,6 @@
     "status": "Status",
     "unassigned": "—",
     "details": "Details",
-    "openWorkspace": "Open workspace {name}",
     "profile": "Workspace profile",
     "activeMembers": "Active team members",
     "currency": "Currency",

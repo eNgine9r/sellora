@@ -36,7 +36,7 @@ def _enabled():
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Session login is not enabled")
 
 
-def _origin(request: Request) -> None:
+def _origin(request: Request, *, expected: str | None = None) -> None:
     settings = get_settings()
     origins = os.getenv("SELLORA_CORS_ALLOWED_ORIGINS", "").strip()
     allowed = {
@@ -56,16 +56,16 @@ def _origin(request: Request) -> None:
         except ValueError:
             candidate = ""
     # Fail closed for absent, null, foreign or malformed Origin/Referer.
-    if not candidate or candidate not in allowed:
+    if not candidate or candidate not in allowed or (expected is not None and candidate != expected):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Untrusted session request origin")
 
 
-def _set_cookie(response: Response, tokens: SessionTokens) -> None:
+def _set_cookie(response: Response, tokens: SessionTokens, *, secure: bool = False) -> None:
     response.set_cookie(
         key=COOKIE_NAME,
         value=tokens.refresh_cookie,
         httponly=True,
-        secure=get_settings().environment == "production",
+        secure=secure or get_settings().environment == "production",
         samesite="lax",
         path=COOKIE_PATH,
         max_age=tokens.max_age_seconds,

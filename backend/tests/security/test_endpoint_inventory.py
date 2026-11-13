@@ -10,8 +10,8 @@ PUBLIC_ENDPOINTS = {"/health", "/health/live", "/health/ready", "/api/v1/auth/lo
     "/api/v1/auth/session/login", "/api/v1/auth/session/refresh", "/api/v1/auth/session/logout"}
 PUBLIC_METHOD_ENDPOINTS = {("GET", "/api/v1/integrations/meta-ads/oauth/callback")}
 AUTHENTICATED_GLOBAL_ENDPOINTS = {"/api/v1/auth/me", "/api/v1/workspaces", "/api/v1/workspaces/demo",
-    "/api/v1/auth/session/upgrade", "/api/v1/auth/session/logout-all"}
-FEATURE_GATED_PREFIXES = ("/api/v1/integrations/meta-ads",)
+    "/api/v1/auth/session/upgrade", "/api/v1/auth/session/logout-all", "/api/v1/auth/session/access/identities"}
+FEATURE_GATED_PREFIXES = ("/api/v1/integrations/meta-ads", "/api/v1/auth/session/access")
 WORKSPACE_PREFIXES = (
     "/api/v1/leads",
     "/api/v1/customers",
@@ -68,18 +68,18 @@ OWNER_ONLY_ENDPOINTS = {
 }
 EXPECTED_PRIMARY_COUNTS = {
     "PUBLIC": 9,
-    "AUTHENTICATED_GLOBAL": 6,
+    "AUTHENTICATED_GLOBAL": 7,
     "WORKSPACE_SCOPED": 231,
-    "FEATURE_GATED": 15,
+    "FEATURE_GATED": 20,
     "PLATFORM_ADMIN": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 276
+EXPECTED_TOTAL_ROUTES = 282
 READ_ONLY_BODY_ROUTES = {
     ("POST", "/api/v1/platform-admin/workspaces/search"),
     ("POST", "/api/v1/platform-admin/users/search"),
 }
-EXPECTED_MUTATION_ROUTES = 150
+EXPECTED_MUTATION_ROUTES = 153
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),

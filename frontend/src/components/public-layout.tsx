@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CheckCircle2, Menu, X } from "lucide-react";
 import { BrandLockup } from "@/components/brand";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { usePublicAuthOptions } from "@/hooks/use-public-auth-options";
 import { useI18n } from "@/i18n/provider";
 
 type PublicNavItem = { href: string; label: string };
@@ -84,6 +85,8 @@ function useMobileMenu(open: boolean, onClose: () => void) {
 
 export function PublicHeader() {
   const { t } = useI18n();
+  const { data: authOptions } = usePublicAuthOptions();
+  const canRegister = Boolean(authOptions?.email_registration || authOptions?.signup_providers.length);
   const [open, setOpen] = useState(false);
   const panelRef = useMobileMenu(open, () => setOpen(false));
 
@@ -99,6 +102,7 @@ export function PublicHeader() {
         <div className="hidden shrink-0 items-center gap-2 md:flex [&>*]:h-10">
           <LanguageSwitcher compact />
           <Link href="/login" className="inline-flex h-10 items-center rounded-2xl border border-border-subtle bg-surface-2 px-4 text-sm font-black text-text-primary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t("auth.login")}</Link>
+          {canRegister ? <Link href="/register" className="inline-flex h-10 items-center rounded-2xl bg-brand-gradient px-4 text-sm font-black text-primary-foreground transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t("auth.access.createAccount")}</Link> : null}
           <a href="#capabilities" className="inline-flex h-10 items-center justify-center rounded-2xl border border-border-subtle bg-surface-2 px-4 text-sm font-black text-text-primary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t("landing.headerExploreCta")}</a>
         </div>
         <button type="button" className="grid h-10 w-10 place-items-center rounded-2xl border border-border-subtle bg-surface-2 text-text-primary transition hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring md:hidden" aria-label={t("landing.nav.mobileMenu")} aria-expanded={open} onClick={() => setOpen(true)}>
@@ -119,6 +123,7 @@ export function PublicHeader() {
             <div className="mt-5 grid gap-3 [&>*]:min-h-11">
               <LanguageSwitcher compact />
               <Link href="/login" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-border-subtle bg-surface-2 px-4 font-black text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" onClick={() => setOpen(false)}>{t("auth.login")}</Link>
+              {canRegister ? <Link href="/register" className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-brand-gradient px-4 font-black text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" onClick={() => setOpen(false)}>{t("auth.access.createAccount")}</Link> : null}
               <a href="#capabilities" onClick={() => setOpen(false)} className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-border-subtle bg-surface-2 px-4 font-black text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">{t("landing.headerExploreCta")}</a>
             </div>
           </div>

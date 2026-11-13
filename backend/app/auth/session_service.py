@@ -85,6 +85,19 @@ class SessionAuthenticationService:
         self.db.commit()
         return issued
 
+    def lock_active_refresh(self, cookie: str | None, user_id: UUID, session_id: UUID) -> bool:
+        parts = self._parts(cookie)
+        if parts is None or parts[0] != session_id:
+            return False
+        digest = self.db.scalar(
+            text(
+                "SELECT refresh_hash FROM public.auth_sessions WHERE id=:sid AND user_id=:uid "
+                "AND revoked_at IS NULL AND expires_at > now() FOR UPDATE"
+            ),
+            {"sid": session_id, "uid": user_id},
+        )
+        return digest is not None and hmac.compare_digest(digest, self._hash(cookie))
+
     def rotate(self, cookie: str | None) -> SessionTokens | None:
         parts = self._parts(cookie)
         if parts is None:
