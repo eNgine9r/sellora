@@ -48,7 +48,6 @@ export function PlatformMfaCode({ value, onChange, pending, error }: {
   }
 
   const active = Math.min(selection.end, value.length, platformMfaCodeLength - 1);
-  const help = error || t("platformAdmin.mfaCodeHint");
 
   return (
     <div className="grid gap-2.5">
@@ -85,7 +84,7 @@ export function PlatformMfaCode({ value, onChange, pending, error }: {
           required
           disabled={pending}
           aria-invalid={Boolean(error)}
-          aria-describedby={`${id}-hint`}
+          aria-describedby={error ? `${id}-hint platform-mfa-error` : `${id}-hint`}
           value={value}
           onChange={handleChange}
           onClick={placeCaret}
@@ -95,12 +94,11 @@ export function PlatformMfaCode({ value, onChange, pending, error }: {
             const field = event.currentTarget;
             setSelection({ start: field.selectionStart ?? 0, end: field.selectionEnd ?? 0 });
           }}
-          className="absolute inset-0 z-10 h-full w-full cursor-text rounded-xl border-0 bg-transparent text-base text-transparent caret-transparent outline-none selection:bg-transparent selection:text-transparent disabled:cursor-wait"
+          className="absolute inset-0 z-10 h-full w-full cursor-text text-base opacity-0 disabled:cursor-wait"
         />
       </div>
-      <p id={`${id}-hint`} role={error ? "alert" : undefined}
-        className={`text-xs leading-5 ${error ? "text-[var(--danger-foreground)]" : "text-text-secondary"}`}>
-        {help}
+      <p id={`${id}-hint`} className="text-xs leading-5 text-text-secondary">
+        {t("platformAdmin.mfaCodeHint")}
       </p>
     </div>
   );

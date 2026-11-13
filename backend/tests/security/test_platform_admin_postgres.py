@@ -271,6 +271,11 @@ def test_user_registry_is_admin_only_and_projects_existing_memberships(client, d
     second = add_workspace(db, "Registry second shop")
     add_member(db, shared, owner, "OWNER")
     add_member(db, second, owner, "MANAGER")
+    add_member(db, second, new_account, "OWNER")
+    second.is_active = False
+    analyst = add_user(db)
+    add_member(db, shared, analyst, "ANALYST", active=False)
+    add_member(db, second, analyst, "MANAGER")
     deleted = add_workspace(db, "Removed membership")
     add_member(db, deleted, owner, "OWNER")
     db.get(WorkspaceUser, (deleted.id, owner.id)).deleted_at = datetime.now(UTC)
@@ -302,9 +307,19 @@ def test_user_registry_is_admin_only_and_projects_existing_memberships(client, d
     profile_path = f"{PREFIX}/users/{owner.id}"
     detail = client.get(profile_path, headers={**auth, "X-Workspace-ID": str(deleted.id)}).json()
     assert {item["id"]: item["role"] for item in detail["workspaces"]} == {
-        str(shared.id): "OWNER", str(second.id): "MANAGER",
+        str(shared.id): "OWNER",
     }
-    assert client.get(f"{PREFIX}/users/{new_account.id}", headers=auth).json()["workspaces"] == []
+    assert [item["id"] for item in client.get(f"{PREFIX}/users/{new_account.id}", headers=auth).json()["workspaces"]] == [str(second.id)]
+    assert client.get(f"{PREFIX}/users/{analyst.id}", headers=auth).status_code == 404
+    assert client.post(search, headers=auth, json={"q": analyst.email}).json()["items"] == []
+    team_path = f"{PREFIX}/workspaces/{shared.id}/team"
+    team = client.get(team_path, headers={**auth, "X-Workspace-ID": str(second.id)})
+    assert team.headers["cache-control"] == "private, no-store"
+    assert team.json() == {"items": [{
+        "id": str(analyst.id), "first_name": analyst.first_name, "last_name": analyst.last_name,
+        "role": "ANALYST", "is_active": False,
+    }], "next_cursor": None}
+    assert client.get(team_path, headers=owner_auth).status_code == 403
     assert client.get(profile_path).status_code == 401
     for role in (None, PlatformRole.SUPPORT, PlatformRole.AUDITOR):
         denied = login(client, add_user(db, role)) if role else owner_auth
@@ -322,12 +337,15 @@ def test_account_segments_and_summary_use_enabled_memberships_not_subscription_s
     standard = add_user(db)
     disabled_user = add_user(db, is_active=False)
     removed_member = add_user(db)
+    inactive_owner = add_user(db)
     demo = add_workspace(db, "Account demo", demo=True)
     standard_shop = add_workspace(db, "Account standard")
     disabled_shop = add_workspace(db, "Disabled account shop", active=False)
     add_member(db, demo, demo_only, "OWNER")
     add_member(db, demo, standard, "OWNER")
-    add_member(db, standard_shop, standard, "MANAGER")
+    add_member(db, standard_shop, standard, "OWNER")
+    add_member(db, disabled_shop, disabled_user, "OWNER")
+    add_member(db, disabled_shop, inactive_owner, "OWNER")
     add_member(db, disabled_shop, demo_only, "OWNER")
     add_member(db, standard_shop, removed_member, "OWNER")
     db.get(WorkspaceUser, (standard_shop.id, removed_member.id)).deleted_at = datetime.now(UTC)
@@ -339,17 +357,17 @@ def test_account_segments_and_summary_use_enabled_memberships_not_subscription_s
     response = client.get(summary_path, headers=auth)
     assert response.headers["cache-control"] == "private, no-store"
     assert response.json() == {
-        "total_accounts": 5, "enabled_accounts": 4, "demo_only_accounts": 1, "accounts_without_enabled_workspace": 3,
+        "total_accounts": 4, "enabled_accounts": 3, "demo_only_accounts": 1, "accounts_without_enabled_workspace": 2,
     }
     expected = {
         "DEMO_ONLY": {str(demo_only.id)},
         "STANDARD": {str(standard.id)},
-        "NO_ENABLED_WORKSPACE": {str(admin.id), str(disabled_user.id), str(removed_member.id)},
+        "NO_ENABLED_WORKSPACE": {str(disabled_user.id), str(inactive_owner.id)},
     }
     for segment, ids in expected.items():
         result = client.post(search, headers=auth, json={"segment": segment}).json()
         assert {user["id"] for user in result["items"]} == ids
-        assert all(user["segment"] == segment and user["owned_workspace_count"] == 0 for user in result["items"])
+        assert all(user["segment"] == segment and user["owned_workspace_count"] == int(segment == "STANDARD") for user in result["items"])
 
     first = client.post(search, headers=auth, json={"segment": "NO_ENABLED_WORKSPACE", "limit": 1}).json()
     assert first["next_cursor"]

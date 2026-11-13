@@ -24,8 +24,8 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
   });
   await signIn(page, "admin");
   const navigation = page.getByRole("navigation", { name: "Розділи панелі" });
-  await expect(page.getByRole("heading", { name: "Користувачі" })).toBeVisible();
-  await expect(navigation.getByRole("link", { name: "Користувачі" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("heading", { name: "Власники" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Власники" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("heading", { name: "Реєстр магазинів" })).toHaveCount(0);
   await navigation.getByRole("link", { name: "Активність" }).click();
   await expect(page).toHaveURL(/#platform-activity$/);
@@ -127,19 +127,20 @@ test("a tenant owner is denied through the direct URL and never loads platform d
   await denied;
   await expect(page.getByRole("heading", { name: "Доступ заборонено" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Реєстр магазинів" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Користувачі" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Власники" })).toHaveCount(0);
   expect(paths).toEqual([`${prefix}/me`]);
 });
 
 test("admin finds a Sellora account and can archive and restore an eligible workspace", async ({ page, isMobile }, testInfo) => {
   await signIn(page, "admin");
   const sections = page.getByRole("navigation", { name: "Розділи панелі" });
-  const users = page.getByRole("region", { name: "Користувачі" });
+  const users = page.getByRole("region", { name: "Власники" });
   await expect(users.getByRole("group", { name: "Показники акаунтів" })).toBeVisible();
-  await expect(isMobile ? users.getByRole("list", { name: "Користувачі" }) : users.getByRole("table", { name: "Користувачі" })).toBeVisible();
+  await expect(isMobile ? users.getByRole("list", { name: "Власники" }) : users.getByRole("table", { name: "Власники" })).toBeVisible();
+  await expect(users.getByText("qa-platform-analyst@example.com")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("platform-users.png") });
   await users.getByRole("button", { name: "Лише демо", exact: true }).click();
-  await expect(users.getByRole("heading", { name: "Користувачів не знайдено" })).toBeVisible();
+  await expect(users.getByRole("heading", { name: "Власників не знайдено" })).toBeVisible();
   await users.getByRole("button", { name: "Зі звичайним магазином", exact: true }).click();
   await users.getByRole("textbox", { name: "Ім’я, email або ID" }).fill("qa-platform-owner@example.com");
   await users.getByRole("button", { name: "Знайти", exact: true }).click();
@@ -152,6 +153,8 @@ test("admin finds a Sellora account and can archive and restore an eligible work
   await user.getByRole("button", { name: "Деталі", exact: true }).click();
   const paid = page.getByRole("dialog", { name: "QA Platform Shop 22" });
   await expect(paid.getByText("qa-pilot")).toBeVisible();
+  await expect(paid.getByText("QA Analyst", { exact: true })).toBeVisible();
+  await expect(paid.getByText("Неактивний", { exact: true })).toBeVisible();
   await expect(paid.getByRole("button", { name: "Архівувати магазин" })).toHaveCount(0);
   await page.keyboard.press("Escape");
 
@@ -206,6 +209,8 @@ test("MFA uses six slots with native editing, paste, validation and retry", asyn
   await expect(input).toHaveAttribute("autocomplete", "one-time-code");
   await expect(input).toHaveAttribute("inputmode", "numeric");
   await expect(submit).toBeDisabled();
+  await expect(input).toHaveCSS("opacity", "0");
+  const buttonY = (await submit.boundingBox())?.y;
   await page.screenshot({ path: testInfo.outputPath("platform-mfa.png") });
 
   await input.pressSequentially("0a12345");
@@ -221,6 +226,7 @@ test("MFA uses six slots with native editing, paste, validation and retry", asyn
   await input.press("Enter");
   const codeError = page.getByRole("alert").filter({ hasText: "Код недійсний або вже використаний. Спробуйте новий код." });
   await expect(codeError).toBeVisible();
+  expect((await submit.boundingBox())?.y).toBe(buttonY);
   await expect(input).toHaveValue("");
   await expect(input).toBeFocused();
 
@@ -231,6 +237,6 @@ test("MFA uses six slots with native editing, paste, validation and retry", asyn
   await expect(slots).toHaveText("056789");
   await expect(codeError).toHaveCount(0);
   await submit.click();
-  await expect(page.getByRole("heading", { name: "Користувачі" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Власники" })).toBeVisible();
   expect(submissions).toEqual(["012345", "056789"]);
 });

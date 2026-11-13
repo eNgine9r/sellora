@@ -134,8 +134,60 @@ function WorkspaceDirectory({ items, onSelect }: { items: PlatformWorkspace[]; o
   );
 }
 
-function WorkspaceProfile({ id, operatorId, onClose, recheckAccess, showActivity, canArchive }: {
-  id: string; operatorId: string; onClose: () => void; recheckAccess: () => void; showActivity: boolean; canArchive: boolean;
+function WorkspaceTeam({ operatorId, workspaceId, recheckAccess }: {
+  operatorId: string; workspaceId: string; recheckAccess: () => void;
+}) {
+  const { t } = useI18n();
+  const [cursors, setCursors] = useState<(string | null)[]>([null]);
+  const cursor = cursors[cursors.length - 1];
+  const team = useQuery({
+    queryKey: ["platform-admin", operatorId, "workspace-team", workspaceId, cursor],
+    queryFn: ({ signal }) => platformAdminApi.workspaceTeam(workspaceId, cursor, signal),
+    retry: false,
+    gcTime: 0,
+  });
+  const denied = accessDenied(team.error);
+  useEffect(() => { if (denied) recheckAccess(); }, [denied, recheckAccess]);
+  const page = team.error ? undefined : team.data;
+
+  return (
+    <Card>
+      <h3 className="mb-3 font-bold">{t("platformRegistry.team.title")}</h3>
+      {team.isPending ? <p role="status" className="text-sm text-text-secondary">{t("common.loading")}</p> : null}
+      {team.error ? <PlatformProblem message={denied ? "forbidden" : "error"} retry={denied ? undefined : () => void team.refetch()} /> : null}
+      {page && page.items.length === 0 ? <p className="text-sm text-text-secondary">{t("platformRegistry.team.empty")}</p> : null}
+      {page && page.items.length > 0 ? (
+        <ul className="divide-y divide-border-subtle">
+          {page.items.map((member) => (
+            <li key={member.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+              <p className="min-w-0 break-words text-sm font-semibold">{[member.first_name, member.last_name].filter(Boolean).join(" ")}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <StatusBadge>{t(`platformRegistry.roles.${member.role}`)}</StatusBadge>
+                <StatusBadge tone={member.is_active ? "success" : "neutral"}>
+                  {t(member.is_active ? "platformRegistry.team.enabled" : "platformRegistry.team.disabled")}
+                </StatusBadge>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {page && (cursors.length > 1 || page.next_cursor) ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" disabled={cursors.length === 1} onClick={() => setCursors((current) => current.slice(0, -1))}>
+            {t("platformAdmin.previous")}
+          </Button>
+          <Button size="sm" variant="secondary" disabled={!page.next_cursor}
+            onClick={() => setCursors((current) => [...current, page.next_cursor])}>
+            {t("platformAdmin.next")}
+          </Button>
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+function WorkspaceProfile({ id, operatorId, onClose, recheckAccess, showActivity, canArchive, showTeam }: {
+  id: string; operatorId: string; onClose: () => void; recheckAccess: () => void; showActivity: boolean; canArchive: boolean; showTeam: boolean;
 }) {
   const { t, locale } = useI18n();
   const queryClient = useQueryClient();
@@ -202,6 +254,7 @@ function WorkspaceProfile({ id, operatorId, onClose, recheckAccess, showActivity
             </dl>
             {workspace.subscription.cancel_at_period_end ? <p className="mt-4 text-sm text-[var(--warning-foreground)]">{t("platformAdmin.cancelAtEnd")}</p> : null}
           </Card>
+          {showTeam ? <WorkspaceTeam operatorId={operatorId} workspaceId={id} recheckAccess={recheckAccess} /> : null}
           {showActivity ? <PlatformActivity operatorId={operatorId} workspaceId={id} recheckAccess={recheckAccess} /> : null}
           {canArchive && (restoring || workspace.archive_allowed) ? (
             <Card className="grid gap-3">
@@ -258,7 +311,7 @@ export function PlatformDashboard({ operatorId, recheckAccess, showActivity, sho
           </section>
         ) : null}
       </div>
-      {selected ? <WorkspaceProfile key={selected} id={selected} operatorId={operatorId} onClose={closeProfile} recheckAccess={recheckAccess} showActivity={showActivity} canArchive={canArchive} /> : null}
+      {selected ? <WorkspaceProfile key={selected} id={selected} operatorId={operatorId} onClose={closeProfile} recheckAccess={recheckAccess} showActivity={showActivity} canArchive={canArchive} showTeam={showUsers} /> : null}
     </div>
   );
 }

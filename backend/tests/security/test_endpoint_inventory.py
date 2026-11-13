@@ -71,10 +71,10 @@ EXPECTED_PRIMARY_COUNTS = {
     "AUTHENTICATED_GLOBAL": 6,
     "WORKSPACE_SCOPED": 231,
     "FEATURE_GATED": 15,
-    "PLATFORM_ADMIN": 14,
+    "PLATFORM_ADMIN": 15,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 275
+EXPECTED_TOTAL_ROUTES = 276
 READ_ONLY_BODY_ROUTES = {
     ("POST", "/api/v1/platform-admin/workspaces/search"),
     ("POST", "/api/v1/platform-admin/users/search"),
@@ -311,6 +311,7 @@ def test_platform_admin_routes_require_their_own_capabilities() -> None:
         "/summary": "workspaces.read",
         "/users/search": "users.read",
         "/users/summary": "users.read",
+        "/workspaces/{workspace_id}/team": "users.read",
         "/users/{user_id}": "users.read",
         "/workspaces/{workspace_id}/archive": "workspaces.archive",
         "/workspaces/{workspace_id}/restore": "workspaces.archive",

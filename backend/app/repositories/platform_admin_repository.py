@@ -126,6 +126,18 @@ class PlatformWorkspaceRepository:
     def exists(self, workspace_id: UUID) -> bool:
         return self.db.scalar(select(Workspace.id).where(Workspace.id == workspace_id)) is not None
 
+    def list_team(self, workspace_id: UUID, after: UUID | None, limit: int):
+        statement = select(
+            User.id, User.first_name, User.last_name, Role.name.label("role"),
+            and_(User.is_active.is_(True), WorkspaceUser.is_active.is_(True)).label("is_active"),
+        ).select_from(WorkspaceUser).join(User).join(Role).where(
+            WorkspaceUser.workspace_id == workspace_id, WorkspaceUser.deleted_at.is_(None),
+            Role.name.in_((RoleName.MANAGER.value, RoleName.ANALYST.value)),
+        )
+        if after is not None:
+            statement = statement.where(User.id > after)
+        return self.db.execute(statement.order_by(User.id).limit(limit)).mappings().all()
+
     def count_active_members(self, workspace_id: UUID) -> int:
         return self.db.execute(
             select(func.count()).select_from(WorkspaceUser).join(User, User.id == WorkspaceUser.user_id).where(
@@ -169,9 +181,16 @@ class PlatformUserRepository:
             Workspace.archived_at.is_(None),
         )
 
+    @staticmethod
+    def _is_owner():
+        return select(WorkspaceUser.workspace_id).join(Role).where(
+            WorkspaceUser.user_id == User.id, WorkspaceUser.is_active.is_(True),
+            WorkspaceUser.deleted_at.is_(None), Role.name == RoleName.OWNER.value,
+        ).correlate(User).exists()
+
     def _has_workspace(self, *, demo: bool | None = None):
-        statement = select(WorkspaceUser.workspace_id).join(Workspace).where(
-            WorkspaceUser.user_id == User.id, *self._enabled_memberships(),
+        statement = select(WorkspaceUser.workspace_id).join(Workspace).join(Role).where(
+            WorkspaceUser.user_id == User.id, Role.name == RoleName.OWNER.value, *self._enabled_memberships(),
         )
         if demo is not None:
             is_demo = _is_demo_workspace()
@@ -186,13 +205,13 @@ class PlatformUserRepository:
             func.count(User.id).filter(User.is_active.is_(True)).label("enabled_accounts"),
             func.count(User.id).filter(has_demo, ~has_standard).label("demo_only_accounts"),
             func.count(User.id).filter(~self._has_workspace()).label("accounts_without_enabled_workspace"),
-        )).mappings().one()
+        ).where(self._is_owner())).mappings().one()
 
     def list_users(
         self, *, search: str | None, without_workspaces: bool, segment: PlatformUserSegment | None,
         active: bool | None, before: tuple[datetime, UUID] | None, limit: int,
     ):
-        statement = select(*self.columns)
+        statement = select(*self.columns).where(self._is_owner())
         if search:
             matches = [column.icontains(search, autoescape=True) for column in (
                 User.email, func.concat_ws(" ", User.first_name, User.last_name),
@@ -221,14 +240,13 @@ class PlatformUserRepository:
             WorkspaceUser.user_id,
             func.count().filter(~is_demo).label("standard_count"),
             func.count().filter(is_demo).label("demo_count"),
-            func.count().filter(~is_demo, Role.name == RoleName.OWNER.value).label("owned_count"),
         ).select_from(WorkspaceUser).join(Workspace).join(Role).where(
-            WorkspaceUser.user_id.in_(user_ids), *self._enabled_memberships(),
+            WorkspaceUser.user_id.in_(user_ids), Role.name == RoleName.OWNER.value, *self._enabled_memberships(),
         ).group_by(WorkspaceUser.user_id)
         return {row["user_id"]: row for row in self.db.execute(statement).mappings()}
 
     def get_user(self, user_id: UUID):
-        return self.db.execute(select(*self.columns).where(User.id == user_id)).mappings().one_or_none()
+        return self.db.execute(select(*self.columns).where(User.id == user_id, self._is_owner())).mappings().one_or_none()
 
     def list_user_workspaces(self, user_id: UUID, *, before: tuple[datetime, UUID] | None, limit: int):
         statement = select(
@@ -236,6 +254,7 @@ class PlatformUserRepository:
             Workspace.is_active, Workspace.archived_at, WorkspaceUser.created_at,
         ).select_from(WorkspaceUser).join(Workspace).join(Role).where(
             WorkspaceUser.user_id == user_id, WorkspaceUser.is_active.is_(True), WorkspaceUser.deleted_at.is_(None),
+            Role.name == RoleName.OWNER.value,
         )
         if before:
             created_at, workspace_id = before

@@ -15,7 +15,7 @@ from app.repositories.subscription_repository import SubscriptionRepository
 from app.schemas.platform_admin import (
     PlatformIdentity, PlatformSummary, PlatformUser, PlatformUserDetail, PlatformUserPage, PlatformUserSegment,
     PlatformUserSummary, PlatformUserWorkspace,
-    PlatformWorkspace, PlatformWorkspaceDetail, PlatformWorkspacePage,
+    PlatformWorkspace, PlatformWorkspaceDetail, PlatformWorkspacePage, PlatformWorkspaceTeamMember, PlatformWorkspaceTeamPage,
 )
 from app.schemas.subscription import SubscriptionDisplayStatus, SubscriptionStatusResponse
 from app.services.subscription_service import describe_subscription
@@ -111,6 +111,14 @@ class PlatformWorkspaceService:
             archive_allowed=workspace.archived_at is None and subscription is None and (demo or not workspace.is_active),
         )
 
+    def get_team(self, workspace_id: UUID, after: UUID | None) -> PlatformWorkspaceTeamPage | None:
+        if not self.workspaces.exists(workspace_id):
+            return None
+        limit = 20
+        rows = self.workspaces.list_team(workspace_id, after, limit + 1)
+        items = [PlatformWorkspaceTeamMember(**row) for row in rows[:limit]]
+        return PlatformWorkspaceTeamPage(items=items, next_cursor=items[-1].id if len(rows) > limit else None)
+
     def get_subscription(self, workspace_id: UUID) -> SubscriptionStatusResponse | None:
         if not self.workspaces.exists(workspace_id):
             return None
@@ -179,7 +187,7 @@ class PlatformUserService:
         elif counts and counts["demo_count"]:
             segment = "DEMO_ONLY"
         return PlatformUser(
-            **user, segment=segment, owned_workspace_count=counts["owned_count"] if counts else 0,
+            **user, segment=segment, owned_workspace_count=counts["standard_count"] if counts else 0,
         )
 
     def summarize(self) -> PlatformUserSummary:
@@ -190,7 +198,7 @@ class PlatformUserService:
         segment: PlatformUserSegment | None = None, active: bool | None = None,
     ) -> PlatformUserPage:
         search = (search or "").strip() or None
-        filters = ("users", search, without_workspaces)
+        filters = ("owners", search, without_workspaces)
         if segment is not None or active is not None:
             filters += (segment, active)
         before = _decode_cursor(cursor, filters) if cursor else None
@@ -207,7 +215,7 @@ class PlatformUserService:
         )
 
     def get_user(self, user_id: UUID, cursor: str | None) -> PlatformUserDetail | None:
-        filters = ("user-workspaces", str(user_id))
+        filters = ("owner-workspaces", str(user_id))
         before = _decode_cursor(cursor, filters) if cursor else None
         user = self.users.get_user(user_id)
         if user is None:

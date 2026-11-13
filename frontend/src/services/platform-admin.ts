@@ -115,6 +115,17 @@ export type PlatformUser = {
   segment: PlatformUserSegment;
 };
 
+type PlatformWorkspaceTeamPage = {
+  items: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    role: "MANAGER" | "ANALYST";
+    is_active: boolean;
+  }[];
+  next_cursor: string | null;
+};
+
 type PlatformUserDetail = PlatformUser & {
   workspaces: (Pick<PlatformWorkspace, "id" | "name" | "slug" | "is_active" | "archived_at"> & {
     role: "OWNER" | "MANAGER" | "ANALYST";
@@ -158,6 +169,10 @@ export const platformAdminApi = {
     return read<ProductUsageReport>(`${path}?days=${days}`, signal);
   },
   detail: (id: string, signal: AbortSignal) => read<PlatformWorkspaceDetail>(`workspaces/${encodeURIComponent(id)}`, signal),
+  workspaceTeam(id: string, cursor: string | null, signal: AbortSignal) {
+    const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+    return read<PlatformWorkspaceTeamPage>(`workspaces/${encodeURIComponent(id)}/team${query}`, signal);
+  },
   userSummary: (signal: AbortSignal) => read<PlatformUserSummary>("users/summary", signal),
   users(filters: PlatformUserFilters, cursor: string | null, signal: AbortSignal) {
     return apiRequest<{ items: PlatformUser[]; next_cursor: string | null }>("/platform-admin/users/search", {

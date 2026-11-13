@@ -3282,7 +3282,7 @@
     "day": "Дата (UTC)"
   },
   "platformRegistry": {
-    "users": "Користувачі",
+    "users": "Власники",
     "description": "Акаунти Sellora та магазини, до яких вони мають доступ.",
     "search": "Ім’я, email або ID",
     "load": "Показати користувачів",
@@ -3292,9 +3292,9 @@
     "created": "Акаунт створено {time}",
     "userEnabled": "Активний акаунт",
     "userDisabled": "Вимкнений акаунт",
-    "linkedWorkspaces": "Пов’язані магазини",
+    "linkedWorkspaces": "Власні магазини",
     "noLinkedWorkspaces": "Акаунт ще не має чинних зв’язків із магазинами.",
-    "empty": "Користувачів не знайдено",
+    "empty": "Власників не знайдено",
     "emptyDescription": "Змініть пошуковий запит або фільтр.",
     "pagination": "Сторінки результатів",
     "current": "Поточний реєстр",
@@ -3318,10 +3318,10 @@
       "MANAGER": "Менеджер",
       "ANALYST": "Аналітик"
     },
-    "consoleDescription": "Акаунти Sellora, їхні магазини та останні входи.",
+    "consoleDescription": "Власники Sellora, їхні магазини та останні входи. Склад команди доступний у профілі магазину.",
     "summary": "Показники акаунтів",
     "accountSegments": "Групи акаунтів",
-    "allAccounts": "Усі акаунти",
+    "allAccounts": "Усі власники",
     "account": "Акаунт",
     "accountStatus": "Стан акаунта",
     "ownedWorkspaces": "Власні магазини",
@@ -3339,10 +3339,16 @@
       "NO_ENABLED_WORKSPACE": "Без увімкнених магазинів"
     },
     "metrics": {
-      "total_accounts": "Усі акаунти",
+      "total_accounts": "Усі власники",
       "enabled_accounts": "Акаунти з доступом",
       "demo_only_accounts": "Лише демо",
       "accounts_without_enabled_workspace": "Без увімкнених магазинів"
+    },
+    "team": {
+      "title": "Команда магазину",
+      "empty": "У магазині ще немає менеджерів або аналітиків.",
+      "enabled": "Активний",
+      "disabled": "Неактивний"
     }
   }
 }
