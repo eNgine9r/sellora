@@ -9,7 +9,13 @@ root=/home/btcradar/runtime/sellora/protected-backups
 receipt="$root/.last-offhost-verified"
 key="$root/db-backup-passphrase.key"
 image=postgres:17-alpine
-expected_revision=202611120055
+expected_revision=${1:-202611120055}
+
+(( $# <= 1 )) || fail RESTORE_CHECK_USAGE
+case "$expected_revision" in
+  202611120055|202611130058) ;;
+  *) fail RESTORE_REVISION_UNSUPPORTED ;;
+esac
 
 [[ $(id -u) == 1000 && -t 0 ]] || fail OWNER_TERMINAL_REQUIRED
 [[ -d "$root" && ! -L "$root" && $(stat -c '%u:%a' "$root") == 1000:700 ]] ||
@@ -163,6 +169,16 @@ psql -XAtq -h /tmp -U postgres -d sellora_restore_check -v ON_ERROR_STOP=1 \
   -c "SELECT 1 FROM public.users LIMIT 1; SELECT 1 FROM public.workspaces LIMIT 1;
       SELECT 1 FROM public.orders LIMIT 1; SELECT 1 FROM public.workspace_subscriptions LIMIT 1;" \
   > /dev/null 2>&1 || { echo RESTORED_SCHEMA_SMOKE_FAILED >&2; exit 1; }
+if [ "$EXPECTED_REVISION" = 202611130058 ]; then
+  psql -XAtq -h /tmp -U postgres -d sellora_restore_check -v ON_ERROR_STOP=1 \
+    -c "SELECT 1 FROM public.platform_operator_grants LIMIT 1;
+        SELECT 1 FROM public.platform_operator_mfa LIMIT 1;
+        SELECT 1 FROM public.platform_audit_events LIMIT 1;
+        SELECT 1 FROM public.product_usage_events LIMIT 1;
+        SELECT 1 FROM public.product_usage_daily LIMIT 1;" \
+    > /dev/null 2>&1 || { echo RESTORED_PLATFORM_SCHEMA_SMOKE_FAILED >&2; exit 1; }
+  printf "restored_platform_schema_smoke=PASS\n"
+fi
 printf "restored_revision=%s\nrestored_schema_smoke=PASS\n" "$revision"
 '
 
