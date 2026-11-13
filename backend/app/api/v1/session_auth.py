@@ -102,14 +102,11 @@ def session_login(
             detail="Too many sign-in attempts",
             headers={"Retry-After": str(exc.retry_after_seconds)},
         ) from exc
-    authenticated = AuthService(db).authenticate(payload.email, payload.password)
-    if authenticated is None:
+    user = AuthService(db).authenticate_user(payload.email, payload.password)
+    if user is None:
         guard.failed(payload.email)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     guard.succeeded(payload.email)
-    user = AuthService(db).users.get_by_email(payload.email)
-    if user is None or not user.is_active:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     issued = SessionAuthenticationService(db).create(user.id, authenticated_with_password=True)
     _set_cookie(response, issued)
     return SessionAccessResponse(access_token=issued.access_token)

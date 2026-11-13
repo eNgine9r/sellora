@@ -21,6 +21,13 @@ class UserRepository:
         stmt = select(User).where(User.id == user_id).options(selectinload(User.workspaces).selectinload(WorkspaceUser.role), selectinload(User.workspaces).selectinload(WorkspaceUser.workspace))
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def get_for_sign_in(self, email: str) -> User | None:
+        exact = self.get_by_email(email)
+        if exact is not None:
+            return exact
+        matches = self.db.scalars(select(User).where(func.lower(User.email) == email.lower()).limit(2)).all()
+        return matches[0] if len(matches) == 1 else None
+
     def email_exists(self, email: str) -> bool:
         return self.db.scalar(select(User.id).where(func.lower(User.email) == email).limit(1)) is not None
 

@@ -151,7 +151,9 @@ def test_email_code_signup_and_facebook_verification(auth, monkeypatch, social):
     if social:
         assert complete(client, "facebook", start(client, "facebook", "login")).headers["Location"].endswith("/dashboard")
     else:
-        assert client.post("/api/v1/auth/session/login", headers=HEADERS, json={"email": email, "password": PASSWORD}).status_code == 200
+        mixed_case_email = "New" + email[3:]
+        assert client.post("/api/v1/auth/session/login", headers=HEADERS,
+                           json={"email": mixed_case_email, "password": PASSWORD}).status_code == 200
     assert me(client).json()["id"] == account["id"]
 
 
