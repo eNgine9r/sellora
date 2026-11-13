@@ -1,16 +1,19 @@
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_, select, text
+from sqlalchemy import and_, case, func, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog
 from app.models.platform_admin import PlatformAuditEvent, PlatformGrant
+from app.models.role import Role, RoleName
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.models.workspace_subscription import SubscriptionStatus, WorkspaceSubscription
 from app.models.workspace_user import WorkspaceUser
 from app.repositories.audit_log_repository import DEMO_WORKSPACE_CREATE_ACTION
+from app.schemas.platform_admin import PlatformUserSegment
+from app.schemas.subscription import SubscriptionDisplayStatus
 
 
 class PlatformGrantRepository:
@@ -48,27 +51,28 @@ class PlatformAuditRepository:
         return self.db.scalar(statement) is not None
 
 
+def _is_demo_workspace():
+    return select(AuditLog.id).where(
+        AuditLog.workspace_id == Workspace.id,
+        AuditLog.entity_type == "Workspace",
+        AuditLog.entity_id == func.cast(Workspace.id, AuditLog.entity_id.type),
+        AuditLog.action == DEMO_WORKSPACE_CREATE_ACTION,
+    ).correlate(Workspace).exists()
+
+
 class PlatformWorkspaceRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    @staticmethod
-    def _is_demo():
-        return select(AuditLog.id).where(
-            AuditLog.workspace_id == Workspace.id,
-            AuditLog.entity_type == "Workspace",
-            AuditLog.entity_id == func.cast(Workspace.id, AuditLog.entity_id.type),
-            AuditLog.action == DEMO_WORKSPACE_CREATE_ACTION,
-        ).exists()
-
     def _with_subscription(self):
-        return select(Workspace, self._is_demo().label("is_demo"), WorkspaceSubscription).outerjoin(
+        return select(Workspace, _is_demo_workspace().label("is_demo"), WorkspaceSubscription).outerjoin(
             WorkspaceSubscription, WorkspaceSubscription.workspace_id == Workspace.id
         )
 
     def list_workspaces(
         self, *, search: str | None, active: bool | None, demo: bool | None,
         before: tuple[datetime, UUID] | None, limit: int,
+        subscription_status: SubscriptionDisplayStatus | None, now: datetime, archived: bool | None,
     ):
         statement = self._with_subscription()
         if search:
@@ -81,7 +85,20 @@ class PlatformWorkspaceRepository:
         if active is not None:
             statement = statement.where(Workspace.is_active == active)
         if demo is not None:
-            statement = statement.where(self._is_demo() if demo else ~self._is_demo())
+            statement = statement.where(_is_demo_workspace() if demo else ~_is_demo_workspace())
+        if archived is not None:
+            statement = statement.where(Workspace.archived_at.is_not(None) if archived else Workspace.archived_at.is_(None))
+        if subscription_status is not None:
+            subscription = WorkspaceSubscription
+            # Match describe_subscription at the same instant used to project the results.
+            has_term = subscription.status.in_((SubscriptionStatus.ACTIVE.value, SubscriptionStatus.TRIALING.value))
+            display_status = case(
+                (subscription.workspace_id.is_(None), SubscriptionDisplayStatus.UNMANAGED.value),
+                (and_(has_term, subscription.current_period_start > now), SubscriptionDisplayStatus.PENDING.value),
+                (and_(has_term, subscription.current_period_end <= now), SubscriptionDisplayStatus.EXPIRED.value),
+                else_=subscription.status,
+            )
+            statement = statement.where(display_status == subscription_status.value)
         if before:
             created_at, workspace_id = before
             statement = statement.where(or_(
@@ -94,6 +111,17 @@ class PlatformWorkspaceRepository:
 
     def get_workspace(self, workspace_id: UUID):
         return self.db.execute(self._with_subscription().where(Workspace.id == workspace_id)).one_or_none()
+
+    def lock_workspace(self, workspace_id: UUID) -> Workspace | None:
+        return self.db.scalar(select(Workspace).where(Workspace.id == workspace_id).with_for_update())
+
+    def archive_facts(self, workspace_id: UUID) -> tuple[bool, bool]:
+        statement = select(
+            _is_demo_workspace(),
+            select(WorkspaceSubscription.workspace_id).where(WorkspaceSubscription.workspace_id == Workspace.id).exists(),
+        ).where(Workspace.id == workspace_id)
+        demo, has_subscription = self.db.execute(statement).one()
+        return demo, has_subscription
 
     def exists(self, workspace_id: UUID) -> bool:
         return self.db.scalar(select(Workspace.id).where(Workspace.id == workspace_id)) is not None
@@ -114,11 +142,105 @@ class PlatformWorkspaceRepository:
             WorkspaceSubscription.current_period_start <= now,
             WorkspaceSubscription.current_period_end > now,
         )
+        visible = Workspace.archived_at.is_(None)
         return self.db.execute(select(
-            func.count(Workspace.id).label("total_workspaces"),
-            func.count(Workspace.id).filter(Workspace.is_active).label("enabled_workspaces"),
-            func.count(Workspace.id).filter(self._is_demo()).label("demo_workspaces"),
-            func.count(Workspace.id).filter(current_term).label("workspaces_with_current_term"),
+            func.count(Workspace.id).filter(visible).label("total_workspaces"),
+            func.count(Workspace.id).filter(visible, Workspace.is_active).label("enabled_workspaces"),
+            func.count(Workspace.id).filter(visible, _is_demo_workspace()).label("demo_workspaces"),
+            func.count(Workspace.id).filter(visible, current_term).label("workspaces_with_current_term"),
+            func.count(Workspace.id).filter(Workspace.archived_at.is_not(None)).label("archived_workspaces"),
         ).select_from(Workspace).outerjoin(
             WorkspaceSubscription, WorkspaceSubscription.workspace_id == Workspace.id
         )).mappings().one()
+
+
+class PlatformUserRepository:
+    columns = (User.id, User.email, User.first_name, User.last_name, User.is_active, User.created_at, User.last_login_at)
+
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    @staticmethod
+    def _enabled_memberships():
+        return (
+            WorkspaceUser.is_active.is_(True),
+            WorkspaceUser.deleted_at.is_(None),
+            Workspace.is_active.is_(True),
+            Workspace.archived_at.is_(None),
+        )
+
+    def _has_workspace(self, *, demo: bool | None = None):
+        statement = select(WorkspaceUser.workspace_id).join(Workspace).where(
+            WorkspaceUser.user_id == User.id, *self._enabled_memberships(),
+        )
+        if demo is not None:
+            is_demo = _is_demo_workspace()
+            statement = statement.where(is_demo if demo else ~is_demo)
+        return statement.correlate(User).exists()
+
+    def summarize(self):
+        has_standard = self._has_workspace(demo=False)
+        has_demo = self._has_workspace(demo=True)
+        return self.db.execute(select(
+            func.count(User.id).label("total_accounts"),
+            func.count(User.id).filter(User.is_active.is_(True)).label("enabled_accounts"),
+            func.count(User.id).filter(has_demo, ~has_standard).label("demo_only_accounts"),
+            func.count(User.id).filter(~self._has_workspace()).label("accounts_without_enabled_workspace"),
+        )).mappings().one()
+
+    def list_users(
+        self, *, search: str | None, without_workspaces: bool, segment: PlatformUserSegment | None,
+        active: bool | None, before: tuple[datetime, UUID] | None, limit: int,
+    ):
+        statement = select(*self.columns)
+        if search:
+            matches = [column.icontains(search, autoescape=True) for column in (
+                User.email, func.concat_ws(" ", User.first_name, User.last_name),
+            )]
+            try:
+                matches.append(User.id == UUID(search))
+            except ValueError:
+                pass
+            statement = statement.where(or_(*matches))
+        if active is not None:
+            statement = statement.where(User.is_active.is_(active))
+        if without_workspaces or segment == "NO_ENABLED_WORKSPACE":
+            statement = statement.where(~self._has_workspace())
+        if segment == "STANDARD":
+            statement = statement.where(self._has_workspace(demo=False))
+        elif segment == "DEMO_ONLY":
+            statement = statement.where(self._has_workspace(demo=True), ~self._has_workspace(demo=False))
+        if before:
+            created_at, user_id = before
+            statement = statement.where(or_(User.created_at < created_at, and_(User.created_at == created_at, User.id < user_id)))
+        return self.db.execute(statement.order_by(User.created_at.desc(), User.id.desc()).limit(limit)).mappings().all()
+
+    def workspace_counts(self, user_ids: list[UUID]):
+        is_demo = _is_demo_workspace()
+        statement = select(
+            WorkspaceUser.user_id,
+            func.count().filter(~is_demo).label("standard_count"),
+            func.count().filter(is_demo).label("demo_count"),
+            func.count().filter(~is_demo, Role.name == RoleName.OWNER.value).label("owned_count"),
+        ).select_from(WorkspaceUser).join(Workspace).join(Role).where(
+            WorkspaceUser.user_id.in_(user_ids), *self._enabled_memberships(),
+        ).group_by(WorkspaceUser.user_id)
+        return {row["user_id"]: row for row in self.db.execute(statement).mappings()}
+
+    def get_user(self, user_id: UUID):
+        return self.db.execute(select(*self.columns).where(User.id == user_id)).mappings().one_or_none()
+
+    def list_user_workspaces(self, user_id: UUID, *, before: tuple[datetime, UUID] | None, limit: int):
+        statement = select(
+            Workspace.id, Workspace.name, Workspace.slug, Role.name.label("role"),
+            Workspace.is_active, Workspace.archived_at, WorkspaceUser.created_at,
+        ).select_from(WorkspaceUser).join(Workspace).join(Role).where(
+            WorkspaceUser.user_id == user_id, WorkspaceUser.is_active.is_(True), WorkspaceUser.deleted_at.is_(None),
+        )
+        if before:
+            created_at, workspace_id = before
+            statement = statement.where(or_(
+                WorkspaceUser.created_at < created_at,
+                and_(WorkspaceUser.created_at == created_at, Workspace.id < workspace_id),
+            ))
+        return self.db.execute(statement.order_by(WorkspaceUser.created_at.desc(), Workspace.id.desc()).limit(limit)).mappings().all()

@@ -3150,13 +3150,14 @@
   "platformAdmin": {
     "name": "Platform Admin",
     "title": "Керування платформою",
-    "description": "Магазини Sellora, стан їхніх підписок і склад команд.",
+    "description": "Стан магазинів, підписок і використання Sellora.",
     "signInTitle": "Вхід до Platform Admin",
     "signInDescription": "Увійдіть з паролем облікового запису оператора Sellora.",
     "signInError": "Не вдалося увійти. Перевірте дані та повторіть спробу.",
     "mfaTitle": "Підтвердження входу",
     "mfaDescription": "Введіть шестизначний код із застосунку-автентифікатора для доступу до Platform Admin.",
     "mfaCode": "Код підтвердження",
+    "mfaCodeHint": "Можна вставити всі шість цифр одразу.",
     "mfaVerify": "Підтвердити",
     "mfaInvalid": "Код недійсний або вже використаний. Спробуйте новий код.",
     "mfaRateLimited": "Забагато спроб. Зачекайте до п’яти хвилин і повторіть.",
@@ -3170,7 +3171,7 @@
     "directory": "Реєстр магазинів",
     "loadingDirectory": "Завантажуємо магазини…",
     "search": "Пошук",
-    "searchPlaceholder": "Назва, slug або ID",
+    "searchPlaceholder": "Назва, адреса або ID",
     "workspace": "Магазин",
     "workspaceStatus": "Стан магазину",
     "workspaceType": "Тип магазину",
@@ -3211,7 +3212,7 @@
     "metrics": {
       "total_workspaces": "Усі магазини",
       "enabled_workspaces": "Увімкнені магазини",
-      "workspaces_with_current_term": "Магазини з чинною підпискою",
+      "workspaces_with_current_term": "Чинні підписки й пробні періоди",
       "demo_workspaces": "Демо-магазини"
     },
     "subscriptionStatus": {
@@ -3240,7 +3241,19 @@
         "title": "Магазин не знайдено",
         "description": "Закрийте профіль і оновіть реєстр."
       }
-    }
+    },
+    "sections": "Розділи панелі",
+    "overviewNav": "Огляд",
+    "directoryNav": "Магазини",
+    "activityNav": "Активність",
+    "openDirectory": "До реєстру магазинів",
+    "directoryDescription": "Пошук за назвою, ідентифікатором або короткою адресою магазину.",
+    "visibleRows": "На сторінці: {count}",
+    "subscriptionFilter": "Статус підписки",
+    "created": "Створено",
+    "createdUtc": "Створено (UTC)",
+    "workspaceId": "ID магазину",
+    "workspaceInfo": "Про магазин"
   },
   "platformActivity": {
     "title": "Активність у Sellora",
@@ -3261,6 +3274,75 @@
       "first_orders": "Перші замовлення",
       "orders_created": "Створені замовлення",
       "integration_days": "Дні використання інтеграцій"
+    },
+    "dailyOrders": "Замовлення за днями",
+    "dailyOrdersDescription": "Нові замовлення за UTC-добу. Історичний імпорт виключено.",
+    "dailyValue": "{day} · {count}",
+    "dailyTable": "Переглянути значення за днями",
+    "day": "Дата (UTC)"
+  },
+  "platformRegistry": {
+    "users": "Користувачі",
+    "description": "Акаунти Sellora та магазини, до яких вони мають доступ.",
+    "search": "Ім’я, email або ID",
+    "load": "Показати користувачів",
+    "withoutWorkspaces": "Без увімкнених магазинів",
+    "profile": "Профіль користувача",
+    "openUser": "Відкрити профіль {name}",
+    "created": "Акаунт створено {time}",
+    "userEnabled": "Активний акаунт",
+    "userDisabled": "Вимкнений акаунт",
+    "linkedWorkspaces": "Пов’язані магазини",
+    "noLinkedWorkspaces": "Акаунт ще не має чинних зв’язків із магазинами.",
+    "empty": "Користувачів не знайдено",
+    "emptyDescription": "Змініть пошуковий запит або фільтр.",
+    "pagination": "Сторінки результатів",
+    "current": "Поточний реєстр",
+    "archiveTab": "Архів",
+    "archived": "В архіві",
+    "archiveEmpty": "Архів порожній",
+    "archiveEmptyDescription": "Архівовані магазини з’являться тут.",
+    "lifecycle": "Архів магазину",
+    "archive": "Архівувати магазин",
+    "restore": "Відновити з архіву",
+    "archiveDescription": "Магазин зникне з поточного реєстру. Дані та зв’язки з акаунтами збережуться. Якщо магазин увімкнений, доступ до нього в CRM буде вимкнено.",
+    "restoreDescription": "Магазин повернеться до поточного реєстру зі станом доступу, який мав до архівації.",
+    "archiveConflict": "Магазин більше не відповідає умовам архівації. Закрийте профіль і перевірте його стан.",
+    "archiveError": "Не вдалося змінити стан архіву. Спробуйте ще раз.",
+    "confirm": {
+      "archive": "Підтвердити архівацію",
+      "restore": "Підтвердити відновлення"
+    },
+    "roles": {
+      "OWNER": "Власник",
+      "MANAGER": "Менеджер",
+      "ANALYST": "Аналітик"
+    },
+    "consoleDescription": "Акаунти Sellora, їхні магазини та останні входи.",
+    "summary": "Показники акаунтів",
+    "accountSegments": "Групи акаунтів",
+    "allAccounts": "Усі акаунти",
+    "account": "Акаунт",
+    "accountStatus": "Стан акаунта",
+    "ownedWorkspaces": "Власні магазини",
+    "lastLogin": "Останній вхід",
+    "noLogin": "Вхід не зафіксовано",
+    "createdColumn": "Акаунт створено",
+    "accountId": "ID акаунта",
+    "accountBilling": "Підписка акаунта",
+    "billingUnavailable": "Оплати та ліміти на рівні акаунта ще не підключені.",
+    "find": "Знайти",
+    "loading": "Завантажуємо акаунти…",
+    "segments": {
+      "STANDARD": "Зі звичайним магазином",
+      "DEMO_ONLY": "Лише демо",
+      "NO_ENABLED_WORKSPACE": "Без увімкнених магазинів"
+    },
+    "metrics": {
+      "total_accounts": "Усі акаунти",
+      "enabled_accounts": "Акаунти з доступом",
+      "demo_only_accounts": "Лише демо",
+      "accounts_without_enabled_workspace": "Без увімкнених магазинів"
     }
   }
 }

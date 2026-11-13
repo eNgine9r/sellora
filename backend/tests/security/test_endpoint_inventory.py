@@ -71,12 +71,15 @@ EXPECTED_PRIMARY_COUNTS = {
     "AUTHENTICATED_GLOBAL": 6,
     "WORKSPACE_SCOPED": 231,
     "FEATURE_GATED": 15,
-    "PLATFORM_ADMIN": 9,
+    "PLATFORM_ADMIN": 14,
     "INTERNAL_OR_DOCUMENTATION": 0,
 }
-EXPECTED_TOTAL_ROUTES = 270
-READ_ONLY_BODY_ROUTES = {("POST", "/api/v1/platform-admin/workspaces/search")}
-EXPECTED_MUTATION_ROUTES = 148
+EXPECTED_TOTAL_ROUTES = 275
+READ_ONLY_BODY_ROUTES = {
+    ("POST", "/api/v1/platform-admin/workspaces/search"),
+    ("POST", "/api/v1/platform-admin/users/search"),
+}
+EXPECTED_MUTATION_ROUTES = 150
 
 EXPECTED_CANONICAL_FULFILLMENT_ROUTES = {
     ("POST", "/api/v1/order-fulfillments"),
@@ -306,6 +309,11 @@ def test_platform_admin_routes_require_their_own_capabilities() -> None:
     expected = {
         "/me": "platform.access",
         "/summary": "workspaces.read",
+        "/users/search": "users.read",
+        "/users/summary": "users.read",
+        "/users/{user_id}": "users.read",
+        "/workspaces/{workspace_id}/archive": "workspaces.archive",
+        "/workspaces/{workspace_id}/restore": "workspaces.archive",
         "/activity/summary": "activity.read",
         "/workspaces/{workspace_id}/activity": "activity.read",
         "/workspaces": "workspaces.read",
@@ -319,6 +327,7 @@ def test_platform_admin_routes_require_their_own_capabilities() -> None:
     assert challenge.methods == {"POST"}
     assert require_platform_mfa_challenge in {item.call for item in challenge.dependant.dependencies}
     assert routes.keys() == expected.keys()
+    post_routes = {"/workspaces/search", "/users/search", "/workspaces/{workspace_id}/archive", "/workspaces/{workspace_id}/restore"}
     for path, route in routes.items():
-        assert route.methods == ({"POST"} if path == "/workspaces/search" else {"GET"})
+        assert route.methods == ({"POST"} if path in post_routes else {"GET"})
         assert expected[path] in {getattr(item.call, "platform_capability", None) for item in route.dependant.dependencies}

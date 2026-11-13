@@ -22,19 +22,28 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
       directoryRequests.push({ method: request.method(), search: url.search, body: request.postData() });
     }
   });
-  const summaryResponse = page.waitForResponse((response) => new URL(response.url()).pathname === `${prefix}/summary` && response.ok());
   await signIn(page, "admin");
-  const summary = await (await summaryResponse).json();
-  await expect(page.getByRole("heading", { name: "Керування платформою" })).toBeVisible();
-  await expect(page.getByTestId("total_workspaces")).toHaveText(String(summary.total_workspaces));
-  await expect(page.getByTestId("workspaces_with_current_term")).toHaveText(String(summary.workspaces_with_current_term));
-  expect(summary.workspaces_with_current_term).toBeGreaterThan(0);
+  const navigation = page.getByRole("navigation", { name: "Розділи панелі" });
+  await expect(page.getByRole("heading", { name: "Користувачі" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Користувачі" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("heading", { name: "Реєстр магазинів" })).toHaveCount(0);
+  await navigation.getByRole("link", { name: "Активність" }).click();
+  await expect(page).toHaveURL(/#platform-activity$/);
   const activityOrders = page.getByTestId("activity-orders_created");
   await expect(activityOrders).toHaveText("1");
   await page.getByRole("button", { name: "30 днів", exact: true }).click();
   await expect(activityOrders).toHaveText("2");
   await expect(page.getByRole("button", { name: "30 днів", exact: true })).toHaveAttribute("aria-pressed", "true");
-
+  await page.getByText("Переглянути значення за днями").click();
+  await expect(page.getByRole("table", { name: "Замовлення за днями" }).getByRole("row")).toHaveCount(31);
+  await page.getByText("Переглянути значення за днями").click();
+  const summaryResponse = page.waitForResponse((response) => new URL(response.url()).pathname === `${prefix}/summary` && response.ok());
+  await navigation.getByRole("link", { name: "Магазини" }).click();
+  await expect(page).toHaveURL(/#platform-directory$/);
+  const summary = await (await summaryResponse).json();
+  await expect(page.getByTestId("total_workspaces")).toHaveText(String(summary.total_workspaces));
+  await expect(page.getByTestId("workspaces_with_current_term")).toHaveText(String(summary.workspaces_with_current_term));
+  expect(summary.workspaces_with_current_term).toBeGreaterThan(0);
 
   await page.getByRole("textbox", { name: "Пошук" }).fill("QA Platform Shop");
   await page.getByRole("button", { name: "Застосувати" }).click();
@@ -61,6 +70,12 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
   await expect(profile).toHaveCount(0);
   await expect(row).toBeFocused();
 
+  await page.getByLabel("Статус підписки").selectOption("ACTIVE");
+  await page.getByRole("button", { name: "Застосувати" }).click();
+  await expect(page.getByText("На сторінці: 1", { exact: true })).toBeVisible();
+  await expect(row).toBeVisible();
+  await expect(page.getByRole("button", { name: "Далі", exact: true })).toHaveCount(0);
+  await page.getByLabel("Статус підписки").selectOption("");
   await page.getByLabel("Тип магазину").selectOption("true");
   await page.getByRole("button", { name: "Застосувати" }).click();
   await expect(page.getByRole("button", { name: "Відкрити магазин QA Platform Shop 01" })).toBeVisible();
@@ -83,6 +98,7 @@ test("admin views real metrics, filters, pages and opens a workspace profile", a
   expect(directoryRequests.every(({ method, search }) => method === "POST" && search === "")).toBe(true);
   expect(directoryRequests.some(({ body }) => body && JSON.parse(body).q === "QA Platform Shop")).toBe(true);
   expect(directoryRequests.some(({ body }) => body && JSON.parse(body).cursor)).toBe(true);
+  expect(directoryRequests.some(({ body }) => body && JSON.parse(body).subscription_status === "ACTIVE")).toBe(true);
   const authorization = platformHeaders.find((headers) => headers.authorization)?.authorization;
   expect(authorization).toBeTruthy();
   const legacyAlias = await page.request.get(`${prefix}/workspaces/`, {
@@ -111,5 +127,110 @@ test("a tenant owner is denied through the direct URL and never loads platform d
   await denied;
   await expect(page.getByRole("heading", { name: "Доступ заборонено" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Реєстр магазинів" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Користувачі" })).toHaveCount(0);
   expect(paths).toEqual([`${prefix}/me`]);
+});
+
+test("admin finds a Sellora account and can archive and restore an eligible workspace", async ({ page, isMobile }, testInfo) => {
+  await signIn(page, "admin");
+  const sections = page.getByRole("navigation", { name: "Розділи панелі" });
+  const users = page.getByRole("region", { name: "Користувачі" });
+  await expect(users.getByRole("group", { name: "Показники акаунтів" })).toBeVisible();
+  await expect(isMobile ? users.getByRole("list", { name: "Користувачі" }) : users.getByRole("table", { name: "Користувачі" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("platform-users.png") });
+  await users.getByRole("button", { name: "Лише демо", exact: true }).click();
+  await expect(users.getByRole("heading", { name: "Користувачів не знайдено" })).toBeVisible();
+  await users.getByRole("button", { name: "Зі звичайним магазином", exact: true }).click();
+  await users.getByRole("textbox", { name: "Ім’я, email або ID" }).fill("qa-platform-owner@example.com");
+  await users.getByRole("button", { name: "Знайти", exact: true }).click();
+  await page.getByRole("button", { name: "Відкрити профіль QA Owner" }).click();
+  const user = page.getByRole("dialog", { name: "QA Owner" });
+  await expect(user.getByText("QA Platform Shop 22")).toBeVisible();
+  await expect(user.getByText("Оплати та ліміти на рівні акаунта ще не підключені.")).toBeVisible();
+  await expect(user.getByText("Власник", { exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("platform-user-profile.png") });
+  await user.getByRole("button", { name: "Деталі", exact: true }).click();
+  const paid = page.getByRole("dialog", { name: "QA Platform Shop 22" });
+  await expect(paid.getByText("qa-pilot")).toBeVisible();
+  await expect(paid.getByRole("button", { name: "Архівувати магазин" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  await sections.getByRole("link", { name: "Магазини" }).click();
+  await page.getByRole("textbox", { name: "Пошук", exact: true }).fill("QA Platform Shop 01");
+  const directory = page.getByRole("region", { name: "Реєстр магазинів" });
+  await directory.getByRole("button", { name: "Застосувати" }).click();
+  const open = directory.getByRole("button", { name: "Відкрити магазин QA Platform Shop 01" });
+  await open.click();
+  const demo = page.getByRole("dialog", { name: "QA Platform Shop 01" });
+  await demo.getByRole("button", { name: "Архівувати магазин" }).click();
+  await demo.getByRole("button", { name: "Підтвердити архівацію" }).click();
+  await expect(demo.getByRole("button", { name: "Відновити з архіву" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(open).toHaveCount(0);
+  await directory.getByRole("button", { name: /^Архів/ }).click();
+  await open.click();
+  await demo.getByRole("button", { name: "Відновити з архіву" }).click();
+  await demo.getByRole("button", { name: "Підтвердити відновлення" }).click();
+  await expect(demo.getByRole("button", { name: "Архівувати магазин" })).toBeVisible();
+  await expect(demo.getByText("Вимкнений", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(open).toHaveCount(0);
+  await directory.getByRole("button", { name: "Поточний реєстр" }).click();
+  await expect(open).toBeVisible();
+});
+
+test("MFA uses six slots with native editing, paste, validation and retry", async ({ page }, testInfo) => {
+  // Keep sign-in and post-verification page data real. Stub the challenge response
+  // so browser tests can cover form behavior without depending on a TOTP time window.
+  let verified = false;
+  const submissions: string[] = [];
+  await page.route((url) => url.pathname === `${prefix}/me`, async (route) => {
+    if (verified) return route.continue();
+    await route.fulfill({ status: 403, json: { detail: "PLATFORM_MFA_REQUIRED" } });
+  });
+  await page.route((url) => url.pathname === `${prefix}/mfa/verify`, async (route) => {
+    submissions.push(route.request().postDataJSON().code);
+    verified = submissions.length === 2;
+    await route.fulfill(verified
+      ? { json: { proof: "synthetic-browser-proof" } }
+      : { status: 403, json: { detail: "PLATFORM_MFA_INVALID_CODE" } });
+  });
+
+  await signIn(page, "admin");
+  await expect(page.getByRole("heading", { name: "Підтвердження входу" })).toBeVisible();
+  const input = page.getByRole("textbox", { name: "Код підтвердження" });
+  const slots = page.getByTestId("platform-mfa-slots");
+  const submit = page.getByRole("button", { name: "Підтвердити", exact: true });
+  await expect(slots.locator(":scope > span")).toHaveCount(6);
+  await expect(input).toBeFocused();
+  await expect(input).toHaveAttribute("autocomplete", "one-time-code");
+  await expect(input).toHaveAttribute("inputmode", "numeric");
+  await expect(submit).toBeDisabled();
+  await page.screenshot({ path: testInfo.outputPath("platform-mfa.png") });
+
+  await input.pressSequentially("0a12345");
+  await expect(input).toHaveValue("012345");
+  await expect(slots).toHaveText("012345");
+  await input.press("ArrowLeft");
+  await input.press("Backspace");
+  await expect(input).toHaveValue("01235");
+  await expect(submit).toBeDisabled();
+  expect(submissions).toEqual([]);
+  await input.press("4");
+  await expect(input).toHaveValue("012345");
+  await input.press("Enter");
+  const codeError = page.getByRole("alert").filter({ hasText: "Код недійсний або вже використаний. Спробуйте новий код." });
+  await expect(codeError).toBeVisible();
+  await expect(input).toHaveValue("");
+  await expect(input).toBeFocused();
+
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.evaluate(() => navigator.clipboard.writeText("056 789"));
+  await input.press("Control+v");
+  await expect(input).toHaveValue("056789");
+  await expect(slots).toHaveText("056789");
+  await expect(codeError).toHaveCount(0);
+  await submit.click();
+  await expect(page.getByRole("heading", { name: "Користувачі" })).toBeVisible();
+  expect(submissions).toEqual(["012345", "056789"]);
 });

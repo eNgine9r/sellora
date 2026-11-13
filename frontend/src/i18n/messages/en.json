@@ -3150,13 +3150,14 @@
   "platformAdmin": {
     "name": "Platform Admin",
     "title": "Platform administration",
-    "description": "Sellora workspaces, subscriptions and team sizes.",
+    "description": "Workspace, subscription, and Sellora usage at a glance.",
     "signInTitle": "Sign in to Platform Admin",
     "signInDescription": "Use the password for your Sellora operator account.",
     "signInError": "Sign-in failed. Check your credentials and try again.",
     "mfaTitle": "Verify your sign-in",
     "mfaDescription": "Enter the six-digit code from your authenticator app to access Platform Admin.",
     "mfaCode": "Verification code",
+    "mfaCodeHint": "You can paste all six digits at once.",
     "mfaVerify": "Verify",
     "mfaInvalid": "This code is invalid or has already been used. Try a new code.",
     "mfaRateLimited": "Too many attempts. Wait up to five minutes and try again.",
@@ -3170,7 +3171,7 @@
     "directory": "Workspace directory",
     "loadingDirectory": "Loading workspaces…",
     "search": "Search",
-    "searchPlaceholder": "Name, slug or ID",
+    "searchPlaceholder": "Name, slug, or ID",
     "workspace": "Workspace",
     "workspaceStatus": "Workspace state",
     "workspaceType": "Workspace type",
@@ -3211,7 +3212,7 @@
     "metrics": {
       "total_workspaces": "All workspaces",
       "enabled_workspaces": "Enabled workspaces",
-      "workspaces_with_current_term": "Workspaces with a current term",
+      "workspaces_with_current_term": "Current subscriptions and trials",
       "demo_workspaces": "Demo workspaces"
     },
     "subscriptionStatus": {
@@ -3240,7 +3241,19 @@
         "title": "Workspace not found",
         "description": "Close the profile and refresh the directory."
       }
-    }
+    },
+    "sections": "Admin sections",
+    "overviewNav": "Overview",
+    "directoryNav": "Workspaces",
+    "activityNav": "Activity",
+    "openDirectory": "Browse workspaces",
+    "directoryDescription": "Search by workspace name, slug, or ID.",
+    "visibleRows": "On this page: {count}",
+    "subscriptionFilter": "Subscription status",
+    "created": "Created",
+    "createdUtc": "Created (UTC)",
+    "workspaceId": "Workspace ID",
+    "workspaceInfo": "About the workspace"
   },
   "platformActivity": {
     "title": "Sellora usage",
@@ -3261,6 +3274,75 @@
       "first_orders": "First orders",
       "orders_created": "Orders created",
       "integration_days": "Integration usage days"
+    },
+    "dailyOrders": "Orders by day",
+    "dailyOrdersDescription": "New orders by UTC day. Historical imports are excluded.",
+    "dailyValue": "{day} · {count}",
+    "dailyTable": "View daily values",
+    "day": "Date (UTC)"
+  },
+  "platformRegistry": {
+    "users": "Users",
+    "description": "Sellora accounts and the workspaces they belong to.",
+    "search": "Name, email, or ID",
+    "load": "Show users",
+    "withoutWorkspaces": "Without enabled workspaces",
+    "profile": "User profile",
+    "openUser": "Open profile for {name}",
+    "created": "Account created {time}",
+    "userEnabled": "Enabled account",
+    "userDisabled": "Disabled account",
+    "linkedWorkspaces": "Linked workspaces",
+    "noLinkedWorkspaces": "This account has no current workspace memberships.",
+    "empty": "No users found",
+    "emptyDescription": "Change your search or filter.",
+    "pagination": "Result pages",
+    "current": "Current registry",
+    "archiveTab": "Archive",
+    "archived": "Archived",
+    "archiveEmpty": "Archive is empty",
+    "archiveEmptyDescription": "Archived workspaces will appear here.",
+    "lifecycle": "Workspace archive",
+    "archive": "Archive workspace",
+    "restore": "Restore from archive",
+    "archiveDescription": "The workspace will leave the current registry. Data and account links will be preserved. CRM access will be disabled if the workspace is enabled.",
+    "restoreDescription": "The workspace will return to the current registry with its pre-archive access state.",
+    "archiveConflict": "The workspace no longer qualifies for archival. Close the profile and check its current state.",
+    "archiveError": "Could not change the archive state. Try again.",
+    "confirm": {
+      "archive": "Confirm archive",
+      "restore": "Confirm restore"
+    },
+    "roles": {
+      "OWNER": "Owner",
+      "MANAGER": "Manager",
+      "ANALYST": "Analyst"
+    },
+    "consoleDescription": "Sellora accounts, their workspaces, and recent sign-ins.",
+    "summary": "Account overview",
+    "accountSegments": "Account segments",
+    "allAccounts": "All accounts",
+    "account": "Account",
+    "accountStatus": "Account status",
+    "ownedWorkspaces": "Owned stores",
+    "lastLogin": "Last sign-in",
+    "noLogin": "No sign-in recorded",
+    "createdColumn": "Account created",
+    "accountId": "Account ID",
+    "accountBilling": "Account subscription",
+    "billingUnavailable": "Account-level payments and limits are not connected yet.",
+    "find": "Search",
+    "loading": "Loading accounts…",
+    "segments": {
+      "STANDARD": "With a standard store",
+      "DEMO_ONLY": "Demo only",
+      "NO_ENABLED_WORKSPACE": "Without enabled stores"
+    },
+    "metrics": {
+      "total_accounts": "Total accounts",
+      "enabled_accounts": "Enabled accounts",
+      "demo_only_accounts": "Demo only",
+      "accounts_without_enabled_workspace": "Without enabled stores"
     }
   }
 }

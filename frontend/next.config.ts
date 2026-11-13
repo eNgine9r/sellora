@@ -34,14 +34,14 @@ const upstreamConfig: NextConfig = upstream
       skipTrailingSlashRedirect: true,
       async redirects() {
         return [{
-          source: "/:path((?!api/v1/platform-admin/(?:workspaces(?:/search)?|mfa/verify)/$)[^/]+(?:/[^/]+)*)/",
+          source: "/:path((?!api/v1/platform-admin/(?:workspaces(?:/search)?|users/search|mfa/verify)/$)[^/]+(?:/[^/]+)*)/",
           destination: "/:path",
           permanent: true,
         }];
       },
       async rewrites() {
         return {
-          beforeFiles: ["/platform-admin/workspaces", "/platform-admin/workspaces/search", "/platform-admin/mfa/verify"].map((path) => ({
+          beforeFiles: ["/platform-admin/workspaces", "/platform-admin/workspaces/search", "/platform-admin/users/search", "/platform-admin/mfa/verify"].map((path) => ({
             source: API_PATH + path + "/",
             destination: upstream + path,
           })),

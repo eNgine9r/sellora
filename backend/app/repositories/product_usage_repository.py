@@ -66,10 +66,26 @@ class ProductUsageRepository:
             total(UsageEvent.WORKSPACE_ACTIVATED).label("activated_workspaces"),
             total(UsageEvent.FIRST_PRODUCT).label("first_products"),
             total(UsageEvent.FIRST_ORDER).label("first_orders"),
-            total(UsageEvent.ORDER_CREATED).label("orders_created"),
             total(UsageEvent.INTEGRATION_USED).label("integration_days"),
-            total(DROPPED_EVENTS).label("dropped_operations"),
         ).where(and_(daily.day >= first_day, daily.day <= last_day))
         if workspace_id is not None:
             statement = statement.where(daily.workspace_id == workspace_id)
         return self.db.execute(statement).mappings().one()
+
+    def daily_orders(self, first_day: date, last_day: date, workspace_id: UUID | None):
+        daily = ProductUsageDaily
+
+        def total(event: str):
+            return func.coalesce(func.sum(daily.event_count).filter(daily.event_type == event), 0)
+
+        statement = select(
+            daily.day,
+            total(UsageEvent.ORDER_CREATED).label("orders_created"),
+            total(DROPPED_EVENTS).label("dropped_operations"),
+        ).where(
+            daily.day.between(first_day, last_day),
+            daily.event_type.in_((UsageEvent.ORDER_CREATED, DROPPED_EVENTS)),
+        )
+        if workspace_id is not None:
+            statement = statement.where(daily.workspace_id == workspace_id)
+        return self.db.execute(statement.group_by(daily.day)).mappings().all()

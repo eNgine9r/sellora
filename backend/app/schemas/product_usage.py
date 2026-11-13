@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ProductUsageTotals(BaseModel):
@@ -14,6 +14,12 @@ class ProductUsageTotals(BaseModel):
     integration_days: int
 
 
+class ProductUsageDay(BaseModel):
+    day: date
+    orders_created: int
+    dropped_operations: int
+
+
 class ProductUsageReport(BaseModel):
     days: Literal[7, 30]
     from_day: date
@@ -23,3 +29,4 @@ class ProductUsageReport(BaseModel):
     coverage: Literal["complete", "partial", "unavailable"]
     dropped_operations: int | None = None
     totals: ProductUsageTotals | None = None
+    daily: list[ProductUsageDay] = Field(default_factory=list)

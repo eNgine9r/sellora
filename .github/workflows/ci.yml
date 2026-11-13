@@ -419,6 +419,9 @@ jobs:
           path: |
             frontend/.direct-client-conflict-results/**/*.png
             frontend/.direct-client-conflict-results/**/auth-navigation.json
+            frontend/test-results/platform-admin/**/platform-mfa.png
+            frontend/test-results/platform-admin/**/platform-users.png
+            frontend/test-results/platform-admin/**/platform-user-profile.png
           include-hidden-files: true
           retention-days: 7
       - name: Remove private synthetic credential manifest
