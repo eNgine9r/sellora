@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app/main.py": {
+      "includeFiles": "supabase-root.crt"
+    }
+  },
+  "regions": [
+    "dub1"
+  ]
+}
