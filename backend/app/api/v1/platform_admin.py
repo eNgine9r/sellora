@@ -21,6 +21,7 @@ from app.schemas.platform_admin import (
     PlatformWorkspacePage,
     PlatformWorkspaceRequestError,
     PlatformWorkspaceSearchParams,
+    PlatformWorkspaceTeamPage,
 )
 from app.schemas.product_usage import ProductUsageReport
 from app.schemas.subscription import SubscriptionStatusResponse
@@ -176,6 +177,19 @@ def get_workspace_activity(
     return _audited_read(
         db, actor, WORKSPACE_ACTIVITY,
         lambda: ProductUsageService(db).get_report(period, workspace_id=workspace_id),
+        workspace_id,
+    )
+
+
+@router.get("/workspaces/{workspace_id}/team", response_model=PlatformWorkspaceTeamPage)
+def get_platform_workspace_team(
+    workspace_id: UUID,
+    cursor: UUID | None = None,
+    actor: PlatformIdentity = Depends(require_platform_permission("users.read", "READ_WORKSPACE_TEAM")),
+    db: Session = Depends(get_db),
+) -> PlatformWorkspaceTeamPage:
+    return _audited_read(
+        db, actor, "READ_WORKSPACE_TEAM", lambda: PlatformWorkspaceService(db).get_team(workspace_id, cursor),
         workspace_id,
     )
 

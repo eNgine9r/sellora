@@ -119,3 +119,16 @@ class PlatformUserWorkspace(BaseModel):
 class PlatformUserDetail(PlatformUser):
     workspaces: list[PlatformUserWorkspace]
     next_cursor: str | None
+
+
+class PlatformWorkspaceTeamMember(BaseModel):
+    id: UUID
+    first_name: str
+    last_name: str
+    role: Literal["MANAGER", "ANALYST"]
+    is_active: bool
+
+
+class PlatformWorkspaceTeamPage(BaseModel):
+    items: list[PlatformWorkspaceTeamMember]
+    next_cursor: UUID | None

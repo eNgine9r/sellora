@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, KeyRound, LogOut, ShieldCheck } from "lucide-react";
+import { ArrowRight, KeyRound, Loader2, LogOut, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { BrandIcon } from "@/components/brand";
 import { Button, Card, FormField, Input, LoadingSkeleton, StatusBadge } from "@/components/ui/primitives";
@@ -107,10 +107,14 @@ function PlatformMfaChallenge({ onVerified }: { onVerified: () => void }) {
       <form className="mt-7 grid gap-5" onSubmit={submit}>
         <PlatformMfaCode value={code} pending={pending} error={error ? t(`platformAdmin.${error}`) : undefined}
           onChange={(value) => { setCode(value); setError(undefined); }} />
-        <Button className="justify-between rounded-xl" type="submit" loading={pending}
-          disabled={code.length !== platformMfaCodeLength}>
-          <span>{t("platformAdmin.mfaVerify")}</span><ArrowRight className="size-4" aria-hidden="true" />
+        <Button className="justify-between rounded-xl" type="submit" aria-busy={pending}
+          disabled={pending || code.length !== platformMfaCodeLength}>
+          <span>{t("platformAdmin.mfaVerify")}</span>
+          {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <ArrowRight className="size-4" aria-hidden="true" />}
         </Button>
+        {error ? <p id="platform-mfa-error" role="alert" className="-mt-2 text-xs leading-5 text-[var(--danger-foreground)]">
+          {t(`platformAdmin.${error}`)}
+        </p> : null}
       </form>
     </PlatformAccessCard>
   );

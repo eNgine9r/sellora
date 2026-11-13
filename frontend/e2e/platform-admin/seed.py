@@ -32,6 +32,7 @@ def main() -> None:
         password_hash = hash_password("QA-Platform-Local123!")
         admin = User(email="qa-platform-admin@example.com", password_hash=password_hash, first_name="QA", last_name="Admin")
         owner = User(email="qa-platform-owner@example.com", password_hash=password_hash, first_name="QA", last_name="Owner")
+        analyst = User(email="qa-platform-analyst@example.com", password_hash=password_hash, first_name="QA", last_name="Analyst")
         now = datetime.now(UTC)
         workspaces = [
             Workspace(name=f"QA Platform Shop {index:02}", slug=f"qa-platform-shop-{index:02}",
@@ -41,10 +42,12 @@ def main() -> None:
         role = db.scalar(select(Role).where(Role.name == RoleName.OWNER))
         if role is None:
             role = Role(name=RoleName.OWNER)
-        db.add_all([admin, owner, role, *workspaces])
+        analyst_role = db.scalar(select(Role).where(Role.name == RoleName.ANALYST)) or Role(name=RoleName.ANALYST)
+        db.add_all([admin, owner, analyst, role, analyst_role, *workspaces])
         db.flush()
         db.add(PlatformGrant(user_id=admin.id, role=PlatformRole.ADMIN))
         db.add(WorkspaceUser(user_id=owner.id, workspace_id=workspaces[-1].id, role_id=role.id))
+        db.add(WorkspaceUser(user_id=analyst.id, workspace_id=workspaces[-1].id, role_id=analyst_role.id, is_active=False))
         db.add(AuditLog(
             workspace_id=workspaces[0].id, entity_type="Workspace", entity_id=str(workspaces[0].id),
             action=DEMO_WORKSPACE_CREATE_ACTION,
