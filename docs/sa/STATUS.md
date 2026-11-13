@@ -10,6 +10,6 @@
 | SA.5 | Виправлення злиті в [PR #417](https://github.com/eNgine9r/sellora/pull/417). Ізольований QA та репетиція off switch пройшли. [Handoff SA.5](handoffs/SA.5.md) |
 | Захищений Platform Admin staging | **PASS.** Окремі frontend, API та PostgreSQL. Підтверджено ручний вхід із MFA, доступ до списку магазинів і запис в аудиті. [Докази](handoffs/SA.5.md#фактичний-результат-захищеного-staging) |
 | Робочий CRM-фронтенд | Власник підтвердив [sellora-web-staging.vercel.app](https://sellora-web-staging.vercel.app). Поточний deployment — `a8e5ff2`. |
-| Production rollout | **NO-GO** станом на 13.11.2026. MFA на staging і ARM64-відкат на схемі `058` пройшли. Наступний крок — узгодити контроль автодеплою з `main`, перевірити бойову пару frontend/API та підготувати production-доступ оператора. [Preflight](PRODUCTION_PREFLIGHT.md) |
+| Production rollout | **NO-GO** станом на 13.11.2026. MFA на staging і ARM64-відкат на схемі `058` пройшли. PR #419 злитий, автопризначення домену вимкнено, frontend зі злитого `main` має `READY`. Наступний крок — підтвердити відновлення свіжої копії, потім перевірити нову бойову пару frontend/API та зареєструвати production-фактор. [Preflight](PRODUCTION_PREFLIGHT.md) |
 
 [Архітектура](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) · [Handoff SA.0](handoffs/SA.0.md)
