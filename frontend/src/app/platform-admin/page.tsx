@@ -166,7 +166,8 @@ export default function PlatformAdminPage() {
   } else if (!role || !operatorId || !identity.data?.capabilities.includes("workspaces.read")) {
     content = <PlatformProblem message="forbidden" />;
   } else {
-    content = <PlatformDashboard key={operatorId} operatorId={operatorId} recheckAccess={recheckAccess} showActivity={identity.data.capabilities.includes("activity.read")} />;
+    content = <PlatformDashboard key={operatorId} operatorId={operatorId} recheckAccess={recheckAccess} showActivity={identity.data.capabilities.includes("activity.read")}
+      showUsers={identity.data.capabilities.includes("users.read")} canArchive={identity.data.capabilities.includes("workspaces.archive")} />;
   }
 
   return (

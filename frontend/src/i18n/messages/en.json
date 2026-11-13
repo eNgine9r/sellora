@@ -3279,5 +3279,43 @@
     "dailyValue": "{day} · {count}",
     "dailyTable": "View daily values",
     "day": "Date (UTC)"
+  },
+  "platformRegistry": {
+    "users": "Users",
+    "description": "Sellora accounts and the workspaces they belong to.",
+    "search": "Name, email, or ID",
+    "load": "Show users",
+    "withoutWorkspaces": "Without enabled workspaces",
+    "profile": "User profile",
+    "openUser": "Open profile for {name}",
+    "created": "Account created {time}",
+    "userEnabled": "Enabled account",
+    "userDisabled": "Disabled account",
+    "linkedWorkspaces": "Linked workspaces",
+    "noLinkedWorkspaces": "This account has no current workspace memberships.",
+    "empty": "No users found",
+    "emptyDescription": "Change your search or filter.",
+    "pagination": "Result pages",
+    "current": "Current registry",
+    "archiveTab": "Archive",
+    "archived": "Archived",
+    "archiveEmpty": "Archive is empty",
+    "archiveEmptyDescription": "Archived workspaces will appear here.",
+    "lifecycle": "Workspace archive",
+    "archive": "Archive workspace",
+    "restore": "Restore from archive",
+    "archiveDescription": "The workspace will leave the current registry. Data and account links will be preserved. CRM access will be disabled if the workspace is enabled.",
+    "restoreDescription": "The workspace will return to the current registry with its pre-archive access state.",
+    "archiveConflict": "The workspace no longer qualifies for archival. Close the profile and check its current state.",
+    "archiveError": "Could not change the archive state. Try again.",
+    "confirm": {
+      "archive": "Confirm archive",
+      "restore": "Confirm restore"
+    },
+    "roles": {
+      "OWNER": "Owner",
+      "MANAGER": "Manager",
+      "ANALYST": "Analyst"
+    }
   }
 }

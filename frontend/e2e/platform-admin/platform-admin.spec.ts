@@ -127,3 +127,39 @@ test("a tenant owner is denied through the direct URL and never loads platform d
   await expect(page.getByRole("heading", { name: "Реєстр магазинів" })).toHaveCount(0);
   expect(paths).toEqual([`${prefix}/me`]);
 });
+
+test("admin finds a Sellora account and can archive and restore an eligible workspace", async ({ page }) => {
+  await signIn(page, "admin");
+  const sections = page.getByRole("navigation", { name: "Розділи панелі" });
+  await sections.getByRole("link", { name: "Користувачі" }).click();
+  await page.getByRole("textbox", { name: "Ім’я, email або ID" }).fill("qa-platform-owner@example.com");
+  await page.getByRole("button", { name: "Показати користувачів" }).click();
+  await page.getByRole("button", { name: "Відкрити профіль QA Owner" }).click();
+  const user = page.getByRole("dialog", { name: "QA Owner" });
+  await expect(user.getByText("QA Platform Shop 22")).toBeVisible();
+  await expect(user.getByText("Власник", { exact: true })).toBeVisible();
+  await user.getByRole("button", { name: "Деталі", exact: true }).click();
+  const paid = page.getByRole("dialog", { name: "QA Platform Shop 22" });
+  await expect(paid.getByText("qa-pilot")).toBeVisible();
+  await expect(paid.getByRole("button", { name: "Архівувати магазин" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  await sections.getByRole("link", { name: "Магазини" }).click();
+  await page.getByRole("textbox", { name: "Пошук", exact: true }).fill("QA Platform Shop 01");
+  const directory = page.getByRole("region", { name: "Реєстр магазинів" });
+  await directory.getByRole("button", { name: "Застосувати" }).click();
+  const open = directory.getByRole("button", { name: "Відкрити магазин QA Platform Shop 01" });
+  await open.click();
+  const demo = page.getByRole("dialog", { name: "QA Platform Shop 01" });
+  await demo.getByRole("button", { name: "Архівувати магазин" }).click();
+  await demo.getByRole("button", { name: "Підтвердити архівацію" }).click();
+  await expect(demo.getByRole("button", { name: "Відновити з архіву" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(open).toHaveCount(0);
+  await directory.getByRole("button", { name: /^Архів/ }).click();
+  await open.click();
+  await demo.getByRole("button", { name: "Відновити з архіву" }).click();
+  await demo.getByRole("button", { name: "Підтвердити відновлення" }).click();
+  await expect(demo.getByRole("button", { name: "Архівувати магазин" })).toBeVisible();
+  await expect(demo.getByText("Вимкнений", { exact: true })).toBeVisible();
+});

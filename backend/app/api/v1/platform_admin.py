@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Annotated, Literal, TypeVar
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, SecretStr
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -12,6 +12,9 @@ from app.dependencies.platform_admin import PlatformSession, require_platform_mf
 from app.schemas.platform_admin import (
     PlatformIdentity,
     PlatformSummary,
+    PlatformUserDetail,
+    PlatformUserPage,
+    PlatformUserSearchParams,
     PlatformWorkspaceDetail,
     PlatformWorkspaceListParams,
     PlatformWorkspacePage,
@@ -20,7 +23,10 @@ from app.schemas.platform_admin import (
 )
 from app.schemas.product_usage import ProductUsageReport
 from app.schemas.subscription import SubscriptionStatusResponse
-from app.services.platform_admin_service import InvalidPlatformCursor, PlatformAuditService, PlatformWorkspaceService
+from app.services.platform_admin_service import (
+    InvalidPlatformCursor, PlatformAuditService, PlatformUserService, PlatformWorkspaceArchiveService,
+    PlatformWorkspaceService, WorkspaceArchiveConflict,
+)
 
 from app.services.platform_mfa_service import PlatformMfaError, PlatformMfaService
 from app.services.product_usage_service import ProductUsageService
@@ -40,20 +46,21 @@ WORKSPACE_REQUEST_ERRORS = {422: {"model": PlatformWorkspaceRequestError}}
 
 def _audited_read(
     db: Session, actor: PlatformIdentity, action: str, read: Callable[[], Result | None],
-    workspace_id: UUID | None = None,
+    workspace_id: UUID | None = None, *, target_user_id: UUID | None = None,
 ) -> Result:
     try:
         result = read()
         PlatformAuditService(db).record_read(
-            actor.operator_id, actor.role, action, "NOT_FOUND" if result is None else "ALLOWED", workspace_id
+            actor.operator_id, actor.role, action, "NOT_FOUND" if result is None else "ALLOWED", workspace_id,
+            target_user_id=target_user_id,
         )
     except InvalidPlatformCursor as exc:
-        raise HTTPException(status_code=422, detail="Invalid workspace cursor") from exc
+        raise HTTPException(status_code=422, detail="Invalid cursor") from exc
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(status_code=503, detail="Platform data unavailable") from exc
     if result is None:
-        raise HTTPException(status_code=404, detail="Workspace not found")
+        raise HTTPException(status_code=404, detail="User not found" if target_user_id else "Workspace not found")
     return result
 
 
@@ -123,7 +130,7 @@ def search_platform_workspaces(
     service = PlatformWorkspaceService(db)
     return _audited_read(db, actor, WORKSPACES, lambda: service.list_workspaces(
         search=params.q, active=params.active, demo=params.demo, cursor=params.cursor, limit=params.limit,
-        subscription_status=params.subscription_status,
+        subscription_status=params.subscription_status, archived=params.archived,
     ))
 
 
@@ -170,3 +177,60 @@ def get_workspace_activity(
         lambda: ProductUsageService(db).get_report(period, workspace_id=workspace_id),
         workspace_id,
     )
+
+
+@router.post("/users/search", response_model=PlatformUserPage, responses=WORKSPACE_REQUEST_ERRORS)
+def search_platform_users(
+    params: PlatformUserSearchParams,
+    request: Request,
+    actor: PlatformIdentity = Depends(require_platform_permission("users.read", "LIST_USERS")),
+    db: Session = Depends(get_db),
+) -> PlatformUserPage:
+    if request.query_params:
+        raise HTTPException(status_code=422, detail="User search accepts filters in the request body")
+    service = PlatformUserService(db)
+    return _audited_read(db, actor, "LIST_USERS", lambda: service.list_users(
+        search=params.q, without_workspaces=params.without_workspaces, cursor=params.cursor, limit=params.limit,
+    ))
+
+
+@router.get("/users/{user_id}", response_model=PlatformUserDetail)
+def get_platform_user(
+    user_id: UUID,
+    cursor: Annotated[str | None, Query(min_length=1, max_length=900)] = None,
+    actor: PlatformIdentity = Depends(require_platform_permission("users.read", "READ_USER")),
+    db: Session = Depends(get_db),
+) -> PlatformUserDetail:
+    return _audited_read(db, actor, "READ_USER", lambda: PlatformUserService(db).get_user(user_id, cursor),
+                         target_user_id=user_id)
+
+
+def _set_workspace_archived(db: Session, workspace_id: UUID, actor: PlatformIdentity, *, archived: bool) -> Response:
+    try:
+        PlatformWorkspaceArchiveService(db).set_archived(workspace_id, actor, archived=archived)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Workspace not found") from exc
+    except WorkspaceArchiveConflict as exc:
+        raise HTTPException(status_code=409, detail="Workspace cannot be archived") from exc
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Platform data unavailable") from exc
+    return Response(status_code=204)
+
+
+@router.post("/workspaces/{workspace_id}/archive", status_code=204)
+def archive_platform_workspace(
+    workspace_id: UUID,
+    actor: PlatformIdentity = Depends(require_platform_permission("workspaces.archive", "ARCHIVE_WORKSPACE")),
+    db: Session = Depends(get_db),
+) -> Response:
+    return _set_workspace_archived(db, workspace_id, actor, archived=True)
+
+
+@router.post("/workspaces/{workspace_id}/restore", status_code=204)
+def restore_platform_workspace(
+    workspace_id: UUID,
+    actor: PlatformIdentity = Depends(require_platform_permission("workspaces.archive", "RESTORE_WORKSPACE")),
+    db: Session = Depends(get_db),
+) -> Response:
+    return _set_workspace_archived(db, workspace_id, actor, archived=False)

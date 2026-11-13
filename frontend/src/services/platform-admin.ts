@@ -24,6 +24,7 @@ export type PlatformWorkspace = {
   is_active: boolean;
   is_demo: boolean;
   created_at: string;
+  archived_at: string | null;
   subscription: Subscription;
 };
 
@@ -31,6 +32,7 @@ export type PlatformWorkspaceDetail = PlatformWorkspace & {
   currency_code: string;
   timezone: string;
   active_member_count: number;
+  archive_allowed: boolean;
 };
 
 type WorkspacePage = {
@@ -44,6 +46,7 @@ type PlatformSummary = {
   total_workspaces: number;
   enabled_workspaces: number;
   demo_workspaces: number;
+  archived_workspaces?: number;
   workspaces_with_current_term: number;
 };
 
@@ -82,6 +85,23 @@ export type WorkspaceFilters = {
   active: "" | "true" | "false";
   demo: "" | "true" | "false";
   subscriptionStatus: "" | SubscriptionStatus;
+  archived: boolean;
+};
+
+export type PlatformUser = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+type PlatformUserDetail = PlatformUser & {
+  workspaces: (Pick<PlatformWorkspace, "id" | "name" | "slug" | "is_active" | "archived_at"> & {
+    role: "OWNER" | "MANAGER" | "ANALYST";
+  })[];
+  next_cursor: string | null;
 };
 
 let mfaProof: string | undefined;
@@ -120,6 +140,25 @@ export const platformAdminApi = {
     return read<ProductUsageReport>(`${path}?days=${days}`, signal);
   },
   detail: (id: string, signal: AbortSignal) => read<PlatformWorkspaceDetail>(`workspaces/${encodeURIComponent(id)}`, signal),
+  users(search: string, withoutWorkspaces: boolean, cursor: string | null, signal: AbortSignal) {
+    return apiRequest<{ items: PlatformUser[]; next_cursor: string | null }>("/platform-admin/users/search", {
+      method: "POST",
+      signal,
+      headers: proofHeaders(),
+      cache: "no-store",
+      body: JSON.stringify({ q: search || undefined, without_workspaces: withoutWorkspaces, cursor: cursor || undefined }),
+    });
+  },
+  user(id: string, cursor: string | null, signal: AbortSignal) {
+    const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+    return read<PlatformUserDetail>(`users/${encodeURIComponent(id)}${query}`, signal);
+  },
+  setArchived(id: string, archived: boolean) {
+    const action = archived ? "archive" : "restore";
+    return apiRequest<void>(`/platform-admin/workspaces/${encodeURIComponent(id)}/${action}`, {
+      method: "POST", headers: proofHeaders(), cache: "no-store",
+    });
+  },
   workspaces(filters: WorkspaceFilters, cursor: string | null, signal: AbortSignal) {
     return apiRequest<WorkspacePage>("/platform-admin/workspaces/search", {
       method: "POST",
@@ -132,6 +171,7 @@ export const platformAdminApi = {
         active: filters.active ? filters.active === "true" : undefined,
         demo: filters.demo ? filters.demo === "true" : undefined,
         subscription_status: filters.subscriptionStatus || undefined,
+        archived: filters.archived,
         cursor: cursor || undefined,
       }),
     });

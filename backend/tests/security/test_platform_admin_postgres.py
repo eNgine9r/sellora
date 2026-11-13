@@ -205,7 +205,7 @@ def test_workspace_directory_and_subscription_return_only_scoped_projections(cli
     detail = client.get(f"{PREFIX}/workspaces/{first.id}", headers=auth).json()
     assert detail["active_member_count"] == 1 and detail["subscription"]["plan_code"] == "pilot"
     assert set(detail) == {"id", "name", "slug", "is_active", "is_demo", "created_at", "subscription",
-                           "currency_code", "timezone", "active_member_count"}
+                           "currency_code", "timezone", "active_member_count", "archived_at", "archive_allowed"}
     assert active_member.email not in str(detail)
     unmanaged = client.get(f"{PREFIX}/workspaces/{second.id}/subscription", headers=auth).json()
     assert unmanaged["status"] == "UNMANAGED" and unmanaged["enforcement_enabled"] is False
@@ -262,6 +262,103 @@ def test_subscription_filter_matches_display_status_and_binds_the_cursor(client,
     inactive = client.post(search, json={**filters, "active": False}, headers=auth).json()
     assert [item["name"] for item in inactive["items"]] == ["Subscription filter Stored pending"]
     assert client.post(search, json=filters, headers=login(client, add_user(db))).status_code == 403
+
+
+def test_user_registry_is_admin_only_and_projects_existing_memberships(client, db):
+    owner = add_user(db)
+    new_account = add_user(db)
+    shared = add_workspace(db, "Registry shared shop")
+    second = add_workspace(db, "Registry second shop")
+    add_member(db, shared, owner, "OWNER")
+    add_member(db, second, owner, "MANAGER")
+    deleted = add_workspace(db, "Removed membership")
+    add_member(db, deleted, owner, "OWNER")
+    db.get(WorkspaceUser, (deleted.id, owner.id)).deleted_at = datetime.now(UTC)
+    db.flush()
+
+    admin = add_user(db, PlatformRole.ADMIN)
+    auth = login(client, admin)
+    search = f"{PREFIX}/users/search"
+    first = client.post(search, headers=auth, json={"limit": 1}).json()
+    assert first["next_cursor"]
+    second_page = client.post(search, headers=auth, json={"limit": 1, "cursor": first["next_cursor"]}).json()
+    assert first["items"][0]["id"] != second_page["items"][0]["id"]
+    assert client.post(search, headers=auth, json={"q": "other", "cursor": first["next_cursor"]}).status_code == 422
+    query = client.post(search, headers=auth, json={"q": owner.email}).json()
+    assert [item["id"] for item in query["items"]] == [str(owner.id)]
+    assert set(query["items"][0]) == {"id", "email", "first_name", "last_name", "created_at", "is_active"}
+    no_shop = client.post(search, headers=auth, json={"q": new_account.email, "without_workspaces": True}).json()
+    assert [item["id"] for item in no_shop["items"]] == [str(new_account.id)]
+    assert client.post(search, headers=auth, json={"q": owner.email, "without_workspaces": True}).json()["items"] == []
+
+    profile_path = f"{PREFIX}/users/{owner.id}"
+    detail = client.get(profile_path, headers={**auth, "X-Workspace-ID": str(deleted.id)}).json()
+    assert {item["id"]: item["role"] for item in detail["workspaces"]} == {
+        str(shared.id): "OWNER", str(second.id): "MANAGER",
+    }
+    assert client.get(f"{PREFIX}/users/{new_account.id}", headers=auth).json()["workspaces"] == []
+    assert client.get(profile_path).status_code == 401
+    for role in (None, PlatformRole.SUPPORT, PlatformRole.AUDITOR):
+        denied = login(client, add_user(db, role)) if role else login(client, owner)
+        assert client.get(profile_path, headers=denied).status_code == 403
+        assert client.post(search, headers=denied, json={}).status_code == 403
+    assert client.get(f"{PREFIX}/users/{uuid4()}", headers=auth).status_code == 404
+    events = db.scalars(select(PlatformAuditEvent).where(PlatformAuditEvent.action.in_(("LIST_USERS", "READ_USER")))).all()
+    assert any(event.target_user_id == owner.id and event.outcome == "ALLOWED" for event in events)
+    assert all(event.target_user_id is None for event in events if event.action == "LIST_USERS")
+
+
+def test_workspace_archive_is_reversible_audited_and_protects_operating_shops(client, db):
+    admin_auth = login(client, add_user(db, PlatformRole.ADMIN))
+    owner = add_user(db)
+    owner_auth = login(client, owner)
+    support_auth = login(client, add_user(db, PlatformRole.SUPPORT))
+    demo = add_workspace(db, "Synthetic demo", demo=True)
+    inactive = add_workspace(db, "Retired ordinary shop", active=False)
+    ordinary = add_workspace(db, "Operating ordinary shop")
+    paid = add_workspace(db, "Subscription shop", active=False)
+    add_member(db, demo, owner, "OWNER")
+    now = datetime.now(UTC)
+    db.add(WorkspaceSubscription(
+        workspace_id=paid.id, plan_code="pilot", status="ACTIVE",
+        current_period_start=now - timedelta(days=1), current_period_end=now + timedelta(days=1),
+    ))
+    db.flush()
+    demo_path = f"{PREFIX}/workspaces/{demo.id}"
+    tenant_settings = {**owner_auth, "X-Workspace-ID": str(demo.id)}
+    assert client.get("/api/v1/workspaces/current", headers=tenant_settings).status_code == 200
+    assert client.post(demo_path + "/archive").status_code == 401
+    assert client.post(demo_path + "/archive", headers=owner_auth).status_code == 403
+    assert client.post(demo_path + "/archive", headers=support_auth).status_code == 403
+    assert client.post(f"{PREFIX}/workspaces/{ordinary.id}/archive", headers=admin_auth).status_code == 409
+    assert client.post(f"{PREFIX}/workspaces/{paid.id}/archive", headers=admin_auth).status_code == 409
+    assert client.post(f"{PREFIX}/workspaces/{uuid4()}/archive", headers=admin_auth).status_code == 404
+    assert client.get(demo_path, headers=admin_auth).json()["archive_allowed"] is True
+    assert client.post(demo_path + "/archive", headers=admin_auth).status_code == 204
+    assert client.post(demo_path + "/archive", headers=admin_auth).status_code == 204
+    assert client.get("/api/v1/workspaces/current", headers=tenant_settings).status_code == 403
+    assert db.get(WorkspaceUser, (demo.id, owner.id)).is_active
+    assert client.post(f"{PREFIX}/workspaces/{inactive.id}/archive", headers=admin_auth).status_code == 204
+
+    search = f"{PREFIX}/workspaces/search"
+    current = client.post(search, headers=admin_auth, json={"archived": False}).json()
+    assert {item["id"] for item in current["items"]} == {str(ordinary.id), str(paid.id)}
+    archived = client.post(search, headers=admin_auth, json={"archived": True, "limit": 1}).json()
+    assert archived["items"][0]["archived_at"] and archived["next_cursor"]
+    assert client.post(search, headers=admin_auth, json={"archived": False, "cursor": archived["next_cursor"]}).status_code == 422
+    summary = client.get(f"{PREFIX}/summary", headers=admin_auth).json()
+    assert summary["total_workspaces"] == 2 and summary["archived_workspaces"] == 2
+    assert client.post(demo_path + "/restore", headers=admin_auth).status_code == 204
+    assert client.post(demo_path + "/restore", headers=admin_auth).status_code == 204
+    assert client.get("/api/v1/workspaces/current", headers=tenant_settings).status_code == 200
+    inactive_path = f"{PREFIX}/workspaces/{inactive.id}"
+    assert client.post(inactive_path + "/restore", headers=admin_auth).status_code == 204
+    assert client.get(inactive_path, headers=admin_auth).json()["is_active"] is False
+    audit = db.scalars(select(PlatformAuditEvent).where(
+        PlatformAuditEvent.workspace_id == demo.id, PlatformAuditEvent.outcome == "ALLOWED",
+        PlatformAuditEvent.action.in_(("ARCHIVE_WORKSPACE", "RESTORE_WORKSPACE")),
+    )).all()
+    assert sorted(event.action for event in audit) == ["ARCHIVE_WORKSPACE", "RESTORE_WORKSPACE"]
 
 
 def test_grant_lifecycle_and_audit_immutability(db):

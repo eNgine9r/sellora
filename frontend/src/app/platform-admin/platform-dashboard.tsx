@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { Activity, ArrowRight, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, CreditCard, FlaskConical, LayoutDashboard, Search, Store } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Activity, ArrowRight, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, CreditCard, FlaskConical, LayoutDashboard, Search, Store, Users } from "lucide-react";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Drawer } from "@/components/ui/overlay";
 import { Button, Card, DataTable, EmptyState, FormField, Input, LoadingSkeleton, Select, StatusBadge } from "@/components/ui/primitives";
@@ -10,9 +10,10 @@ import { ApiError } from "@/services/api";
 import { platformAdminApi, type PlatformWorkspace, type SubscriptionStatus, type WorkspaceFilters } from "@/services/platform-admin";
 
 import { PlatformActivity } from "./platform-activity";
+import { PlatformUsers } from "./platform-users";
 import { accessDenied, PlatformProblem } from "./platform-feedback";
 
-const defaultFilters: WorkspaceFilters = { search: "", active: "", demo: "", subscriptionStatus: "" };
+const defaultFilters: WorkspaceFilters = { search: "", active: "", demo: "", subscriptionStatus: "", archived: false };
 const metrics = [
   { key: "total_workspaces", icon: Store, accent: "bg-violet-500/15 text-violet-300" },
   { key: "enabled_workspaces", icon: CircleCheck, accent: "bg-emerald-500/15 text-emerald-300" },
@@ -29,6 +30,7 @@ const subscriptionStatuses = Object.keys(subscriptionTones) as SubscriptionStatu
 const sections = [
   { id: "platform-overview", label: "platformAdmin.overviewNav", icon: LayoutDashboard },
   { id: "platform-directory", label: "platformAdmin.directoryNav", icon: Store },
+  { id: "platform-users", label: "platformRegistry.users", icon: Users },
   { id: "platform-activity", label: "platformAdmin.activityNav", icon: Activity },
 ] as const;
 
@@ -39,6 +41,7 @@ function SubscriptionBadge({ status }: { status: SubscriptionStatus }) {
 
 function WorkspaceState({ workspace }: { workspace: PlatformWorkspace }) {
   const { t } = useI18n();
+  if (workspace.archived_at) return <StatusBadge tone="neutral">{t("platformRegistry.archived")}</StatusBadge>;
   return (
     <div className="flex flex-wrap gap-1.5">
       <StatusBadge tone={workspace.is_active ? "success" : "neutral"}>{t(workspace.is_active ? "platformAdmin.enabled" : "platformAdmin.disabled")}</StatusBadge>
@@ -119,8 +122,14 @@ function WorkspaceDirectory({ items, onSelect }: { items: PlatformWorkspace[]; o
   );
 }
 
-function WorkspaceProfile({ id, operatorId, onClose, recheckAccess, showActivity }: { id: string; operatorId: string; onClose: () => void; recheckAccess: () => void; showActivity: boolean }) {
+function WorkspaceProfile({ id, operatorId, onClose, recheckAccess, showActivity, canArchive }: {
+  id: string; operatorId: string; onClose: () => void; recheckAccess: () => void; showActivity: boolean; canArchive: boolean;
+}) {
   const { t, locale } = useI18n();
+  const queryClient = useQueryClient();
+  const [confirm, setConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [failure, setFailure] = useState<"archiveConflict" | "archiveError">();
   const detail = useQuery({
     queryKey: ["platform-admin", operatorId, "workspace", id],
     queryFn: ({ signal }) => platformAdminApi.detail(id, signal),
@@ -134,6 +143,25 @@ function WorkspaceProfile({ id, operatorId, onClose, recheckAccess, showActivity
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });
   const formatDate = (value: string | null) => value ? date.format(new Date(value)) : t("platformAdmin.unassigned");
   const notFound = detail.error instanceof ApiError && detail.error.status === 404;
+  const restoring = Boolean(workspace?.archived_at);
+  const lifecycleAction = restoring ? "restore" : "archive";
+
+  async function changeArchive() {
+    setSaving(true);
+    setFailure(undefined);
+    try {
+      await platformAdminApi.setArchived(id, !restoring);
+      setConfirm(false);
+      await queryClient.invalidateQueries({
+        predicate: ({ queryKey }) => queryKey[0] === "platform-admin" && queryKey[1] === operatorId && queryKey[2] !== "identity",
+      });
+    } catch (error) {
+      if (accessDenied(error)) recheckAccess();
+      setFailure(error instanceof ApiError && error.status === 409 ? "archiveConflict" : "archiveError");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Drawer open title={workspace?.name ?? t("platformAdmin.profile")} description={workspace?.slug} onClose={onClose} className="dark text-text-primary">
@@ -163,13 +191,32 @@ function WorkspaceProfile({ id, operatorId, onClose, recheckAccess, showActivity
             {workspace.subscription.cancel_at_period_end ? <p className="mt-4 text-sm text-[var(--warning-foreground)]">{t("platformAdmin.cancelAtEnd")}</p> : null}
           </Card>
           {showActivity ? <PlatformActivity operatorId={operatorId} workspaceId={id} recheckAccess={recheckAccess} /> : null}
+          {canArchive && (restoring || workspace.archive_allowed) ? (
+            <Card className="grid gap-3">
+              <h3 className="font-bold">{t("platformRegistry.lifecycle")}</h3>
+              <p className="text-sm text-text-secondary">{t(`platformRegistry.${lifecycleAction}Description`)}</p>
+              {failure ? <p className="text-sm text-[var(--danger-foreground)]" role="alert">{t(`platformRegistry.${failure}`)}</p> : null}
+              <div className="flex flex-wrap gap-2">
+                {confirm ? (
+                  <>
+                    <Button variant={restoring ? "brand" : "danger"} loading={saving} onClick={() => void changeArchive()}>
+                      {t(`platformRegistry.confirm.${lifecycleAction}`)}
+                    </Button>
+                    <Button variant="ghost" disabled={saving} onClick={() => setConfirm(false)}>{t("actions.cancel")}</Button>
+                  </>
+                ) : <Button variant="secondary" onClick={() => setConfirm(true)}>{t(`platformRegistry.${lifecycleAction}`)}</Button>}
+              </div>
+            </Card>
+          ) : null}
         </div>
       ) : null}
     </Drawer>
   );
 }
 
-export function PlatformDashboard({ operatorId, recheckAccess, showActivity }: { operatorId: string; recheckAccess: () => void; showActivity: boolean }) {
+export function PlatformDashboard({ operatorId, recheckAccess, showActivity, showUsers, canArchive }: {
+  operatorId: string; recheckAccess: () => void; showActivity: boolean; showUsers: boolean; canArchive: boolean;
+}) {
   const { t, locale } = useI18n();
   const [filters, setFilters] = useState(defaultFilters);
   const [draft, setDraft] = useState(defaultFilters);
@@ -189,8 +236,8 @@ export function PlatformDashboard({ operatorId, recheckAccess, showActivity }: {
   });
   const denied = accessDenied(summary.error) || accessDenied(directory.error);
   useEffect(() => { if (denied) recheckAccess(); }, [denied, recheckAccess]);
-  const filtered = Object.values(filters).some(Boolean);
-  const hasDraft = Object.values(draft).some(Boolean);
+  const filtered = Boolean(filters.search || filters.active || filters.demo || filters.subscriptionStatus);
+  const hasDraft = Boolean(draft.search || draft.active || draft.demo || draft.subscriptionStatus);
   const items = directory.data?.items ?? [];
   const nextCursor = directory.data?.next_cursor;
   const number = new Intl.NumberFormat(locale);
@@ -203,8 +250,16 @@ export function PlatformDashboard({ operatorId, recheckAccess, showActivity }: {
   }
 
   function clearFilters() {
-    setFilters(defaultFilters);
-    setDraft(defaultFilters);
+    const reset = { ...defaultFilters, archived: filters.archived };
+    setFilters(reset);
+    setDraft(reset);
+    setCursors([null]);
+  }
+
+  function switchArchive(archived: boolean) {
+    const next = { ...defaultFilters, archived };
+    setFilters(next);
+    setDraft(next);
     setCursors([null]);
   }
 
@@ -213,7 +268,7 @@ export function PlatformDashboard({ operatorId, recheckAccess, showActivity }: {
   return (
     <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[12rem_minmax(0,1fr)] xl:gap-9">
       <nav aria-label={t("platformAdmin.sections")} className="sticky top-0 z-20 flex flex-wrap gap-1 rounded-2xl border border-border-subtle bg-surface-1 p-1.5 shadow-[var(--shadow-card)] xl:top-8 xl:grid xl:p-2">
-        {sections.filter(({ id }) => id !== "platform-activity" || showActivity).map(({ id, label, icon: Icon }) => (
+        {sections.filter(({ id }) => (id !== "platform-activity" || showActivity) && (id !== "platform-users" || showUsers)).map(({ id, label, icon: Icon }) => (
           <a key={id} href={`#${id}`} className="flex min-h-10 items-center gap-2 rounded-xl px-2.5 text-sm font-semibold text-text-secondary transition-colors hover:bg-violet-500/10 hover:text-violet-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring xl:px-3">
             <Icon className="size-4 shrink-0 text-violet-300" aria-hidden="true" />
             {t(label)}
@@ -270,6 +325,15 @@ export function PlatformDashboard({ operatorId, recheckAccess, showActivity }: {
               <span className="text-xs tabular-nums text-text-secondary" aria-live="polite">{t("platformAdmin.visibleRows", { count: number.format(items.length) })}</span>
             ) : null}
           </div>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("platformAdmin.directory")}>
+            <Button size="sm" variant={filters.archived ? "ghost" : "secondary"} aria-pressed={!filters.archived} onClick={() => switchArchive(false)}>
+              {t("platformRegistry.current")}
+            </Button>
+            <Button size="sm" variant={filters.archived ? "secondary" : "ghost"} aria-pressed={filters.archived} onClick={() => switchArchive(true)}>
+              {t("platformRegistry.archiveTab")}
+              {summary.data && !summary.error && summary.data.archived_workspaces !== undefined ? number.format(summary.data.archived_workspaces) : null}
+            </Button>
+          </div>
           <form onSubmit={applyFilters} className="grid items-end gap-3 rounded-[var(--radius-card)] border border-border-subtle bg-surface-1 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1.25fr] xl:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1.25fr_auto]">
             <FormField label={t("platformAdmin.search")}>
               <Input name="search" value={draft.search} onChange={(event) => setDraft({ ...draft, search: event.target.value })} maxLength={120} placeholder={t("platformAdmin.searchPlaceholder")} />
@@ -304,7 +368,7 @@ export function PlatformDashboard({ operatorId, recheckAccess, showActivity }: {
           {directory.data && !directory.error ? (
             items.length
               ? <WorkspaceDirectory items={items} onSelect={setSelected} />
-              : <EmptyState title={t(filtered ? "platformAdmin.filteredEmpty" : "platformAdmin.empty")} description={t(filtered ? "platformAdmin.filteredEmptyDescription" : "platformAdmin.emptyDescription")} />
+              : <EmptyState title={t(filtered ? "platformAdmin.filteredEmpty" : filters.archived ? "platformRegistry.archiveEmpty" : "platformAdmin.empty")} description={t(filtered ? "platformAdmin.filteredEmptyDescription" : filters.archived ? "platformRegistry.archiveEmptyDescription" : "platformAdmin.emptyDescription")} />
           ) : null}
           {!directory.error && (cursors.length > 1 || nextCursor) ? (
             <nav className="flex flex-wrap items-center justify-between gap-2" aria-label={t("platformAdmin.pagination")}>
@@ -319,13 +383,15 @@ export function PlatformDashboard({ operatorId, recheckAccess, showActivity }: {
           ) : null}
         </section>
 
+        {showUsers ? <PlatformUsers operatorId={operatorId} recheckAccess={recheckAccess} onOpenWorkspace={setSelected} /> : null}
+
         {showActivity ? (
           <section id="platform-activity" aria-label={t("platformActivity.title")} className="scroll-mt-32 xl:scroll-mt-8" tabIndex={-1}>
             <PlatformActivity operatorId={operatorId} recheckAccess={recheckAccess} />
           </section>
         ) : null}
       </div>
-      {selected ? <WorkspaceProfile key={selected} id={selected} operatorId={operatorId} onClose={closeProfile} recheckAccess={recheckAccess} showActivity={showActivity} /> : null}
+      {selected ? <WorkspaceProfile key={selected} id={selected} operatorId={operatorId} onClose={closeProfile} recheckAccess={recheckAccess} showActivity={showActivity} canArchive={canArchive} /> : null}
     </div>
   );
 }
