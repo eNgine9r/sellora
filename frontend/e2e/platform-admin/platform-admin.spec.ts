@@ -125,6 +125,7 @@ test("a tenant owner is denied through the direct URL and never loads platform d
   await denied;
   await expect(page.getByRole("heading", { name: "Доступ заборонено" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Реєстр магазинів" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Користувачі" })).toHaveCount(0);
   expect(paths).toEqual([`${prefix}/me`]);
 });
 
@@ -162,4 +163,8 @@ test("admin finds a Sellora account and can archive and restore an eligible work
   await demo.getByRole("button", { name: "Підтвердити відновлення" }).click();
   await expect(demo.getByRole("button", { name: "Архівувати магазин" })).toBeVisible();
   await expect(demo.getByText("Вимкнений", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(open).toHaveCount(0);
+  await directory.getByRole("button", { name: "Поточний реєстр" }).click();
+  await expect(open).toBeVisible();
 });
