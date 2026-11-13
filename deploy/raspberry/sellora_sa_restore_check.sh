@@ -47,6 +47,50 @@ image_id=$(docker image inspect --format '{{.Id}}' "$image") || fail BACKUP_POST
 
 restore_command='
 set -eu
+export LC_ALL=C
+
+restore_failure() {
+  result=$1
+  log=/tmp/restore.stderr
+  reason=UNCLASSIFIED
+  if [ "$result" -eq 124 ]; then
+    reason=TIMEOUT
+  elif [ "$result" -eq 143 ]; then
+    reason=TERMINATED
+  elif [ "$result" -eq 137 ]; then
+    reason=KILLED
+  elif grep -Fq "No space left on device" "$log"; then
+    if grep -Fq "shared memory segment" "$log"; then
+      reason=SHARED_MEMORY_FULL
+    else
+      reason=STORAGE_FULL
+    fi
+  elif grep -Eq "out of memory|Cannot allocate memory" "$log"; then
+    reason=OUT_OF_MEMORY
+  elif grep -Eq "unsupported version|invalid archive version" "$log"; then
+    reason=ARCHIVE_VERSION_UNSUPPORTED
+  elif grep -Eq "could not read from input file|unexpected end of file|input file is too short|does not appear to be a valid archive|could not uncompress data" "$log"; then
+    reason=ARCHIVE_READ_FAILED
+  elif grep -Eq "unrecognized configuration parameter" "$log"; then
+    reason=SERVER_SETTING_UNSUPPORTED
+  elif grep -Eq "ERROR:.*role .*does not exist" "$log"; then
+    reason=MISSING_ROLE
+  elif grep -Eq "ERROR:.*extension .*is not available" "$log"; then
+    reason=MISSING_EXTENSION
+  elif grep -Eq "ERROR:.*(function|relation|schema|type|operator) .*does not exist" "$log"; then
+    reason=MISSING_DB_OBJECT
+  elif grep -Eq "permission denied|Operation not permitted" "$log"; then
+    reason=PERMISSION_DENIED
+  elif grep -Eq "server closed the connection unexpectedly|connection to server .* failed|could not connect to server" "$log"; then
+    reason=DATABASE_CONNECTION_LOST
+  elif grep -Fq "could not execute query" "$log"; then
+    reason=SQL_EXECUTION_FAILED
+  fi
+  printf "ARCHIVE_RESTORE_FAILED reason=%s pg_restore_exit=%s\n" "$reason" "$result" >&2
+  df -Pk "$PGDATA" /dev/shm | awk "NR > 1 {print \"available_kib=\" \$4, \"mount=\" \$6}" >&2
+  exit 1
+}
+
 initdb -D "$PGDATA" --username=postgres --auth-local=trust --auth-host=reject \
   > /dev/null 2>&1 || { echo RESTORE_INIT_FAILED >&2; exit 1; }
 pg_ctl -D "$PGDATA" -l /tmp/postgres.log \
@@ -56,7 +100,7 @@ createdb -h /tmp -U postgres -T template0 sellora_restore_check \
   > /dev/null 2>&1 || { echo RESTORE_CREATE_DB_FAILED >&2; exit 1; }
 timeout 600 pg_restore -h /tmp -U postgres -d sellora_restore_check \
   --no-owner --no-privileges --single-transaction --exit-on-error \
-  > /dev/null 2>&1 || { echo ARCHIVE_RESTORE_FAILED >&2; exit 1; }
+  > /dev/null 2>/tmp/restore.stderr || restore_failure "$?"
 export PGOPTIONS="-c default_transaction_read_only=on -c statement_timeout=5000"
 revision=$(psql -XAtq -h /tmp -U postgres -d sellora_restore_check -v ON_ERROR_STOP=1 \
   -c "SELECT version_num FROM public.alembic_version" 2>/dev/null) || { echo RESTORED_REVISION_UNREADABLE >&2; exit 1; }
