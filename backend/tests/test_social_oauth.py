@@ -1,4 +1,6 @@
+import base64
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
 from urllib.parse import parse_qs, urlsplit
 
 from cryptography.hazmat.primitives import serialization
@@ -52,6 +54,10 @@ def google_key():
     return private, {**jwk.construct(public, "RS256").to_dict(), "kid": "test-key"}
 
 
+GOOGLE_ACCESS_TOKEN = "synthetic-google-access-token"
+GOOGLE_ACCESS_HASH = base64.urlsafe_b64encode(sha256(GOOGLE_ACCESS_TOKEN.encode()).digest()[:16]).decode().rstrip("=")
+
+
 @pytest.mark.parametrize(("changes", "expected"), [
     ({}, "owner@gmail.com"),
     ({"email": "owner@example.com"}, None),
@@ -62,6 +68,8 @@ def google_key():
     ({"iss": "https://invalid.example.com"}, "reject"),
     ({"exp": 1}, "reject"),
     ({"azp": "wrong"}, "reject"),
+    ({"at_hash": GOOGLE_ACCESS_HASH}, "owner@gmail.com"),
+    ({"at_hash": "different-hash"}, "reject"),
 ])
 def test_google_identity_claims(settings, google_key, monkeypatch, changes, expected):
     private, public = google_key
@@ -75,7 +83,7 @@ def test_google_identity_claims(settings, google_key, monkeypatch, changes, expe
         if request.url.host == "oauth2.googleapis.com":
             assert request.method == "POST"
             assert parse_qs(request.content.decode())["code_verifier"] == ["verifier"]
-            return httpx.Response(200, json={"id_token": token})
+            return httpx.Response(200, json={"id_token": token, "access_token": GOOGLE_ACCESS_TOKEN})
         assert request.url.host == "www.googleapis.com"
         return httpx.Response(200, json={"keys": [public]})
 

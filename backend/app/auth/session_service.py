@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.jwt import create_access_token
 from app.core.config import get_settings
+from app.repositories.auth_session_repository import AuthSessionRepository
 from app.repositories.user_repository import UserRepository
 
 
@@ -36,6 +37,7 @@ class ConcurrentSessionRefresh(Exception):
 class SessionAuthenticationService:
     def __init__(self, db: Session):
         self.db = db
+        self.sessions = AuthSessionRepository(db)
         self.settings = get_settings()
 
     def _hash(self, credential: str) -> str:
@@ -89,13 +91,7 @@ class SessionAuthenticationService:
         parts = self._parts(cookie)
         if parts is None or parts[0] != session_id:
             return False
-        digest = self.db.scalar(
-            text(
-                "SELECT refresh_hash FROM public.auth_sessions WHERE id=:sid AND user_id=:uid "
-                "AND revoked_at IS NULL AND expires_at > now() FOR UPDATE"
-            ),
-            {"sid": session_id, "uid": user_id},
-        )
+        digest = self.sessions.lock_active_refresh_digest(user_id, session_id)
         return digest is not None and hmac.compare_digest(digest, self._hash(cookie))
 
     def rotate(self, cookie: str | None) -> SessionTokens | None:

@@ -123,8 +123,12 @@ class SocialOAuth:
 
     def _google(self, client: httpx.Client, form: dict, verifier: str, nonce: str) -> Profile:
         form.update(grant_type="authorization_code", code_verifier=verifier)
-        token = _json(client.post(GOOGLE_TOKEN, data=form))["id_token"]
+        response = _json(client.post(GOOGLE_TOKEN, data=form))
+        token = response["id_token"]
+        access_token = response.get("access_token")
         if not isinstance(token, str) or len(token) > 8192:
+            raise ProviderError()
+        if access_token is not None and (not isinstance(access_token, str) or not access_token or len(access_token) > 8192):
             raise ProviderError()
         header = jwt.get_unverified_header(token)
         keys = _json(client.get(GOOGLE_KEYS))["keys"]
@@ -136,6 +140,7 @@ class SocialOAuth:
         claims = jwt.decode(
             token, key, algorithms=["RS256"], audience=self.client_id,
             issuer=("accounts.google.com", "https://accounts.google.com"),
+            access_token=access_token,
             options={"require_exp": True, "require_iat": True, "require_sub": True, "require_aud": True},
         )
         if (claims.get("nonce") != nonce or claims.get("azp", self.client_id) != self.client_id
