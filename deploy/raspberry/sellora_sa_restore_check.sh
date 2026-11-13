@@ -124,8 +124,10 @@ pg_ctl -D "$PGDATA" -l /tmp/postgres.log \
   -t 30 -w start > /dev/null 2>&1 || { echo RESTORE_START_FAILED >&2; exit 1; }
 createdb -h /tmp -U postgres -T template0 sellora_restore_check \
   > /dev/null 2>&1 || { echo RESTORE_CREATE_DB_FAILED >&2; exit 1; }
+# template0 includes public, which a schema-filtered archive can recreate.
+# Clean only the objects in the archive, inside this disposable database.
 timeout 600 pg_restore -h /tmp -U postgres -d sellora_restore_check \
-  --no-owner --no-privileges --single-transaction --exit-on-error \
+  --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error \
   > /dev/null 2>/tmp/restore.stderr || restore_failure "$?"
 export PGOPTIONS="-c default_transaction_read_only=on -c statement_timeout=5000"
 revision=$(psql -XAtq -h /tmp -U postgres -d sellora_restore_check -v ON_ERROR_STOP=1 \
