@@ -10,6 +10,6 @@
 | SA.5 | Виправлення злиті в [PR #417](https://github.com/eNgine9r/sellora/pull/417). Ізольований QA та репетиція off switch пройшли. [Handoff SA.5](handoffs/SA.5.md) |
 | Захищений Platform Admin staging | **PASS.** Окремі frontend, API та PostgreSQL. Підтверджено ручний вхід із MFA, доступ до списку магазинів і запис в аудиті. [Докази](handoffs/SA.5.md#фактичний-результат-захищеного-staging) |
 | Робочий CRM-фронтенд | Власник підтвердив [sellora-web-staging.vercel.app](https://sellora-web-staging.vercel.app). Поточний deployment — `dpl_9G57Rp5NosKJWGwifELSPuzX4Udi` з `be3c79f`. Власник підтвердив `CRM_LOGIN_ORDERS=PASS`. |
-| Production rollout | **PASS** станом на 13.11.2026. Бойова БД на `058`, [Platform Admin](https://sellora-web-staging.vercel.app/platform-admin) працює з обов’язковим MFA. Аудит підтвердив вхід, список магазинів і зведення. Відновлення нової копії зі схеми `058` очікує запуску в нативному терміналі. [Артефакти, перевірки та відкат](PRODUCTION_PREFLIGHT.md) |
+| Production rollout | **PASS** станом на 13.11.2026. Бойова БД на `058`, [Platform Admin](https://sellora-web-staging.vercel.app/platform-admin) працює з обов’язковим MFA. Аудит підтвердив вхід, список магазинів і зведення. Перевірено вхід у CRM, відкриття замовлення, читання підписок із `enforcement_enabled=false` та відновлення копії зі схеми `058`. [Артефакти, перевірки та відкат](PRODUCTION_PREFLIGHT.md) |
 
 [Архітектура](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) · [Handoff SA.0](handoffs/SA.0.md)

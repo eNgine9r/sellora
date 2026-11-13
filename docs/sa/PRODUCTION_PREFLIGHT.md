@@ -1,13 +1,13 @@
 # Sellora Platform Admin — production preflight
 
-**13.11.2026 · Production Platform Admin rollout — PASS.** Бойова БД на `202611130058`. Platform Admin увімкнений з обов’язковим MFA. Аудит підтвердив вхід погодженого оператора, завантаження списку магазинів і зведення через бойову пару frontend/API.
+**13.11.2026 · Production Platform Admin rollout — PASS.** Бойова БД на `202611130058`. Platform Admin увімкнений з обов’язковим MFA. Аудит підтвердив вхід погодженого оператора, завантаження списку магазинів і зведення через бойову пару frontend/API. Після запуску перевірено вхід у CRM, читання підписки та відновлення архіву зі схеми `058`.
 
 | Перевірка | Факт | Стан |
 | --- | --- | --- |
 | GitHub і кандидат | `main` — `be3c79f6995f3c10b94a50057415dceace5d40a0` після злиття #419. Дерево збігається з перевіреним `fbaebb3`. [CI після злиття](https://github.com/eNgine9r/sellora/actions/runs/43414778134) пройшов 8/8. | PASS |
 | Бойовий frontend | [Робочий CRM](https://sellora-web-staging.vercel.app) обслуговує `dpl_9G57Rp5NosKJWGwifELSPuzX4Udi` з `be3c79f`. Попередній deployment `dpl_HbiuVq2Bv5D9JwJHyp7xxPg9KnL8` зафіксовано для відкату. Автопризначення домену вимкнено. | PASS |
 | Бойовий backend і БД | API `fbaebb3c21e7556288ff1c1afcaaf61a500c793b`, readiness `200`, Alembic `202611130058`. RLS, ACL та тригер append-only для аудиту підтверджені. | PASS |
-| Backup і rollback | Власник підтвердив `restore_check=PASS` для архіву `sellora-db-20261113-110634.pgdump.enc`. На Raspberry перевірено сумісний ARM64 образ відкату на синтетичній `058`. | PASS |
+| Backup і rollback | Власник підтвердив відновлення архівів до й після міграції. Копія зі схеми `058` — `sellora-db-20261113-120642.pgdump.enc`. На Raspberry перевірено сумісний ARM64 образ відкату на синтетичній `058`. | PASS |
 | Доступ оператора | Один активний платформний оператор із production-фактором. Запис `VERIFY_PLATFORM_MFA` о `11:53:25 UTC`, після нього успішні `LIST_WORKSPACES` та `READ_PLATFORM_SUMMARY`. | PASS |
 
 ## Перевірка MFA
@@ -42,9 +42,9 @@ bash /home/btcradar/sellora-mfa-qa.Kr2o1qzq/release-restore-check.sh
 
 - Власник підтвердив `CRM_LOGIN_ORDERS=PASS` на бойовому frontend. Перевірено вхід, список і відкриття наявного замовлення.
 - На бойовій БД у read-only транзакції сервіс підписок повернув `UNMANAGED` та `enforcement_enabled=false` для трьох активних workspace з роллю OWNER. Через бойовий Vercel endpoint запит без сесії з коректним форматом workspace ID повернув `401`. Авторизований HTTP-запит до цього endpoint перевірено на ізольованих даних.
-- Архів зі схеми `058` — `sellora-db-20261113-120642.pgdump.enc`. Off-host квитанція від `2026-11-13T12:07:05Z`, локальна копія збіглася за SHA-256. Відновлення цієї копії очікує перевірки.
+- Архів зі схеми `058` — `sellora-db-20261113-120642.pgdump.enc`. Off-host квитанція від `2026-11-13T12:07:05Z`, локальна копія збіглася за SHA-256. Власник відновив копію в ізольованому PostgreSQL 17 у кодуванні UTF8. Підтверджено `restored_revision=202611130058`, `restored_schema_smoke=PASS`, `restored_platform_schema_smoke=PASS`, `encrypted_sha256_match=PASS` і `restore_check=PASS`. Образ PostgreSQL — `sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73`.
 
-У нативному терміналі `btcradar@btc-radar` запустити підготовлену копію скрипта з явною ревізією:
+Для повторної перевірки зі схеми `058` передати явну ревізію в нативному терміналі `btcradar@btc-radar`:
 
 ```bash
 bash /home/btcradar/sellora-mfa-qa.Kr2o1qzq/release-restore-check-058.sh 202611130058
