@@ -1,6 +1,6 @@
 # SA.5 — QA Fixes & Staging Preparation
 
-**Ізольований QA — PASS. Публічний staging — NO-GO.** Виправлення та їхні regression tests містяться у [PR #417](https://github.com/eNgine9r/sellora/pull/417). База аудиту й підтверджені дефекти описані у [PR #416](https://github.com/eNgine9r/sellora/pull/416).
+**Ізольований QA і захищений Platform Admin staging — PASS.** Виправлення та їхні regression tests злиті у [PR #417](https://github.com/eNgine9r/sellora/pull/417). База аудиту й підтверджені дефекти описані у [PR #416](https://github.com/eNgine9r/sellora/pull/416). Рішення щодо бойового середовища ведеться у [production preflight](../PRODUCTION_PREFLIGHT.md).
 
 | Дефект | Доказ і залишок |
 | --- | --- |
@@ -13,6 +13,14 @@
 - **57 passed** для startup, search privacy, endpoint inventory і subscription status. [CI коду виправлень](https://github.com/eNgine9r/sellora/actions/runs/43226872281) також включає PostgreSQL та desktop/mobile Playwright.
 - **PASS** для `npm run build` та HTTP smoke через зібраний Next.js до окремого Uvicorn і PostgreSQL 16.15 на Alembic head `202611120057`. Використано синтетичні записи.
 - **PASS** для off-switch rollback. Після перезапуску API шість запитів до Platform Admin від admin і OWNER повернули `404`. CRM-вхід, `/auth/me` і читання підписки OWNER повернули `200`. Кількість grants, записів аудиту, usage, підписок і платіжних квитанцій та версія Alembic збереглися.
+
+## Фактичний результат захищеного staging
+
+- [Frontend](https://sellora-platform-staging.vercel.app/platform-admin) і [API](https://sellora-platform-staging-api.vercel.app/api/v1) підтверджені як `READY` у Vercel. Frontend deployment `dpl_37GwpwUN4CBnqGFxUWuDAW4jbWv8` зібраний з `1ac522b5`, API deployment `dpl_BVB2TyBz9NBhP2fvQymwHGW8uyfJ` — з `3e0763e9`. Докази TLS, ізольованого PostgreSQL, прав ролі та smoke задокументовано у [PR #417](https://github.com/eNgine9r/sellora/pull/417).
+- 13.11.2026 власник вручну ввійшов і перевірив панель. Запит лише на читання до staging БД підтвердив активну роль `PLATFORM_ADMIN`, успішний вхід і дозволену операцію в аудиті.
+- Для перевіреного дерева коду пройшло [8 із 8 завдань CI](https://github.com/eNgine9r/sellora/actions/runs/43230727857). Злитий коміт `8c3c2e7` має те саме дерево. Окремого запуску CI для merge-коміту GitHub не показав під час preflight.
+
+Чеклісти нижче описують порядок підготовки й відкату. Зафіксовані вище результати стосуються окремого захищеного стенду.
 
 ## Staging rollout checklist
 
@@ -32,6 +40,6 @@
 3. [ ] Якщо вимкнення прапорців недостатньо, повернути зафіксовану сумісну пару frontend/backend із попереднім ізольованим staging upstream. Перевірити сумісність пари зі збереженим Alembic head перед перемиканням. Відкат схеми або видалення даних за цим сценарієм заборонені.
 4. [ ] Повторити smoke для HTTPS, правильного upstream, сесій, tenant isolation і читання підписки. Звірити Alembic head та контрольні дані grants, audit, usage, підписок і платіжних квитанцій. Зберегти санітизовані докази та повернути статус **NO-GO** до усунення причини.
 
-## Залишкові умови
+## Історичні умови перед staging rollout
 
 Прийняття #417, ізольованість цільового staging, його фактична роль БД, журнали керованого проксі та відкат на цільових артефактах ще потребують підтвердження. Поточний публічний frontend використовує бойовий backend. Злиття в `main` може автоматично опублікувати frontend, тому момент злиття має входити в окремо погоджений rollout. [Налаштування Vercel у репозиторії](../../../frontend/vercel.json)
