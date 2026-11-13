@@ -36,3 +36,25 @@ def test_platform_admin_accepts_explicit_signing_key_for_each_supported_hmac(alg
 def test_platform_admin_enforces_algorithm_key_length():
     with pytest.raises(ValidationError, match="at least 64 bytes"):
         Settings(_env_file=None, platform_admin_enabled=True, jwt_algorithm="HS512", jwt_secret=secrets.token_urlsafe(32))
+
+
+def test_platform_mfa_is_mandatory_for_enabled_production_platform():
+    settings = Settings(
+        _env_file=None, environment="production", platform_admin_enabled=True,
+        platform_admin_mfa_required=False, jwt_secret=secrets.token_urlsafe(48),
+    )
+    assert settings.platform_admin_requires_mfa
+    assert not Settings(_env_file=None, environment="development").platform_admin_requires_mfa
+
+
+def test_totp_matches_rfc6238_sha1_vector_and_rejects_replay():
+    from datetime import UTC, datetime
+
+    from app.services.platform_mfa_service import matching_step, totp_code
+
+    seed = b"12345678901234567890"
+    now = datetime.fromtimestamp(59, UTC)
+    assert totp_code(seed, 1) == "287082"
+    assert matching_step(seed, "287082", now) == 1
+    assert matching_step(seed, "287082", now, after=1) is None
+    assert matching_step(seed, "２８７０８２", now) is None

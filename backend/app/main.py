@@ -163,12 +163,17 @@ async def request_timing(request, call_next):
 
 
 platform_directory_path = f"{settings.api_v1_prefix}/platform-admin/workspaces"
-app.add_middleware(PlatformSearchPrivacyMiddleware, directory_path=platform_directory_path)
+platform_mfa_path = f"{settings.api_v1_prefix}/platform-admin/mfa/verify"
+app.add_middleware(
+    PlatformSearchPrivacyMiddleware, directory_path=platform_directory_path, mfa_path=platform_mfa_path,
+)
 
 
 @app.exception_handler(RequestValidationError)
 async def safe_validation_error(request: Request, exc: RequestValidationError):
-    return await platform_validation_error(request, exc, directory_path=platform_directory_path)
+    return await platform_validation_error(
+        request, exc, directory_path=platform_directory_path, mfa_path=platform_mfa_path,
+    )
 
 
 # Keep Ads OAuth code/state out of Uvicorn access logs, including validation errors.

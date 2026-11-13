@@ -3,11 +3,12 @@ from typing import Annotated, Literal, TypeVar
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, SecretStr
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.dependencies.platform_admin import require_platform_permission
+from app.dependencies.platform_admin import PlatformSession, require_platform_mfa_challenge, require_platform_permission
 from app.schemas.platform_admin import (
     PlatformIdentity,
     PlatformSummary,
@@ -21,6 +22,7 @@ from app.schemas.product_usage import ProductUsageReport
 from app.schemas.subscription import SubscriptionStatusResponse
 from app.services.platform_admin_service import InvalidPlatformCursor, PlatformAuditService, PlatformWorkspaceService
 
+from app.services.platform_mfa_service import PlatformMfaError, PlatformMfaService
 from app.services.product_usage_service import ProductUsageService
 
 router = APIRouter(prefix="/platform-admin", tags=["Platform Admin"])
@@ -53,6 +55,32 @@ def _audited_read(
     if result is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
     return result
+
+
+class PlatformMfaCode(BaseModel):
+    code: SecretStr
+
+
+@router.post("/mfa/verify")
+def verify_platform_mfa(
+    body: PlatformMfaCode,
+    request: Request,
+    operator: PlatformSession = Depends(require_platform_mfa_challenge),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    if request.query_params:
+        raise HTTPException(status_code=422, detail="Invalid MFA request")
+    try:
+        proof = PlatformMfaService(db).verify(
+            operator.identity.operator_id, operator.identity.role, operator.session_id,
+            operator.granted_at, body.code.get_secret_value(),
+        )
+    except PlatformMfaError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Platform access unavailable") from exc
+    return {"proof": proof}
 
 
 @router.get("/me", response_model=PlatformIdentity)

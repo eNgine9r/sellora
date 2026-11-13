@@ -9,6 +9,7 @@ import uvicorn
 from app.database.session import get_db
 from app.main import app
 
+MFA = "/api/v1/platform-admin/mfa/verify"
 DIRECTORY = "/api/v1/platform-admin/workspaces"
 MARKER = "synthetic-private-search-marker"
 
@@ -23,6 +24,7 @@ def test_directory_errors_document_the_redacted_shape():
 def test_directory_legacy_queries_and_validation_do_not_echo_filters_or_reach_access_logs(caplog):
     # Bypass authentication only for this transport test. Real RBAC is covered in PostgreSQL.
     from app.api.v1.router import api_router
+    from app.dependencies.platform_admin import require_platform_mfa_challenge
 
     def platform_routes(router):
         for route in router.routes:
@@ -40,6 +42,7 @@ def test_directory_legacy_queries_and_validation_do_not_echo_filters_or_reach_ac
     assert len(dependencies) == 2
     previous = dict(app.dependency_overrides)
     app.dependency_overrides[get_db] = lambda: None
+    app.dependency_overrides[require_platform_mfa_challenge] = lambda: None
     app.dependency_overrides.update({dependency: lambda: None for dependency in dependencies})
 
     sock = socket.socket()
@@ -65,7 +68,11 @@ def test_directory_legacy_queries_and_validation_do_not_echo_filters_or_reach_ac
             invalid_json = browser.post(
                 DIRECTORY + "/search", content=f'{{"q":"{MARKER}"', headers={"Content-Type": "application/json"},
             )
-            for response in (legacy, alias, malformed, cursor, query, post_alias, invalid_json):
+            mfa_alias = browser.post(MFA + "/", params={"code": MARKER}, json={"code": {"secret": MARKER}})
+            mfa_json = browser.post(
+                MFA, content=f'{{"code":"{MARKER}"', headers={"Content-Type": "application/json"},
+            )
+            for response in (legacy, alias, malformed, cursor, query, post_alias, invalid_json, mfa_alias, mfa_json):
                 assert response.status_code == 422
                 assert response.headers["cache-control"] == "private, no-store"
                 assert MARKER not in response.text
@@ -77,5 +84,6 @@ def test_directory_legacy_queries_and_validation_do_not_echo_filters_or_reach_ac
         app.dependency_overrides.update(previous)
     assert not thread.is_alive()
     logs = [record.getMessage() for record in caplog.records if record.name == "uvicorn.access"]
-    assert len(logs) == 7 and all(DIRECTORY in line for line in logs)
+    assert sum(DIRECTORY in line for line in logs) == 7
+    assert sum(MFA in line for line in logs) == 2
     assert all(MARKER not in line and "?" not in line for line in logs)
