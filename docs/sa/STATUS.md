@@ -10,6 +10,6 @@
 | SA.5 | Виправлення злиті в [PR #417](https://github.com/eNgine9r/sellora/pull/417). Ізольований QA та репетиція off switch пройшли. [Handoff SA.5](handoffs/SA.5.md) |
 | Захищений Platform Admin staging | **PASS.** Окремі frontend, API та PostgreSQL. Підтверджено роль оператора, ручний вхід і запис про доступ в аудиті. [Докази](handoffs/SA.5.md#фактичний-результат-захищеного-staging) |
 | Спільний staging | Залишається на `a8e5ff2`. Збірку для злиття #417 [скасовано](https://vercel.com/engine9rs-projects/sellora-web-staging/EkcsHPxX2A7JK3xSMK8X2xqrdAYe). |
-| Production rollout | **NO-GO** станом на 13.11.2026. Потрібні перевірені версії бойових сервісів, стан БД, докази відновлення й відкату та захист входу оператора. [Preflight](PRODUCTION_PREFLIGHT.md) |
+| Production rollout | **NO-GO** станом на 13.11.2026. Відновлення архіву з хешем, звіреним за off-host квитанцією, пройшло в ізоляції. Залишаються сумісність відкату, бойова пара frontend/API та захист входу оператора. [Preflight](PRODUCTION_PREFLIGHT.md) |
 
 [Архітектура](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) · [Handoff SA.0](handoffs/SA.0.md)
