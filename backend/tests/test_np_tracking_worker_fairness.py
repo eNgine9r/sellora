@@ -62,3 +62,19 @@ def test_unknown_provider_status_is_unverified_not_synced(monkeypatch):
     assert stats["synced"] == 1
     assert stats["unverified"] == 1
     assert stats["failed"] == 0
+
+
+def test_provider_code_3_has_daily_cooldown_in_candidate_sql():
+    module = worker()
+    class DB:
+        statement = None
+        def execute(self, stmt):
+            self.statement = stmt
+            return SimpleNamespace(all=lambda: [])
+    db = DB()
+    assert module.pending_tracking_ids(db, now=datetime.now(UTC)) == []
+    sql = str(db.statement.compile(dialect=postgresql.dialect()))
+    assert 'last_not_found' in sql
+    assert 'provider_status_code' in db.statement.compile(dialect=postgresql.dialect()).params.values()
+    assert 'new_value' in sql
+    assert module.NOT_FOUND_RETRY_INTERVAL.total_seconds() == 24 * 3600

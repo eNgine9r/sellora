@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 LOCK_ID = 846529472001
 BATCH_LIMIT = 10
 MIN_INTERVAL = timedelta(minutes=20)
+NOT_FOUND_RETRY_INTERVAL = timedelta(hours=24)
 MAX_AGE = timedelta(days=90)
 
 
@@ -55,6 +56,24 @@ def pending_tracking_ids(db, *, now: datetime, limit: int = BATCH_LIMIT) -> list
         .group_by(AuditLog.workspace_id, AuditLog.entity_id)
         .subquery()
     )
+    # A provider response with code 3 is NOT evidence of delivery.
+    # Retrying that missing/invalid number every 20 minutes wastes carrier quota
+    # and can starve real newly created shipments. Keep it for manual review,
+    # retry at most daily, and prioritize never-attempted TTNs.
+    code3 = (
+        select(
+            AuditLog.workspace_id.label("workspace_id"),
+            AuditLog.entity_id.label("entity_id"),
+            func.max(AuditLog.created_at).label("last_not_found"),
+        )
+        .where(
+            AuditLog.entity_type == "Shipment",
+            AuditLog.action == "NOVA_POSHTA_STATUS_UNVERIFIED",
+            AuditLog.new_value["provider_status_code"].astext == "3",
+        )
+        .group_by(AuditLog.workspace_id, AuditLog.entity_id)
+        .subquery()
+    )
     stmt = (
         select(Shipment.workspace_id, Shipment.id)
         .join(
@@ -76,6 +95,13 @@ def pending_tracking_ids(db, *, now: datetime, limit: int = BATCH_LIMIT) -> list
                 attempts.c.entity_id == cast(Shipment.id, String),
             ),
         )
+        .outerjoin(
+            code3,
+            and_(
+                code3.c.workspace_id == Shipment.workspace_id,
+                code3.c.entity_id == cast(Shipment.id, String),
+            ),
+        )
         .where(
             Shipment.deleted_at.is_(None),
             Shipment.carrier == ShipmentCarrier.NOVA_POSHTA.value,
@@ -85,6 +111,10 @@ def pending_tracking_ids(db, *, now: datetime, limit: int = BATCH_LIMIT) -> list
                 ShipmentStatus.ARRIVED.value,
             ]),
             Shipment.updated_at >= now - MAX_AGE,
+            or_(
+                code3.c.last_not_found.is_(None),
+                code3.c.last_not_found <= now - NOT_FOUND_RETRY_INTERVAL,
+            ),
             or_(
                 attempts.c.last_attempt.is_(None),
                 attempts.c.last_attempt <= now - MIN_INTERVAL,
