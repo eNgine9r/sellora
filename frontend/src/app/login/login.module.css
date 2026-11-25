@@ -1,5 +1,6 @@
 .page {
   color-scheme: dark;
+  --sidebar: var(--surface-1);
   --surface-1: #151528;
   --surface-2: #1b192d;
   --surface-hover: #29243f;
