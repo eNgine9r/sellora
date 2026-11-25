@@ -264,6 +264,22 @@ jobs:
           alembic upgrade head
           python -m pytest -q tests/security/test_platform_admin_postgres.py
 
+      - name: Verify public registration on disposable PostgreSQL
+        env:
+          SELLORA_PUBLIC_AUTH_DISPOSABLE_CANARY: "YES"
+        run: |
+          python - <<'PYTHON'
+          import os
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.environ["DATABASE_URL"], isolation_level="AUTOCOMMIT")
+          with engine.connect() as connection:
+              connection.execute(text("CREATE DATABASE sellora_public_auth_canary_isolated"))
+          engine.dispose()
+          PYTHON
+          export DATABASE_URL=postgresql+psycopg://sellora:sellora@localhost:5432/sellora_public_auth_canary_isolated
+          alembic upgrade head
+          python -m pytest -q tests/security/test_public_auth_postgres.py
+
   direct-client-conflict-e2e:
     name: direct-client-conflict-e2e
     runs-on: ubuntu-24.04

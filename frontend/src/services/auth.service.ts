@@ -273,3 +273,76 @@ export async function fetchCurrentUser(accessToken: string): Promise<CurrentUser
 export function firstAvailableWorkspace(user: CurrentUser): WorkspaceMembership | null {
   return user.memberships.find((membership) => normalizeWorkspaceId(membership.workspace_id)) ?? null;
 }
+
+export type SignInProvider = "google" | "facebook";
+
+export type PublicAuthOptions = {
+  providers: SignInProvider[];
+  signup_providers: SignInProvider[];
+  email_registration: boolean;
+  origin: string | null;
+};
+
+const EMPTY_AUTH_OPTIONS: PublicAuthOptions = {
+  providers: [], signup_providers: [], email_registration: false, origin: null,
+};
+const PUBLIC_AUTH_PATH = "/auth/session/access";
+
+export class PublicAuthError extends Error {
+  constructor(readonly code: string) {
+    super(code);
+  }
+}
+
+async function publicAuthRequest<T>(path: string, body?: object, authenticated = false): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body) headers["Content-Type"] = "application/json";
+  if (authenticated) {
+    const token = authStorage.getAccessToken();
+    if (!token) throw new PublicAuthError("session_required");
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return consumeAuthResponse(`${API_BASE_URL}${PUBLIC_AUTH_PATH}${path}`, {
+    method: body ? "POST" : "GET", body: body ? JSON.stringify(body) : undefined,
+    headers, credentials: "same-origin", cache: "no-store",
+  }, async (response) => {
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      throw new PublicAuthError(typeof result?.detail === "string" ? result.detail : "unavailable");
+    }
+    return (response.status === 204 ? undefined : await response.json()) as T;
+  });
+}
+
+export async function fetchPublicAuthOptions(): Promise<PublicAuthOptions> {
+  if (!COOKIE_SESSION_AUTH_ENABLED || !API_BASE_URL.startsWith("/")) return EMPTY_AUTH_OPTIONS;
+  const options = await publicAuthRequest<PublicAuthOptions>("/options");
+  return options.origin === window.location.origin ? options : EMPTY_AUTH_OPTIONS;
+}
+
+export async function startSocialAuth(provider: SignInProvider, intent: "login" | "register" | "link",
+                                      locale: "uk" | "en", acceptsTerms = false): Promise<void> {
+  const result = await publicAuthRequest<{ authorization_url: string }>(
+    `/${provider}/start`, { intent, locale, accepts_terms: acceptsTerms }, intent === "link",
+  );
+  const url = new URL(result.authorization_url);
+  const expectedHost = provider === "google" ? "accounts.google.com" : "www.facebook.com";
+  if (url.protocol !== "https:" || url.host !== expectedHost || url.username || url.password) {
+    throw new PublicAuthError("provider_error");
+  }
+  window.location.assign(url.href);
+}
+
+export function fetchLinkedSignInMethods() {
+  return publicAuthRequest<{ linked: SignInProvider[] }>("/identities", undefined, true);
+}
+
+export function sendRegistrationCode(email: string, locale: "uk" | "en", social: boolean) {
+  return publicAuthRequest<{ accepted: boolean }>("/email/send", { email, locale, social });
+}
+
+export function confirmRegistration(body: {
+  email: string; code: string; locale: "uk" | "en"; social: boolean; first_name?: string; password?: string; accepts_terms?: boolean;
+}) {
+  return publicAuthRequest<void>("/email/confirm", body);
+}

@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
@@ -172,6 +173,8 @@ app.add_middleware(
 
 @app.exception_handler(RequestValidationError)
 async def safe_validation_error(request: Request, exc: RequestValidationError):
+    if request.url.path.startswith(f"{settings.api_v1_prefix}/auth/session/access/"):
+        return JSONResponse({"detail": "invalid_request"}, status_code=422, headers={"Cache-Control": "no-store"})
     return await platform_validation_error(
         request, exc, directory_path=platform_directory_path, user_search_path=platform_user_search_path, mfa_path=platform_mfa_path,
     )
@@ -181,3 +184,7 @@ async def safe_validation_error(request: Request, exc: RequestValidationError):
 from app.middleware.meta_ads_oauth_redaction import MetaAdsOAuthQueryRedactionMiddleware
 app.add_middleware(MetaAdsOAuthQueryRedactionMiddleware,
                    callback_path=f"{settings.api_v1_prefix}/integrations/meta-ads/oauth/callback")
+
+for provider in ("google", "facebook"):
+    app.add_middleware(MetaAdsOAuthQueryRedactionMiddleware,
+                       callback_path=f"{settings.api_v1_prefix}/auth/session/access/{provider}/callback")

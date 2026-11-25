@@ -185,7 +185,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
           <div className="min-w-0 overflow-x-clip lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain" data-main-scroll-region>
             {error ? <p className="mx-4 mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-warning md:mx-6">{error}</p> : null}
-            {!currentWorkspaceId ? <NoWorkspaceOnboarding onWorkspaceCreated={reloadCurrentUser} onSwitchWorkspace={switchWorkspace} /> : children}
+            {!currentWorkspaceId && pathname !== "/settings/sign-in" ? <NoWorkspaceOnboarding onWorkspaceCreated={reloadCurrentUser} onSwitchWorkspace={switchWorkspace} /> : children}
           </div>
         </div>
 

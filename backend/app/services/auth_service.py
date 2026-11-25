@@ -18,12 +18,16 @@ class AuthService:
         self.users = UserRepository(db)
 
     def authenticate(self, email: str, password: str) -> TokenPair | None:
-        user = self.users.get_by_email(email)
+        user = self.authenticate_user(email, password)
+        return self.issue_tokens(user) if user is not None else None
+
+    def authenticate_user(self, email: str, password: str) -> User | None:
+        user = self.users.get_for_sign_in(email)
         if not user or not user.is_active or not verify_password(password, user.password_hash):
             return None
         user.last_login_at = datetime.now(UTC)
         self.db.commit()
-        return self.issue_tokens(user)
+        return user
 
     def issue_tokens(self, user: User) -> TokenPair:
         return TokenPair(access_token=create_access_token(user.id), refresh_token=create_refresh_token(user.id))
