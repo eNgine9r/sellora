@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 from hashlib import sha256
 import hmac
+from html import escape
 import secrets
 import smtplib
 import ssl
@@ -98,6 +99,61 @@ def email_enabled(settings: Settings) -> bool:
                 and bool(settings.auth_smtp_user) == bool(settings.auth_smtp_password))
 
 
+def _verification_email(sender: str, recipient: str, locale: str, code: str) -> EmailMessage:
+    if locale == "uk":
+        subject = "Код підтвердження Sellora"
+        heading = "Підтвердьте свою email-адресу"
+        instruction = "Введіть цей код на сторінці реєстрації Sellora."
+        expiry = "Код дійсний 10 хвилин."
+        unsolicited = "Якщо ви не запитували цей код, просто проігноруйте лист."
+    else:
+        subject = "Your Sellora verification code"
+        heading = "Verify your email address"
+        instruction = "Enter this code on the Sellora registration page."
+        expiry = "The code expires in 10 minutes."
+        unsolicited = "If you didn’t request this code, you can ignore this email."
+
+    message = EmailMessage()
+    message["From"] = sender
+    message["To"] = recipient
+    message["Subject"] = subject
+    message.set_content(f"{heading}\n\n{instruction}\n\n{code}\n\n{expiry}\n\n{unsolicited}")
+    message.add_alternative(f"""\
+<!doctype html>
+<html lang="{'uk' if locale == 'uk' else 'en'}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#f3f1fb;font-family:Arial,sans-serif;color:#101426;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f3f1fb;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <!--[if mso]><table role="presentation" width="520" cellspacing="0" cellpadding="0"><tr><td><![endif]-->
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;">
+        <tr><td bgcolor="#13112b" style="padding:20px 28px;border-radius:18px 18px 0 0;
+          border-top:4px solid #8b5cf6;background-color:#13112b;color:#f5f3ff;">
+          <span style="font-size:24px;line-height:30px;font-weight:700;letter-spacing:-0.6px;">Sellora</span>
+        </td></tr>
+        <tr><td bgcolor="#ffffff" style="padding:28px;border:1px solid #e2dcef;border-top:0;
+          background-color:#ffffff;color:#101426;border-radius:0 0 18px 18px;">
+          <h1 style="margin:0 0 12px;font-size:25px;line-height:32px;font-weight:700;">{heading}</h1>
+          <p style="margin:0 0 22px;font-size:16px;line-height:24px;color:#414a62;">{instruction}</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr><td align="center" bgcolor="#f1ebff" style="padding:16px 8px;border:1px solid #dfd1ff;
+              border-radius:12px;background-color:#f1ebff;color:#54239b;font-family:Consolas,'Courier New',monospace;
+              font-size:34px;font-weight:700;letter-spacing:5px;line-height:42px;white-space:nowrap;">{escape(code)}</td></tr>
+          </table>
+          <p style="margin:12px 0 22px;font-size:14px;line-height:20px;color:#414a62;">{expiry}</p>
+          <p style="margin:0;padding-top:16px;border-top:1px solid #e2dcef;font-size:13px;line-height:20px;
+            color:#515a71;">{unsolicited}</p>
+        </td></tr>
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td></tr>
+  </table>
+</body>
+</html>
+""", subtype="html")
+    return message
+
+
 class EmailRegistrationService:
     def __init__(self, db: Session, settings: Settings):
         self.db = db
@@ -126,17 +182,7 @@ class EmailRegistrationService:
             raise PublicAuthError("delivery_failed") from None
 
     def _deliver(self, email: str, locale: str, code: str) -> None:
-        message = EmailMessage()
-        message["From"] = self.settings.auth_smtp_from
-        message["To"] = email
-        message["Subject"] = "Код підтвердження Sellora" if locale == "uk" else "Your Sellora verification code"
-        message.set_content(
-            f"Ваш код підтвердження Sellora: {code}. Він дійсний 10 хвилин.\n"
-            "Якщо ви не реєструвалися в Sellora, проігноруйте цей лист."
-            if locale == "uk" else
-            f"Your Sellora verification code is {code}. It expires in 10 minutes.\n"
-            "If you did not sign up for Sellora, you can ignore this email."
-        )
+        message = _verification_email(self.settings.auth_smtp_from, email, locale, code)
         with smtplib.SMTP_SSL(self.settings.auth_smtp_host, self.settings.auth_smtp_port,
                               context=ssl.create_default_context(), timeout=8) as client:
             if self.settings.auth_smtp_user and self.settings.auth_smtp_password:
